@@ -27,7 +27,7 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
     await expect(page.getByTestId("selection-status")).toHaveText("PSEL");
     await expect(page.getByTestId("cancel-inspector-draft")).toHaveText("Revert draft");
     await expect(page.getByTestId("cancel-inspector-draft")).toHaveAccessibleName("Discard unapplied Inspector draft");
-    await expect(page.getByTestId("status-context")).toContainText("Bottom: Follow");
+    await expect(page.getByTestId("status-context")).not.toContainText("Bottom: Follow");
     await page.getByRole("button", { name: "Open Bookmarks panel", exact: true }).click();
     const bookmarkRow = page.getByTestId("bookmark-editor-panel").getByTestId(/bookmark-row-/).first();
     await bookmarkRow.click();
@@ -59,7 +59,7 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
     await page.getByTestId("follow-selection").check();
     await page.getByTestId("bottom-settings").click();
     await expect(page.getByTestId("selection-status")).toHaveText("PSEL");
-    await expect(page.getByTestId("status-context")).toContainText("Bottom: Follow");
+    await expect(page.getByTestId("status-context")).not.toContainText("Bottom: Follow");
     await expect(inspector, "resuming Follow Selection releases the local Bookmark target").toHaveAttribute("data-inspector-context", "signal");
     await expect(bookmarkRow).toHaveAttribute("data-selected", "false");
     await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();

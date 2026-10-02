@@ -799,7 +799,7 @@ export function MinimalCycleView() {
     zoom,
     snapEnabled,
     viewMode,
-    statusContext: `Workspace: ${workspacePreset} · ${bottomPinned ? "Bottom: Pinned" : followSelection ? "Bottom: Follow" : "Bottom: Fixed"}${!followSelection || bottomPinned ? ` · Target: ${bottomBookmark ? `Bookmark ${bottomBookmark.name}` : bottomTransaction ? `Transaction ${bottomTransaction.name}` : bottomAnnotation ? `Annotation ${bottomAnnotation.label || bottomAnnotation.type}` : bottomSignal ? `Signal ${bottomSignal.display.name}` : bottomGroup ? `Group ${bottomGroup.name}` : "None"}` : ""}${selectedSignal ? ` · Scope: ${selectedSignal.source.instancePath.length > 0 ? selectedSignal.source.instancePath.join("/") : "root"}` : ""}`,
+    statusContext: `Workspace: ${workspacePreset}${bottomPinned || !followSelection ? ` · Bottom: ${bottomPinned ? "Pinned" : "Fixed"} · Target: ${bottomBookmark ? `Bookmark ${bottomBookmark.name}` : bottomTransaction ? `Transaction ${bottomTransaction.name}` : bottomAnnotation ? `Annotation ${bottomAnnotation.label || bottomAnnotation.type}` : bottomSignal ? `Signal ${bottomSignal.display.name}` : bottomGroup ? `Group ${bottomGroup.name}` : "None"}` : ""}${selectedSignal ? ` · Scope: ${selectedSignal.source.instancePath.length > 0 ? selectedSignal.source.instancePath.join("/") : "root"}` : ""}`,
     hideRevisionDetail: visualReference,
     revision: snapshot.revision,
     undoDepth: history.undoDepth,
