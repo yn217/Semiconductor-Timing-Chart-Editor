@@ -26,7 +26,7 @@
   <symbol id="i-select-fit" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="1" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 2"/></symbol>
   <symbol id="i-export" viewBox="0 0 24 24"><path d="M12 15V3M8 7l4-4 4 4M5 12v9h14v-9" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M14.5 14.5L21 21" stroke="currentColor" stroke-width="1.7"/></symbol>
-  <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2" stroke="currentColor" stroke-width="1.5"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><path d="M10.3 2.5h3.4l.5 2.4a7.6 7.6 0 0 1 1.9 1.1l2.3-.8 1.7 2.9-1.8 1.6a7.7 7.7 0 0 1 0 2.2l1.8 1.6-1.7 2.9-2.3-.8a7.6 7.6 0 0 1-1.9 1.1l-.5 2.4h-3.4l-.5-2.4a7.6 7.6 0 0 1-1.9-1.1l-2.3.8-1.7-2.9 1.8-1.6a7.7 7.7 0 0 1 0-2.2L3.9 8.1l1.7-2.9 2.3.8a7.6 7.6 0 0 1 1.9-1.1z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
   <symbol id="i-comment" viewBox="0 0 24 24"><path d="M4 4h16v12H9l-5 4z" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="1.8"/></symbol>
   <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></symbol>
