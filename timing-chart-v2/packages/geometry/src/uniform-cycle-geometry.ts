@@ -39,6 +39,36 @@ export function uniformCycleBoundaryEntries(input: UniformCycleGridInput): reado
   return entries;
 }
 
+const sharedBoundaryEntries = new WeakMap<readonly number[], Map<string, readonly LocalGeometryEntry[]>>();
+
+function createUniformBoundaryEntries(input: UniformCycleGridInput): readonly LocalGeometryEntry[] {
+  return Object.freeze(input.sourceCycles.map((cycle, index) => Object.freeze({
+    cycle,
+    point: "cycle-start" as const,
+    position: Object.freeze({
+      x: input.originX + index * input.cycleWidth,
+      y: input.rowY,
+    }),
+  })));
+}
+
+function uniformBoundaryEntriesShared(input: UniformCycleGridInput): readonly LocalGeometryEntry[] {
+  // A readonly TypeScript type is not a runtime immutability guarantee. Only
+  // share by source-array identity when callers actually freeze that array.
+  if (!Object.isFrozen(input.sourceCycles)) return createUniformBoundaryEntries(input);
+  let byGeometry = sharedBoundaryEntries.get(input.sourceCycles);
+  if (!byGeometry) {
+    byGeometry = new Map();
+    sharedBoundaryEntries.set(input.sourceCycles, byGeometry);
+  }
+  const key = `${input.originX}:${input.cycleWidth}:${input.rowY}`;
+  const cached = byGeometry.get(key);
+  if (cached) return cached;
+  const entries = createUniformBoundaryEntries(input);
+  byGeometry.set(key, entries);
+  return entries;
+}
+
 /**
  * Allocation-free Local Geometry for the uniform grid: every anchor position is computed from the cycle index on demand, so a
  * window of N cycles costs O(N) numbers (the source-cycle index) instead of 5N frozen entry objects. Semantically identical to
@@ -66,11 +96,22 @@ export class UniformCycleLocalGeometryMap implements LocalGeometryMap {
 
   cycleBoundaryEntries(): readonly LocalGeometryEntry[] {
     if (!this.#boundaries) {
-      const { sourceCycles, originX, cycleWidth, rowY } = this.#input;
-      this.#boundaries = Object.freeze(sourceCycles.map((cycle, index) => ({ cycle, point: "cycle-start" as const, position: { x: originX + index * cycleWidth, y: rowY } })));
+      this.#boundaries = uniformBoundaryEntriesShared(this.#input);
     }
     return this.#boundaries;
   }
+
+  /** Resolve a cycle key to its local boundary index without materializing geometry entries. */
+  indexOfCycleKey(cycle: number): number | undefined { return this.#indexOf(cycle); }
+
+  /** Read the cycle key at a local boundary index. */
+  cycleKeyAtIndex(index: number): number | undefined {
+    return Number.isInteger(index) && index >= 0 && index < this.#input.sourceCycles.length
+      ? this.#input.sourceCycles[index]
+      : undefined;
+  }
+
+  get cycleBoundaryCount(): number { return this.#input.sourceCycles.length; }
 
   #indexOf(cycle: number): number | undefined {
     const index = this.#indexBySourceCycle ? this.#indexBySourceCycle.get(cycle) : cycle - this.#firstCycle;
