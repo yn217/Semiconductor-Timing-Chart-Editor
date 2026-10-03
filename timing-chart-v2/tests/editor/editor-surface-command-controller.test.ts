@@ -23,7 +23,7 @@ describe("editor surface command controller", () => {
       expect.objectContaining({ id: "test_transaction_snap_move", type: "transaction.move", transactionId: "transaction_1", start: 3 }),
       expect.objectContaining({ id: "test_home_transaction_create", type: "transaction.create", transaction: expect.objectContaining({ id: "transaction_2" }) }),
       expect.objectContaining({ id: "test_home_transaction_duplicate", type: "transaction.create", transaction: expect.objectContaining({ id: "transaction_3" }) }),
-      expect.objectContaining({ id: "test_find_replace_rename", type: "signal.rename", signalId: "signal_1", name: "Renamed" }),
+      { id: "test_find_replace_rename", type: "signal.bulkRename", renames: [{ signalId: "signal_1", name: "Renamed" }, { signalId: "signal_2", name: "Renamed 2" }] },
       expect.objectContaining({ id: "test_transaction_time_scale_set", type: "transaction.setTimeScale", scale: { clockCyclesPerTransactionCycle: 2, majorInterval: 5, minorInterval: 1 } }),
       expect.objectContaining({ id: "test_check_settings_update", type: "document.updateCheckSettings", checkSettings: { enabledCategories: ["protocol"] } }),
       expect.objectContaining({ id: "test_home_auto_layout", type: "document.updateLayout" }),

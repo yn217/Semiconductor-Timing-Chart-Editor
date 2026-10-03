@@ -794,6 +794,30 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       const changeSet: ChangeSet = { rowPresentation: [signal.id] };
       return { ok: true, document: replaceSignal(document, index, { ...signal, name, display: { ...signal.display, name } }), changeSet, inverseChangeSet: changeSet };
     }
+    case "signal.bulkRename": {
+      // One indexed O(N + K) pass equivalent to an atomic batch of signal.rename commands:
+      // items are validated in order with the same rules and the first failure rejects the whole command.
+      if (command.renames.length === 0) return fail("no-op", "NO_OP", "$.renames", "No Signals were selected for rename.");
+      const indexById = new Map<SignalId, number>();
+      document.signals.forEach((signal, index) => indexById.set(signal.id, index));
+      const seen = new Set<SignalId>();
+      const signals = [...document.signals];
+      const renamedIds: SignalId[] = [];
+      for (const [position, rename] of command.renames.entries()) {
+        if (seen.has(rename.signalId)) return fail("invalid", "DUPLICATE_ID", `$.renames[${position}].signalId`, "Bulk Signal rename contains duplicate IDs.");
+        seen.add(rename.signalId);
+        const index = indexById.get(rename.signalId);
+        const signal = index === undefined ? undefined : signals[index];
+        const name = rename.name.trim();
+        if (index === undefined || !signal) return fail("invalid", "SIGNAL_NOT_FOUND", `$.renames[${position}].signalId`, `Signal '${rename.signalId}' does not exist.`);
+        if (!name) return fail("invalid", "INVALID_NAME", `$.renames[${position}].name`, "Signal name cannot be empty.");
+        if (signal.name === name) return fail("no-op", "NO_OP", `$.renames[${position}]`, "Signal already has this name.");
+        signals[index] = { ...signal, name, display: { ...signal.display, name } };
+        renamedIds.push(signal.id);
+      }
+      const changeSet: ChangeSet = { rowPresentation: renamedIds };
+      return { ok: true, document: { ...document, signals }, changeSet, inverseChangeSet: changeSet };
+    }
     case "signal.move": return moveSignal(document, command);
     case "signal.setVisibility": {
       const index = document.signals.findIndex((signal) => signal.id === command.signalId);
