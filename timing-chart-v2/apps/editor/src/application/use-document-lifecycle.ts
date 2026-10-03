@@ -316,6 +316,10 @@ export function useDocumentLifecycle({
     return true;
   }, [pendingAction, performAction, save]);
   const openRecent = useCallback(async () => {
+    // Claim the request BEFORE the async reads (same contract as readFile): a newer Open/New/Recent supersedes this one, and this one
+    // must never publish after it.
+    const requestId = ++requestIdRef.current;
+    const stale = () => requestId !== requestIdRef.current;
     const queueRecentMigration = (text: string, metadata: RecentMetadata | null) => {
       const documentId = documentIdFromRecentText(text);
       if (!documentId) return;
@@ -331,6 +335,7 @@ export function useDocumentLifecycle({
       // A Save publishes metadata only after its IndexedDB transaction commits.
       // Wait first so this read observes the matching committed generation.
       await recentWriteRef.current;
+      if (stale()) return false;
       const storedText = localStorage.getItem(RECENT_KEY);
       let metadata: (RecentMetadata & RecentDocumentMetadata) | null = null;
       const parsedMetadata: unknown = JSON.parse(localStorage.getItem(RECENT_META_KEY) ?? "null");
@@ -345,11 +350,13 @@ export function useDocumentLifecycle({
       let record: RecentDocumentRecord | undefined;
       try { record = await loadRecentDocument(); }
       catch (error) {
+        if (stale()) return false;
         if (!legacyText) throw error;
-        requestOpenText(legacyText);
+        requestOpenText(legacyText, requestId);
         queueRecentMigration(legacyText, metadata);
         return true;
       }
+      if (stale()) return false;
 
       if (metadata?.storageVersion === 2) {
         if (!recentRecordMatches(record, metadata)) {
@@ -358,12 +365,12 @@ export function useDocumentLifecycle({
           application.setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), diagnostic]);
           return false;
         }
-        requestOpenText(record.text);
+        requestOpenText(record.text, requestId);
         return true;
       }
 
       if (legacyText) {
-        requestOpenText(legacyText);
+        requestOpenText(legacyText, requestId);
         queueRecentMigration(legacyText, metadata);
         return true;
       }
@@ -371,7 +378,7 @@ export function useDocumentLifecycle({
       // Older IDB records can be reopened only when their old metadata proves
       // the same filename, timestamp, size, and canonical document identity.
       if (recentRecordMatches(record, metadata ?? {})) {
-        requestOpenText(record.text);
+        requestOpenText(record.text, requestId);
         if (!record.generation || !record.documentId) queueRecentMigration(record.text, metadata);
         return true;
       }
@@ -387,6 +394,7 @@ export function useDocumentLifecycle({
         : "No recent document is available.");
       return false;
     } catch (error) {
+      if (stale()) return false;
       const diagnostic = recentOpenFailure(error);
       application.setProblem(diagnostic.message);
       application.setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), diagnostic]);

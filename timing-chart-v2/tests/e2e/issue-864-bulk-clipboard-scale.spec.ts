@@ -117,11 +117,20 @@ test("Signals x1000: Cut is an immediate atomic bulk delete (one History step, e
   const statusBar = page.locator(".status-bar, [data-testid=status-bar]").first();
   const problems = async () => Number(/Problems:\s*(\d+)/.exec((await statusBar.textContent()) ?? "")?.[1] ?? "-1");
   // (1) Rows 2 (SIG_1) carries Annotation dependents in the generated document: Cut must be rejected atomically and say why.
+  // A previous Copy must survive a rejected Cut (the clipboard is replaced only when the Cut really happens).
+  await ui.rows.nth(20).click();
+  await ui.ribbon.getByRole("button", { name: "Copy", exact: true }).click();
   const before = await documentState(page);
   await ui.rows.nth(1).click();
   await ui.ribbon.getByRole("button", { name: "Cut", exact: true }).click();
   await expect.poll(problems, { message: "Cut with dependents adds a Problem" }).toBe(1);
   await expectViewOnly(page, before, "a rejected Cut leaves Canonical / History / Dirty untouched");
+  await expect(ui.ribbon.getByTestId("clipboard-status"), "a rejected Cut says so").toContainText("Cut rejected");
+  await ui.ribbon.getByRole("button", { name: "Paste", exact: true }).click();
+  await expect(ui.ribbon.getByTestId("clipboard-status"), "Paste after a rejected Cut still pastes the copied Signal").toHaveText("Pasted 1 signal");
+  await expect.poll(ui.signalCount).toBe("1001");
+  await page.keyboard.press("Control+z");
+  await expect.poll(ui.signalCount).toBe("1000");
   // (2) Ten ordinary Signals without dependents (Signals 14..23; the 12 generated Annotations reference Signals 0..12), multi-selected with Ctrl+click (Shift+click does not extend a Frozen-row selection).
   await ui.rows.nth(14).click();
   for (let row = 15; row <= 23; row += 1) await ui.rows.nth(row).click({ modifiers: ["Control"] });

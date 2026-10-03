@@ -98,6 +98,8 @@ export function useClipboardActions({ application, selection }: { application: E
     } else setStatus("Select a signal, Comment Row, Annotation, or Transaction to copy");
   };
 
+  /** A rejected Cut keeps the previous clipboard and says why (the full diagnostic is in Problems). */
+  const cutRejectedStatus = (result: { readonly ok: false; readonly problems: readonly { readonly message: string }[] }) => `Cut rejected: ${result.problems[0]?.message ?? "the selection cannot be removed"}`;
   const cut = () => {
     const value = selected();
     const cutSignalIds = !value.spacer && value.group
@@ -108,9 +110,11 @@ export function useClipboardActions({ application, selection }: { application: E
       return;
     }
     if (value.spacer && value.group) {
-      setClipboard({ spacer: { spacer: value.spacer, groupId: value.group.id, index: value.group.rows.indexOf(value.spacer.id) } });
+      const spacerClipboard = { spacer: value.spacer, groupId: value.group.id, index: value.group.rows.indexOf(value.spacer.id) };
       const result = application.execute({ id: nextCommandId("cut_spacer"), type: "spacer.delete", spacerId: value.spacer.id });
-      if (result.ok) { selection.clear(); setStatus(`Cut spacer ${value.spacer.id}`); }
+      // The clipboard is replaced only when the Cut really happened: a rejected Cut must keep the user's previous clipboard.
+      if (result.ok) { setClipboard({ spacer: spacerClipboard }); selection.clear(); setStatus(`Cut spacer ${value.spacer.id}`); }
+      else setStatus(cutRejectedStatus(result));
       return;
     }
     if (value.group) {
@@ -133,15 +137,17 @@ export function useClipboardActions({ application, selection }: { application: E
       return;
     }
     if (value.transactions.length > 0 && value.signals.length === 0 && !value.annotation) {
-      setClipboard({ transactions: value.transactions });
       const result = application.execute({ id: nextCommandId("cut_transactions"), type: "transaction.bulkDelete", transactionIds: value.transactions.map((transaction) => transaction.id) });
-      if (result.ok) { selection.clear(); setStatus(`Cut ${value.transactions.length} transaction${value.transactions.length === 1 ? "" : "s"}`); }
+      if (!result.ok) { setStatus(cutRejectedStatus(result)); return; }
+      setClipboard({ transactions: value.transactions });
+      { selection.clear(); setStatus(`Cut ${value.transactions.length} transaction${value.transactions.length === 1 ? "" : "s"}`); }
       return;
     }
     if (value.annotation && value.signals.length === 0) {
-      setClipboard({ annotation: value.annotation });
       const result = application.execute({ id: nextCommandId("cut_annotation"), type: "annotation.delete", annotationId: value.annotation.id });
-      if (result.ok) { selection.clear(); setStatus(`Cut ${value.annotation.label || value.annotation.type} annotation`); }
+      if (!result.ok) { setStatus(cutRejectedStatus(result)); return; }
+      setClipboard({ annotation: value.annotation });
+      { selection.clear(); setStatus(`Cut ${value.annotation.label || value.annotation.type} annotation`); }
       return;
     }
     if (value.signals.length === 0) { setStatus("Select a signal, Comment Row, Annotation, or Transaction to cut"); return; }
@@ -149,9 +155,10 @@ export function useClipboardActions({ application, selection }: { application: E
     const signalLinks = referencesToAny(value.document, "signal", selectedIds)
       .filter((reference) => reference.kind === "transaction.linkedSignal")
       .map((reference) => ({ transactionId: reference.ownerId as TransactionId, signalId: reference.targetId as SignalId }));
-    setClipboard({ signals: value.signals, cutSignals: true, signalLinks });
     const result = application.execute({ id: nextCommandId("cut"), type: "signal.bulkDelete", signalIds: value.signals.map(({ signal }) => signal.id) });
-    if (result.ok) { selection.clear(); setStatus(value.signals.length === 1 ? `Cut ${value.signals[0]!.signal.display.name}` : `Cut ${value.signals.length} signals`); }
+    if (!result.ok) { setStatus(cutRejectedStatus(result)); return; }
+    setClipboard({ signals: value.signals, cutSignals: true, signalLinks });
+    { selection.clear(); setStatus(value.signals.length === 1 ? `Cut ${value.signals[0]!.signal.display.name}` : `Cut ${value.signals.length} signals`); }
   };
 
   const moveCutSignals = () => {

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-03T13:46:59.504Z",
+  "generatedAt": "2026-10-03T18:57:57.935Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 404,
-  "caseCount": 1180,
-  "reviewedCaseCount": 1180,
+  "specFileCount": 405,
+  "caseCount": 1185,
+  "reviewedCaseCount": 1184,
   "curatedProfileCounts": {
     "integration": 597,
     "nightly": 226,
     "performance": 66,
-    "pr": 371,
+    "pr": 375,
     "visual": 180
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -1609,6 +1609,28 @@
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
       "line": 310,
+      "title": "submit_proposal previews an ordered typed batch and applies or undoes it as one History entry",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": null,
+      "originIssue": null,
+      "type": null,
+      "costClass": null,
+      "measuredRuntimeMs": null,
+      "primaryContract": null,
+      "duplicateGroup": null,
+      "executionTier": null,
+      "decision": "UNREVIEWED",
+      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "replacementTest": null,
+      "reviewStatus": "UNREVIEWED"
+    },
+    {
+      "file": "ai-bridge.spec.ts",
+      "suitePath": [],
+      "line": 353,
       "title": "propose_edit builds a Preview only -- it never auto-validates or auto-applies, and a human must still Validate + Apply it themselves",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1634,7 +1656,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 350,
+      "line": 393,
       "title": "propose_rename_signal targets a stable Signal ID and still requires human Validate and Apply",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1660,7 +1682,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 392,
+      "line": 435,
       "title": "the Editor session and pending AI proposal survive Bottom tab switches, then reject stale revision",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1686,7 +1708,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 444,
+      "line": 487,
       "title": "propose_create_signal uses a stable Group ID and remains a Preview until explicit Apply",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1712,7 +1734,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 473,
+      "line": 516,
       "title": "Signal Group move and delete tools target stable IDs and apply only after approval",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1738,7 +1760,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 522,
+      "line": 565,
       "title": "an unauthorized propose_edit call (bad token) never reaches the document, and an empty query is rejected before building any proposal",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1764,7 +1786,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 542,
+      "line": 585,
       "title": "rejects a request with an invalid token, and rejects any tool outside the exposed whitelist",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1790,7 +1812,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 581,
+      "line": 624,
       "title": "bridge disconnect is surfaced truthfully, and the same tab recovers on its own once the bridge comes back",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5010,6 +5032,58 @@
         "pr"
       ],
       "contractId": "comment-row-line-spacing-draft-apply"
+    },
+    {
+      "file": "cursor-signal-split-late-pane.spec.ts",
+      "suitePath": [],
+      "line": 12,
+      "title": "Cursor overlay attaches to a Signal Split Lower pane that mounts later at 1280x720",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "cursor-signal-split",
+      "originIssue": 549,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Cursor overlay attaches to a Signal Split Lower pane that mounts later; Lower-pane drag maps the pointer through the pane's own inner timeline scroller.",
+      "duplicateGroup": "cursor-signal-split",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Regression for the late-mounted Lower pane (no cursor) and the Lower-pane drag X offset found in the 2026-10 code review.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "cursor-signal-split"
+    },
+    {
+      "file": "cursor-signal-split-late-pane.spec.ts",
+      "suitePath": [],
+      "line": 12,
+      "title": "Cursor overlay attaches to a Signal Split Lower pane that mounts later at 1672x941",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "cursor-signal-split",
+      "originIssue": 549,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Cursor overlay attaches to a Signal Split Lower pane that mounts later; Lower-pane drag maps the pointer through the pane's own inner timeline scroller.",
+      "duplicateGroup": "cursor-signal-split",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Regression for the late-mounted Lower pane (no cursor) and the Lower-pane drag X offset found in the 2026-10 code review.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "cursor-signal-split"
     },
     {
       "file": "cycle-default-pitch.spec.ts",
@@ -10624,8 +10698,60 @@
     {
       "file": "issue-549-cursor-multi-frame-drag.spec.ts",
       "suitePath": [],
-      "line": 51,
+      "line": 86,
+      "title": "Combined Cursor A projects source cycles through the shared time geometry",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "cursor-drag",
+      "originIssue": 549,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A Cursor A/B drag follows the pointer across many frames, commits on pointerup, stops on pointercancel and is view-only.",
+      "duplicateGroup": "cursor-drag",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Existing cursor drag specs use one move + mouseup and could not see the drag tearing itself down after the first preview frame.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "cursor-drag"
+    },
+    {
+      "file": "issue-549-cursor-multi-frame-drag.spec.ts",
+      "suitePath": [],
+      "line": 104,
       "title": "pointercancel ends a Cursor drag without another cursor update",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "cursor-drag",
+      "originIssue": 549,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A Cursor A/B drag follows the pointer across many frames, commits on pointerup, stops on pointercancel and is view-only.",
+      "duplicateGroup": "cursor-drag",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Existing cursor drag specs use one move + mouseup and could not see the drag tearing itself down after the first preview frame.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "cursor-drag"
+    },
+    {
+      "file": "issue-549-cursor-multi-frame-drag.spec.ts",
+      "suitePath": [],
+      "line": 127,
+      "title": "switching mode cancels an active Cursor drag owner",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
@@ -17687,7 +17813,7 @@
       "suitePath": [
         "Large Feature Showcase Legend ownership at 1280x720"
       ],
-      "line": 237,
+      "line": 259,
       "title": "keeps the visible Legend reachable through real vertical/horizontal scroll, mode changes, Save/Open, and export",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -17715,7 +17841,7 @@
       "suitePath": [
         "Large Feature Showcase Legend ownership at 1672x941"
       ],
-      "line": 237,
+      "line": 259,
       "title": "keeps the visible Legend reachable through real vertical/horizontal scroll, mode changes, Save/Open, and export",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -18473,7 +18599,7 @@
     {
       "file": "issue-864-bulk-clipboard-scale.spec.ts",
       "suitePath": [],
-      "line": 113,
+      "line": 114,
       "title": "Signals x1000: Cut is an immediate atomic bulk delete (one History step, exact Undo); Cut of Signals with Annotation dependents is rejected via Problems at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -31087,12 +31213,12 @@
     },
     {
       "file": "ai-bridge.spec.ts",
-      "caseCount": 13,
+      "caseCount": 14,
       "reviewedCaseCount": 13,
       "originIssue": null,
       "declaredTimeoutMs": 10,
       "candidateSignals": [],
-      "semanticReviewStatus": "REVIEWED"
+      "semanticReviewStatus": "PARTIAL"
     },
     {
       "file": "ai-domain-coverage.spec.ts",
@@ -31497,6 +31623,19 @@
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "cursor-signal-split-late-pane.spec.ts",
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
+      "originIssue": null,
+      "declaredTimeoutMs": 30,
+      "candidateSignals": [
+        "querySelector",
+        "dataset",
+        "geometryRead"
+      ],
       "semanticReviewStatus": "REVIEWED"
     },
     {
@@ -32169,8 +32308,8 @@
     },
     {
       "file": "issue-549-cursor-multi-frame-drag.spec.ts",
-      "caseCount": 3,
-      "reviewedCaseCount": 3,
+      "caseCount": 5,
+      "reviewedCaseCount": 5,
       "originIssue": "549",
       "declaredTimeoutMs": null,
       "candidateSignals": [],

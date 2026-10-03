@@ -3302,6 +3302,23 @@
       "decision": "KEEP",
       "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
       "replacementTest": null
+    },
+    {
+      "file": "cursor-signal-split-late-pane.spec.ts",
+      "domain": "cursor-signal-split",
+      "originIssue": 549,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Cursor overlay attaches to a Signal Split Lower pane that mounts later; Lower-pane drag maps the pointer through the pane's own inner timeline scroller.",
+      "duplicateGroup": "cursor-signal-split",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Regression for the late-mounted Lower pane (no cursor) and the Lower-pane drag X offset found in the 2026-10 code review.",
+      "replacementTest": null
     }
   ],
   "reviews": [

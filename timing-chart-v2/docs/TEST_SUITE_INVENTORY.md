@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 404 spec files and 1180 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 405 spec files and 1185 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1180/1180 cases reviewed.
+Semantic review progress: 1184/1185 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 597 |
 | `nightly` | 226 |
 | `performance` | 66 |
-| `pr` | 371 |
+| `pr` | 375 |
 | `visual` | 180 |
 
 ## Top recorded per-case runtimes
@@ -53,7 +53,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `acceptance-429-transaction-colors.spec.ts` | 4 | 4/4 reviewed |
 | `acceptance-429-transaction-composition.spec.ts` | 32 | 32/32 reviewed |
 | `advanced-json-diagnostic.spec.ts` | 7 | 7/7 reviewed |
-| `ai-bridge.spec.ts` | 13 | 13/13 reviewed |
+| `ai-bridge.spec.ts` | 14 | 13/14 reviewed |
 | `ai-domain-coverage.spec.ts` | 1 | 1/1 reviewed |
 | `ai-proposal-workflow.spec.ts` | 10 | 10/10 reviewed |
 | `annotation-bottom-list.spec.ts` | 1 | 1/1 reviewed |
@@ -96,6 +96,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `combined-long-fixture-acceptance.spec.ts` | 2 | 2/2 reviewed |
 | `command-parity-delete.spec.ts` | 1 | 1/1 reviewed |
 | `comment-row-draft-consistency.spec.ts` | 1 | 1/1 reviewed |
+| `cursor-signal-split-late-pane.spec.ts` | 2 | 2/2 reviewed |
 | `cycle-default-pitch.spec.ts` | 1 | 1/1 reviewed |
 | `cycle-frozen-columns-scroll.spec.ts` | 2 | 2/2 reviewed |
 | `cycle-ruler-long-document-pitch.spec.ts` | 1 | 1/1 reviewed |
@@ -163,7 +164,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-440-pinned-bookmark-transaction.spec.ts` | 2 | 2/2 reviewed |
 | `issue-441-ribbon-label-integrity.spec.ts` | 3 | 3/3 reviewed |
 | `issue-456-sized-bus-literal.spec.ts` | 1 | 1/1 reviewed |
-| `issue-549-cursor-multi-frame-drag.spec.ts` | 3 | 3/3 reviewed |
+| `issue-549-cursor-multi-frame-drag.spec.ts` | 5 | 5/5 reviewed |
 | `issue-554-transaction-journey.spec.ts` | 2 | 2/2 reviewed |
 | `issue-573-combined-divider-pinned.spec.ts` | 1 | 1/1 reviewed |
 | `issue-573-combined-shared-time-axis.spec.ts` | 3 | 3/3 reviewed |
@@ -472,6 +473,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `bottom-tab-header-visibility.spec.ts` | getComputedStyle, dataset, geometryRead |
 | `checkbox-dark-color-scheme.spec.ts` | getComputedStyle |
 | `clockless-time-axis.spec.ts` | dataset, geometryRead |
+| `cursor-signal-split-late-pane.spec.ts` | querySelector, dataset, geometryRead |
 | `cycle-default-pitch.spec.ts` | querySelector, getComputedStyle, geometryRead, explicitWait |
 | `cycle-frozen-columns-scroll.spec.ts` | getComputedStyle |
 | `design-system-foundation.spec.ts` | querySelector, getComputedStyle, directDomMutation, geometryRead |
