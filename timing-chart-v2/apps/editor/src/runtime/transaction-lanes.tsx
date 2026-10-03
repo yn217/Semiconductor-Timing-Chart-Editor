@@ -20,8 +20,15 @@ const EMPTY_TRANSACTION_GROUPS: NonNullable<CanonicalDocument["transactionGroups
 // takes the first row whose last-placed end is already <= its own start)
 // gives a deterministic, minimal-row assignment with no dependency on
 // document/array order beyond that sort.
-function assignStackRows(transactions: readonly Transaction[]): { readonly rowOf: ReadonlyMap<TransactionId, number>; readonly rowCount: number } {
-  const sorted = [...transactions].sort((left, right) => left.start - right.start || left.end - right.end || left.id.localeCompare(right.id));
+function assignStackRows(transactions: readonly Transaction[], folds: readonly TransactionFoldRange[]): { readonly rowOf: ReadonlyMap<TransactionId, number>; readonly rowCount: number } {
+  // Fully fold-hidden Transactions have no visible interval to stack. Letting
+  // them reserve rows inflated the lane/grid to tens of thousands of pixels,
+  // even though the renderer mounts only bounded fold representatives.
+  const visible = folds.length === 0 ? transactions : transactions.filter((transaction) => {
+    const fold = transactionFoldContainingCycle(folds, transaction.start);
+    return fold === undefined || transaction.end > fold[1];
+  });
+  const sorted = [...visible].sort((left, right) => left.start - right.start || left.end - right.end || left.id.localeCompare(right.id));
   // A linear scan of every existing row made dense lanes quadratic. Keep the
   // next available row in a min-heap keyed by its end cycle instead.
   const available: Array<{ end: number; row: number }> = [];
@@ -298,7 +305,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   const laneIndexBuilds = useRef(0);
   const stackRowBuilds = useRef(0);
   const transactionFilterBuilds = useRef(0);
-  const stackRowsCache = useRef(new WeakMap<readonly Transaction[], ReturnType<typeof assignStackRows>>());
+  const stackRowsCache = useRef(new WeakMap<readonly Transaction[], WeakMap<readonly TransactionFoldRange[], ReturnType<typeof assignStackRows>>>());
   const laneArrayCache = useRef<ReadonlyMap<string, readonly Transaction[]> | undefined>(undefined);
   const laneTransactionCache = useRef<ReadonlyMap<TransactionId, Transaction> | undefined>(undefined);
   const laneKeyCache = useRef<ReadonlyMap<TransactionId, string> | undefined>(undefined);
@@ -560,11 +567,13 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
     if (collapsed) continue;
     for (const laneId of section.lanes) {
       const laneTransactions = laneTransactionsByKey.get(laneKey(section.groupId, laneId)) ?? [];
-      let stackRows = stackRowsCache.current.get(laneTransactions);
+      let rowsByFold = stackRowsCache.current.get(laneTransactions);
+      if (!rowsByFold) { rowsByFold = new WeakMap(); stackRowsCache.current.set(laneTransactions, rowsByFold); }
+      let stackRows = rowsByFold.get(foldRanges);
       if (!stackRows) {
-        stackRows = assignStackRows(laneTransactions);
+        stackRows = assignStackRows(laneTransactions, foldRanges);
         stackRowBuilds.current += 1;
-        stackRowsCache.current.set(laneTransactions, stackRows);
+        rowsByFold.set(foldRanges, stackRows);
       }
       const { rowOf, rowCount } = stackRows;
       // The center label column is Lane-only. Transaction navigation and

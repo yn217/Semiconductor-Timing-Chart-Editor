@@ -165,6 +165,8 @@ test("10k entities hidden by one collapsed fold use bounded rescue DOM and prese
     bookmarkMarkers: element.querySelectorAll("[data-bookmark-id]").length,
     foldSummaries: element.querySelectorAll("[data-hidden-bookmark-count]").length,
     hiddenBookmarkCount: Number(element.querySelector("[data-hidden-bookmark-count]")?.getAttribute("data-hidden-bookmark-count")),
+    laneHeight: Number.parseFloat((element as HTMLElement).style.height),
+    viewportScrollHeight: (element.closest("[data-testid='cycle-viewport']") as HTMLElement | null)?.scrollHeight ?? 0,
     transactionMiniMapSegments: document.querySelectorAll(".minimap-segment-transaction").length,
   }));
   // Fold-edge representatives preserve discoverability, but the hidden 10k
@@ -174,6 +176,8 @@ test("10k entities hidden by one collapsed fold use bounded rescue DOM and prese
   expect(initial.bookmarkMarkers).toBe(0);
   expect(initial.foldSummaries).toBe(1);
   expect(initial.hiddenBookmarkCount).toBe(10_000);
+  expect(initial.laneHeight).toBeLessThanOrEqual(40);
+  expect(initial.viewportScrollHeight).toBeLessThan(1_000);
 
   const measureScrollFrames = async (label: string) => {
     const viewport = page.getByTestId("cycle-viewport");
@@ -183,10 +187,11 @@ test("10k entities hidden by one collapsed fold use bounded rescue DOM and prese
       const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']");
       if (!viewport) throw new Error("Transaction viewport missing for #865 scroll attribution");
       const windowState = window as unknown as Record<string, unknown>;
-      const existing = windowState.__issue865ScrollMetrics as { frameMs: number[]; longTaskMs: number[] } | undefined;
-      const state = existing ?? { frameMs: [], longTaskMs: [] };
+      const existing = windowState.__issue865ScrollMetrics as { frameMs: number[]; longTasks: Array<{ startTime: number; duration: number }>; scrollWindows: Array<{ startTime: number; endTime: number }> } | undefined;
+      const state = existing ?? { frameMs: [], longTasks: [], scrollWindows: [] };
       state.frameMs.length = 0;
-      state.longTaskMs.length = 0;
+      state.longTasks.length = 0;
+      state.scrollWindows.length = 0;
       windowState.__issue865ScrollMetrics = state;
       if (!existing) {
         viewport.addEventListener("scroll", () => {
@@ -194,7 +199,7 @@ test("10k entities hidden by one collapsed fold use bounded rescue DOM and prese
           requestAnimationFrame(() => requestAnimationFrame(() => state.frameMs.push(performance.now() - started)));
         }, { passive: true });
         if (typeof PerformanceObserver !== "undefined") {
-          const observer = new PerformanceObserver((list) => state.longTaskMs.push(...list.getEntries().map((entry) => entry.duration)));
+          const observer = new PerformanceObserver((list) => state.longTasks.push(...list.getEntries().map((entry) => ({ startTime: entry.startTime, duration: entry.duration }))));
           try { observer.observe({ type: "longtask" }); } catch { /* Long Task API is optional; retain frame samples. */ }
         }
       }
@@ -205,6 +210,11 @@ test("10k entities hidden by one collapsed fold use bounded rescue DOM and prese
     expect(maxScrollLeft, "Transaction time viewport must have horizontal overflow for scroll attribution").toBeGreaterThan(0);
     const wheelDelta = previousScrollLeft <= maxScrollLeft / 2 ? 180 : -180;
     for (let index = 0; index < 8; index += 1) {
+      const windowIndex = await page.evaluate(() => {
+        const state = (window as unknown as { __issue865ScrollMetrics: { scrollWindows: Array<{ startTime: number; endTime: number }> } }).__issue865ScrollMetrics;
+        state.scrollWindows.push({ startTime: performance.now(), endTime: Number.POSITIVE_INFINITY });
+        return state.scrollWindows.length - 1;
+      });
       await page.mouse.move(viewportBounds!.x + viewportBounds!.width / 2, viewportBounds!.y + viewportBounds!.height / 2);
       // Scroll away from the nearest edge so each native wheel sample has room
       // to move, even when opening the fixture starts at the far-right edge.
@@ -212,11 +222,21 @@ test("10k entities hidden by one collapsed fold use bounded rescue DOM and prese
       await expect.poll(() => viewport.evaluate((element) => element.scrollLeft), { message: `${label} native horizontal wheel step ${index + 1}` }).not.toBe(previousScrollLeft);
       previousScrollLeft = await viewport.evaluate((element) => element.scrollLeft);
       await expect.poll(() => page.evaluate(() => ((window as unknown as { __issue865ScrollMetrics: { frameMs: number[] } }).__issue865ScrollMetrics.frameMs.length))).toBeGreaterThan(samplesBefore + index);
+      await page.evaluate((at) => {
+        const state = (window as unknown as { __issue865ScrollMetrics: { scrollWindows: Array<{ startTime: number; endTime: number }> } }).__issue865ScrollMetrics;
+        const interval = state.scrollWindows[at];
+        if (interval) interval.endTime = performance.now();
+      }, windowIndex);
     }
     return page.evaluate((name) => {
-      const state = (window as unknown as { __issue865ScrollMetrics: { frameMs: number[]; longTaskMs: number[] } }).__issue865ScrollMetrics;
+      const state = (window as unknown as { __issue865ScrollMetrics: { frameMs: number[]; longTasks: Array<{ startTime: number; duration: number }>; scrollWindows: Array<{ startTime: number; endTime: number }> } }).__issue865ScrollMetrics;
       const samples = state.frameMs.slice(-8).sort((a, b) => a - b);
-      return { label: name, p50Ms: samples[3] ?? 0, p95Ms: samples[7] ?? 0, longTaskCount: state.longTaskMs.length, maxLongTaskMs: Math.max(0, ...state.longTaskMs) };
+      const windows = state.scrollWindows.slice(-8);
+      const overlappingLongTasks = state.longTasks.flatMap((task) => {
+        const scrollWindowIndexes = windows.flatMap((interval, index) => task.startTime < interval.endTime && task.startTime + task.duration > interval.startTime ? [index] : []);
+        return scrollWindowIndexes.length > 0 ? [{ ...task, scrollWindowIndexes }] : [];
+      });
+      return { label: name, p50Ms: samples[3] ?? 0, p95Ms: samples[7] ?? 0, scrollWindowCount: windows.length, overlappingLongTaskCount: overlappingLongTasks.length, maxOverlappingLongTaskMs: Math.max(0, ...overlappingLongTasks.map((task) => task.duration)), overlappingLongTasks };
     }, label);
   };
   const minimapEnabledScroll = await measureScrollFrames("MiniMap enabled");
@@ -238,6 +258,23 @@ test("10k entities hidden by one collapsed fold use bounded rescue DOM and prese
   expect(await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision")).toBe(revision);
   expect(await page.getByTestId("history-status").textContent()).toBe(history);
   expect(await page.getByTestId("dirty-status").textContent()).toBe(dirty);
+
+  // Counterbalance the cold-first-scroll attribution in a fresh app document:
+  // disable MiniMap before any timeline scroll, then collect the same eight
+  // native scroll windows. This distinguishes first-use renderer/layout work
+  // from work that requires a visible MiniMap.
+  await page.reload();
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "transaction-hidden-rescue-minimap-off-first.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", "10000", { timeout: 60_000 });
+  await page.getByRole("button", { name: "Transaction", exact: true }).click();
+  await expect(page.getByTestId("transaction-lanes")).toBeVisible();
+  await expect(page.getByTestId("minimap")).toHaveAttribute("aria-busy", "false", { timeout: 60_000 });
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "MiniMap", exact: true }).click();
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-minimap-enabled", "false");
+  const miniMapHiddenFirstScroll = await measureScrollFrames("MiniMap hidden first interaction after reload");
+  console.log(`[issue-865-cold-scroll-ab] ${JSON.stringify(miniMapHiddenFirstScroll)}`);
 });
 
 test("standalone Transaction cycle viewport scroll advances the virtualized lane window", async ({ page }) => {
