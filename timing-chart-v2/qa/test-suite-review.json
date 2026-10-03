@@ -552,6 +552,23 @@
       "replacementTest": null
     },
     {
+      "file": "issue-175-scrollbar-geometry-matrix.spec.ts",
+      "domain": "timeline-scrollbar",
+      "originIssue": 175,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "The Timeline horizontal scrollbar keeps following its current scroll owner through panel, resize, zoom, mode and document changes.",
+      "duplicateGroup": "timeline-scrollbar",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Regression guard for effect-lifecycle optimisations of TimelineHorizontalScrollbar (#175 / PR #1025 regressed it).",
+      "replacementTest": null
+    },
+    {
       "file": "issue-208-open-epoch-coherence.spec.ts",
       "domain": "open-epoch",
       "originIssue": 208,
