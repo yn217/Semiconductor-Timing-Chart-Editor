@@ -118,17 +118,21 @@ export function documentProblemRuleDescriptor(code: string): DocumentProblemRule
     ?? SCHEMA_RULE_DESCRIPTORS.find((descriptor) => descriptor.code === code);
 }
 
-function walkNumbers(value: unknown, path: string, problems: DocumentProblem[]): void {
+function inspectCanonicalState(value: unknown, path: string, numbers: DocumentProblem[], forbidden: DocumentProblem[]): void {
   if (typeof value === "number" && !Number.isFinite(value)) {
-    problems.push(problem("NON_FINITE_NUMBER", path, "NaN and Infinity are forbidden in canonical documents."));
+    numbers.push(problem("NON_FINITE_NUMBER", path, "NaN and Infinity are forbidden in canonical documents."));
     return;
   }
   if (Array.isArray(value)) {
-    value.forEach((entry, index) => walkNumbers(entry, `${path}[${index}]`, problems));
+    value.forEach((entry, index) => inspectCanonicalState(entry, `${path}[${index}]`, numbers, forbidden));
     return;
   }
   if (value !== null && typeof value === "object") {
-    Object.entries(value).forEach(([key, entry]) => walkNumbers(entry, `${path}.${key}`, problems));
+    for (const [key, entry] of Object.entries(value)) {
+      const childPath = `${path}.${key}`;
+      if (DERIVED_OR_TRANSIENT_KEYS.has(key)) forbidden.push(problem("NON_PERSISTENT_FIELD", childPath, `Field '${key}' belongs to transient or derived state.`));
+      inspectCanonicalState(entry, childPath, numbers, forbidden);
+    }
   }
 }
 
@@ -137,18 +141,6 @@ const DERIVED_OR_TRANSIENT_KEYS = new Set([
   "screenX", "screenY", "scroll", "scrollLeft", "scrollTop", "zoom", "selection", "hover",
   "problems", "minimap", "generatedEdges", "edgeList", "dragPreview",
 ]);
-
-function findForbiddenState(value: unknown, path: string, problems: DocumentProblem[]): void {
-  if (Array.isArray(value)) {
-    value.forEach((entry, index) => findForbiddenState(entry, `${path}[${index}]`, problems));
-    return;
-  }
-  if (value === null || typeof value !== "object") return;
-  for (const [key, entry] of Object.entries(value)) {
-    if (DERIVED_OR_TRANSIENT_KEYS.has(key)) problems.push(problem("NON_PERSISTENT_FIELD", `${path}.${key}`, `Field '${key}' belongs to transient or derived state.`));
-    findForbiddenState(entry, `${path}.${key}`, problems);
-  }
-}
 
 function requiredBits(value: string | number): number | undefined {
   if (typeof value === "number") {
@@ -219,8 +211,9 @@ function validateAnchor(anchor: SemanticAnchor, path: string, annotation: Annota
 
 export function validateCanonicalDocument(input: unknown): readonly CanonicalDocumentProblem[] {
   const problems: CanonicalDocumentProblem[] = [];
-  walkNumbers(input, "$", problems);
-  findForbiddenState(input, "$", problems);
+  const forbiddenState: CanonicalDocumentProblem[] = [];
+  inspectCanonicalState(input, "$", problems, forbiddenState);
+  for (const item of forbiddenState) problems.push(item);
   if (!validateSchema(input)) problems.push(...(validateSchema.errors ?? []).map(schemaProblem));
   if (problems.length > 0 || input === null || typeof input !== "object") return problems;
 

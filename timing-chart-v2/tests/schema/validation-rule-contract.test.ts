@@ -15,6 +15,22 @@ import {
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 describe("canonical validation problem-code contract", () => {
+  it("inspects nested state once while preserving number-before-transient diagnostic order", () => {
+    let enumerations = 0;
+    const nested = new Proxy({ zoom: Number.NaN, rows: [{ screenX: Infinity, value: -Infinity }] }, {
+      ownKeys(target) { enumerations += 1; return Reflect.ownKeys(target); },
+    });
+    const problems = validateCanonicalDocument({ ...canonicalFixture(), unexpected: nested });
+    expect(enumerations).toBe(1);
+    expect(problems.filter((item) => item.code === "NON_FINITE_NUMBER" || item.code === "NON_PERSISTENT_FIELD").map((item) => [item.code, item.path])).toEqual([
+      ["NON_FINITE_NUMBER", "$.unexpected.zoom"],
+      ["NON_FINITE_NUMBER", "$.unexpected.rows[0].screenX"],
+      ["NON_FINITE_NUMBER", "$.unexpected.rows[0].value"],
+      ["NON_PERSISTENT_FIELD", "$.unexpected.zoom"],
+      ["NON_PERSISTENT_FIELD", "$.unexpected.rows[0].screenX"],
+    ]);
+    expect(validateCanonicalDocument(canonicalFixture())).toEqual([]);
+  });
   it("exports one typed inventory and descriptors for representative canonical faults", () => {
     expect(canonicalValidationCodes()).toEqual(CANONICAL_PROBLEM_CODES);
     expect(canonicalRuleDescriptors().every((descriptor) => canonicalValidationCodes().includes(descriptor.code) && descriptor.category === "canonical")).toBe(true);
