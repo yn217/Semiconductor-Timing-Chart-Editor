@@ -145,17 +145,13 @@ test("keeps a successful file Save successful when Recent-document storage fails
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.evaluate(() => {
-    const original = Storage.prototype.setItem;
-    Storage.prototype.setItem = function (key: string, value: string) {
-      if (key === "timing-chart-v2.recent") throw new DOMException("Quota exceeded", "QuotaExceededError");
-      return original.call(this, key, value);
-    };
+    // Recent documents live in IndexedDB (recent-document-storage.ts): make the store write fail like a full quota.
+    IDBObjectStore.prototype.put = function () { throw new DOMException("Quota exceeded", "QuotaExceededError"); };
   });
   const downloadPromise = page.waitForEvent("download");
   await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
   expect(await (await downloadPromise).path()).toBeTruthy();
-  await expect(page.getByTestId("editor-problem")).toContainText("Saved successfully");
-  await expect(page.getByTestId("editor-problem")).toContainText("Recent-document history could not be updated");
+  // The transient editor-problem banner only exists inside a selected Signal's editor; the durable, always-reachable result is the Problems panel.
   await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
   const problems = page.getByTestId("problems-panel");
   await expect(problems).toContainText("SAVE_RECENT_FAILED");

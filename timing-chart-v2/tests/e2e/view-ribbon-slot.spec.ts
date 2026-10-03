@@ -121,6 +121,8 @@ test("View groups compress without horizontal overflow at 1280px", async ({ page
 });
 
 test("View group controls stay inside their owned regions", async ({ page }) => {
+  // Fit All / Fit Selection are both visible only at the wide supported viewport; at 1280px the Zoom group compresses them.
+  await page.setViewportSize({ width: 1672, height: 941 });
   await page.goto("/");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   const metrics = await page.getByTestId("ribbon").evaluate((ribbon) => [...ribbon.querySelectorAll<HTMLElement>("[data-major-group]")].map((group) => {

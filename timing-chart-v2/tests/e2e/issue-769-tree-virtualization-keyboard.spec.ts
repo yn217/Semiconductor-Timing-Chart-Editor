@@ -47,7 +47,8 @@ test("Journey 3-4: keyboard navigation continues correctly after a Group above c
   await openLargeGroup(page, 520);
   // A real Group above the large Ungrouped set: create the Group, select one row and move it in via the Bottom "Group" select so
   // collapsing that Group actually changes height (an empty Group's collapse would not move anything below it).
-  await page.getByTestId("add-transaction-group-tree-visible").click();
+  await page.getByTestId("add-transaction-tree").click();
+  await page.getByTestId("add-transaction-group-menu-item").click();
   await expect(page.locator(".transaction-left-tree-group[data-transaction-group-id]").first()).toBeVisible();
   const firstRow = page.locator(".transaction-left-tree-row").first();
   const firstRowId = await firstRow.getAttribute("data-transaction-tree-id");

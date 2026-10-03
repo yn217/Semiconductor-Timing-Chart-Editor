@@ -440,12 +440,17 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
           projectionCoordinator,
           collapsedGroupIds: [...collapsedGroupIdsRef.current],
           onProjection: (nextProjection: RenderProjection, nextWindow: VirtualizationWindow, mountedSignalsChanged: boolean) => {
+            const sameProjection = nextProjection === projection;
             window = nextWindow;
             projection = nextProjection;
             if (mountedSignalsChanged) timelineGeometry.invalidateSnapIndex();
-            renderer.update(projection);
-            rendererHost.dataset.viewportStartY = String(window.viewportStartY);
-            publishState();
+            if (sameProjection) renderer.updateViewport(projection);
+            else {
+              renderer.update(projection);
+              const viewportStartY = String(window.viewportStartY);
+              if (rendererHost.dataset.viewportStartY !== viewportStartY) rendererHost.dataset.viewportStartY = viewportStartY;
+              publishState();
+            }
             // Annotation overlays are viewport-filtered too. A scroll can
             // move a previously-offscreen source anchor into view without
             // changing the mounted Signal rows; refresh after any newly
@@ -456,7 +461,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
             const refreshEpoch = documentEpoch.current();
             void renderer.whenIdle().then(() => {
               if (!active || !rendererHost.isConnected || refreshGeneration !== scrollOverlayRefreshGeneration || !documentEpoch.isCurrent(refreshEpoch)) return;
-              timelineRuntime.refreshOverlays();
+              timelineRuntime.refreshOverlays("scroll");
             });
           },
         }));
@@ -906,11 +911,8 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       onSelect,
       onTreeKeyDown,
       onScroll: () => {
-        // Keep the sticky ruler in the same scroll transaction as the
-        // scrollable overlay surface. The runtime render path is intentionally
-        // coalesced, but ruler alignment must be immediate for pointer/test
-        // observers that sample geometry in the same task.
-        syncRulerScroll(rulerElement, viewportElement, timelineGeometry.timeAxisMetrics.zoom);
+        // onViewportScroll invokes timelineRender synchronously; that path
+        // performs the immediate sticky-ruler sync before coalescing row work.
         timelineRuntime.onViewportScroll();
       },
       onViewportKeyDown,

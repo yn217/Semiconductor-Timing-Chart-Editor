@@ -18,7 +18,8 @@ test("left-pane Add and keyboard journey at both supported viewports", async ({ 
     const paneBefore = await page.getByTestId("left-workspace-rail").boundingBox();
 
     // Journey B: Add.
-    await header.getByRole("button", { name: "Add transaction", exact: true }).click();
+    await header.getByRole("button", { name: "Add transaction or group", exact: true }).click();
+    await page.getByTestId("add-transaction-menu-item").click();
     await expect.poll(async () => (await ids()).length).toBe(before.length + 1);
     const created = (await ids()).filter((id) => !before.includes(id));
     expect(created).toHaveLength(1);

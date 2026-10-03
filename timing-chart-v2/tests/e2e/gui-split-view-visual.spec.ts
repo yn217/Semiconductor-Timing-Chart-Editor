@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
+import { visualArtifactRoot } from "./artifact-output.js";
 
 test("captures the stacked Combined composition with both contexts and zero view mutation", async ({ page }) => {
   await page.setViewportSize({ width: 1672, height: 941 });
@@ -66,8 +67,8 @@ test("captures the stacked Combined composition with both contexts and zero view
   await expect(viewport).toHaveAttribute("data-pane", "signal");
   await expect(page.locator(".bottom-tabs").getByRole("tab", { name: "Signal", exact: true })).toBeVisible();
   await expect(page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true })).toBeVisible();
-  await mkdir(resolve(process.cwd(), "artifacts", "gui-split-view"), { recursive: true });
-  await page.screenshot({ path: resolve(process.cwd(), "artifacts", "gui-split-view", "split-1672x941.png"), animations: "disabled" });
+  await mkdir(resolve(visualArtifactRoot(), "gui-split-view"), { recursive: true });
+  await page.screenshot({ path: resolve(visualArtifactRoot(), "gui-split-view", "split-1672x941.png"), animations: "disabled" });
 
   await expect(surface).toHaveAttribute("data-canonical-revision", before.revision!);
   await expect(surface).toHaveAttribute("data-history-depth", before.history!);

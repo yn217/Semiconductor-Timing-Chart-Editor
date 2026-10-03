@@ -114,7 +114,7 @@ export type SignalTreeColumnHeaderProps = {
 type HeaderButton = { readonly label: string; readonly testId?: string; readonly expanded?: boolean; readonly popup?: "menu"; readonly onClick: (event: React.MouseEvent<HTMLButtonElement>) => void };
 export function LeftPaneHeaderActions({ add, more, children }: { readonly add: HeaderButton; readonly more: HeaderButton & { readonly buttonRef?: React.RefObject<HTMLButtonElement | null> }; readonly children?: ReactNode }) {
   return <span className="left-column-actions">
-    <button type="button" className="tree-add-button" aria-label={add.label} title={add.label} {...(add.testId ? { "data-testid": add.testId } : {})} {...(add.expanded === undefined ? {} : { "aria-expanded": add.expanded })} onClick={add.onClick}><EditorIcon name="plus" /></button>
+    <button type="button" className="tree-add-button" aria-label={add.label} title={add.label} {...(add.testId ? { "data-testid": add.testId } : {})} {...(add.expanded === undefined ? {} : { "aria-expanded": add.expanded })} {...(add.popup ? { "aria-haspopup": add.popup } : {})} onClick={add.onClick}><EditorIcon name="plus" /></button>
     {children}
     <button ref={more.buttonRef} type="button" className="tree-more-button" aria-label={more.label} title={more.label} {...(more.testId ? { "data-testid": more.testId } : {})} {...(more.expanded === undefined ? {} : { "aria-expanded": more.expanded })} {...(more.popup ? { "aria-haspopup": more.popup } : {})} onClick={more.onClick}><EditorIcon name="more" /></button>
   </span>;
@@ -156,7 +156,7 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
     if (!addMenuOpen && !moreMenuOpen) return;
     const frame = requestAnimationFrame(() => {
       const menu = document.querySelector<HTMLElement>(
-        addMenuOpen ? "[role='menu'][aria-label='Add signal or group']" : "[role='menu'][aria-label='More tree actions']",
+        addMenuOpen ? "[role='menu'].tree-add-menu" : "[role='menu'][aria-label='More tree actions']",
       );
       menu?.querySelector<HTMLButtonElement>("button[role='menuitem']:not(:disabled)")?.focus();
     });
@@ -164,6 +164,20 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
   }, [addMenuOpen, moreMenuOpen]);
   const [transactionMoreOpen, setTransactionMoreOpen] = useState(false);
   const transactionMoreButton = useRef<HTMLButtonElement>(null);
+  const [transactionAddPosition, setTransactionAddPosition] = useState<{ readonly left: number; readonly top: number }>();
+  // #1007: the Transaction header clips its children, so the shared Add menu (same .tree-add-menu surface, keyboard/outside-click/focus-return owners as Cycle) is portaled and anchored to the Add button.
+  useLayoutEffect(() => {
+    if (!addMenuOpen || !transactionMode) { setTransactionAddPosition(undefined); return; }
+    const place = () => {
+      const trigger = document.querySelector<HTMLElement>("[data-testid='add-transaction-tree']");
+      if (!trigger) return;
+      const rect = trigger.getBoundingClientRect();
+      setTransactionAddPosition({ left: Math.max(8, Math.min(rect.left, window.innerWidth - 150)), top: rect.bottom + 4 });
+    };
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
+  }, [addMenuOpen, transactionMode]);
   const [transactionMenuPosition, setTransactionMenuPosition] = useState<{ readonly left: number; readonly top: number }>();
   // The Transaction tree header clips its children (overflow:hidden grid), so the menu is portaled to <body> and anchored to the button;
   // rendered inline it was cut to the first item and sat behind the timeline.
@@ -206,11 +220,13 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
       </label>}
       {<select aria-label="Filter transactions" title="Filters the Transaction Tree (left) by kind" data-filter-active={String(transactionMode.filterMode !== "all")} value={transactionMode.filterMode} onChange={(event) => transactionMode.onFilterModeChange(event.target.value as typeof transactionMode.filterMode)}><option value="all">All</option><option value="grouped">Grouped</option><option value="ungrouped">Ungrouped</option><option value="phases">Has Phases</option><option value="no-phases">No Phases</option><option value="linked">Has Linked Signals</option><option value="visible">Visible</option><option value="hidden">Hidden</option></select>}
       <LeftPaneHeaderActions
-        add={{ label: "Add transaction", testId: "add-transaction-tree", onClick: transactionMode.onAdd }}
+        add={{ label: "Add transaction or group", testId: "add-transaction-tree", expanded: addMenuOpen, popup: "menu", onClick: (event) => onToggleAddMenu(event.currentTarget) }}
         more={{ label: "Transaction tree actions", testId: "transaction-tree-more", expanded: transactionMoreOpen, popup: "menu", buttonRef: transactionMoreButton, onClick: () => setTransactionMoreOpen((open) => !open) }}
-      >
-        <button type="button" className="tree-add-group-button" aria-label="New Transaction Group" title="New Transaction Group" data-testid="add-transaction-group-tree-visible" onClick={transactionMode.onAddGroup}>+ Group</button>
-      </LeftPaneHeaderActions>
+      />
+      {addMenuOpen && transactionAddPosition && createPortal(<div className="tree-add-menu tree-add-menu--floating" role="menu" aria-label="Add transaction or group" data-testid="transaction-tree-add-menu" style={transactionAddPosition}>
+        <button type="button" role="menuitem" data-testid="add-transaction-menu-item" onClick={() => { transactionMode.onAdd(); onCloseAddMenu(); }}>Transaction</button>
+        <button type="button" role="menuitem" data-testid="add-transaction-group-menu-item" onClick={() => { transactionMode.onAddGroup(); onCloseAddMenu(); }}>Group</button>
+      </div>, document.body)}
       {transactionMoreOpen && transactionMenuPosition && createPortal(<div className="tree-header-menu tree-header-menu--floating" role="menu" aria-label="Transaction tree actions" data-testid="transaction-tree-more-menu" style={transactionMenuPosition}>
         <button type="button" role="menuitem" data-testid="transaction-tree-expand-all" onClick={() => { transactionMode.onExpandAll(); setTransactionMoreOpen(false); }}>Expand All</button>
         <button type="button" role="menuitem" data-testid="transaction-tree-collapse-all" onClick={() => { transactionMode.onCollapseAll(); setTransactionMoreOpen(false); }}>Collapse All</button>

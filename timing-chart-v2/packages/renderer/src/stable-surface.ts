@@ -1,6 +1,7 @@
 import type { RenderProjection, RowLayoutEntry } from "@timing-chart-v2/projection";
 import { createLeftTreeIcon, createRoleBadge } from "./tree-row-dom.js";
 import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnosticSummary, RendererDiagnostics, RendererRowIdentitySnapshot, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveMountBatchItem, WaveMountRequest, WavePrefetchRequest, WaveSignalId } from "./types.js";
+import { isWavePrefetchModeEligible, WavePrefetchLifecycle } from "./wave-prefetch-lifecycle.js";
 import { applyTextStyle, parseTextStyle, renderOverlay } from "./annotation-overlay-dom.js";
 import { groupBackgroundColor } from "./group-background.js";
 import { syncGroupHeaderLayer } from "./group-header-dom.js";
@@ -84,8 +85,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   #prefetchSignalIds: readonly WaveSignalId[] = [];
   #prefetchIndexBySignal = new Map<WaveSignalId, number>();
   #prefetchPlan: readonly WavePrefetchRequest[] = [];
-  #prefetchPlanKey = "";
-  #prefetchGeneration = 0;
+  readonly #prefetchLifecycle = new WavePrefetchLifecycle();
   #prefetchTask: Promise<void> | undefined;
   #prefetchAttempted = new Set<string>();
   #lastPrefetchScrollTop: number | undefined;
@@ -200,9 +200,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       this.#wavePending.clear();
       this.#waveWindowRetryKeys.clear();
       this.#waveStaleRetryKeys.clear();
-      this.#prefetchGeneration += 1;
+      this.#prefetchLifecycle.invalidatePlan();
       this.#prefetchPlan = [];
-      this.#prefetchPlanKey = "";
       this.#prefetchAttempted.clear();
       this.#diagnostics = { ...this.#diagnostics, waveRendersBySignalCount: 0, localGeometryBuildsBySignalCount: 0, diagnosticMapPrunePasses: this.#diagnosticMapPrunePasses };
       for (const [signalId, owner] of this.#waveOwners) {
@@ -319,6 +318,25 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     // #indexedRows() above owns these identity-cached indexes. Copying each
     // complete map here after every presentation-only edit duplicated O(rows)
     // work without changing the row lookup contents.
+  }
+
+  updateViewport(projection: RenderProjection): void {
+    if (!this.#layers) throw new Error("Timing chart renderer must be mounted before viewport update.");
+    assertCrossSurfaceInvariant(projection);
+    for (const signalId of projection.mountedSignalIds) {
+      const owner = this.#waveOwners.get(signalId);
+      if (!owner || !owner.isConnected) {
+        // A row/owner was unexpectedly evicted; restore the complete projection
+        // contract instead of silently leaving a mounted Signal without a wave.
+        this.update(projection);
+        return;
+      }
+      const sourceWindow = this.#provider.getSourceWindow?.(owner);
+      const sourceWindowChanged = sourceWindow !== undefined
+        && (owner.dataset.renderedSourceWindowStart !== String(sourceWindow.start)
+          || owner.dataset.renderedSourceWindowEnd !== String(sourceWindow.end));
+      if (this.#dirtyWaves.has(signalId) || sourceWindowChanged) this.#queueWave(signalId, owner);
+    }
   }
 
   counters(): Readonly<RenderCounters> {
@@ -499,7 +517,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#navigationRowIndex.clear();
     this.#layers?.root.remove();
     this.#layers = undefined;
-    this.#prefetchGeneration += 1;
+    this.#prefetchLifecycle.invalidatePlan();
     this.#prefetchPlan = [];
     this.#prefetchAttempted.clear();
   }
@@ -508,11 +526,15 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     const layers = this.#layers;
     if (!layers || !this.#provider.prefetchWaveBatch) return;
     const viewMode = layers.root.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode;
-    if (viewMode === "Transaction") {
+    const prefetchEligible = isWavePrefetchModeEligible(viewMode);
+    const eligibilityChanged = this.#prefetchLifecycle.setEligible(prefetchEligible);
+    if (!prefetchEligible) {
+      if (eligibilityChanged) this.#prefetchAttempted.clear();
       this.#prefetchPlan = [];
       this.#diagnostics = { ...this.#diagnostics, wavePrefetchOwnerCount: 0 };
       return;
     }
+    if (eligibilityChanged) this.#prefetchAttempted.clear();
     const sourceRows = projection.rowLayout;
     if (this.#prefetchRowLayoutSource !== sourceRows) {
       this.#prefetchRowLayoutSource = sourceRows;
@@ -561,7 +583,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       this.#diagnostics = { ...this.#diagnostics, wavePrefetchOwnerCount: 0 };
       return;
     }
-    const generation = this.#prefetchGeneration + 1;
+    const generation = this.#prefetchLifecycle.nextGeneration();
     const requests = candidates.map((signalId): WavePrefetchRequest => {
       const version = this.#waveVersions.get(signalId) ?? 0;
       if (!this.#waveVersions.has(signalId)) this.#waveVersions.set(signalId, version);
@@ -570,7 +592,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         documentEpoch: this.#documentEpoch,
         ownerDocument: layers.root.ownerDocument,
         sourceWindow,
-        isFresh: () => this.#prefetchGeneration === generation
+        isFresh: () => this.#prefetchLifecycle.isCurrent(generation)
           && this.#documentEpoch === projection.documentEpoch
           && this.#waveVersions.get(signalId) === version
           && this.#canonicalSignalIdSet.has(signalId),
@@ -578,17 +600,20 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     });
     const key = requests.map((request) => `${request.signalId}@${this.#waveVersions.get(request.signalId)}`).join(",")
       + `:${sourceWindow.start}-${sourceWindow.end}:${projection.documentEpoch}`;
-    if (key !== this.#prefetchPlanKey) {
-      this.#prefetchGeneration = generation;
-      this.#prefetchPlanKey = key;
+    if (this.#prefetchLifecycle.setPlanKey(key)) {
       this.#prefetchPlan = requests;
     }
     this.#diagnostics = { ...this.#diagnostics, wavePrefetchOwnerCount: this.#prefetchPlan.length };
+    // Normally prefetch starts after the visible wave batch so it cannot
+    // compete with newly-mounted owners. A mode roundtrip can restore an
+    // unchanged visible cohort with no wave batch queued; start the rebuilt
+    // plan directly in that case instead of leaving it dormant until scroll.
+    if (eligibilityChanged && this.#waveQueue.size === 0 && this.#wavePending.size === 0) this.#startWavePrefetch();
   }
 
   #startWavePrefetch(): void {
     if (this.#prefetchTask || !this.#layers || !this.#provider.prefetchWaveBatch || this.#prefetchPlan.length === 0) return;
-    const generation = this.#prefetchGeneration;
+    const generation = this.#prefetchLifecycle.generation;
     const plan = this.#prefetchPlan.filter((request) => {
       const key = `${request.signalId}@${this.#waveVersions.get(request.signalId)}:${request.sourceWindow?.start}-${request.sourceWindow?.end}:${request.documentEpoch}`;
       if (this.#prefetchAttempted.has(key)) return false;
@@ -602,7 +627,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       this.#prefetchAttempted.delete(oldest);
     }
     const task = this.#provider.prefetchWaveBatch(plan).then((result) => {
-      if (this.#prefetchGeneration !== generation || !this.#layers) return;
+      if (!this.#prefetchLifecycle.isCurrent(generation) || !this.#layers) return;
       this.#diagnostics = {
         ...this.#diagnostics,
         wavePrefetchRequestedCount: this.#diagnostics.wavePrefetchRequestedCount + result.requested,
@@ -613,12 +638,12 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       };
       this.#publishCounters();
     }).catch(() => {
-      if (this.#prefetchGeneration !== generation || !this.#layers) return;
+      if (!this.#prefetchLifecycle.isCurrent(generation) || !this.#layers) return;
       this.#diagnostics = { ...this.#diagnostics, wavePrefetchFailedCount: this.#diagnostics.wavePrefetchFailedCount + plan.length };
       this.#publishCounters();
     }).finally(() => {
       if (this.#prefetchTask === task) this.#prefetchTask = undefined;
-      if (this.#prefetchGeneration !== generation) this.#startWavePrefetch();
+      if (!this.#prefetchLifecycle.isCurrent(generation)) this.#startWavePrefetch();
     });
     this.#prefetchTask = task;
   }
