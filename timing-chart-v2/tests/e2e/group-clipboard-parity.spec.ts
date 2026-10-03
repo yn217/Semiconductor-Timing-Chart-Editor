@@ -3,8 +3,52 @@ import { readFile } from "node:fs/promises";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import type { SignalId, TransactionId } from "@timing-chart-v2/schema";
 import { startInCycleSample } from "./cycle-startup.js";
+import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 
 startInCycleSample(test);
+
+test("duplicates a 2000-row Group with fresh identities and exact one-step Undo/Redo", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const fixture = generatePerformanceDocument({ signalCount: 2000, cycleCount: 40, profile: "standard" });
+  const group = { ...fixture.signalGroups[0]!, rows: fixture.signals.map((signal) => signal.id), spacers: [] };
+  const document = { ...fixture, signalGroups: [group] };
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "group-2000.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-signal-count", "2000");
+  const ribbon = page.getByTestId("ribbon");
+  const save = async () => {
+    const download = page.waitForEvent("download");
+    await ribbon.getByRole("button", { name: "Save", exact: true }).click();
+    return JSON.parse(await readFile((await (await download).path())!, "utf8"));
+  };
+  const before = await save();
+  await host.locator(`[data-role='left-group-header'][data-group-id='${group.id}'] [data-role='tree-branch']`).first().click();
+  await ribbon.getByRole("button", { name: "Duplicate", exact: true }).first().click();
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-signal-count", "4000");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  const after = await save();
+  const copied = after.signalGroups.find((item: { id: string }) => item.id !== group.id);
+  expect(copied.rows).toHaveLength(2000);
+  const originalIds = new Set(group.rows);
+  expect(copied.rows.every((id: SignalId) => !originalIds.has(id))).toBe(true);
+  expect(new Set(after.signals.map((signal: { id: string }) => signal.id)).size).toBe(4000);
+  const byId = new Map(after.signals.map((signal: { id: string }) => [signal.id, signal]));
+  copied.rows.forEach((id: string, index: number) => {
+    const { id: _originalId, ...original } = before.signals[index];
+    const { id: _copiedId, ...copy } = byId.get(id) as Record<string, unknown>;
+    expect(copy).toEqual(original);
+  });
+  await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+  expect(await save()).toEqual(before);
+  await ribbon.getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  expect(await save()).toEqual(after);
+});
 
 test("copies, pastes, and duplicates a group as one semantic batch", async ({ page }) => {
   await page.goto("/");
