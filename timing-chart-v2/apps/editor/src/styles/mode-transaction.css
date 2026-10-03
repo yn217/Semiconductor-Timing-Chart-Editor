@@ -1,5 +1,6 @@
 /* Transaction Mode workspace owner: every rule scoped by .cycle-panel.mode-transaction, moved here
    from app-shell/center-columns/bottom-editor so the mode has one stylesheet (#593). */
+.editor-shell[data-view-mode="Transaction"] { --gui-workspace-header-height: 58px; }
 /* Transaction mode's tree header is 58px tall (line 140), not the plain
    37px `.column-headings` height every other mode uses -- `.cycle-viewport`
    kept the flat 37px offset, so its bottom 21px (exactly enough to swallow

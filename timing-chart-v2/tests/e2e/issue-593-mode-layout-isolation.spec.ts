@@ -18,6 +18,10 @@ async function openDocument(page: Page): Promise<void> {
 const setMode = async (page: Page, mode: "Cycle" | "Transaction" | "Combined") => {
   await page.locator(".view-mode").getByRole("button", { name: mode, exact: true }).click();
   await expect(page.getByTestId("view-mode-status")).toHaveText(mode === "Combined" ? /Mode: (Combined|Split)/ : `Mode: ${mode}`);
+  await expect(page.locator(".cycle-panel")).toHaveAttribute("data-workspace-owner", `${mode}Workspace`);
+  await expect(page.locator(".cycle-panel[data-workspace-owner]")).toHaveCount(1);
+  await expect(page.getByTestId("left-workspace-rail")).toHaveAttribute("data-workspace-owner", `${mode}Workspace`);
+  await expect(page.getByTestId("left-workspace-rail")).toHaveCount(1);
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true", { timeout: 30_000 });
   await page.waitForTimeout(300);
 };
