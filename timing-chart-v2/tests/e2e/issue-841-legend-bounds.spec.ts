@@ -172,6 +172,28 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
       const inspectorY = page.getByLabel("Legend Y");
       await expect(inspectorX).toHaveValue("500");
       await expect(inspectorY).toHaveValue("80");
+      await page.evaluate(() => {
+        const original = Element.prototype.getBoundingClientRect;
+        let legendRectReads = 0;
+        Element.prototype.getBoundingClientRect = new Proxy(original, {
+          apply(target, thisArg, args: []) {
+            if (thisArg instanceof HTMLElement && thisArg.matches(".editor-legend")) legendRectReads += 1;
+            return Reflect.apply(target, thisArg, args);
+          },
+        });
+        Object.defineProperty(window, "__legendRectReads", { get: () => legendRectReads });
+      });
+      const nextFrame = () => page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      await nextFrame();
+      const legendRectReadsBeforeScroll = await page.evaluate(() => Number(Reflect.get(window, "__legendRectReads")));
+      await page.locator(".left-workspace-rail").evaluate((element) => element.dispatchEvent(new Event("scroll", { bubbles: true })));
+      await nextFrame();
+      expect(await page.evaluate(() => Number(Reflect.get(window, "__legendRectReads"))), "unrelated pane scroll must not measure the Legend").toBe(legendRectReadsBeforeScroll);
+      await page.getByTestId("cycle-viewport").evaluate((element) => {
+        for (let index = 0; index < 5; index += 1) element.dispatchEvent(new Event("scroll", { bubbles: true }));
+      });
+      await nextFrame();
+      expect(await page.evaluate(() => Number(Reflect.get(window, "__legendRectReads"))), "relevant scroll events are coalesced to one frame update").toBe(legendRectReadsBeforeScroll + 1);
       const viewOnlyBefore = await documentState(page);
 
       await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();

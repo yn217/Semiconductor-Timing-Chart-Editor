@@ -32,6 +32,18 @@ export function LegendView({ document, commands, selected = false, onSelect }: {
       setPosition((current) => current.x === visible.x && current.y === visible.y ? current : visible);
     };
     update();
+    let scrollFrame: number | undefined;
+    const updateOnRelevantScroll = (event: Event) => {
+      const target = event.target;
+      if (!(target instanceof Node) || (!content.contains(target) && !target.contains(content))) return;
+      if (scrollFrame !== undefined) return;
+      if (ownerWindow) {
+        scrollFrame = ownerWindow.requestAnimationFrame(() => {
+          scrollFrame = undefined;
+          update();
+        });
+      }
+    };
     const observer = new ResizeObserver(update);
     observer.observe(content);
     const viewport = content.closest<HTMLElement>(".cycle-viewport");
@@ -42,11 +54,12 @@ export function LegendView({ document, commands, selected = false, onSelect }: {
     if (rail) observer.observe(rail);
     const ownerDocument = content.ownerDocument;
     const ownerWindow = ownerDocument.defaultView;
-    ownerDocument.addEventListener("scroll", update, true);
+    ownerDocument.addEventListener("scroll", updateOnRelevantScroll, true);
     ownerWindow?.addEventListener("resize", update);
     return () => {
       observer.disconnect();
-      ownerDocument.removeEventListener("scroll", update, true);
+      if (scrollFrame !== undefined) ownerWindow?.cancelAnimationFrame(scrollFrame);
+      ownerDocument.removeEventListener("scroll", updateOnRelevantScroll, true);
       ownerWindow?.removeEventListener("resize", update);
     };
   }, [document.legend.show, document.legend.position.x, document.legend.position.y]);
