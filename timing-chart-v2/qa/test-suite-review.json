@@ -3319,6 +3319,23 @@
       "decision": "KEEP",
       "reason": "Regression for the late-mounted Lower pane (no cursor) and the Lower-pane drag X offset found in the 2026-10 code review.",
       "replacementTest": null
+    },
+    {
+      "file": "issue-753-bookmark-navigation-no-crash.spec.ts",
+      "domain": "bookmark-navigation",
+      "originIssue": 753,
+      "type": "ISSUE_REGRESSION",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Bottom Bookmark row click/dblclick, Previous/Next and ruler Bookmark marker keep the editor mounted, same URL, no page/console error (recording 2026-09-20 gesture).",
+      "duplicateGroup": "bookmark-navigation",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Regression for the #753 white-page recording.",
+      "replacementTest": null
     }
   ],
   "reviews": [

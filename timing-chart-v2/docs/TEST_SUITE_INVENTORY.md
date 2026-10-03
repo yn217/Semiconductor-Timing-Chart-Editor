@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 406 spec files and 1194 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 407 spec files and 1208 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1192/1194 cases reviewed.
+Semantic review progress: 1206/1208 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,10 +10,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 605 |
+| `integration` | 608 |
 | `nightly` | 226 |
 | `performance` | 66 |
-| `pr` | 375 |
+| `pr` | 386 |
 | `visual` | 180 |
 
 ## Top recorded per-case runtimes
@@ -165,7 +165,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-440-pinned-bookmark-transaction.spec.ts` | 2 | 2/2 reviewed |
 | `issue-441-ribbon-label-integrity.spec.ts` | 3 | 3/3 reviewed |
 | `issue-456-sized-bus-literal.spec.ts` | 1 | 1/1 reviewed |
-| `issue-549-cursor-multi-frame-drag.spec.ts` | 5 | 5/5 reviewed |
+| `issue-549-cursor-multi-frame-drag.spec.ts` | 16 | 16/16 reviewed |
 | `issue-554-transaction-journey.spec.ts` | 2 | 2/2 reviewed |
 | `issue-573-combined-divider-pinned.spec.ts` | 1 | 1/1 reviewed |
 | `issue-573-combined-shared-time-axis.spec.ts` | 3 | 3/3 reviewed |
@@ -242,6 +242,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-751-bottom-phase-editor.spec.ts` | 1 | 1/1 reviewed |
 | `issue-752-bottom-remount.spec.ts` | 1 | 1/1 reviewed |
 | `issue-753-bookmark-gesture-fuzz.spec.ts` | 5 | 5/5 reviewed |
+| `issue-753-bookmark-navigation-no-crash.spec.ts` | 3 | 3/3 reviewed |
 | `issue-753-bookmark-navigation-stays-in-app.spec.ts` | 3 | 3/3 reviewed |
 | `issue-753-stress-classified.spec.ts` | 3 | 3/3 reviewed |
 | `issue-755-analytic-transition-equivalence.spec.ts` | 1 | 1/1 reviewed |
@@ -496,6 +497,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `issue-208-open-epoch-coherence.spec.ts` | querySelector |
 | `issue-219-wave-url-lifetime.spec.ts` | querySelector, explicitWait |
 | `issue-441-ribbon-label-integrity.spec.ts` | getComputedStyle, geometryRead |
+| `issue-549-cursor-multi-frame-drag.spec.ts` | dataset |
 | `issue-573-combined-shared-time-axis.spec.ts` | geometryRead, explicitWait |
 | `issue-573-combined-single-hscroll.spec.ts` | getComputedStyle, geometryRead, explicitWait |
 | `issue-593-inflight-mode-switch.spec.ts` | querySelector, getComputedStyle, dataset, geometryRead, explicitWait |
@@ -540,6 +542,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `issue-750-ruler-follows-tc-scale.spec.ts` | dataset |
 | `issue-751-bottom-phase-editor.spec.ts` | querySelector |
 | `issue-753-bookmark-gesture-fuzz.spec.ts` | querySelector, explicitWait |
+| `issue-753-bookmark-navigation-no-crash.spec.ts` | querySelector, explicitWait |
 | `issue-755-canvas-production-acceptance.spec.ts` | querySelector, dataset, geometryRead |
 | `issue-757-far-scroll-window-coverage.spec.ts` | querySelector, geometryRead |
 | `issue-759-group-disclosure-shared.spec.ts` | querySelector |
