@@ -8,7 +8,7 @@ import { timelineScrollOwner } from "./runtime/timeline-scroll-owner.js";
  * track -- positioned from the time-domain origin (ruler left edge) to the viewport's right edge -- drives the same scrollLeft, so
  * the scrollbar never extends beneath Signals / Groups, Role or Signal / Annotation.
  */
-function TimelineHorizontalScrollbar({ viewport }: { readonly viewport: RefObject<HTMLDivElement | null> }) {
+function TimelineHorizontalScrollbar({ viewport, viewMode, leftPaneWidth }: { readonly viewport: RefObject<HTMLDivElement | null>; readonly viewMode: string; readonly leftPaneWidth: number }) {
   const track = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -49,43 +49,12 @@ function TimelineHorizontalScrollbar({ viewport }: { readonly viewport: RefObjec
     const observer = new ResizeObserver(layout);
     observer.observe(view);
     if (view.firstElementChild) observer.observe(view.firstElementChild);
-    let observedOwner: HTMLElement = view;
-    const observedOwnerChildren = new Set<Element>();
-    const refreshObservedOwner = () => {
-      const owner = timelineScrollOwner(view);
-      if (owner === observedOwner) return;
-      if (observedOwner !== view) observer.unobserve(observedOwner);
-      for (const child of observedOwnerChildren) observer.unobserve(child);
-      observedOwnerChildren.clear();
-      observedOwner = owner;
-      if (owner !== view) {
-        observer.observe(owner);
-        for (const child of owner.children) { observer.observe(child); observedOwnerChildren.add(child); }
-      }
-      layout();
-    };
-    const mutationObserver = new MutationObserver((records) => {
-      const shell = view.closest<HTMLElement>(".editor-shell");
-      const modeChanged = records.some((record) => record.target === shell && record.attributeName === "data-view-mode");
-      if (modeChanged) {
-        refreshObservedOwner();
-        layout();
-        return;
-      }
-      const containsTimelineOwner = (node: Node): boolean => node instanceof Element
-        ? node.matches("[data-role='timeline-viewport']") || Boolean(node.querySelector("[data-role='timeline-viewport']"))
-        : node instanceof DocumentFragment && Boolean(node.querySelector("[data-role='timeline-viewport']"));
-      if (records.some((record) => record.attributeName === "data-role"
-        || [...record.addedNodes, ...record.removedNodes].some(containsTimelineOwner))) refreshObservedOwner();
-    });
-    mutationObserver.observe(view, { attributes: true, attributeFilter: ["data-role"], childList: true, subtree: true });
-    const shell = view.closest<HTMLElement>(".editor-shell");
-    if (shell) mutationObserver.observe(shell, { attributes: true, attributeFilter: ["data-view-mode"] });
-    refreshObservedOwner();
+    const owner = timelineScrollOwner(view);
+    if (owner !== view) { observer.observe(owner); for (const child of owner.children) observer.observe(child); }
     window.addEventListener("resize", layout);
     view.addEventListener("timeline-viewport-resize", layout);
-    return () => { view.removeEventListener("scroll", onViewScroll, true); bar.removeEventListener("scroll", onBarScroll); mutationObserver.disconnect(); observer.disconnect(); window.removeEventListener("resize", layout); view.removeEventListener("timeline-viewport-resize", layout); delete view.dataset.ownHscroll; };
-  }, [viewport]);
+    return () => { view.removeEventListener("scroll", onViewScroll, true); bar.removeEventListener("scroll", onBarScroll); observer.disconnect(); window.removeEventListener("resize", layout); view.removeEventListener("timeline-viewport-resize", layout); delete view.dataset.ownHscroll; };
+  }, [viewport, viewMode, leftPaneWidth]);
   return <div className="timeline-hscroll" ref={track} data-testid="timeline-hscroll" role="scrollbar" aria-orientation="horizontal" aria-label="Timeline horizontal scroll" hidden><div ref={inner} style={{ height: 1 }} /></div>;
 }
 
@@ -338,7 +307,7 @@ export function EditorWorkspaceView({
           <div className="surface-host" ref={host} data-testid="cycle-surface" data-snap-enabled={String(snapEnabled)} />
         </div>
       </div>
-      <TimelineHorizontalScrollbar viewport={viewport} />
+      <TimelineHorizontalScrollbar viewport={viewport} viewMode={viewMode} leftPaneWidth={leftPaneWidth} />
       {signalSplitEnabled && viewMode === "Cycle" && <CycleSignalSplitPane signalSplitRatio={signalSplitRatio} gridEnabled={gridEnabled} rulerEnabled={rulerEnabled} viewportLower={viewportLower} gridLayerLower={gridLayerLower} rulerLower={rulerLower} hostLower={hostLower} onViewportKeyDown={onViewportKeyDown} onKeyDown={onSignalSplitKeyDown} onPointerDown={onSignalSplitPointerDown} onPointerMove={onSignalSplitPointerMove} onPointerUp={onSignalSplitPointerUp} />}
     </section>
     <div className={`left-workspace-rail mode-${viewMode.toLowerCase()}`} data-testid="left-workspace-rail">
