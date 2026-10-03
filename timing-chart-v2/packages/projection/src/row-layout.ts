@@ -25,6 +25,7 @@ export interface RowLayoutSourceIndex {
   readonly signals: CanonicalDocument["signals"];
   readonly signalGroups: CanonicalDocument["signalGroups"];
   readonly signalsById: ReadonlyMap<string, Signal>;
+  readonly signalIndexById: ReadonlyMap<string, number>;
   readonly spacersById: ReadonlyMap<string, SpacerRow>;
   readonly canonicalRowIds: readonly RowId[];
 }
@@ -36,11 +37,17 @@ export function getRowLayoutSourceIndex(document: CanonicalDocument): Readonly<{
   const cached = byGroups?.get(document.signalGroups);
   if (cached) return { index: cached, built: false };
 
-  const signalsById = new Map<string, Signal>(document.signals.map((signal) => [signal.id, signal]));
+  const signalsById = new Map<string, Signal>();
+  const signalIndexById = new Map<string, number>();
+  const indexedSignals = document.signals.map((signal, index) => [signal, index] as const);
+  for (const [signal, index] of indexedSignals) {
+    signalsById.set(signal.id, signal);
+    signalIndexById.set(signal.id, index);
+  }
   const spacersById = new Map<string, SpacerRow>();
   for (const group of document.signalGroups) for (const spacer of group.spacers ?? []) spacersById.set(spacer.id, spacer);
   const canonicalRowIds = document.signalGroups.flatMap((group) => group.rows);
-  const index = Object.freeze({ signals: document.signals, signalGroups: document.signalGroups, signalsById, spacersById, canonicalRowIds });
+  const index = Object.freeze({ signals: document.signals, signalGroups: document.signalGroups, signalsById, signalIndexById, spacersById, canonicalRowIds });
   if (!byGroups) {
     byGroups = new WeakMap();
     rowLayoutSourceIndexes.set(document.signals, byGroups);
@@ -161,7 +168,7 @@ export function calculateRowLayout(document: CanonicalDocument, collapsedGroupId
   return { canonicalRowIds, navigationRows, visibleRows, groupHeaders, totalHeight: y, paneExcludedRowIds };
 }
 
-function signalEntry(signal: Signal | undefined, groupId: RowLayoutEntry["groupId"], groupName: string, groupStyle: RowLayoutEntry["groupStyle"], y: number, height: number, rowId: RowId): RowLayoutEntry | undefined {
+export function signalEntry(signal: Signal | undefined, groupId: RowLayoutEntry["groupId"], groupName: string, groupStyle: RowLayoutEntry["groupStyle"], y: number, height: number, rowId: RowId): RowLayoutEntry | undefined {
   if (!signal) return undefined;
   return {
     rowId,
