@@ -21,6 +21,23 @@ for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] 
         },
       });
       Object.defineProperty(window, "__cursorRulerCycleQueries", { get: () => rulerCycleQueries });
+      const registrations = { resizeObserver: 0, viewportPointerDown: 0, viewportScroll: 0, windowResize: 0 };
+      const originalAdd = EventTarget.prototype.addEventListener;
+      EventTarget.prototype.addEventListener = new Proxy(originalAdd, {
+        apply(target, thisArg, args: [string, ...unknown[]]) {
+          if (thisArg === window && args[0] === "resize") registrations.windowResize += 1;
+          if (thisArg instanceof Element && thisArg.matches(".cycle-viewport")) {
+            if (args[0] === "pointerdown") registrations.viewportPointerDown += 1;
+            if (args[0] === "scroll") registrations.viewportScroll += 1;
+          }
+          return Reflect.apply(target, thisArg, args);
+        },
+      });
+      const NativeResizeObserver = window.ResizeObserver;
+      window.ResizeObserver = class extends NativeResizeObserver {
+        constructor(callback: ResizeObserverCallback) { registrations.resizeObserver += 1; super(callback); }
+      };
+      Object.defineProperty(window, "__cursorLifecycleRegistrations", { get: () => ({ ...registrations }) });
     });
     await page.goto("/");
     await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
@@ -30,6 +47,7 @@ for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] 
     await expect(line).toBeVisible();
     const before = await documentState(page);
     const rulerCycleQueriesBeforeDrag = await page.evaluate(() => Number(Reflect.get(window, "__cursorRulerCycleQueries")));
+    const lifecycleRegistrationsBeforeDrag = await page.evaluate(() => Reflect.get(window, "__cursorLifecycleRegistrations"));
     const startCycle = Number(await line.getAttribute("data-cycle"));
     const tick = (cycle: number) => page.locator(`.cycle-ruler [data-cycle][data-source-cycle='${cycle}']`).first();
     const viewport = page.getByTestId("cycle-viewport");
@@ -48,6 +66,7 @@ for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] 
     await expect.poll(async () => Number(await viewport.getAttribute("data-cursor-drag-pointer-moves"))).toBeGreaterThan(1);
     await expect.poll(async () => Number(await viewport.getAttribute("data-cursor-drag-preview-frames"))).toBeGreaterThan(1);
     expect(await page.evaluate(() => Number(Reflect.get(window, "__cursorRulerCycleQueries"))), "Cursor movement must use shared time geometry instead of scanning ruler ticks").toBe(rulerCycleQueriesBeforeDrag);
+    expect(await page.evaluate(() => Reflect.get(window, "__cursorLifecycleRegistrations")), "Cursor preview updates must not reconnect viewport/window listeners or recreate ResizeObserver").toEqual(lifecycleRegistrationsBeforeDrag);
     await page.mouse.up();
     await expect.poll(async () => Number(await line.getAttribute("data-cycle")), { message: "cursor followed the pointer to the last tick" }).toBe(targets.at(-1));
     const finalLineBox = (await line.boundingBox())!;

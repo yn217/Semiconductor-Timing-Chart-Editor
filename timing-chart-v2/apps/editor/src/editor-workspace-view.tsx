@@ -254,16 +254,16 @@ export function EditorWorkspaceView({
   const { bottom, inspector } = viewModel.content;
   const { onBottomReset, onInspectorReset, onBottomKeyDown, onBottomPointerDown, onBottomPointerMove, onBottomPointerUp, onInspectorKeyDown, onInspectorPointerDown, onInspectorPointerMove, onInspectorPointerUp, onSetCursorAtCycle, resolveCursorCycleAtClientX, resolveCursorViewportXForCycle } = viewModel.interactions;
   const activeDragCleanupsRef = useRef(new Set<() => void>());
+  const cursorInputRef = useRef({ cursorA: cursor.a, cursorB: cursor.b, onSetCursorAtCycle, resolveCursorCycleAtClientX, resolveCursorViewportXForCycle });
+  cursorInputRef.current = { cursorA: cursor.a, cursorB: cursor.b, onSetCursorAtCycle, resolveCursorCycleAtClientX, resolveCursorViewportXForCycle };
+  const refreshCursorPresentationRef = useRef<() => void>(() => undefined);
   useEffect(() => {
     // Cursor A/B are workspace-only source-cycle markers. Resolve their
     // presentation through shared time geometry; never enumerate ruler ticks
     // as an alternate cycle-to-X authority.
     const viewports = [[viewport.current, ruler.current], [viewportLower.current, rulerLower.current]] as const;
-    const cursors = [
-      ["a", cursor.a, "Cursor A"],
-      ["b", cursor.b, "Cursor B"],
-    ] as const;
     const update = () => {
+      const current = cursorInputRef.current;
       for (const [viewportElement, rulerContent] of viewports) {
         if (!viewportElement || !rulerContent) continue;
         let overlay = viewportElement.querySelector<HTMLElement>("[data-role='cursor-overlay']");
@@ -277,7 +277,7 @@ export function EditorWorkspaceView({
         overlay.style.inset = "0";
         overlay.style.pointerEvents = "none";
         const viewportRect = viewportElement.getBoundingClientRect();
-        for (const [key, cycle, label] of cursors) {
+        for (const [key, cycle, label] of [["a", current.cursorA, "Cursor A"], ["b", current.cursorB, "Cursor B"]] as const) {
           let line = overlay.querySelector<HTMLElement>(`[data-cursor='${key}']`);
           if (cycle === undefined) { line?.remove(); continue; }
           if (!line) {
@@ -287,7 +287,7 @@ export function EditorWorkspaceView({
             line.setAttribute("aria-label", label);
             overlay.append(line);
           }
-          const x = resolveCursorViewportXForCycle?.(cycle, viewportElement, rulerContent);
+          const x = current.resolveCursorViewportXForCycle?.(cycle, viewportElement, rulerContent);
           if (x === undefined || !Number.isFinite(x)) { line.hidden = true; continue; }
           line.hidden = false;
           // Keep the dynamically-created guide independently hit-testable even
@@ -305,21 +305,26 @@ export function EditorWorkspaceView({
         }
       }
     };
+    refreshCursorPresentationRef.current = update;
     update();
+    return () => { if (refreshCursorPresentationRef.current === update) refreshCursorPresentationRef.current = () => undefined; };
+  }, [ruler, rulerLower, cursor.a, cursor.b, cursorPresentationRevision, zoom, viewport, viewportLower, resolveCursorViewportXForCycle]);
+  useEffect(() => {
+    const viewports = [[viewport.current, ruler.current], [viewportLower.current, rulerLower.current]] as const;
     const scrollTargets = [viewport.current, viewportLower.current].filter((item): item is HTMLDivElement => item !== null);
-    // Ruler presentation is refreshed by the owning timeline runtime. A
-    // deferred pass covers late-mounted ticks without installing a subtree
-    // subtree observer (which would turn every ruler update into a generic
-    // synchronization path).
-    const deferredUpdate = requestAnimationFrame(update);
-    const rulerResizeObserver = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(update);
+    const refresh = () => refreshCursorPresentationRef.current();
+    // Keep the one post-mount refresh for late layout, without tying it to
+    // cursor preview renders.
+    const deferredUpdate = requestAnimationFrame(refresh);
+    const rulerResizeObserver = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(refresh);
     for (const target of [ruler.current, rulerLower.current].filter((item): item is HTMLDivElement => item !== null)) rulerResizeObserver?.observe(target);
     const dragHandlers: Array<[HTMLDivElement, (event: PointerEvent) => void]> = [];
-    // The active drag owner outlives this effect: its own output (cursor.a/b) is in the dependency list, so an effect re-run must not tear the
-    // gesture down (#549). The set is owned by a ref and cleared on unmount / mode change below.
+    // This lifecycle effect is intentionally independent of cursor values;
+    // preview renders update the presentation ref without replacing listeners.
+    // The active gesture is still cleared on unmount / mode change below.
     const activeDragCleanups = activeDragCleanupsRef.current;
     for (const [viewportElement, rulerContent] of viewports) {
-      if (!viewportElement || !rulerContent || !onSetCursorAtCycle) continue;
+      if (!viewportElement || !rulerContent) continue;
       const onPointerDown = (event: PointerEvent) => {
         // Cursor A/B has one workspace-wide drag owner. A second pointer
         // must not install another window-level move/up handler while the
@@ -339,8 +344,9 @@ export function EditorWorkspaceView({
         };
         trace();
         const applyCursorAt = (clientX: number) => {
-          const resolved = resolveCursorCycleAtClientX?.(clientX, viewportElement);
-          if (resolved !== undefined) onSetCursorAtCycle(which, resolved);
+          const current = cursorInputRef.current;
+          const resolved = current.resolveCursorCycleAtClientX?.(clientX, viewportElement);
+          if (resolved !== undefined) current.onSetCursorAtCycle?.(which, resolved);
         };
         const move = (moveEvent: PointerEvent) => {
           pendingClientX = moveEvent.clientX;
@@ -364,16 +370,16 @@ export function EditorWorkspaceView({
       viewportElement.addEventListener("pointerdown", onPointerDown, true);
       dragHandlers.push([viewportElement, onPointerDown]);
     }
-    for (const target of scrollTargets) target.addEventListener("scroll", update, { passive: true, capture: true });
-    window.addEventListener("resize", update);
+    for (const target of scrollTargets) target.addEventListener("scroll", refresh, { passive: true, capture: true });
+    window.addEventListener("resize", refresh);
     return () => {
-      for (const target of scrollTargets) target.removeEventListener("scroll", update, true);
+      for (const target of scrollTargets) target.removeEventListener("scroll", refresh, true);
       cancelAnimationFrame(deferredUpdate);
       rulerResizeObserver?.disconnect();
       for (const [target, handler] of dragHandlers) target.removeEventListener("pointerdown", handler, true);
-      window.removeEventListener("resize", update);
+      window.removeEventListener("resize", refresh);
     };
-  }, [ruler, rulerLower, cursor.a, cursor.b, cursorPresentationRevision, zoom, viewport, viewportLower, onSetCursorAtCycle, resolveCursorCycleAtClientX, resolveCursorViewportXForCycle]);
+  }, [ruler, rulerLower, viewport, viewportLower]);
   // Cursor drag handlers survive their own cursor.a/b state updates, but a
   // mode owner change ends the gesture so stale viewport listeners cannot leak.
   useEffect(() => () => { for (const cleanupDrag of [...activeDragCleanupsRef.current]) cleanupDrag(); }, [viewMode]);
