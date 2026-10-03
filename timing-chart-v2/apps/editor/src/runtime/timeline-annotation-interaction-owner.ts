@@ -2,8 +2,8 @@ import type { ImmutableSnapIndex, LocalGeometryMap, Point } from "@timing-chart-
 import type { SemanticCommand } from "@timing-chart-v2/commands";
 import type { RenderProjection } from "@timing-chart-v2/projection";
 import type { TimingChartRenderer } from "@timing-chart-v2/renderer";
-import type { AnnotationId, CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
-import { annotationFields, projectAnnotationOverlays } from "./annotation-overlays.js";
+import type { Annotation, AnnotationId, CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
+import { annotationById, annotationFields, projectAnnotationOverlays } from "./annotation-overlays.js";
 import { annotationOffsetDeltaFromScreen, withAddedOffset, withSnapOffset } from "./anchor-offset.js";
 import { preferredSnapKinds } from "./snap-policy.js";
 import { normalizeSnapDistance } from "./snap-distance.js";
@@ -24,7 +24,7 @@ export type AnnotationGeometryPort = Readonly<{
 
 export type AnnotationInteractionContext = Readonly<{
   rendererHost: HTMLElement;
-  renderer: Pick<TimingChartRenderer, "updateSnapGuide" | "updateOverlays">;
+  renderer: Pick<TimingChartRenderer, "updateSnapGuide" | "patchOverlays">;
   timelineGeometry: AnnotationGeometryPort;
   documentEpoch: Pick<DocumentEpoch, "current" | "isCurrent">;
   getDocument: () => CanonicalDocument;
@@ -59,11 +59,12 @@ export class AnnotationInteractionOwner {
   constructor(private readonly context: AnnotationInteractionContext) {}
 
   onPointerDown = (event: PointerEvent): void => {
+    this.#measurements = undefined;
     if (event.button !== 0 || !(event.target instanceof Element)) return;
     const owner = event.target.closest<HTMLElement>("[data-role='annotation-owner'][data-annotation-id]");
     if (!owner?.dataset.annotationId) return;
     const primaryId = owner.dataset.annotationId;
-    if (this.context.getDocument().annotations.find((item) => item.id === primaryId)?.locked) return;
+    if (annotationById(this.context.getDocument().annotations, primaryId)?.locked) return;
     const fieldElement = event.target.closest<HTMLElement>("[data-role='annotation-handle'][data-annotation-field]");
     const label = event.target.closest<HTMLElement>("[data-annotation-label='true']") !== null;
     const field = fieldElement?.dataset.annotationField as AnnotationField | undefined;
@@ -114,15 +115,14 @@ export class AnnotationInteractionOwner {
     // and commit already share, so nothing needs to snap back.
     if (!drag.field && !drag.label) { for (const owner of drag.owners.values()) owner.style.translate = `${screenDx}px ${dy}px`; return; }
     const document = this.context.getDocument();
-    const annotation = document.annotations.find((item) => item.id === [...drag.annotationIds][0]);
+    const annotation = annotationById(document.annotations, [...drag.annotationIds][0] ?? "");
     if (annotation?.type === "marker" && (drag.field === "verticalSpanStart" || drag.field === "verticalSpanEnd")) return;
     if (drag.label) {
       if (!annotation) return;
       this.context.publishState();
       const previewOffsetDelta = annotationOffsetDeltaFromScreen({ x: screenDx, y: dy }, timeAxisMetrics.presentationScale, currentZoom);
       const previewLabelOffset = { x: (annotation.labelOffset?.x ?? 0) + previewOffsetDelta.x, y: (annotation.labelOffset?.y ?? -14) + previewOffsetDelta.y };
-      const previewDocument: CanonicalDocument = { ...document, annotations: document.annotations.map((item) => item.id === annotation.id ? { ...item, labelOffset: previewLabelOffset } : item) };
-      this.context.renderer.updateOverlays(projectAnnotationOverlays(previewDocument, this.context.getProjection(), this.context.timelineGeometry.geometryMaps, timeAxisMetrics.mapping, timeAxisMetrics.presentationScale, undefined, undefined, timeAxisMetrics));
+      this.#patchPreview(document, { ...annotation, labelOffset: previewLabelOffset });
       return;
     }
     if (!drag.field) return;
@@ -134,8 +134,7 @@ export class AnnotationInteractionOwner {
     this.context.publishState();
     const previewOffsetDelta = annotationOffsetDeltaFromScreen({ x: screenDx, y: dy }, timeAxisMetrics.presentationScale, currentZoom);
     const previewAnchor = snap ? withSnapOffset(snap.anchor, desired, snap.point, timeAxisMetrics.presentationScale) : withAddedOffset(anchor, previewOffsetDelta.x, previewOffsetDelta.y);
-    const previewDocument: CanonicalDocument = { ...document, annotations: document.annotations.map((item) => item.id === annotation.id ? { ...item, [drag.field as AnnotationField]: previewAnchor } : item) };
-    this.context.renderer.updateOverlays(projectAnnotationOverlays(previewDocument, this.context.getProjection(), this.context.timelineGeometry.geometryMaps, timeAxisMetrics.mapping, timeAxisMetrics.presentationScale, undefined, undefined, timeAxisMetrics));
+    this.#patchPreview(document, { ...annotation, [drag.field as AnnotationField]: previewAnchor });
     if (!snap) {
       this.context.renderer.updateSnapGuide();
       delete this.context.rendererHost.dataset.snapKind;
@@ -163,6 +162,7 @@ export class AnnotationInteractionOwner {
     const dy = offsetDelta.y;
     for (const owner of drag.owners.values()) owner.style.translate = "";
     this.#drag = undefined;
+    this.#measurements = undefined;
     this.context.renderer.updateSnapGuide();
     if (dx === 0 && dy === 0) return;
     const document = this.context.getDocument();
@@ -171,11 +171,11 @@ export class AnnotationInteractionOwner {
       // whole AnnotationGroup / multi-selection moving together) gets the
       // same delta as one command each, submitted as a single batch so
       // Undo restores the whole group's position in one step.
-      const commands: SemanticCommand[] = [...drag.annotationIds].flatMap((id) => document.annotations.some((item) => item.id === id) ? [{ id: nextCommandId("annotation_move"), type: "annotation.translateOffsets", annotationId: id as AnnotationId, delta: { x: dx, y: dy } } satisfies SemanticCommand] : []);
+      const commands: SemanticCommand[] = [...drag.annotationIds].flatMap((id) => annotationById(document.annotations, id) !== undefined ? [{ id: nextCommandId("annotation_move"), type: "annotation.translateOffsets", annotationId: id as AnnotationId, delta: { x: dx, y: dy } } satisfies SemanticCommand] : []);
       if (commands.length > 0) this.context.executeBatch(commands);
       return;
     }
-    const annotation = document.annotations.find((item) => item.id === [...drag.annotationIds][0]);
+    const annotation = annotationById(document.annotations, [...drag.annotationIds][0] ?? "");
     if (!annotation) return;
     if (annotation.type === "marker" && (drag.field === "verticalSpanStart" || drag.field === "verticalSpanEnd")) {
       const current = annotation.verticalSpan ?? { mode: "custom" as const, startOffset: 0, endOffset: 0 };
@@ -204,6 +204,21 @@ export class AnnotationInteractionOwner {
     this.context.execute({ id: nextCommandId("annotation_drag"), type: "annotation.setAnchor", annotationId: annotation.id, field, anchor: nextAnchor });
   };
 
+  /** #175: Preview re-projects only the dragged Annotation (O(dragged) per move, no Annotation-array copy, no time-index
+   * rebuild) and patches just its overlay owner. A Measurement's lane depends on every other Measurement, so for one the
+   * pool is the document's Measurements (collected once per drag) with the dragged one substituted -- same lanes as a full
+   * projection. Canonical/History/Dirty are untouched; the draft document never leaves this method. */
+  #measurements: readonly Annotation[] | undefined;
+  #patchPreview(document: CanonicalDocument, preview: Annotation): void {
+    let pool: readonly Annotation[] = [preview];
+    if (preview.type === "measurement") {
+      this.#measurements ??= document.annotations.filter((item) => item.type === "measurement");
+      pool = this.#measurements.map((item) => item.id === preview.id ? preview : item);
+    }
+    const timeAxisMetrics = this.context.timelineGeometry.timeAxisMetrics;
+    this.context.renderer.patchOverlays(projectAnnotationOverlays({ ...document, annotations: pool }, this.context.getProjection(), this.context.timelineGeometry.geometryMaps, timeAxisMetrics.mapping, timeAxisMetrics.presentationScale, undefined, undefined, timeAxisMetrics));
+  }
+
   get active(): boolean { return this.#drag !== undefined; }
 
   /** Arrow-key nudge for the focused Annotation's primary anchor. Not a
@@ -216,7 +231,7 @@ export class AnnotationInteractionOwner {
     const delta = event.shiftKey ? 10 : 1;
     const movement = event.key === "ArrowLeft" ? { x: -delta, y: 0 } : event.key === "ArrowRight" ? { x: delta, y: 0 } : event.key === "ArrowUp" ? { x: 0, y: -delta } : event.key === "ArrowDown" ? { x: 0, y: delta } : undefined;
     if (!owner?.dataset.annotationId || !movement) return false;
-    const annotation = this.context.getDocument().annotations.find((item) => item.id === owner.dataset.annotationId);
+    const annotation = annotationById(this.context.getDocument().annotations, owner.dataset.annotationId);
     const field = annotation && annotationFields.find((key) => annotation[key] !== undefined);
     const anchor = field && annotation ? annotation[field] : undefined;
     if (!annotation || !field || !anchor || annotation.locked) return false;
@@ -237,9 +252,11 @@ export class AnnotationInteractionOwner {
     // were never touched by the preview in the first place, but the DOM
     // must match).
     if (drag?.field || drag?.label) {
-      const timeAxisMetrics = this.context.timelineGeometry.timeAxisMetrics;
-      this.context.renderer.updateOverlays(projectAnnotationOverlays(this.context.getDocument(), this.context.getProjection(), this.context.timelineGeometry.geometryMaps, timeAxisMetrics.mapping, timeAxisMetrics.presentationScale, undefined, undefined, timeAxisMetrics));
+      const document = this.context.getDocument();
+      const annotation = annotationById(document.annotations, [...drag.annotationIds][0] ?? "");
+      if (annotation) this.#patchPreview(document, annotation);
     }
+    this.#measurements = undefined;
     this.#drag = undefined;
     this.context.renderer.updateSnapGuide();
     delete this.context.rendererHost.dataset.snapKind;

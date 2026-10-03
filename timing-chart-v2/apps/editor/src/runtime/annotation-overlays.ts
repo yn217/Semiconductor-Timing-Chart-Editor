@@ -51,6 +51,11 @@ function annotationTimeIndex(annotations: readonly Annotation[]): AnnotationTime
   annotationTimeIndexes.set(annotations, index);
   return index;
 }
+/** O(1) id lookup sharing the time index's cached `byId` (built once per Annotation array identity, not per call). */
+export function annotationById(annotations: readonly Annotation[], id: string): Annotation | undefined {
+  const position = annotationTimeIndex(annotations).byId.get(id);
+  return position === undefined ? undefined : annotations[position];
+}
 export function annotationsNearViewport(annotations: readonly Annotation[], sourceStart: number, sourceEnd: number): readonly Annotation[] {
   return indexedAnnotationsNearViewport(annotations, sourceStart, sourceEnd).items;
 }
