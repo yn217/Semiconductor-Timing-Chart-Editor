@@ -115,6 +115,9 @@ test("showcase Transaction bars stay aligned with Cycle boundaries through horiz
   await expect(tickAt(0)).toHaveCount(1);
   await expect(tickAt(10)).toHaveCount(1);
   const viewport = page.locator(".cycle-viewport").first();
+  // A filled Transaction track fits the viewport exactly (#945), so create real horizontal overflow with Zoom before scrolling.
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  for (let step = 0; step < 3; step += 1) await page.getByTestId("ribbon").getByRole("button", { name: "Zoom In", exact: true }).click();
   await expect.poll(() => viewport.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeGreaterThan(0);
 
   const alignmentDelta = async () => {
@@ -127,7 +130,8 @@ test("showcase Transaction bars stay aligned with Cycle boundaries through horiz
   await expect.poll(alignmentDelta).toBeLessThanOrEqual(1);
 
   await viewport.hover();
-  await page.mouse.wheel(600, 0);
+  // A modest real wheel offset keeps the bar inside the visible window (a Transaction scrolled fully out of view is legitimately unmounted).
+  await page.mouse.wheel(120, 0);
   await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
   await expect.poll(alignmentDelta).toBeLessThanOrEqual(1);
 

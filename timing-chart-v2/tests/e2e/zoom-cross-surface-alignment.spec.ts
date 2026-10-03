@@ -18,11 +18,15 @@ test("Annotation and Transaction X positions stay exactly aligned with the Ruler
   await page.getByLabel("Workspace preset").selectOption("transaction");
   const txEditor = page.getByTestId("transaction-editor");
   await txEditor.getByLabel("New Transaction name").fill("TX1");
-  await txEditor.getByLabel("New Transaction start").fill("2");
-  await txEditor.getByLabel("New Transaction end").fill("6");
+  await txEditor.getByLabel("New Transaction start").fill("0.2"); // Transaction form fields are in TC (1 TC = 10 cycles): cycles 2..6
+  await txEditor.getByLabel("New Transaction end").fill("0.6");
+  const lanesLocator = page.getByTestId("transaction-lanes").locator("[data-transaction-id]");
+  const existingIds = await lanesLocator.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-transaction-id")));
   await txEditor.getByRole("button", { name: "Create Transaction" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  const transactionId = await page.getByTestId("transaction-lanes").locator("[data-transaction-id]").filter({ hasText: "TX1" }).getAttribute("data-transaction-id");
+  // Bars carry no text (names live in the left Tree): identify the new Transaction as the id that was not mounted before.
+  await expect.poll(async () => (await lanesLocator.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-transaction-id")))).find((id) => !existingIds.includes(id))).toBeTruthy();
+  const transactionId = (await lanesLocator.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-transaction-id")))).find((id) => !existingIds.includes(id));
   expect(transactionId).toBeTruthy();
   await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
 
