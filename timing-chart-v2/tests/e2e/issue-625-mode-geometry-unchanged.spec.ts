@@ -28,6 +28,8 @@ test("Transaction, Combined and Cycle geometry is unchanged by the Cycle-only sp
       });
       const before = baseline[`${viewport.width}x${viewport.height}:${mode}`]!;
       const compare = (a: unknown, b: unknown, path: string): void => {
+        // #865: Transaction bars are horizontally virtualized, so WHICH bars are mounted (and their X) depends on the visible window; the lane REGIONS (transactionLanes) stay pinned.
+        if (mode === "Combined" && /^lanes/.test(path)) return;
         if (Array.isArray(a) && (a.length === 0 || typeof a[0] === "number")) {
           expect(Array.isArray(b), path).toBe(true);
           // #756: in Cycle the panel/tree/grid columns now span Main + Bottom, so only their heights changed (x/y/width are pinned).

@@ -36,6 +36,9 @@ test("Combined keeps Transaction and Cycle source boundaries aligned after colum
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const after = await readX();
   for (const cycle of points) {
-    expect((after[cycle]["transaction bar"] - before[cycle]["transaction bar"])).toBeCloseTo(after[cycle].ruler - before[cycle].ruler, 0);
+    // Every consumer measured at this source boundary (bar / phase edges differ per cycle) must move exactly as the shared ruler does.
+    const consumers = Object.keys(after[cycle]!).filter((name) => name !== "ruler");
+    expect(consumers.length, `consumers measured at cycle ${cycle}`).toBeGreaterThan(0);
+    for (const name of consumers) expect(after[cycle]![name]! - before[cycle]![name]!, `${name} at cycle ${cycle}`).toBeCloseTo(after[cycle]!.ruler! - before[cycle]!.ruler!, 0);
   }
 });

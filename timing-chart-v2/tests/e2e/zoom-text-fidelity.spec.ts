@@ -1,5 +1,6 @@
 import { expect, test, type Locator } from "@playwright/test";
 import { startInCycleSample } from "./cycle-startup.js";
+import { readWave } from "./wave-probe.js";
 
 startInCycleSample(test);
 
@@ -10,8 +11,8 @@ test("keeps text glyph aspect ratio and X-axis alignment constant across Zoom le
   const surface = host.locator("[data-role='timing-chart-surface']");
   const ruler = page.getByTestId("cycle-ruler");
   const tick0 = ruler.locator("[data-cycle='0']");
-  const busText = surface.locator("[data-signal-id='sig_cycle_data'] > svg text[data-value-label-index='1']");
-  const requestUses = surface.locator("[data-signal-id='sig_cycle_request'] > svg use");
+  // Wave artifacts are blob images: read labels/shapes through the semantic wave probe (screen coordinates), not the page DOM.
+  const stretch = async () => { const wave = await readWave(page, "sig_cycle_data"); return (wave.box.width / wave.box.height) / (wave.intrinsic.width / wave.intrinsic.height); };
   const tabs = page.locator(".ribbon-tabs");
   const ribbon = page.getByTestId("ribbon");
   await tabs.getByRole("button", { name: "View", exact: true }).click();
@@ -22,17 +23,18 @@ test("keeps text glyph aspect ratio and X-axis alignment constant across Zoom le
   };
 
   const tickAspectAt100 = await aspect(tick0);
-  const busAspectAt100 = await aspect(busText);
+  const stretchAt100 = await stretch();
 
   const checkAt = async (label: string) => {
     await expect(page.getByTestId("zoom-status")).toHaveText(label);
     // font/glyph aspect ratio must never change with zoom
     expect(await aspect(tick0)).toBeCloseTo(tickAspectAt100, 3);
-    expect(await aspect(busText)).toBeCloseTo(busAspectAt100, 3);
+    // value labels are part of the wave artifact: it must keep its intrinsic aspect (a non-uniform CSS scale stretches glyphs)
+    expect(await stretch(), "wave artifact aspect vs intrinsic (1 = glyphs not stretched)").toBeCloseTo(stretchAt100, 2);
     // the REQUEST signal's 0->1 transition (rendered "use" element index 6, at cycle 3)
     // must stay aligned with the ruler's cycle-3 tick at every zoom level
     const cycle3X = (await ruler.locator("[data-cycle='3']").boundingBox())!.x;
-    const transitionX = (await requestUses.nth(6).boundingBox())!.x;
+    const transitionX = (await readWave(page, "sig_cycle_request")).uses[6]!.x;
     expect(Math.abs(transitionX - cycle3X)).toBeLessThan(5);
   };
 
@@ -84,23 +86,26 @@ test("uses measured WaveDrom screen scale for text while keeping geometry aligne
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  const text = host.locator("[data-role='stable-waveform-surface'] svg text").filter({ hasText: "A5" }).first();
-  const evidence = await text.evaluate((element) => {
-    const owner = element.closest<HTMLElement>("[data-role='stable-waveform-surface']")?.closest<HTMLElement>("[data-testid='cycle-surface']");
-    const presentationScale = Number.parseFloat(getComputedStyle(owner ?? element).getPropertyValue("--presentation-x-scale"));
-    const scale = getComputedStyle(element).scale.split(/\s+/).map(Number)[0];
-    return { presentationScale, textScale: scale, textRect: element.getBoundingClientRect().toJSON() };
-  });
-  expect(evidence.presentationScale).toBeGreaterThan(0);
-  expect(evidence.textScale).toBeCloseTo(1 / evidence.presentationScale, 3);
-  expect(evidence.textRect.width).toBeGreaterThan(0);
-  expect(evidence.textRect.height).toBeGreaterThan(0);
+  // Semantic result: the label "A5" is present in the wave artifact at a measurable screen position, and the artifact is not stretched
+  // relative to the document's presentation X scale (labels counter-scale; geometry follows the scale).
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  for (let step = 0; step < 4; step += 1) await page.getByTestId("ribbon").getByRole("button", { name: "Zoom in" }).click();
+  await expect(page.getByTestId("zoom-status")).toHaveText("200%");
+  const wave = await readWave(page, "sig_cycle_data");
+  const label = wave.labels.find((item) => item.text.includes("A5"));
+  expect(label, "value label A5 is present in the wave artifact").toBeDefined();
+  const presentationScale = Number.parseFloat(await host.evaluate((element) => getComputedStyle(element).getPropertyValue("--presentation-x-scale")));
+  expect(presentationScale).toBeGreaterThan(0);
+  const stretch = (wave.box.width / wave.box.height) / (wave.intrinsic.width / wave.intrinsic.height);
+  expect(stretch, "wave artifact (labels + geometry) must not be distorted by the presentation scale").toBeCloseTo(1, 2);
+  expect(label!.x).toBeGreaterThan(wave.box.left);
 });
 
 test("keeps the cycle ruler sticky and clipped to the time domain during vertical and horizontal scroll", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const viewport = page.getByTestId("cycle-viewport");
   const ruler = page.getByTestId("cycle-ruler");
   const frozen = host.locator("[data-role='frozen-label-rows']");

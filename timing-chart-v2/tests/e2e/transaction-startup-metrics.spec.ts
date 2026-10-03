@@ -36,7 +36,8 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
   console.log(JSON.stringify({ samples, medianReadyMs: percentile(ready, 0.5), p95ReadyMs: percentile(ready, 0.95) }));
   expect(samples.every((sample) => sample.idle && sample.projectionCalls > 0)).toBe(true);
   expect(samples.every((sample) => sample.canonicalRevision === 0 && sample.projectionRevision === 0 && sample.projectionDocumentEpoch >= 1 && sample.rendererDocumentEpoch === sample.projectionDocumentEpoch)).toBe(true);
-  const requiredPhases = ["open-command-start", "canonical-replaced", "renderer-updated", "reference-clock-painted", "reference-geometry-ready", "first-visible-wave-painted", "ruler-painted", "row-shell-painted", "first-correct-paint"];
+  // Current Open phase vocabulary (the old reference-clock-painted / first-visible-wave-painted marks were replaced by presentation-ready / visible-waveforms-ready).
+  const requiredPhases = ["open-command-start", "canonical-replaced", "renderer-updated", "reference-geometry-ready", "ruler-painted", "row-shell-painted", "first-correct-paint", "presentation-ready", "visible-waveforms-ready"];
   expect(samples.every((sample) => requiredPhases.every((phase) => Number.isFinite(sample.phaseMarks[phase])))).toBe(true);
   expect(samples.every((sample) => requiredPhases.every((phase, index) => index === 0 || sample.phaseMarks[requiredPhases[index - 1]!]! <= sample.phaseMarks[phase]!))).toBe(true);
   expect(samples.every((sample) => {

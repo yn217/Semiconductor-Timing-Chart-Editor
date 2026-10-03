@@ -1,4 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
+import { generatePerformanceDocument } from "@timing-chart-v2/testing";
+import { setTimelineScrollLeft, timelineOwner, timelineScrollLeft } from "./timeline-scroll.js";
 
 async function state(page: Page) {
   const shell = page.locator(".editor-shell");
@@ -108,17 +110,18 @@ test("pointer capture and pointercancel clean up the splitter gesture", async ({
 
 test("native horizontal scrolling remains available beside the dedicated splitter", async ({ page }) => {
   await page.goto("/");
-  const viewport = page.getByTestId("cycle-viewport");
-  const overflow = await viewport.evaluate((element) => ({
-    overflowX: getComputedStyle(element).overflowX,
-    scrollWidth: element.scrollWidth,
-    clientWidth: element.clientWidth,
-    scrollLeft: element.scrollLeft,
-  }));
-  expect(overflow.overflowX).toBe("auto");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  // The startup document fits the viewport; open a wide one so a real horizontal scroll extent exists.
+  const wide = generatePerformanceDocument({ signalCount: 6, cycleCount: 400, profile: "standard" });
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "wide.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(wide)) });
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  // Cycle's horizontal scroll owner is the TimelineViewport wrapper driven by the dedicated native scrollbar (#625), not cycle-viewport.
+  const owner = timelineOwner(page);
+  const overflow = await owner.evaluate((element) => ({ scrollWidth: element.scrollWidth, clientWidth: element.clientWidth, scrollLeft: element.scrollLeft }));
   expect(overflow.scrollWidth).toBeGreaterThan(overflow.clientWidth);
-  await viewport.evaluate((element) => { element.scrollLeft = element.scrollWidth; element.dispatchEvent(new Event("scroll")); });
-  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(overflow.scrollLeft);
+  await setTimelineScrollLeft(page, overflow.scrollWidth);
+  await expect.poll(() => timelineScrollLeft(page)).toBeGreaterThan(overflow.scrollLeft);
   const before = await state(page);
   await dragSplitter(page, 0.5, -80);
   expect(await state(page)).toMatchObject({ revision: before.revision, history: before.history, dirty: before.dirty, sessionCounters: before.sessionCounters, renderCounters: before.renderCounters });
