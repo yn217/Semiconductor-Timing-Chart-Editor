@@ -1,6 +1,7 @@
 import {
   mergeChangeSets,
   planCommand,
+  planAnnotationUpdateBatch,
   type ChangeSet,
   type CommandResult,
   type SemanticBatchDispatcher,
@@ -122,6 +123,11 @@ export class CommandHistorySession implements CanonicalStore, SemanticCommandDis
     if (!isStableId(id)) return { ok: false, reason: "invalid", problems: [{ code: "INVALID_COMMAND_ID", path: "$.id", message: "Batch ID must be a stable ID." }] };
     if (commands.length === 0) return { ok: false, reason: "no-op", problems: [{ code: "EMPTY_BATCH", path: "$", message: "Atomic batch contains no commands." }] };
     const before = this.getSnapshot();
+    const annotationPlan = planAnnotationUpdateBatch(before.document, commands);
+    if (annotationPlan) {
+      if (!annotationPlan.ok) return { ok: false, reason: annotationPlan.reason, problems: annotationPlan.problems };
+      return this.#commit({ id, type: "batch", commands }, before, annotationPlan.document, annotationPlan.changeSet, annotationPlan.inverseChangeSet);
+    }
     let candidate = before.document;
     const forward: ChangeSet[] = [];
     const inverse: ChangeSet[] = [];
