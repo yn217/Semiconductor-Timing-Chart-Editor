@@ -10,8 +10,7 @@ const sizes = [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] as co
 const setModeNow = (page: Page, mode: "Cycle" | "Transaction" | "Combined") => page.locator(".view-mode").getByRole("button", { name: mode, exact: true }).click();
 
 for (const size of sizes) {
-  // Known gap (#593, HANDOFF -> CODEX): Cycle frozen chrome is still mounted (hidden) in Transaction on main until PR #1005 lands; test.fail flips red when fixed, then remove the annotation.
-  test.fail(`mode switch during in-flight work leaves no stale owner/chrome at ${size.width}x${size.height}`, async ({ page }) => {
+  test(`mode switch during in-flight work leaves no stale owner/chrome at ${size.width}x${size.height}`, async ({ page }) => {
     test.setTimeout(180_000);
     const problems: string[] = [];
     page.on("pageerror", (error) => problems.push(error.message));
