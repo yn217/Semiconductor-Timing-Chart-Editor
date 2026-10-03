@@ -89,6 +89,8 @@ describe("TimelineGeometryOwner", () => {
     expect(metrics.localXToSourceBoundary(20.5 + 3 * 40)).toBe(5);
     expect(metrics.localXToSourceBoundary(20.5 + metrics.displayCycleCount * 40)).toBe(20);
     expect(metrics.localXToSourceBoundary(20.5 - 21)).toBeUndefined();
+    expect(metrics.localXToSourceBoundary(-500, { clamp: true })).toBe(0);
+    expect(metrics.localXToSourceBoundary(20.5 + (metrics.displayCycleCount + 9) * 40, { clamp: true })).toBe(20);
   });
 
   it("publishes immutable presentation metrics as one generation", () => {

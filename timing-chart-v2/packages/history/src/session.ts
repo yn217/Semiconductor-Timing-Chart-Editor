@@ -142,6 +142,7 @@ export class CommandHistorySession implements CanonicalStore, SemanticCommandDis
       forward.push(plan.changeSet);
       inverse.push(plan.inverseChangeSet);
     }
+    // Inverse change sets are merged in reverse command order; push + one reverse avoids O(K^2) unshift.
     inverse.reverse();
     const action: RecordedAction = { id, type: "batch", commands };
     return this.#commit(action, before, candidate, mergeChangeSets(forward), mergeChangeSets(inverse));
