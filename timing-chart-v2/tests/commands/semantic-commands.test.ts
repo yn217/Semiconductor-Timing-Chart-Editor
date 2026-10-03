@@ -663,6 +663,9 @@ describe("pure Semantic Command planning", () => {
 
   it("plans Signal Editor changes with precise render domains", () => {
     const source = canonicalFixture();
+    const renamed = planCommand(source, { id: commandId("cmd_row_label_rename"), type: "signal.rename", signalId: "sig_data" as SignalId, name: "DATA_RENAMED" });
+    expect(renamed.ok).toBe(true);
+    if (renamed.ok) expect(renamed.changeSet).toEqual({ rowPresentation: ["sig_data"] });
     const moved = planCommand(source, { id: commandId("cmd_move_value"), type: "signal.moveValue", signalId: "sig_data" as SignalId, fromStart: 4, toStart: 3 });
     expect(moved.ok).toBe(true);
     if (moved.ok) {

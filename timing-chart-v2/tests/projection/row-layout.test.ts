@@ -467,6 +467,77 @@ describe("RowLayout and projection invariants", () => {
     expect(service.diagnostics().rowLayoutBuilds).toBe(2);
   });
 
+  it("patches row presentation by stable ID without rebuilding or rescanning the full layout", () => {
+    const document = layoutFixture();
+    const service = new DefaultProjectionService();
+    const viewport = { viewportStartY: 0, viewportEndY: 2_000, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] } as const;
+    const initial = service.project({ snapshot: { revision: 0, document } as CanonicalSnapshot, changeSet: { fullDocumentReplace: true }, viewport });
+    const before = service.diagnostics();
+    const renamed = {
+      ...document,
+      signals: document.signals.map((signal) => signal.id === "sig_data" ? { ...signal, name: "RENAMED", display: { ...signal.display, name: "RENAMED" } } : signal),
+    };
+    const updated = service.project({ snapshot: { revision: 1, document: renamed } as CanonicalSnapshot, changeSet: { rowPresentation: ["sig_data" as RowId] }, viewport, previous: initial });
+    expect(updated.rowLayout.find((row) => row.rowId === "sig_data")?.name).toBe("RENAMED");
+    expect(updated.navigationRowLayout.find((row) => row.rowId === "sig_data")?.name).toBe("RENAMED");
+    expect(service.diagnostics()).toMatchObject({ rowLayoutBuilds: before.rowLayoutBuilds, fullVisibleRowScans: before.fullVisibleRowScans });
+
+    const scrolled = service.project({ snapshot: { revision: 1, document: renamed } as CanonicalSnapshot, changeSet: {}, viewport: { ...viewport, viewportStartY: 30, viewportEndY: 2_030 }, previous: updated });
+    expect(scrolled.navigationRowLayout.find((row) => row.rowId === "sig_data")?.name).toBe("RENAMED");
+    expect(service.diagnostics().rowLayoutBuilds).toBe(before.rowLayoutBuilds);
+  });
+
+  it("keeps waveform and Edge Number invalidation out of the row-presentation fast path", () => {
+    const document = layoutFixture();
+    const service = new DefaultProjectionService();
+    const viewport = { viewportStartY: 0, viewportEndY: 2_000, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] } as const;
+    const initial = service.project({ snapshot: { revision: 0, document } as CanonicalSnapshot, changeSet: { fullDocumentReplace: true }, viewport });
+    const renamed = { ...document, signals: document.signals.map((signal) => signal.id === "sig_data" ? { ...signal, display: { ...signal.display, name: "DATA_RENAMED" } } : signal) };
+    const before = service.diagnostics();
+
+    const updated = service.project({
+      snapshot: { revision: 1, document: renamed } as CanonicalSnapshot,
+      changeSet: { rowPresentation: ["sig_data" as RowId], waveSemantics: ["sig_data" as SignalId] },
+      viewport,
+      previous: initial,
+    });
+
+    expect(updated.waveSignalIds).toEqual(["sig_data"]);
+    expect(service.diagnostics().rowLayoutBuilds).toBe(before.rowLayoutBuilds + 1);
+
+    const beforeEdgeCounter = service.diagnostics();
+    service.project({
+      snapshot: { revision: 2, document: renamed } as CanonicalSnapshot,
+      changeSet: { rowPresentation: ["sig_clk" as RowId], edgeCounter: ["sig_clk" as SignalId] },
+      viewport,
+      previous: updated,
+    });
+    expect(service.diagnostics().rowLayoutBuilds).toBe(beforeEdgeCounter.rowLayoutBuilds + 1);
+  });
+
+  it("updates renamed Group metadata in row and header projections without rebuilding geometry", () => {
+    const document = layoutFixture();
+    const service = new DefaultProjectionService();
+    const viewport = { viewportStartY: 0, viewportEndY: 2_000, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] } as const;
+    const initial = service.project({ snapshot: { revision: 0, document } as CanonicalSnapshot, changeSet: { fullDocumentReplace: true }, viewport });
+    const group = document.signalGroups[0]!;
+    const renamed = { ...document, signalGroups: [{ ...group, name: "Renamed Group" }] };
+    const before = service.diagnostics();
+
+    const updated = service.project({
+      snapshot: { revision: 1, document: renamed } as CanonicalSnapshot,
+      changeSet: { rowPresentation: group.rows },
+      viewport,
+      previous: initial,
+    });
+
+    expect(updated.rowLayout.find((row) => row.rowId === "sig_data")?.groupName).toBe("Renamed Group");
+    expect(updated.navigationRowLayout.find((row) => row.rowId === "sig_data")?.groupName).toBe("Renamed Group");
+    expect(updated.groupHeaders.find((header) => header.groupId === group.id)?.groupName).toBe("Renamed Group");
+    expect(updated.leftGroupHeaders.find((header) => header.groupId === group.id)?.groupName).toBe("Renamed Group");
+    expect(service.diagnostics().rowLayoutBuilds).toBe(before.rowLayoutBuilds);
+  });
+
   it("updates only the viewport slice during pure scroll", () => {
     const document = layoutFixture();
     const service = new DefaultProjectionService();
