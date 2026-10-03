@@ -603,6 +603,40 @@
       "replacementTest": null
     },
     {
+      "file": "issue-431-enum-state-save-open.spec.ts",
+      "domain": "enum-state-save-open",
+      "originIssue": 431,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "State/Enum values, mapping, binding and symbolic labels survive Save -> Open exactly.",
+      "duplicateGroup": "enum-state-save-open",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Added in the #431 non-Scenario verification pass; protects a user-visible journey with no duplicate coverage.",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-431-protocol-check-toggle.spec.ts",
+      "domain": "check-category-toggle",
+      "originIssue": 431,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Protocol/Stability checks toggle OFF/ON from the Check tab with deterministic, duplicate-free findings.",
+      "duplicateGroup": "check-category-toggle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Added in the #431 non-Scenario verification pass; protects a user-visible journey with no duplicate coverage.",
+      "replacementTest": null
+    },
+    {
       "file": "issue-440-mode-context-coherence.spec.ts",
       "domain": "mode-context",
       "originIssue": 440,

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-03T07:02:45.027Z",
+  "generatedAt": "2026-10-03T08:19:26.732Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 394,
-  "caseCount": 1147,
-  "reviewedCaseCount": 1147,
+  "specFileCount": 396,
+  "caseCount": 1153,
+  "reviewedCaseCount": 1153,
   "curatedProfileCounts": {
     "integration": 579,
     "nightly": 226,
-    "performance": 63,
-    "pr": 358,
+    "performance": 65,
+    "pr": 362,
     "visual": 178
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -9972,6 +9972,110 @@
       "contractId": "inspector-bookmark"
     },
     {
+      "file": "issue-431-enum-state-save-open.spec.ts",
+      "suitePath": [],
+      "line": 22,
+      "title": "State/Enum keeps values, mapping, binding and symbolic labels through Save -> Open at 1280x720",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "enum-state-save-open",
+      "originIssue": 431,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "State/Enum values, mapping, binding and symbolic labels survive Save -> Open exactly.",
+      "duplicateGroup": "enum-state-save-open",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Added in the #431 non-Scenario verification pass; protects a user-visible journey with no duplicate coverage.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "enum-state-save-open"
+    },
+    {
+      "file": "issue-431-enum-state-save-open.spec.ts",
+      "suitePath": [],
+      "line": 22,
+      "title": "State/Enum keeps values, mapping, binding and symbolic labels through Save -> Open at 1672x941",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "enum-state-save-open",
+      "originIssue": 431,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "State/Enum values, mapping, binding and symbolic labels survive Save -> Open exactly.",
+      "duplicateGroup": "enum-state-save-open",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Added in the #431 non-Scenario verification pass; protects a user-visible journey with no duplicate coverage.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "enum-state-save-open"
+    },
+    {
+      "file": "issue-431-protocol-check-toggle.spec.ts",
+      "suitePath": [],
+      "line": 26,
+      "title": "Protocol check ON/OFF/ON through the Check tab is deterministic at 1280x720",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "check-category-toggle",
+      "originIssue": 431,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Protocol/Stability checks toggle OFF/ON from the Check tab with deterministic, duplicate-free findings.",
+      "duplicateGroup": "check-category-toggle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Added in the #431 non-Scenario verification pass; protects a user-visible journey with no duplicate coverage.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "check-category-toggle"
+    },
+    {
+      "file": "issue-431-protocol-check-toggle.spec.ts",
+      "suitePath": [],
+      "line": 26,
+      "title": "Protocol check ON/OFF/ON through the Check tab is deterministic at 1672x941",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "check-category-toggle",
+      "originIssue": 431,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Protocol/Stability checks toggle OFF/ON from the Check tab with deterministic, duplicate-free findings.",
+      "duplicateGroup": "check-category-toggle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Added in the #431 non-Scenario verification pass; protects a user-visible journey with no duplicate coverage.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "check-category-toggle"
+    },
+    {
       "file": "issue-440-mode-context-coherence.spec.ts",
       "suitePath": [],
       "line": 15,
@@ -12691,7 +12795,7 @@
     {
       "file": "issue-728-group-double-click.spec.ts",
       "suitePath": [],
-      "line": 3,
+      "line": 4,
       "title": "double-clicking a Transaction Group header toggles it and does not start rename",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -14478,7 +14582,7 @@
     {
       "file": "issue-765-transaction-no-phantom-vscroll.spec.ts",
       "suitePath": [],
-      "line": 21,
+      "line": 22,
       "title": "scroll extent equals the Transaction content (and fits when there is room) at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -14505,7 +14609,7 @@
     {
       "file": "issue-765-transaction-no-phantom-vscroll.spec.ts",
       "suitePath": [],
-      "line": 21,
+      "line": 22,
       "title": "scroll extent equals the Transaction content (and fits when there is room) at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -14532,7 +14636,7 @@
     {
       "file": "issue-765-transaction-no-phantom-vscroll.spec.ts",
       "suitePath": [],
-      "line": 73,
+      "line": 72,
       "title": "a genuinely tall Transaction document keeps all lanes reachable through the one vertical owner",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -16485,7 +16589,7 @@
     {
       "file": "issue-799-orphan-divider.spec.ts",
       "suitePath": [],
-      "line": 12,
+      "line": 13,
       "title": "Cycle fixed-column boundaries do not show isolated idle grips with the default document at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -16511,7 +16615,7 @@
     {
       "file": "issue-799-orphan-divider.spec.ts",
       "suitePath": [],
-      "line": 12,
+      "line": 13,
       "title": "Cycle fixed-column boundaries do not show isolated idle grips with the default document at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -16537,7 +16641,7 @@
     {
       "file": "issue-799-orphan-divider.spec.ts",
       "suitePath": [],
-      "line": 52,
+      "line": 53,
       "title": "Cycle fixed-column boundaries do not show isolated idle grips with the protocol showcase at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -16563,7 +16667,7 @@
     {
       "file": "issue-799-orphan-divider.spec.ts",
       "suitePath": [],
-      "line": 52,
+      "line": 53,
       "title": "Cycle fixed-column boundaries do not show isolated idle grips with the protocol showcase at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -16589,7 +16693,7 @@
     {
       "file": "issue-799-orphan-divider.spec.ts",
       "suitePath": [],
-      "line": 88,
+      "line": 89,
       "title": "fixed-column grips stay structurally aligned through signal-count and layout interactions at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -16615,7 +16719,7 @@
     {
       "file": "issue-799-orphan-divider.spec.ts",
       "suitePath": [],
-      "line": 88,
+      "line": 89,
       "title": "fixed-column grips stay structurally aligned through signal-count and layout interactions at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -16641,7 +16745,7 @@
     {
       "file": "issue-799-orphan-divider.spec.ts",
       "suitePath": [],
-      "line": 173,
+      "line": 172,
       "title": "Cycle resize handles remain pointer-operable at their structural header boundaries",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -17307,7 +17411,7 @@
     {
       "file": "issue-847-inflight-mode-switch.spec.ts",
       "suitePath": [],
-      "line": 17,
+      "line": 18,
       "title": "in-flight Cycle prefetch is abandoned by Transaction and rebuilt on return, then wheel scroll keeps row/wave ownership (1280x720, Bottom closed)",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -17333,7 +17437,7 @@
     {
       "file": "issue-847-inflight-mode-switch.spec.ts",
       "suitePath": [],
-      "line": 17,
+      "line": 18,
       "title": "in-flight Cycle prefetch is abandoned by Transaction and rebuilt on return, then wheel scroll keeps row/wave ownership (1280x720, Bottom open)",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -17359,7 +17463,7 @@
     {
       "file": "issue-847-inflight-mode-switch.spec.ts",
       "suitePath": [],
-      "line": 17,
+      "line": 18,
       "title": "in-flight Cycle prefetch is abandoned by Transaction and rebuilt on return, then wheel scroll keeps row/wave ownership (1672x941, Bottom closed)",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -17385,7 +17489,7 @@
     {
       "file": "issue-847-inflight-mode-switch.spec.ts",
       "suitePath": [],
-      "line": 17,
+      "line": 18,
       "title": "in-flight Cycle prefetch is abandoned by Transaction and rebuilt on return, then wheel scroll keeps row/wave ownership (1672x941, Bottom open)",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -17411,7 +17515,7 @@
     {
       "file": "issue-847-prefetch-mode-roundtrip.spec.ts",
       "suitePath": [],
-      "line": 10,
+      "line": 11,
       "title": "Cycle -> Transaction -> Cycle rebuilds waveform prefetch at unchanged viewport (Bottom closed)",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -17437,7 +17541,7 @@
     {
       "file": "issue-847-prefetch-mode-roundtrip.spec.ts",
       "suitePath": [],
-      "line": 10,
+      "line": 11,
       "title": "Cycle -> Transaction -> Cycle rebuilds waveform prefetch at unchanged viewport (Bottom open)",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -17909,8 +18013,60 @@
     {
       "file": "issue-869-minimap-transaction-incremental.spec.ts",
       "suitePath": [],
-      "line": 9,
+      "line": 10,
       "title": "a single Transaction edit updates the MiniMap Transaction overview incrementally",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "minimap-incremental",
+      "originIssue": 869,
+      "type": "PERFORMANCE",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A Transaction edit updates the MiniMap incrementally.",
+      "duplicateGroup": "minimap-incremental",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance"
+      ],
+      "contractId": "minimap-incremental"
+    },
+    {
+      "file": "issue-869-minimap-transaction-incremental.spec.ts",
+      "suitePath": [],
+      "line": 53,
+      "title": "10k Transactions in one lane produce pixel-bounded MiniMap DOM at 1280x720",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "minimap-incremental",
+      "originIssue": 869,
+      "type": "PERFORMANCE",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A Transaction edit updates the MiniMap incrementally.",
+      "duplicateGroup": "minimap-incremental",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance"
+      ],
+      "contractId": "minimap-incremental"
+    },
+    {
+      "file": "issue-869-minimap-transaction-incremental.spec.ts",
+      "suitePath": [],
+      "line": 53,
+      "title": "10k Transactions in one lane produce pixel-bounded MiniMap DOM at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
@@ -18377,7 +18533,7 @@
     {
       "file": "issue-937-remaining-closure.spec.ts",
       "suitePath": [],
-      "line": 28,
+      "line": 29,
       "title": "clockless axis: Ruler, Grid and Wave boundaries share X across zoom/scroll at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -18403,7 +18559,7 @@
     {
       "file": "issue-937-remaining-closure.spec.ts",
       "suitePath": [],
-      "line": 28,
+      "line": 29,
       "title": "clockless axis: Ruler, Grid and Wave boundaries share X across zoom/scroll at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -18429,7 +18585,7 @@
     {
       "file": "issue-937-remaining-closure.spec.ts",
       "suitePath": [],
-      "line": 63,
+      "line": 64,
       "title": "Inspector drag-resize keeps Ruler/Wave boundary alignment at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -18455,7 +18611,7 @@
     {
       "file": "issue-937-remaining-closure.spec.ts",
       "suitePath": [],
-      "line": 63,
+      "line": 64,
       "title": "Inspector drag-resize keeps Ruler/Wave boundary alignment at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -18481,7 +18637,7 @@
     {
       "file": "issue-937-remaining-closure.spec.ts",
       "suitePath": [],
-      "line": 103,
+      "line": 102,
       "title": "Transaction Phase boundaries stay on the Ruler across zoom at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -18507,7 +18663,7 @@
     {
       "file": "issue-937-remaining-closure.spec.ts",
       "suitePath": [],
-      "line": 103,
+      "line": 102,
       "title": "Transaction Phase boundaries stay on the Ruler across zoom at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -18533,7 +18689,7 @@
     {
       "file": "issue-937-remaining-closure.spec.ts",
       "suitePath": [],
-      "line": 143,
+      "line": 142,
       "title": "Transaction items tighter than 2px stay mounted, hit-testable and on the Ruler at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -18559,7 +18715,7 @@
     {
       "file": "issue-937-remaining-closure.spec.ts",
       "suitePath": [],
-      "line": 143,
+      "line": 142,
       "title": "Transaction items tighter than 2px stay mounted, hit-testable and on the Ruler at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -24213,7 +24369,7 @@
     {
       "file": "splitter-view-state.contract.spec.ts",
       "suitePath": [],
-      "line": 6,
+      "line": 7,
       "title": "Bottom and Inspector splitters are discoverable at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -24240,7 +24396,7 @@
     {
       "file": "splitter-view-state.contract.spec.ts",
       "suitePath": [],
-      "line": 6,
+      "line": 7,
       "title": "Bottom and Inspector splitters are discoverable at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -24267,7 +24423,7 @@
     {
       "file": "splitter-view-state.contract.spec.ts",
       "suitePath": [],
-      "line": 45,
+      "line": 44,
       "title": "double-clicking the Bottom and Inspector splitters restores default sizes without touching the document",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -28377,7 +28533,7 @@
     {
       "file": "transaction-tree-menu-overlay.spec.ts",
       "suitePath": [],
-      "line": 4,
+      "line": 5,
       "title": "Transaction Tree menus stay readable, anchored and view-only at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -28403,7 +28559,7 @@
     {
       "file": "transaction-tree-menu-overlay.spec.ts",
       "suitePath": [],
-      "line": 4,
+      "line": 5,
       "title": "Transaction Tree menus stay readable, anchored and view-only at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -31234,6 +31390,24 @@
       "semanticReviewStatus": "REVIEWED"
     },
     {
+      "file": "issue-431-enum-state-save-open.spec.ts",
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
+      "originIssue": "431",
+      "declaredTimeoutMs": 180,
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "issue-431-protocol-check-toggle.spec.ts",
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
+      "originIssue": "431",
+      "declaredTimeoutMs": 120,
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
       "file": "issue-440-mode-context-coherence.spec.ts",
       "caseCount": 3,
       "reviewedCaseCount": 3,
@@ -32622,8 +32796,8 @@
     },
     {
       "file": "issue-869-minimap-transaction-incremental.spec.ts",
-      "caseCount": 1,
-      "reviewedCaseCount": 1,
+      "caseCount": 3,
+      "reviewedCaseCount": 3,
       "originIssue": "869",
       "declaredTimeoutMs": 240,
       "candidateSignals": [],
