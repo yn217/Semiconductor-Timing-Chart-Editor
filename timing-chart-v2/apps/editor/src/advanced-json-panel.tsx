@@ -6,20 +6,21 @@ import { replaceSelectedJsonObject } from "./json-selection.js";
 import { selectedJsonProblem } from "./json-problems.js";
 
 export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, selectedAnnotation, selectedTransaction, onReplaceDocument, onDiagnostic }: { readonly document: CanonicalDocument; readonly selectedSignal: Signal | undefined; readonly selectedGroup: SignalGroup | undefined; readonly selectedAnnotation: Annotation | undefined; readonly selectedTransaction: Transaction | undefined; readonly onReplaceDocument: (document: CanonicalDocument) => CommandResult; readonly onDiagnostic: (diagnostic: DocumentProblem | readonly DocumentProblem[] | undefined) => void }) {
-  const text = useMemo(() => serializeCanonicalDocument(document), [document]);
-  const [advanced, setAdvanced] = useState(false);
   const [scope, setScope] = useState<"selected" | "document">("document");
-  const [draft, setDraft] = useState(text);
+  const selected = selectedSignal ?? selectedGroup ?? selectedAnnotation ?? selectedTransaction;
+  const text = useMemo(() => scope === "document" ? serializeCanonicalDocument(document) : "", [document, scope]);
+  const selectedText = JSON.stringify(selected ?? {}, null, 2);
+  const sourceText = scope === "selected" ? selectedText : text;
+  const [advanced, setAdvanced] = useState(false);
+  const [draft, setDraft] = useState(sourceText);
   const [userEdited, setUserEdited] = useState(false);
   const [status, setStatus] = useState("Read only");
-  const selected = selectedSignal ?? selectedGroup ?? selectedAnnotation ?? selectedTransaction;
-  const sourceText = scope === "selected" ? JSON.stringify(selected ?? {}, null, 2) : text;
   const draftChanged = advanced && userEdited && draft !== sourceText;
   const changeScope = (nextScope: "selected" | "document") => {
     setScope(nextScope);
     // Scope changes are explicit user navigation, so load that scope's
     // source rather than treating it as an unsolicited live refresh.
-    setDraft(nextScope === "selected" ? JSON.stringify(selected ?? {}, null, 2) : text);
+    setDraft(nextScope === "selected" ? selectedText : serializeCanonicalDocument(document));
     setUserEdited(false);
     onDiagnostic(undefined);
     setStatus(nextScope === "selected" ? "Selected Object" : "Read only");
@@ -111,5 +112,5 @@ export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, sel
     setUserEdited(false);
     setStatus("Applied");
   };
-  return <section className="json-panel" data-testid="json-panel"><div className="json-toolbar"><strong>JSON</strong><button type="button" data-testid="json-advanced-toggle" aria-pressed={advanced} onClick={() => setAdvanced((value) => !value)}>{advanced ? "Read Only" : "Advanced Editable"}</button><span aria-label="JSON editing mode">{advanced ? "Advanced" : "Read only"}</span>{advanced && draftChanged && <span data-testid="json-unapplied-status">● Unapplied changes</span>}<select aria-label="JSON scope" value={scope} onChange={(event) => changeScope(event.target.value as typeof scope)}><option value="selected">Selected Object</option><option value="document">Whole Document</option></select><button type="button" onClick={format}>Format</button><button type="button" onClick={validate}>Validate</button><button type="button" onClick={() => void copy()}>Copy</button>{advanced && <><button type="button" data-testid="cancel-advanced-json" onClick={cancel} disabled={!draftChanged}>Cancel</button><button type="button" data-testid="apply-advanced-json" onClick={apply} disabled={!draftChanged}>Apply JSON</button></>}<output>{status}</output></div>{advanced ? <textarea aria-label="Advanced JSON" value={draft} onChange={(event) => { setUserEdited(true); setDraft(event.target.value); }} spellCheck={false} /> : <pre>{text}</pre>}</section>;
+  return <section className="json-panel" data-testid="json-panel"><div className="json-toolbar"><strong>JSON</strong><button type="button" data-testid="json-advanced-toggle" aria-pressed={advanced} onClick={() => setAdvanced((value) => !value)}>{advanced ? "Read Only" : "Advanced Editable"}</button><span aria-label="JSON editing mode">{advanced ? "Advanced" : "Read only"}</span>{advanced && draftChanged && <span data-testid="json-unapplied-status">● Unapplied changes</span>}<select aria-label="JSON scope" value={scope} onChange={(event) => changeScope(event.target.value as typeof scope)}><option value="selected">Selected Object</option><option value="document">Whole Document</option></select><button type="button" onClick={format}>Format</button><button type="button" onClick={validate}>Validate</button><button type="button" onClick={() => void copy()}>Copy</button>{advanced && <><button type="button" data-testid="cancel-advanced-json" onClick={cancel} disabled={!draftChanged}>Cancel</button><button type="button" data-testid="apply-advanced-json" onClick={apply} disabled={!draftChanged}>Apply JSON</button></>}<output>{status}</output></div>{advanced ? <textarea aria-label="Advanced JSON" value={draft} onChange={(event) => { setUserEdited(true); setDraft(event.target.value); }} spellCheck={false} /> : <pre>{scope === "selected" ? selectedText : text}</pre>}</section>;
 }

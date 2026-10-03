@@ -170,6 +170,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, cyclesPerTc, on
   // otherwise the single selected Annotation, otherwise nothing (every
   // Arrange handler stays undefined -> ArrangeGroup renders disabled).
   const arrangeTargetIds: readonly AnnotationId[] = selectedAnnotationIds.size > 0 ? [...selectedAnnotationIds] : selectedAnnotation ? [selectedAnnotation.id] : [];
+  const annotationById = useMemo(() => new Map(document.annotations.map((annotation) => [annotation.id, annotation])), [document.annotations]);
   const arrangeGroup = arrangeTargetIds.length > 0 ? (document.annotationGroups ?? []).find((group) => group.annotationIds.includes(arrangeTargetIds[0]!)) : undefined;
   // #332 item D: these reasons must distinguish "nothing selected" from an
   // implemented control that is merely unavailable for the current
@@ -184,8 +185,8 @@ function Ribbon({ tab, document, revision, range, history, zoom, cyclesPerTc, on
   const arrangeHandlers = arrangeTargetIds.length === 0 ? {} : {
     onBringToFront: () => commands.bringAnnotationsToFront(arrangeTargetIds),
     onSendToBack: () => commands.sendAnnotationsToBack(arrangeTargetIds),
-    onRotateRight: () => commands.rotateAnnotations(arrangeTargetIds.map((annotationId) => ({ annotationId, rotation: (((document.annotations.find((item) => item.id === annotationId)?.rotation ?? 0) + 90) % 360 + 360) % 360 }))),
-    onRotateLeft: () => commands.rotateAnnotations(arrangeTargetIds.map((annotationId) => ({ annotationId, rotation: (((document.annotations.find((item) => item.id === annotationId)?.rotation ?? 0) - 90) % 360 + 360) % 360 }))),
+    onRotateRight: () => commands.rotateAnnotations(arrangeTargetIds.map((annotationId) => ({ annotationId, rotation: (((annotationById.get(annotationId)?.rotation ?? 0) + 90) % 360 + 360) % 360 }))),
+    onRotateLeft: () => commands.rotateAnnotations(arrangeTargetIds.map((annotationId) => ({ annotationId, rotation: (((annotationById.get(annotationId)?.rotation ?? 0) - 90) % 360 + 360) % 360 }))),
     ...(arrangeTargetIds.length >= 2 && !arrangeGroup ? { onGroup: () => commands.createAnnotationGroup({ id: nextEntityId("annotationGroup", document) as AnnotationGroupId, annotationIds: arrangeTargetIds } satisfies AnnotationGroup) } : {}),
     ...(arrangeGroup ? { onUngroup: () => commands.deleteAnnotationGroup(arrangeGroup.id) } : {}),
     // Align brings every selected Annotation's label onto the same row
@@ -193,7 +194,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, cyclesPerTc, on
     // existing single-annotation annotation.updateLabelOffset command,
     // just batched, rather than inventing a new command type for it.
     ...(arrangeTargetIds.length >= 2 ? { onAlign: () => {
-      const targets = arrangeTargetIds.flatMap((id) => { const found = document.annotations.find((item) => item.id === id); return found ? [found] : []; });
+      const targets = arrangeTargetIds.flatMap((id) => { const found = annotationById.get(id); return found ? [found] : []; });
       const reference = targets[0];
       if (targets.length < 2 || !reference) return;
       const referenceY = reference.labelOffset?.y ?? -14;
@@ -207,14 +208,14 @@ function Ribbon({ tab, document, revision, range, history, zoom, cyclesPerTc, on
     // change, and disable+explain when every selected annotation is
     // already at the requested state, matching #332's disabled-reason
     // convention rather than presenting an enabled control with no effect.
-    ...(arrangeTargetIds.some((id) => !(document.annotations.find((item) => item.id === id)?.locked ?? false)) ? { onLock: () => commands.setAnnotationsLocked(arrangeTargetIds.filter((id) => !(document.annotations.find((item) => item.id === id)?.locked ?? false)), true) } : { lockUnavailableReason: "Selected annotation(s) are already locked" }),
-    ...(arrangeTargetIds.some((id) => document.annotations.find((item) => item.id === id)?.locked ?? false) ? { onUnlock: () => commands.setAnnotationsLocked(arrangeTargetIds.filter((id) => document.annotations.find((item) => item.id === id)?.locked ?? false), false) } : { unlockUnavailableReason: "Selected annotation(s) are already unlocked" }),
+    ...(arrangeTargetIds.some((id) => !(annotationById.get(id)?.locked ?? false)) ? { onLock: () => commands.setAnnotationsLocked(arrangeTargetIds.filter((id) => !(annotationById.get(id)?.locked ?? false)), true) } : { lockUnavailableReason: "Selected annotation(s) are already locked" }),
+    ...(arrangeTargetIds.some((id) => annotationById.get(id)?.locked ?? false) ? { onUnlock: () => commands.setAnnotationsLocked(arrangeTargetIds.filter((id) => annotationById.get(id)?.locked ?? false), false) } : { unlockUnavailableReason: "Selected annotation(s) are already unlocked" }),
     // Same width: match every OTHER selected annotation's start-end cycle
     // span to the first selected one's. Types without start/end (arrow,
     // callout, marker, ...) are silently skipped rather than failing the
     // whole batch, since a mixed selection is common.
     ...(arrangeTargetIds.length >= 2 ? (() => {
-      const targets = arrangeTargetIds.flatMap((id) => { const found = document.annotations.find((item) => item.id === id); return found ? [found] : []; });
+      const targets = arrangeTargetIds.flatMap((id) => { const found = annotationById.get(id); return found ? [found] : []; });
       const reference = targets.find((item) => item.start && item.end);
       const spanCycles = reference?.start && reference.end ? reference.end.cycle - reference.start.cycle : undefined;
       const rest = spanCycles === undefined ? [] : targets.filter((item) => item.id !== reference?.id && item.start && item.end);
