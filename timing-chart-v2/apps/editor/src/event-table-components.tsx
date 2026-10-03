@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { formatBusValue, quickValueLiteral, quickValueOptions, type EnumDefinition, type SignalValueChange, type ValueSignal } from "@timing-chart-v2/schema";
+import { quickValueLiteral, quickValueOptions, type EnumDefinition, type SignalValueChange, type ValueSignal } from "@timing-chart-v2/schema";
+import { formatBusValueAtCycle, formatSignalValueChange } from "./signal-value-presentation.js";
 import type { SignalEditorCommandActions } from "./application/editor-surface-command-controller.js";
 import { RibbonIcon } from "./ribbon-icon.js";
 import { resolveValueEditorPolicy } from "./runtime/value-editor-policy.js";
@@ -175,11 +176,12 @@ export function EventRow({ signal, enumDefinition, change, end, index, selected,
 /** Match the value shown by the waveform projection while preserving an
  * explicit presentation label when one is supplied. */
 export function formatEventRowValue(signal: Pick<ValueSignal, "type" | "displayFormat" | "width">, change: Pick<SignalValueChange, "value" | "displayLabel">): string {
-  if (change.displayLabel !== undefined) return change.displayLabel;
-  if (signal.type === "bus" && signal.displayFormat !== undefined) {
-    return formatBusValue(change.value, signal.displayFormat, signal.width);
-  }
-  return String(change.value);
+  return formatSignalValueChange(signal, change);
+}
+
+export function InspectorBusCurrentValue({ signal, cycle }: { readonly signal: ValueSignal; readonly cycle: number }) {
+  const value = formatBusValueAtCycle(signal, cycle);
+  return <div className="property-row"><span>Value at cycle {cycle}</span><output aria-label={`Bus value at cycle ${cycle}`} data-testid="inspector-bus-current-value">{value ?? "—"}</output></div>;
 }
 
 export function QuickValues({ signal, setValue }: { readonly signal: ValueSignal; readonly setValue: (value: string) => void }) {

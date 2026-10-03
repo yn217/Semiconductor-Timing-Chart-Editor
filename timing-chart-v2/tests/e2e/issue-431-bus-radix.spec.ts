@@ -40,12 +40,16 @@ for (const size of sizes) {
 
     await surface.locator(`[data-role='frozen-row'][data-row-id='${id}']`).click();
     await expect.poll(waveLabels).toEqual(expect.arrayContaining([...expectedLabels.hex]));
+    const inspector = page.getByTestId("inspector");
+    const inspectorValue = inspector.getByTestId("inspector-bus-current-value");
+    await page.getByTestId("cycle-ruler").locator("[data-cycle='4']").click();
+    await expect(inspectorValue).toHaveText("0xA5");
 
     for (const format of ["decimal", "binary"] as const) {
-      const inspector = page.getByTestId("inspector");
       await inspector.getByLabel("Inspector bus format").selectOption(format);
       await inspector.getByRole("button", { name: /Apply/ }).first().click();
       await expect.poll(async () => same(await waveLabels(), expectedLabels[format]), { message: `waveform labels follow ${format}` }).toBe(true);
+      await expect(inspectorValue).toHaveText(expectedLabels[format][1]);
       const cells = await tableCells();
       for (const value of expectedLabels[format]) expect(cells, `Bottom event table shows ${value}`).toContain(value);
     }

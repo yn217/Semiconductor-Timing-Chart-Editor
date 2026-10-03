@@ -130,6 +130,7 @@ export interface EditorSecondarySurfacesInput {
   };
   readonly timeline: {
     readonly range: Readonly<{ start: number; end: number }>;
+    readonly selectedCycle: number;
     readonly collapsedGroupIds: ReadonlySet<GroupId>;
     readonly setCollapsedGroups: (next: ReadonlySet<GroupId>) => void;
     readonly toggleCollapsedGroup: (id: GroupId) => void;
@@ -641,6 +642,7 @@ export function useEditorSecondarySurfaces(
     <InspectorPanel
       key={`${input.documentEpoch}:${inspectorSelectionKey}:${dialog.inspectorResetToken}`}
       signal={inspectorSignal}
+      selectedCycle={input.timeline.selectedCycle}
       selectedSignalIds={inspectorSignalIds}
       group={inspectorGroup}
       annotation={inspectorAnnotation}
