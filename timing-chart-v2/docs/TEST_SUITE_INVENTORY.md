@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 402 spec files and 1171 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 403 spec files and 1174 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1170/1171 cases reviewed.
+Semantic review progress: 1173/1174 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,9 +10,9 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 587 |
+| `integration` | 590 |
 | `nightly` | 226 |
-| `performance` | 65 |
+| `performance` | 66 |
 | `pr` | 371 |
 | `visual` | 180 |
 
@@ -152,6 +152,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-175-scrollbar-effect-lifecycle.spec.ts` | 1 | 0/1 reviewed |
 | `issue-175-scrollbar-geometry-matrix.spec.ts` | 2 | 2/2 reviewed |
 | `issue-208-open-epoch-coherence.spec.ts` | 1 | 1/1 reviewed |
+| `issue-219-wave-url-lifetime.spec.ts` | 2 | 2/2 reviewed |
 | `issue-426-event-selection-scope.spec.ts` | 1 | 1/1 reviewed |
 | `issue-426-external-bottom-draft-update.spec.ts` | 3 | 3/3 reviewed |
 | `issue-426-inspector-bookmark-rebase.spec.ts` | 2 | 2/2 reviewed |
@@ -331,7 +332,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `measurement-top-row-clip.spec.ts` | 2 | 2/2 reviewed |
 | `mechanical-visual-diagnostics.spec.ts` | 1 | 1/1 reviewed |
 | `minimal-cycle-view.spec.ts` | 3 | 3/3 reviewed |
-| `minimap-overview-performance.spec.ts` | 3 | 3/3 reviewed |
+| `minimap-overview-performance.spec.ts` | 4 | 4/4 reviewed |
 | `minimap-viewport-closure.spec.ts` | 1 | 1/1 reviewed |
 | `mode-isolation-journey.spec.ts` | 2 | 2/2 reviewed |
 | `name-draft-identity.spec.ts` | 1 | 1/1 reviewed |
@@ -489,6 +490,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `issue-1004-group-hierarchy.spec.ts` | querySelector, getComputedStyle, geometryRead |
 | `issue-175-scrollbar-geometry-matrix.spec.ts` | geometryRead |
 | `issue-208-open-epoch-coherence.spec.ts` | querySelector |
+| `issue-219-wave-url-lifetime.spec.ts` | querySelector, explicitWait |
 | `issue-441-ribbon-label-integrity.spec.ts` | getComputedStyle, geometryRead |
 | `issue-573-combined-shared-time-axis.spec.ts` | geometryRead, explicitWait |
 | `issue-573-combined-single-hscroll.spec.ts` | getComputedStyle, geometryRead, explicitWait |
