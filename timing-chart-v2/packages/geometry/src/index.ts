@@ -460,6 +460,8 @@ export interface SemanticSnapGeometryInput {
   readonly document: Pick<CanonicalDocument, "signals" | "timeline" | "bookmarks" | "annotations">;
   readonly geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>;
   readonly rowY: ReadonlyMap<SignalId, number>;
+  /** Optional inclusive vertical search bounds for each row's waveform geometry. */
+  readonly rowBounds?: ReadonlyMap<SignalId, Readonly<{ top: number; bottom: number }>>;
   /** Derived TimeAxis owner used for anchors without an explicit signal. */
   readonly axisOwnerSignalId?: SignalId;
   /** Number of cycles in the rendered geometry (may be smaller than source time after a fold). */
@@ -478,21 +480,56 @@ interface IndexedCycleSnapSourceCacheEntry {
 }
 
 const indexedCycleSnapSources = new WeakMap<LocalGeometryMap, IndexedCycleSnapSourceCacheEntry>();
+const indexedBoundarySequenceValidity = new WeakMap<readonly LocalGeometryEntry[], WeakMap<(sourceCycle: number) => number | undefined, Map<number, boolean>>>();
 
-function getIndexedCycleSnapSource(signalId: SignalId, signalType: string, rowY: number, map: LocalGeometryMap, entries: readonly LocalGeometryEntry[], terminalCycle: number, renderedCycleForSourceCycle: (sourceCycle: number) => number | undefined): SnapCandidateSource | undefined {
+function hasContiguousIndexedBoundaries(entries: readonly LocalGeometryEntry[], terminalCycle: number, renderedCycleForSourceCycle: (sourceCycle: number) => number | undefined): boolean {
+  let byMapper = indexedBoundarySequenceValidity.get(entries);
+  if (!byMapper) {
+    byMapper = new WeakMap();
+    indexedBoundarySequenceValidity.set(entries, byMapper);
+  }
+  let byTerminal = byMapper.get(renderedCycleForSourceCycle);
+  if (!byTerminal) {
+    byTerminal = new Map();
+    byMapper.set(renderedCycleForSourceCycle, byTerminal);
+  }
+  const cached = byTerminal.get(terminalCycle);
+  if (cached !== undefined) return cached;
+  let valid = entries.length >= 2;
+  for (let index = 0; valid && index < entries.length; index += 1) {
+    if (!Number.isFinite(entries[index]!.position.x)) { valid = false; break; }
+    if (index === 0) continue;
+    if (entries[index]!.position.x < entries[index - 1]!.position.x) { valid = false; break; }
+    const priorRendered = renderedCycleForSourceCycle(entries[index - 1]!.cycle);
+    const currentRendered = renderedCycleForSourceCycle(entries[index]!.cycle);
+    if (priorRendered === undefined || currentRendered === undefined || currentRendered !== priorRendered + 1) valid = false;
+  }
+  byTerminal.set(terminalCycle, valid);
+  return valid;
+}
+
+function getIndexedCycleSnapSource(signalId: SignalId, signalType: string, rowY: number, rowBounds: Readonly<{ top: number; bottom: number }> | undefined, map: LocalGeometryMap, entries: readonly LocalGeometryEntry[], terminalCycle: number, renderedCycleForSourceCycle: (sourceCycle: number) => number | undefined): SnapCandidateSource | undefined {
   let source: SnapCandidateSource | undefined;
   if (map.cycleBoundaryEntriesDisplayFiltered) {
     const cached = indexedCycleSnapSources.get(map);
     if (cached?.entries === entries && cached.terminalCycle === terminalCycle && cached.signalType === signalType) source = cached.source;
   }
   if (!source) {
+    if (!hasContiguousIndexedBoundaries(entries, terminalCycle, renderedCycleForSourceCycle)) return undefined;
     source = createIndexedCycleSnapSource(signalId, signalType, 0, map, entries, terminalCycle, renderedCycleForSourceCycle);
     if (source && map.cycleBoundaryEntriesDisplayFiltered) indexedCycleSnapSources.set(map, { entries, terminalCycle, signalType, source });
   }
-  if (!source || rowY === 0) return source;
+  if (!source || rowY === 0 && rowBounds === undefined) return source;
   const shift = (candidate: SnapCandidate | undefined) => candidate === undefined ? undefined : { ...candidate, point: { ...candidate.point, y: candidate.point.y + rowY } };
   return {
-    candidatesNear: (point, tolerance) => source!.candidatesNear(point, tolerance).map((candidate) => shift(candidate)!),
+    candidatesNear: (point, tolerance) => {
+      // Geometry for one waveform is contained by its projected row. Avoid
+      // resolving detailed anchors for unrelated rows before distance checks;
+      // in large documents each such lookup would materialize that owner's
+      // lazy analytic geometry despite the pointer being hundreds of pixels away.
+      if (rowBounds && (point.y + tolerance < rowBounds.top || point.y - tolerance > rowBounds.bottom)) return [];
+      return source!.candidatesNear(point, tolerance).map((candidate) => shift(candidate)!);
+    },
     ...(source.neighborsByX === undefined ? {} : {
       neighborsByX: (x: number, kind: SnapKind) => {
         const neighbors = source!.neighborsByX!(x, kind);
@@ -558,7 +595,7 @@ export class SemanticSnapCandidateService {
       // instead of materializing every transition/value candidate in the
       // retained contiguous source interval. Sparse/folded or unordered maps
       // keep the conservative semantic path below.
-      const indexedSource = eligibleBoundaryEntries && getIndexedCycleSnapSource(signal.id, signal.type, y, map, eligibleBoundaryEntries, input.document.timeline.cycleCount, renderedCycleForSourceCycle);
+      const indexedSource = eligibleBoundaryEntries && getIndexedCycleSnapSource(signal.id, signal.type, y, input.rowBounds?.get(signal.id), map, eligibleBoundaryEntries, input.document.timeline.cycleCount, renderedCycleForSourceCycle);
       if (indexedSource) sources.push(indexedSource);
       if (indexedSource) continue;
       const sourceCycles = boundaryEntries === undefined || boundaryEntries.length === 0
@@ -604,20 +641,6 @@ export class SemanticSnapCandidateService {
 }
 
 function createIndexedCycleSnapSource(signalId: SignalId, signalType: string, rowY: number, map: LocalGeometryMap, entries: readonly LocalGeometryEntry[], terminalCycle: number, renderedCycleForSourceCycle: (sourceCycle: number) => number | undefined): SnapCandidateSource | undefined {
-  if (entries.length < 2) return undefined;
-  for (let index = 0; index < entries.length; index += 1) {
-    if (!Number.isFinite(entries[index]!.position.x)) return undefined;
-    // Folded timelines intentionally omit hidden source cycles from this
-    // projection, so canonical cycle IDs may have gaps while rendered-cycle
-    // positions remain contiguous. Sparse retained geometry is still rejected
-    // because its rendered-cycle positions have gaps.
-    if (index > 0 && entries[index]!.position.x < entries[index - 1]!.position.x) return undefined;
-    if (index > 0) {
-      const priorRendered = renderedCycleForSourceCycle(entries[index - 1]!.cycle);
-      const currentRendered = renderedCycleForSourceCycle(entries[index]!.cycle);
-      if (priorRendered === undefined || currentRendered === undefined || currentRendered !== priorRendered + 1) return undefined;
-    }
-  }
   const lowerBound = (x: number): number => {
     let low = 0;
     let high = entries.length;

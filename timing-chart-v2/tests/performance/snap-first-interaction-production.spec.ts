@@ -42,6 +42,8 @@ for (const workload of workloads) test(`production first snap interaction: ${wor
   await page.mouse.up();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const longTasks = await page.evaluate(() => (window as unknown as { __lt: number[] }).__lt);
-  console.log(`[snap-first-interaction-production] ${JSON.stringify({ workload: workload.label, firstSnapMs, longTasks: { count: longTasks.length, maxMs: Math.round(Math.max(0, ...longTasks)) } })}`);
+  const maxLongTaskMs = Math.max(0, ...longTasks);
+  console.log(`[snap-first-interaction-production] ${JSON.stringify({ workload: workload.label, firstSnapMs, longTasks: { count: longTasks.length, maxMs: Math.round(maxLongTaskMs * 100) / 100 } })}`);
   expect(firstSnapMs, "first snap candidate drawn").toBeLessThan(1_000);
+  expect(maxLongTaskMs, "ordinary first snap interaction has no >50ms main-thread Long Task").toBeLessThanOrEqual(50);
 });

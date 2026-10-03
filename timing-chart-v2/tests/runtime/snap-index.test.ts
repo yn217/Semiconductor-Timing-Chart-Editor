@@ -6,6 +6,37 @@ import { buildSnapIndex } from "../../apps/editor/src/runtime/snap-index.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 describe("buildSnapIndex row lookup", () => {
+  it("does not resolve waveform anchors for rows outside the pointer's vertical tolerance", () => {
+    const source = canonicalFixture();
+    const [near, far] = source.signals.filter((item) => item.type !== "commentRow").slice(0, 2);
+    expect(near).toBeDefined();
+    expect(far).toBeDefined();
+    const document = { ...source, signals: [near!, far!], bookmarks: [], annotations: [] };
+    const entries = [0, 1, 2].map((cycle) => ({ cycle, point: "cycle-start" as const, position: { x: 20.5 + cycle * 40, y: 15.5 } }));
+    const findCalls = new Map([[near!.id, 0], [far!.id, 0]]);
+    const mapFor = (signalId: SignalId) => ({
+      signalId,
+      cycleKeyDomain: "source" as const,
+      cycleBoundaryEntries: () => entries,
+      find: (anchor: { cycle: number; point: string }) => {
+        findCalls.set(signalId, findCalls.get(signalId)! + 1);
+        if (anchor.cycle < 0 || anchor.cycle > 2) return undefined;
+        const localY = anchor.point === "cycle-start" ? 15.5 : 10;
+        return { signalId, anchor: anchor as never, point: { x: 20.5 + anchor.cycle * 40, y: localY } };
+      },
+    });
+    const projection = { rowLayout: [
+      { rowId: near!.id, y: 0, height: 30 },
+      { rowId: far!.id, y: 300, height: 30 },
+    ] } as never;
+    const index = buildSnapIndex(document, projection, new Map([[near!.id, mapFor(near!.id)], [far!.id, mapFor(far!.id)]]), new DisplayTimeMappingCache().get(document.timeline, document.timeGroups));
+
+    const nearest = index.nearest({ x: 20.5, y: 15.5 }, 8);
+    expect(nearest?.anchor.signalId).toBe(near!.id);
+    expect(findCalls.get(near!.id)).toBeGreaterThan(0);
+    expect(findCalls.get(far!.id)).toBe(0);
+  });
+
   it("reuses canonical row membership and projected Y for the same immutable inputs", () => {
     const source = canonicalFixture();
     const signal = source.signals.find((item) => item.type !== "commentRow")!;

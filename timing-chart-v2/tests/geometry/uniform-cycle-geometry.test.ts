@@ -43,6 +43,27 @@ describe("UniformCycleLocalGeometryMap (#755, allocation-free equivalent of the 
       expect(lazy.find({ signalId: "other" as SignalId, cycle: sourceCycles[0]!, point: "cycle-start" } as never)).toBeUndefined();
     });
   }
+
+  it("shares immutable boundaries between owners with an identical source window", () => {
+    const sourceCycles = Object.freeze([0, 1, 2, 3]);
+    const first = new UniformCycleLocalGeometryMap("sig_a" as SignalId, { sourceCycles, originX: 20.5, cycleWidth: 40, rowY: 15.5 });
+    const second = new UniformCycleLocalGeometryMap("sig_b" as SignalId, { sourceCycles, originX: 20.5, cycleWidth: 40, rowY: 15.5 });
+
+    expect(first.cycleBoundaryEntries()).toBe(second.cycleBoundaryEntries());
+    expect(Object.isFrozen(first.cycleBoundaryEntries())).toBe(true);
+    expect(first.cycleBoundaryEntries()[0]!.position).toMatchObject({ x: 20.5, y: 15.5 });
+  });
+
+  it("does not share boundary snapshots for a mutable source-cycle array", () => {
+    const sourceCycles = [0, 1];
+    const first = new UniformCycleLocalGeometryMap("sig_a" as SignalId, { sourceCycles, originX: 20.5, cycleWidth: 40, rowY: 15.5 });
+    const firstEntries = first.cycleBoundaryEntries();
+    sourceCycles[1] = 2;
+    const second = new UniformCycleLocalGeometryMap("sig_b" as SignalId, { sourceCycles, originX: 20.5, cycleWidth: 40, rowY: 15.5 });
+
+    expect(second.cycleBoundaryEntries()).not.toBe(firstEntries);
+    expect(second.cycleBoundaryEntries().map((entry) => entry.cycle)).toEqual([0, 2]);
+  });
 });
 
 describe("OffsetLocalGeometryMap (#757, window-relative -> document-absolute X)", () => {

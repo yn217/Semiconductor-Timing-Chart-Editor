@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { analyticLocalGeometry, toWaveJson } from "@timing-chart-v2/wavedrom-adapter";
+import { analyticLocalGeometry, toWaveJson, type WaveJsonSignal } from "@timing-chart-v2/wavedrom-adapter";
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
+import type { SignalId } from "@timing-chart-v2/schema";
 import { LazyAnalyticGeometryMap } from "../../apps/editor/src/runtime/lazy-analytic-geometry.js";
 
 describe("lazy analytic geometry", () => {
@@ -17,11 +18,51 @@ describe("lazy analytic geometry", () => {
         expect(lazy.find({ signalId: signal.id, cycle, point })).toEqual(eager.find({ signalId: signal.id, cycle, point }));
       }
     }
-    for (const point of ["rising-edge", "falling-edge", "transition-start", "transition-center", "transition-end"] as const) {
+    for (const point of ["value-start", "rising-edge", "falling-edge", "transition-start", "transition-center", "transition-end"] as const) {
       for (let cycle = 0; cycle <= 12; cycle += 1) {
         expect(lazy.find({ signalId: signal.id, cycle, point })).toEqual(eager.find({ signalId: signal.id, cycle, point }));
       }
     }
     expect(lazy.edgeEntries()).toEqual(eager.edgeEntries());
+  });
+
+  it("resolves sparse-window transition details with local geometry and absolute cycle rebasing", () => {
+    const signalId = "sparse" as SignalId;
+    const sourceCycles = Object.freeze(Array.from({ length: 9 }, (_, index) => 100 + index));
+    const waveJson: WaveJsonSignal = {
+      wave: "0...1..0",
+      geometrySourceCycles: sourceCycles,
+      geometryCycleDomain: "source",
+    };
+    const eager = analyticLocalGeometry(signalId, waveJson);
+    const lazy = new LazyAnalyticGeometryMap(signalId, waveJson, sourceCycles);
+
+    for (const [cycle, points] of [
+      [104, ["value-start", "transition-start", "transition-center", "transition-end", "rising-edge"]],
+      [107, ["value-start", "transition-start", "transition-center", "transition-end", "falling-edge"]],
+    ] as const) {
+      for (const point of points) {
+        const anchor = { signalId, cycle, point } as const;
+        expect(lazy.find(anchor)).toEqual(eager.find(anchor));
+      }
+    }
+  });
+
+  it("reconstructs expanded-clock edge details from the entering level", () => {
+    const signalId = "expanded_clock" as SignalId;
+    const sourceCycles = Object.freeze(Array.from({ length: 10 }, (_, index) => index));
+    const waveJson: WaveJsonSignal = {
+      wave: "0..p.n..0",
+      clock: { expanded: true, polarity: "positive", initial: 0 },
+      geometrySourceCycles: sourceCycles,
+      geometryCycleDomain: "source",
+    };
+    const eager = analyticLocalGeometry(signalId, waveJson);
+    const lazy = new LazyAnalyticGeometryMap(signalId, waveJson, sourceCycles);
+
+    for (const cycle of [3, 5]) for (const point of ["rising-edge", "falling-edge"] as const) {
+      const anchor = { signalId, cycle, point };
+      expect(lazy.find(anchor)).toEqual(eager.find(anchor));
+    }
   });
 });
