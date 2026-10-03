@@ -14,6 +14,7 @@ type SignalClipboardItem = Readonly<{ signal: Signal; groupId: GroupId; index: n
 type GroupClipboardItem = Readonly<{ group: SignalGroup; rows: readonly Signal[]; sourceIndex: number; cutLinks?: readonly GroupTransactionSignalLink[] }>;
 type SpacerClipboardItem = Readonly<{ spacer: SpacerRow; groupId: GroupId; index: number }>;
 const spacerId = (value: string) => value as SpacerId;
+export const NO_SIGNAL_GROUP_STATUS = "No Signal Group to insert into";
 
 export function useClipboardActions({ application, selection }: { application: EditorApplicationOwner; selection: SelectionOwner }) {
   const [status, setStatus] = useState("Empty");
@@ -175,7 +176,8 @@ export function useClipboardActions({ application, selection }: { application: E
       ...(selectedSignalId === undefined ? {} : { selectedSignalId }),
       ...(input[0] === undefined ? {} : { sourceGroupId: input[0].groupId }),
     });
-    if (!target || input.length === 0) return;
+    if (input.length === 0) { setStatus("No signal clipboard available"); return; }
+    if (!target) { setStatus(NO_SIGNAL_GROUP_STATUS); return; }
     const commands: SemanticCommand[] = [
       { id: nextCommandId("cut_paste_move_signals"), type: "signal.bulkCreate", signals: input.map(({ signal }) => signal), targetGroupId: target.id, index: target.rows.length },
     ];
@@ -208,7 +210,7 @@ export function useClipboardActions({ application, selection }: { application: E
       bucket.signals.push(signal);
       createdByGroup.set(target.id, bucket);
     }
-    if (created.length === 0) return;
+    if (created.length === 0) { setStatus(NO_SIGNAL_GROUP_STATUS); return; }
     const placements = [...createdByGroup.values()].map(({ target, signals }) => ({
       targetGroupId: target.id,
       index: target.rows.length,
@@ -301,8 +303,8 @@ export function useClipboardActions({ application, selection }: { application: E
   const createSpacer = (input: SpacerClipboardItem, operation: "paste" | "duplicate") => {
     const current = document();
     const target = current.signalGroups.find((item) => item.id === input.groupId) ?? current.signalGroups.at(-1);
-    if (!target) return;
-    const spacer = { ...input.spacer, id: spacerId(nextEntityId("spacer", current)) };
+    if (!target) { setStatus(NO_SIGNAL_GROUP_STATUS); return; }
+    const spacer ={ ...input.spacer, id: spacerId(nextEntityId("spacer", current)) };
     const result = application.execute({ id: nextCommandId(`${operation}_spacer`), type: "spacer.create", spacer, targetGroupId: target.id, index: Math.min(input.index, target.rows.length) });
     if (result.ok) { selection.selectSpacer(target.id, spacer.id); setStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} spacer`); }
   };
@@ -398,7 +400,7 @@ export function useClipboardActions({ application, selection }: { application: E
     return application.execute({ id: nextCommandId("route_transaction_visibility_bulk"), type: "transaction.bulkSetVisibility", transactionIds: ids, visible });
   };
 
-  return { status, available, copy, cut, paste, duplicate, deleteSelection, deleteSignal, deleteAnnotation, deleteTransaction, rename, setVisibility, setSignalVisibility, setTransactionsVisibility, isolateSelection, move, createSignals } as const;
+  return { status, reportStatus: setStatus, available, copy, cut, paste, duplicate, deleteSelection, deleteSignal, deleteAnnotation, deleteTransaction, rename, setVisibility, setSignalVisibility, setTransactionsVisibility, isolateSelection, move, createSignals } as const;
 }
 
 export type ClipboardActions = ReturnType<typeof useClipboardActions>;

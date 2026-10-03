@@ -61,7 +61,7 @@ export function retainedBookmarkDrafts(bookmarks: readonly Bookmark[], exceptId:
  * TransactionEditor already uses. Reuses the canonical `bookmark.create/
  * update/delete` SemanticCommands as its only mutation path -- no second
  * Bookmark list/store. */
-export function BookmarkEditor({ bookmark, document, history, range, onSelect, onReveal, onNavigateBookmark, commands, onUndo, onRedo, onDelete, onCancel }: { readonly bookmark: Bookmark | undefined; readonly document: CanonicalDocument; readonly history: HistoryState; readonly range: { readonly start: number; readonly end: number }; readonly onSelect: (id: BookmarkId) => void; readonly onReveal: (start: number) => void; readonly onNavigateBookmark: (cycle: number, bookmarkId?: BookmarkId) => void; readonly commands: Pick<EditorSurfaceCommandController, "createBookmark" | "updateBookmark" | "updateTimeGroupPresentation">; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: (id: BookmarkId) => void; readonly onCancel: () => void }) {
+export function BookmarkEditor({ bookmark, document, history, range, onSelect, onReveal, onNavigateBookmark, commands, onUndo, onRedo, onDelete, onCancel }: { readonly bookmark: Bookmark | undefined; readonly document: CanonicalDocument; readonly history: HistoryState; readonly range: { readonly start: number; readonly end: number }; readonly onSelect: (id: BookmarkId) => void; readonly onReveal: (start: number) => void; readonly onNavigateBookmark: (cycle: number, bookmarkId?: BookmarkId) => void; readonly commands: Pick<EditorSurfaceCommandController, "createBookmark" | "updateBookmark" | "expandAllTimeGroups">; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: (id: BookmarkId) => void; readonly onCancel: () => void }) {
   const [name, setName] = useState("Bookmark");
   const [start, setStart] = useState(0);
   const [comment, setComment] = useState("");
@@ -132,7 +132,8 @@ export function BookmarkEditor({ bookmark, document, history, range, onSelect, o
   const keepDraft = () => { if (!bookmark || !canonicalFields) return; const draft = { name: editName, start: editStart, comment: editComment }; setExternalConflict([]); bookmarkDrafts.set(bookmark.id, { base: canonicalFields, draft, conflicts: [] }); notifyBookmarkDrafts(); };
   const containingGroups = bookmark === undefined ? [] : document.timeGroups.filter((group) => group.presentation?.collapsed && bookmark.start >= group.start && bookmark.start < group.end);
   const collapsedGroupNames = (start: number) => document.timeGroups.filter((group) => group.presentation?.collapsed && start >= group.start && start < group.end).map((group) => group.name);
-  const expandAndJump = () => { for (const group of containingGroups) commands.updateTimeGroupPresentation(group.id, { ...(group.presentation ?? {}), collapsed: false, foldStyle: "none", foldLabel: group.presentation?.foldLabel || group.name }); onReveal(bookmark!.start); };
+  // One batch => one History entry; reveal only when every group expanded.
+  const expandAndJump = () => { if (commands.expandAllTimeGroups(containingGroups).ok) onReveal(bookmark!.start); };
   const createHasChanges = name !== "Bookmark" || start !== 0 || comment !== "";
   return <section className="bookmark-editor-panel" data-testid="bookmark-editor-panel" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}>
     <header>
