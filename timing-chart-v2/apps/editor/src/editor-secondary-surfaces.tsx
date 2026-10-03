@@ -495,6 +495,7 @@ export function useEditorSecondarySurfaces(
         zoom={input.zoom}
         selectedId={selected.transactionId}
         selectedIds={selected.transactionIds}
+        {...(selected.bookmark?.id === undefined ? {} : { selectedBookmarkId: selected.bookmark.id })}
         filter={
           workspace.viewMode === "Transaction"
             ? workspace.transactionTreeFilter

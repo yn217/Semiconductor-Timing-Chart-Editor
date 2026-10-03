@@ -74,8 +74,20 @@ describe("fold-hidden Transaction and Bookmark rescue stays bounded (#865 regres
     const index = indexTransactionIntervals(transactions);
     const folds = [[0, 99_990]] as const;
     const visible = transactionIntervalsOutsideFolds(index, folds, { start: 0, end: 100_000 });
-    expect(visible).toEqual([{ id: "tx-9999", start: 99_990, end: 99_995 }]);
-    expect(transactionIntervalsOutsideFolds(index, folds, { start: 0, end: 100_000 }, new Set(["tx-5000"])).map((item) => item.id).sort()).toEqual(["tx-5000", "tx-9999"]);
+    expect(visible.map((item) => item.id)).toEqual(["tx-0", "tx-1", "tx-2", "tx-3", "tx-4", "tx-5", "tx-6", "tx-7", "tx-9999"]);
+    expect(transactionIntervalsOutsideFolds(index, folds, { start: 0, end: 100_000 }, new Set(["tx-5000"])).map((item) => item.id).sort()).toEqual(["tx-0", "tx-1", "tx-2", "tx-3", "tx-4", "tx-5", "tx-5000", "tx-6", "tx-7", "tx-9999"]);
+  });
+
+  it("caps folded Transaction representatives while preserving an explicitly pinned stable ID", () => {
+    const transactions = Array.from({ length: 100 }, (_, index) => ({ id: `hidden-${index}`, start: index * 10 + 1, end: index * 10 + 2 }));
+    const folds = transactions.map(({ start }) => [start - 1, start + 3] as const);
+    const index = indexTransactionIntervals(transactions);
+    const representatives = transactionIntervalsOutsideFolds(index, folds, { start: 0, end: 1_000 });
+    const withSelection = transactionIntervalsOutsideFolds(index, folds, { start: 0, end: 1_000 }, new Set(["hidden-99"]));
+
+    expect(representatives).toHaveLength(32);
+    expect(withSelection).toHaveLength(33);
+    expect(withSelection.some((item) => item.id === "hidden-99")).toBe(true);
   });
 
   it("keeps only visible Bookmarks as individual markers and represents 10k hidden ones with one fold summary", () => {
@@ -84,6 +96,7 @@ describe("fold-hidden Transaction and Bookmark rescue stays bounded (#865 regres
     const visible = bookmarksOutsideFolds(bookmarks, folds, { start: 0, end: 10_001 });
     expect(visible.map((bookmark) => bookmark.start)).toEqual([10_000, 10_001]);
     expect(hiddenBookmarkFoldSummaries(bookmarks, folds, { start: 0, end: 10_001 })).toEqual([{ start: 0, end: 9_999, count: 10_000 }]);
+    expect(bookmarksOutsideFolds(bookmarks, folds, { start: 0, end: 10_001 }, bookmarks[5])).toEqual([bookmarks[5], bookmarks[10_000], bookmarks[10_001]]);
     expect(bookmarksOutsideFolds(bookmarks, folds, null)).toEqual([]);
   });
 });

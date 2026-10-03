@@ -167,8 +167,10 @@ test("10k entities hidden by one collapsed fold use bounded rescue DOM and prese
     hiddenBookmarkCount: Number(element.querySelector("[data-hidden-bookmark-count]")?.getAttribute("data-hidden-bookmark-count")),
     transactionMiniMapSegments: document.querySelectorAll(".minimap-segment-transaction").length,
   }));
-  expect(initial.candidates).toBe(0);
-  expect(initial.bars).toBe(0);
+  // Fold-edge representatives preserve discoverability, but the hidden 10k
+  // entities must never be expanded into a per-entity bar list.
+  expect(initial.candidates).toBeLessThanOrEqual(32);
+  expect(initial.bars).toBeLessThanOrEqual(32);
   expect(initial.bookmarkMarkers).toBe(0);
   expect(initial.foldSummaries).toBe(1);
   expect(initial.hiddenBookmarkCount).toBe(10_000);
@@ -232,7 +234,7 @@ test("10k entities hidden by one collapsed fold use bounded rescue DOM and prese
   await page.getByTestId("transaction-left-tree-row-txn_hidden_0").click();
   await expect(lanes.locator('[data-transaction-id="txn_hidden_0"]')).toHaveAttribute("data-hidden-in-fold", "true");
   await expect(lanes.locator('[data-transaction-id="txn_hidden_0"]')).toHaveAttribute("data-selected", "true");
-  expect(await lanes.locator("[data-transaction-id]").count()).toBe(1);
+  expect(await lanes.locator("[data-transaction-id]").count()).toBeLessThanOrEqual(33);
   expect(await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision")).toBe(revision);
   expect(await page.getByTestId("history-status").textContent()).toBe(history);
   expect(await page.getByTestId("dirty-status").textContent()).toBe(dirty);

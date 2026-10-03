@@ -62,7 +62,7 @@ export type HiddenBookmarkFoldSummary = Readonly<{ start: number; end: number; c
 
 /** Query visible bookmark points without enumerating bookmarks hidden by a collapsed fold. */
 export function bookmarksOutsideFolds<T extends Readonly<{ start: number }>>(
-  ordered: readonly T[], folds: readonly (readonly [start: number, end: number])[], sourceWindow: TransactionSourceWindowState,
+  ordered: readonly T[], folds: readonly (readonly [start: number, end: number])[], sourceWindow: TransactionSourceWindowState, pinnedBookmark?: T,
 ): readonly T[] {
   if (sourceWindow === null) return [];
   const window = sourceWindow ?? (ordered.length === 0 ? { start: 0, end: 0 } : { start: ordered[0]!.start, end: ordered.at(-1)!.start });
@@ -75,6 +75,12 @@ export function bookmarksOutsideFolds<T extends Readonly<{ start: number }>>(
     if (cursor >= window.end) break;
   }
   if (cursor <= window.end) result.push(...bookmarkRange(ordered, cursor, window.end, cursor === window.start, true));
+  // A selected Bookmark remains addressable by stable ID even when its source
+  // cycle is hidden by a fold or lies outside the ordinary viewport window.
+  if (pinnedBookmark !== undefined && !result.includes(pinnedBookmark)) {
+    result.push(pinnedBookmark);
+    result.sort((left, right) => left.start - right.start);
+  }
   return result;
 }
 
@@ -212,6 +218,40 @@ export function transactionIntervalsOutsideFolds<T extends TransactionInterval>(
   }
   if (cursor < window.end) {
     for (const transaction of transactionIntervalsInWindow(index, cursor, window.end).items) result.set(transaction.id, transaction);
+  }
+  // Keep a small representative affordance for collapsed-fold contents. The
+  // full semantic collection remains available in the Tree; this bounded
+  // sample avoids turning a fold boundary into thousands of mounted bars.
+  const representativeIds = new Set<string>();
+  const representativeLimit = 32;
+  const startsAtOrAfter = (cycle: number) => {
+    let low = 0; let high = index.ordered.length;
+    while (low < high) {
+      const middle = low + Math.floor((high - low) / 2);
+      if (index.ordered[middle]!.start < cycle) low = middle + 1;
+      else high = middle;
+    }
+    return low;
+  };
+  for (const [foldStart, foldEnd] of folds) {
+    if (representativeIds.size >= representativeLimit) break;
+    if (foldEnd < window.start || foldStart > window.end) continue;
+    const first = startsAtOrAfter(foldStart);
+    // Bound both the number of emitted affordances and per-fold probing. A
+    // selected hidden ID is handled separately below and is never subject to
+    // these representative limits.
+    const probeEnd = Math.min(index.ordered.length, first + 8);
+    let foldRepresentatives = 0;
+    for (let position = first; position < probeEnd && foldRepresentatives < 8; position += 1) {
+      const transaction = index.ordered[position]!;
+      if (transaction.start >= foldEnd) break;
+      if (transaction.end <= foldEnd) {
+        result.set(transaction.id, transaction);
+        representativeIds.add(transaction.id);
+        foldRepresentatives += 1;
+        if (representativeIds.size >= representativeLimit) break;
+      }
+    }
   }
   for (const id of pinnedIds ?? []) {
     const pinned = index.byId.get(id);
