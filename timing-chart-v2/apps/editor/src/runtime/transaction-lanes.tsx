@@ -7,7 +7,7 @@ import type { TransactionLaneCommandActions } from "../application/editor-surfac
 import { InlineNameInput } from "../inline-name-input.js";
 import { registerActiveGestureCancel } from "./active-gesture-cancellation.js";
 import { mergeTransactionFoldRanges, transactionFoldBoundariesInWindow, transactionFoldContainingCycle, transactionFoldContainingEndBoundary, transactionFoldRangesIntersecting, transactionVisibleSegments, type TransactionFoldRange } from "./transaction-fold-index.js";
-import { bookmarksOutsideFolds, hiddenBookmarkFoldSummaries, indexTransactionIntervals, INITIAL_TRANSACTION_SOURCE_WINDOW, transactionGeometryGuidesInSourceWindow, transactionIntervalsOutsideFolds, type TransactionIntervalIndex, type TransactionSourceWindowState } from "./transaction-virtual-index.js";
+import { bookmarksOutsideFolds, hiddenBookmarkFoldSummaries, indexTransactionIntervals, INITIAL_TRANSACTION_SOURCE_WINDOW, nextTransactionVerticalWindow, retainTransactionSourceWindow, transactionGeometryGuidesInSourceWindow, transactionIntervalsOutsideFolds, type TransactionIntervalIndex, type TransactionSourceWindowState, type TransactionVerticalWindow } from "./transaction-virtual-index.js";
 import { TRANSACTION_LANE_ROW_HEIGHT as LANE_ROW_HEIGHT, transactionLaneBandHeights } from "./transaction-lane-layout.js";
 
 const GROUP_HEADER_HEIGHT = 24;
@@ -378,7 +378,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
       // A temporarily unavailable geometry window is not permission to mount
       // the whole document. Keep the initial empty state (or last valid window)
       // until the shared geometry owner can publish a bounded range.
-      if (next !== undefined) setHorizontalSourceWindow(next);
+      if (next !== undefined) setHorizontalSourceWindow((current) => retainTransactionSourceWindow(current, next));
     };
     update();
     const refreshFrame = requestAnimationFrame(update);
@@ -579,7 +579,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
     }
     return { groupHeaders, laneBands, totalHeight: Math.max(labelCursor, trackCursor, LANE_ROW_HEIGHT) };
   }, [collapsedGroups, laneTransactionsByKey, sections, transactionCountByGroup]);
-  const [virtualWindow, setVirtualWindow] = useState({ top: 0, height: 900 });
+  const [virtualWindow, setVirtualWindow] = useState<TransactionVerticalWindow>({ top: 0, height: 900 });
   useEffect(() => {
     const laneRoot = owner.current;
     // Combined mode owns a nested vertical scroller for the transaction pane;
@@ -592,7 +592,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
       ?? laneRoot?.closest<HTMLElement>(".cycle-viewport")
       ?? panel?.querySelector<HTMLElement>(".transaction-left-tree");
     if (!viewport) return;
-    const update = () => setVirtualWindow({ top: viewport.scrollTop, height: viewport.clientHeight || 900 });
+    const update = () => setVirtualWindow((current) => nextTransactionVerticalWindow(current, viewport.scrollTop, viewport.clientHeight || 900, LANE_ROW_HEIGHT));
     update();
     viewport.addEventListener("scroll", update, { passive: true });
     window.addEventListener("resize", update);

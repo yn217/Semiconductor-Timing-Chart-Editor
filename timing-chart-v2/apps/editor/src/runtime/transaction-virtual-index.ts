@@ -4,6 +4,23 @@ export type TransactionSourceWindow = Readonly<{ start: number; end: number }>;
  * the viewport is unavailable and callers may use the unwindowed fallback. */
 export type TransactionSourceWindowState = TransactionSourceWindow | null | undefined;
 export const INITIAL_TRANSACTION_SOURCE_WINDOW = null;
+export type TransactionVerticalWindow = Readonly<{ top: number; height: number }>;
+
+/** Preserve state identity when scroll/resize events resolve to the same source interval. */
+export function retainTransactionSourceWindow(current: TransactionSourceWindowState, next: TransactionSourceWindowState): TransactionSourceWindowState {
+  return current !== null && current !== undefined && next !== null && next !== undefined
+    && current.start === next.start && current.end === next.end
+    ? current
+    : current === next ? current : next;
+}
+
+/** Quantize vertical virtualization updates by lane row while retaining the overscan cushion. */
+export function nextTransactionVerticalWindow(current: TransactionVerticalWindow, scrollTop: number, height: number, rowHeight: number): TransactionVerticalWindow {
+  const safeRowHeight = Number.isFinite(rowHeight) && rowHeight > 0 ? rowHeight : 1;
+  const safeTop = Number.isFinite(scrollTop) ? Math.max(0, scrollTop) : 0;
+  const next = { top: Math.floor(safeTop / safeRowHeight) * safeRowHeight, height };
+  return current.top === next.top && current.height === next.height ? current : next;
+}
 
 export type TransactionIntervalIndex<T extends TransactionInterval> = Readonly<{
   ordered: readonly T[];

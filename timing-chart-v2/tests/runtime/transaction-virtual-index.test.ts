@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bookmarksOutsideFolds, hiddenBookmarkFoldSummaries, bookmarksForSourceWindowState, bookmarksInSourceWindow, indexTransactionIntervals, INITIAL_TRANSACTION_SOURCE_WINDOW, transactionGeometryGuidesInSourceWindow, transactionIntervalsForSourceWindowState, transactionIntervalsInWindow, transactionIntervalsOutsideFolds, transactionRowsInWindow } from "../../apps/editor/src/runtime/transaction-virtual-index.js";
+import { bookmarksOutsideFolds, hiddenBookmarkFoldSummaries, bookmarksForSourceWindowState, bookmarksInSourceWindow, indexTransactionIntervals, INITIAL_TRANSACTION_SOURCE_WINDOW, nextTransactionVerticalWindow, retainTransactionSourceWindow, transactionGeometryGuidesInSourceWindow, transactionIntervalsForSourceWindowState, transactionIntervalsInWindow, transactionIntervalsOutsideFolds, transactionRowsInWindow } from "../../apps/editor/src/runtime/transaction-virtual-index.js";
 
 describe("Transaction horizontal interval window", () => {
   it("keeps the initial unmeasured render empty, then applies a bounded or explicit unwindowed source", () => {
@@ -50,6 +50,21 @@ describe("Transaction horizontal interval window", () => {
 });
 
 describe("Transaction vertical row window", () => {
+  it("reuses the same vertical window for horizontal-only scroll and buckets vertical updates by lane row", () => {
+    const initial = { top: 0, height: 720 };
+    expect(nextTransactionVerticalWindow(initial, 1, 720, 40)).toBe(initial);
+    expect(nextTransactionVerticalWindow(initial, 39, 720, 40)).toBe(initial);
+    expect(nextTransactionVerticalWindow(initial, 40, 720, 40)).toEqual({ top: 40, height: 720 });
+    expect(nextTransactionVerticalWindow(initial, 1, 700, 40)).toEqual({ top: 0, height: 700 });
+  });
+
+  it("retains source-window identity when scroll resolves to the same interval", () => {
+    const current = { start: 20, end: 40 } as const;
+    expect(retainTransactionSourceWindow(current, { start: 20, end: 40 })).toBe(current);
+    expect(retainTransactionSourceWindow(null, null)).toBeNull();
+    expect(retainTransactionSourceWindow(current, { start: 21, end: 40 })).toEqual({ start: 21, end: 40 });
+  });
+
   it("slices a 10k row lane to only the requested viewport rows", () => {
     const rows = Array.from({ length: 10_000 }, (_, index) => index);
     expect(transactionRowsInWindow(rows, 499.2, 508.1)).toEqual([499, 500, 501, 502, 503, 504, 505, 506, 507, 508]);
