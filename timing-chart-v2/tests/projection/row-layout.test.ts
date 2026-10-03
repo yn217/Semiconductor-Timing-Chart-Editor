@@ -467,6 +467,26 @@ describe("RowLayout and projection invariants", () => {
     expect(service.diagnostics().rowLayoutBuilds).toBe(2);
   });
 
+  it("patches row presentation by stable ID without rebuilding or rescanning the full layout", () => {
+    const document = layoutFixture();
+    const service = new DefaultProjectionService();
+    const viewport = { viewportStartY: 0, viewportEndY: 2_000, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] } as const;
+    const initial = service.project({ snapshot: { revision: 0, document } as CanonicalSnapshot, changeSet: { fullDocumentReplace: true }, viewport });
+    const before = service.diagnostics();
+    const renamed = {
+      ...document,
+      signals: document.signals.map((signal) => signal.id === "sig_data" ? { ...signal, name: "RENAMED", display: { ...signal.display, name: "RENAMED" } } : signal),
+    };
+    const updated = service.project({ snapshot: { revision: 1, document: renamed } as CanonicalSnapshot, changeSet: { rowPresentation: ["sig_data" as RowId] }, viewport, previous: initial });
+    expect(updated.rowLayout.find((row) => row.rowId === "sig_data")?.name).toBe("RENAMED");
+    expect(updated.navigationRowLayout.find((row) => row.rowId === "sig_data")?.name).toBe("RENAMED");
+    expect(service.diagnostics()).toMatchObject({ rowLayoutBuilds: before.rowLayoutBuilds, fullVisibleRowScans: before.fullVisibleRowScans });
+
+    const scrolled = service.project({ snapshot: { revision: 1, document: renamed } as CanonicalSnapshot, changeSet: {}, viewport: { ...viewport, viewportStartY: 30, viewportEndY: 2_030 }, previous: updated });
+    expect(scrolled.navigationRowLayout.find((row) => row.rowId === "sig_data")?.name).toBe("RENAMED");
+    expect(service.diagnostics().rowLayoutBuilds).toBe(before.rowLayoutBuilds);
+  });
+
   it("updates only the viewport slice during pure scroll", () => {
     const document = layoutFixture();
     const service = new DefaultProjectionService();

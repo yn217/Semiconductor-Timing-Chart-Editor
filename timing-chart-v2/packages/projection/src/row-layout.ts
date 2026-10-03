@@ -161,7 +161,7 @@ export function calculateRowLayout(document: CanonicalDocument, collapsedGroupId
   return { canonicalRowIds, navigationRows, visibleRows, groupHeaders, totalHeight: y, paneExcludedRowIds };
 }
 
-function signalEntry(signal: Signal | undefined, groupId: RowLayoutEntry["groupId"], groupName: string, groupStyle: RowLayoutEntry["groupStyle"], y: number, height: number, rowId: RowId): RowLayoutEntry | undefined {
+export function signalEntry(signal: Signal | undefined, groupId: RowLayoutEntry["groupId"], groupName: string, groupStyle: RowLayoutEntry["groupStyle"], y: number, height: number, rowId: RowId): RowLayoutEntry | undefined {
   if (!signal) return undefined;
   return {
     rowId,

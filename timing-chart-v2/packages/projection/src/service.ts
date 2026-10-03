@@ -1,5 +1,5 @@
-import type { GroupId, SignalId } from "@timing-chart-v2/schema";
-import { calculateRowLayout, getRowLayoutSourceIndex } from "./row-layout.js";
+import type { GroupId, Signal, SignalId } from "@timing-chart-v2/schema";
+import { calculateRowLayout, getRowLayoutSourceIndex, signalEntry } from "./row-layout.js";
 import { projectPinnedRows } from "./pinned-rows.js";
 import type { ProjectionRequest, ProjectionService, RenderProjection, RowLayoutEntry, VirtualizationWindow } from "./types.js";
 import type { RowLayoutResult, RowLayoutSourceIndex } from "./row-layout.js";
@@ -59,6 +59,19 @@ export class DefaultProjectionService implements ProjectionService {
     if (request.changeSet.fullDocumentReplace) this.#documentEpoch += 1;
     const collapsedGroupIds = [...new Set(request.collapsedGroupIds ?? [])].sort() as GroupId[];
     const collapsedGroupKey = collapsedGroupIds.join("\u0000");
+    const presentationOnlyRows = request.changeSet.rowPresentation !== undefined
+      && request.changeSet.geometryScreenY === undefined
+      && request.changeSet.rowOrder === undefined
+      && request.changeSet.addedSignals === undefined
+      && request.changeSet.removedSignals === undefined
+      && request.changeSet.addedGroups === undefined
+      && request.changeSet.removedGroups === undefined
+      && request.changeSet.fullDocumentReplace !== true;
+    if (presentationOnlyRows && request.previous && this.#layout && this.#navigationLayout && this.#collapsedGroupKey === collapsedGroupKey) {
+      this.#patchRowPresentation(document, request.changeSet.rowPresentation!);
+      this.#projectionBuilds += 1;
+      return this.#projectPresentationOnly(request);
+    }
     const invalidatesLayout = request.changeSet.fullDocumentReplace || request.changeSet.rowOrder !== undefined || request.changeSet.rowPresentation !== undefined || request.changeSet.geometryScreenY !== undefined || request.changeSet.addedSignals !== undefined || request.changeSet.removedSignals !== undefined || request.changeSet.addedGroups !== undefined || request.changeSet.removedGroups !== undefined;
     if (!this.#layout || !this.#navigationLayout || invalidatesLayout || this.#collapsedGroupKey !== collapsedGroupKey) {
       const cachedSourceIndex = this.#rowLayoutSourceIndex;
@@ -161,6 +174,31 @@ export class DefaultProjectionService implements ProjectionService {
       this.#canonicalSignalIds = document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
     }
     return this.#canonicalSignalIds;
+  }
+
+  #patchRowPresentation(document: ProjectionRequest["snapshot"]["document"], rowIds: readonly RowLayoutEntry["rowId"][]): void {
+    const wanted = new Set(rowIds);
+    const signals = new Map<RowLayoutEntry["rowId"], Signal>(document.signals.filter((signal) => wanted.has(signal.id)).map((signal) => [signal.id as RowLayoutEntry["rowId"], signal]));
+    const patch = (rows: readonly RowLayoutEntry[]): readonly RowLayoutEntry[] => rows.map((row) => {
+      const signal = signals.get(row.rowId);
+      const updated = signalEntry(signal, row.groupId, row.groupName, row.groupStyle, row.y, row.height, row.rowId);
+      return updated ? { ...updated, ...(row.pinned === undefined ? {} : { pinned: row.pinned }) } : row;
+    });
+    this.#layout = { ...this.#layout!, navigationRows: patch(this.#layout!.navigationRows), visibleRows: patch(this.#layout!.visibleRows) };
+    this.#navigationLayout = { ...this.#navigationLayout!, navigationRows: patch(this.#navigationLayout!.navigationRows) };
+  }
+
+  #projectPresentationOnly(request: ProjectionRequest): RenderProjection {
+    const previous = request.previous!;
+    const labels = new Set(request.changeSet.rowPresentation);
+    const document = request.snapshot.document;
+    const signals = new Map<RowLayoutEntry["rowId"], Signal>(document.signals.filter((signal) => labels.has(signal.id)).map((signal) => [signal.id as RowLayoutEntry["rowId"], signal]));
+    const patch = (rows: readonly RowLayoutEntry[]) => rows.map((row) => {
+      const signal = signals.get(row.rowId);
+      const updated = signalEntry(signal, row.groupId, row.groupName, row.groupStyle, row.y, row.height, row.rowId);
+      return updated ? { ...updated, ...(row.pinned === undefined ? {} : { pinned: row.pinned }) } : row;
+    });
+    return { ...previous, revision: request.snapshot.revision, rowLayout: patch(previous.rowLayout), navigationRowLayout: patch(previous.navigationRowLayout), waveSignalIds: [] };
   }
 
   #projectViewportOnly(request: ProjectionRequest, layout: RowLayoutResult): RenderProjection {
