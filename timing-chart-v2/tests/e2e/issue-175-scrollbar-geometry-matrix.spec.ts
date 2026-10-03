@@ -65,6 +65,14 @@ for (const size of sizes) {
       await page.mouse.down(); await page.mouse.move(box.x + 70, box.y + 120, { steps: 6 }); await page.mouse.up();
       await expectFollowsOwner(page, "left pane resized");
     }
+    // Frozen (Role/Signal) column resize moves the time-domain origin.
+    const frozen = page.getByTestId("frozen-pane-resizer");
+    if (await frozen.count()) {
+      const box = (await frozen.boundingBox())!;
+      await page.mouse.move(box.x + box.width / 2, box.y + 120);
+      await page.mouse.down(); await page.mouse.move(box.x + 50, box.y + 120, { steps: 6 }); await page.mouse.up();
+      await expectFollowsOwner(page, "frozen pane resized");
+    }
     // Window resize.
     await page.setViewportSize({ width: size.width - 200, height: size.height });
     await expectFollowsOwner(page, "window narrower");

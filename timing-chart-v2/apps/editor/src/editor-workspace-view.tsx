@@ -7,7 +7,7 @@ import { timelineScrollOwner } from "./runtime/timeline-scroll-owner.js";
  * track -- positioned from the time-domain origin (ruler left edge) to the viewport's right edge -- drives the same scrollLeft, so
  * the scrollbar never extends beneath Signals / Groups, Role or Signal / Annotation.
  */
-function TimelineHorizontalScrollbar({ viewport }: { readonly viewport: RefObject<HTMLDivElement | null> }) {
+function TimelineHorizontalScrollbar({ viewport, viewMode, leftPaneWidth }: { readonly viewport: RefObject<HTMLDivElement | null>; readonly viewMode: string; readonly leftPaneWidth: number }) {
   const track = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -53,7 +53,7 @@ function TimelineHorizontalScrollbar({ viewport }: { readonly viewport: RefObjec
     window.addEventListener("resize", layout);
     view.addEventListener("timeline-viewport-resize", layout);
     return () => { view.removeEventListener("scroll", onViewScroll, true); bar.removeEventListener("scroll", onBarScroll); observer.disconnect(); window.removeEventListener("resize", layout); view.removeEventListener("timeline-viewport-resize", layout); delete view.dataset.ownHscroll; };
-  });
+  }, [viewport, viewMode, leftPaneWidth]);
   return <div className="timeline-hscroll" ref={track} data-testid="timeline-hscroll" role="scrollbar" aria-orientation="horizontal" aria-label="Timeline horizontal scroll" hidden><div ref={inner} style={{ height: 1 }} /></div>;
 }
 
@@ -434,7 +434,7 @@ export function EditorWorkspaceView({
         {workspace.upperPane}
         <TimelinePaneContents gridLayer={gridLayer} ruler={ruler} host={host} gridEnabled={viewModel.view.gridEnabled} rulerEnabled={viewModel.view.rulerEnabled} snapEnabled={viewModel.view.snapEnabled} body={workspace.timelineBody} combined={workspace.mode === "Split"} />
       </div>
-      {workspace.timeViewportOwner === "cycle-inner" && <TimelineHorizontalScrollbar viewport={viewport} />}
+      {workspace.timeViewportOwner === "cycle-inner" && <TimelineHorizontalScrollbar viewport={viewport} viewMode={viewMode} leftPaneWidth={leftPaneWidth} />}
       {workspace.auxiliary}
     </section>
     {workspace.rail}
