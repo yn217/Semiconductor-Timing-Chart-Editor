@@ -191,6 +191,10 @@ function normalizeSignal(value: unknown, index: number, warnings: MigrationWarni
   common.values = normalizeChanges(source.values, type === "state" ? "IDLE" : type === "bus" ? "X" : 0, warnings, `$.signals[${index}].values`, usedIds, claimedChangeIds);
   optionalNumber(common, "width", source.width);
   if (["hex", "binary", "decimal", "signed", "unsigned", "symbolic"].includes(text(source.displayFormat))) common.displayFormat = source.displayFormat;
+  // Newer fields already present in a v1-tagged file are carried verbatim; canonical validation
+  // (INVALID_ENUM_DEFINITION / INVALID_RESET_SEMANTICS) judges them exactly as on the v2 path.
+  if (typeof source.enumId === "string") common.enumId = source.enumId;
+  if (jsonObject(source.resetSemantics)) common.resetSemantics = jsonObject(source.resetSemantics);
   return common as unknown as Signal;
 }
 
@@ -223,6 +227,8 @@ function normalizeAnchor(value: unknown, fallbackSignal: SignalId | undefined, e
     cycle: roundCycle(source.cycle, 0, warnings, `${path}.cycle`),
     point: POINT_MAP[text(source.point, text(source.anchor, text(source.edge, "cycle-start")))] ?? "cycle-start",
     offset: { x: number(sourceOffset.x, 0), y: number(sourceOffset.y, 0) },
+    ...(typeof source.threshold === "number" ? { threshold: source.threshold } : {}),
+    ...(jsonObject(source.transition) ? { transition: jsonObject(source.transition) } : {}),
   };
 }
 
@@ -260,7 +266,19 @@ function normalizeAnnotation(value: unknown, index: number, fallbackSignal: Sign
     };
   }
   const style = { ...record(source.style) };
-  if (typeof source.opacity === "number") style.opacity = source.opacity;
+  // Timing Region / Ghost Trace own a canonical top-level opacity; only legacy kinds fold it into style.
+  const overlayOpacity = type === "timingRegion" || type === "ghostTrace";
+  if (typeof source.opacity === "number") {
+    if (overlayOpacity) result.opacity = source.opacity;
+    else style.opacity = source.opacity;
+  }
+  if (typeof source.sourceSignalId === "string") result.sourceSignalId = source.sourceSignalId;
+  if (typeof source.traceOffsetCycles === "number") result.traceOffsetCycles = source.traceOffsetCycles;
+  if (typeof source.rotation === "number") result.rotation = source.rotation;
+  if (["left", "center", "right"].includes(text(source.align))) result.align = source.align;
+  if (typeof source.locked === "boolean") result.locked = source.locked;
+  if (jsonObject(source.measurement)) result.measurement = jsonObject(source.measurement);
+  if (jsonObject(source.measurementLayout)) result.measurementLayout = jsonObject(source.measurementLayout);
   if (typeof source.side === "string") style.side = source.side;
   if (Object.keys(style).length > 0) result.style = structuredJson(style);
   if (["straight", "orthogonal", "curve", "diagonal"].includes(text(source.lineType, text(source.line)))) result.lineType = text(source.lineType, text(source.line));
@@ -289,6 +307,7 @@ function normalizeTransaction(value: unknown, index: number, warnings: Migration
   if (typeof source.groupId === "string") result.groupId = source.groupId;
   if (typeof source.color === "string") result.color = source.color;
   if (typeof source.description === "string") result.description = source.description;
+  if (typeof source.visible === "boolean") result.visible = source.visible;
   const linkedSignals = list(source.linkedSignals).filter((id): id is string => typeof id === "string");
   if (linkedSignals.length > 0) result.linkedSignals = linkedSignals;
   if (typeof source.category === "string") result.category = source.category;
@@ -456,16 +475,18 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
       bookmarks: bookmarks as unknown as CanonicalDocument["bookmarks"],
       timeGroups: timeGroups as unknown as readonly TimeGroup[],
       annotations,
-      annotationGroups: [],
+      annotationGroups: list(source.annotationGroups).map(structuredJson) as unknown as CanonicalDocument["annotationGroups"],
       legend: {
         show: bool(legendSource.show, true),
         orientation: legendSource.orientation === "vertical" ? "vertical" : "horizontal",
         usedRolesOnly: bool(legendSource.usedRolesOnly, legendSource.items === undefined || legendSource.items === "usedRolesOnly"),
         position: { x: number(legendPosition.x, 0), y: number(legendPosition.y, 0) },
         ...(() => { const style = jsonObject(legendSource.style); return style ? { style } : {}; })(),
+        ...(Array.isArray(legendSource.items) ? { items: structuredJson(legendSource.items) as NonNullable<CanonicalDocument["legend"]["items"]> } : {}),
       },
       layout,
       transactions,
+      ...(Array.isArray(source.enumDefinitions) ? { enumDefinitions: structuredJson(source.enumDefinitions) as NonNullable<CanonicalDocument["enumDefinitions"]> } : {}),
       ...(transactionGroups.length > 0 ? { transactionGroups: transactionGroups as unknown as NonNullable<CanonicalDocument["transactionGroups"]> } : {}),
       ...(Number.isFinite(transactionTimeScale.clockCyclesPerTransactionCycle) && Number(transactionTimeScale.clockCyclesPerTransactionCycle) > 0 ? { transactionTimeScale: { clockCyclesPerTransactionCycle: Number(transactionTimeScale.clockCyclesPerTransactionCycle), majorInterval: Number.isInteger(transactionTimeScale.majorInterval) && Number(transactionTimeScale.majorInterval) > 0 ? Number(transactionTimeScale.majorInterval) : 1, minorInterval: Number.isInteger(transactionTimeScale.minorInterval) && Number(transactionTimeScale.minorInterval) > 0 ? Number(transactionTimeScale.minorInterval) : 1, ...(typeof transactionTimeScale.showSecondaryClock === "boolean" ? { showSecondaryClock: transactionTimeScale.showSecondaryClock } : {}) } } : {}),
       constraints,
