@@ -127,7 +127,7 @@ test("a test MCP client can connect, read the live document/selection, and reque
   expect((await initResponse.json()).result.serverInfo.name).toBe("timing-chart-v2-ai-bridge");
   const listResponse = await fetch(`${BASE_URL}/mcp`, { method: "POST", headers: { authorization: `Bearer ${TOKEN}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 0, method: "tools/list" }) });
   const tools = ((await listResponse.json()).result.tools as { name: string }[]).map((tool) => tool.name);
-  const addedTools = ["set_selection", "propose_move_signal_group", "propose_delete_signal_group", "fit_selection", "propose_create_time_group", "propose_update_time_group", "propose_delete_time_group", "switch_mode", "open_panel", "set_visible_time_range", "submit_proposal"];
+  const addedTools = ["set_selection", "reveal_entity", "propose_move_signal_group", "propose_delete_signal_group", "fit_selection", "propose_create_time_group", "propose_update_time_group", "propose_delete_time_group", "switch_mode", "open_panel", "set_visible_time_range", "submit_proposal"];
   // The tool SET is the contract; listing order is an implementation detail of the bridge registry.
   expect(tools.filter((tool) => addedTools.includes(tool)).sort()).toEqual([...addedTools].sort());
   const existingTools = tools.filter((tool) => !addedTools.includes(tool));
@@ -150,6 +150,9 @@ test("a test MCP client can connect, read the live document/selection, and reque
   expect(JSON.parse(setSelection.body.result!.content[0]!.text)).toEqual({ selected: { entityType: "signal", entityId: "sig_cycle_ready", name: "READY" }, canonicalDelta: 0, historyDelta: 0, dirtyDelta: 0 });
   await expect(page.getByTestId("selection-status")).toHaveText("READY");
   expect(JSON.parse((await callTool("get_selection")).body.result!.content[0]!.text)).toEqual(expect.objectContaining({ selectedSignalId: "sig_cycle_ready" }));
+  const reveal = await callTool("reveal_entity", TOKEN, { entityType: "signal", entityId: "sig_cycle_ready" });
+  expect(reveal.body.result!.isError).toBe(false);
+  expect(JSON.parse(reveal.body.result!.content[0]!.text)).toEqual({ revealed: { entityType: "signal", entityId: "sig_cycle_ready" }, canonicalDelta: 0, historyDelta: 0, dirtyDelta: 0 });
 
   // #395 PR5: get_viewport_snapshot is read-only too -- a structured
   // Element Map (real stable ids, not pixel coordinates) plus zoom/cycle

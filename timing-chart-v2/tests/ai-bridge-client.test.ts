@@ -27,6 +27,30 @@ describe("Agent Bridge view-only selection", () => {
   });
 });
 
+describe("Agent Bridge view-only entity reveal", () => {
+  it("routes an existing stable entity ID without changing document state", () => {
+    const document = canonicalFixture();
+    const onRevealEntity = vi.fn();
+    const context = { document, onRevealEntity } as unknown as AIBridgeContext;
+
+    const result = executeAIBridgeTool("reveal_entity", { entityType: "signal", entityId: "sig_clk" }, context);
+
+    expect(result).toEqual({ revealed: { entityType: "signal", entityId: "sig_clk" }, canonicalDelta: 0, historyDelta: 0, dirtyDelta: 0 });
+    expect(onRevealEntity).toHaveBeenCalledOnce();
+    expect(onRevealEntity).toHaveBeenCalledWith({ entityType: "signal", entityId: "sig_clk" });
+    expect(document.signals[0]?.id).toBe("sig_clk");
+  });
+
+  it("rejects missing or malformed targets before routing", () => {
+    const onRevealEntity = vi.fn();
+    const context = { document: canonicalFixture(), onRevealEntity } as unknown as AIBridgeContext;
+
+    expect(() => executeAIBridgeTool("reveal_entity", { entityType: "transaction", entityId: "missing" }, context)).toThrow("does not exist");
+    expect(() => executeAIBridgeTool("reveal_entity", { entityType: "signal", entityId: "" }, context)).toThrow("stable entityId");
+    expect(onRevealEntity).not.toHaveBeenCalled();
+  });
+});
+
 describe("Agent Bridge workspace view-only operations", () => {
   it("routes valid mode, panel, and source-range operations without document mutation", () => {
     const onViewOperation = vi.fn();

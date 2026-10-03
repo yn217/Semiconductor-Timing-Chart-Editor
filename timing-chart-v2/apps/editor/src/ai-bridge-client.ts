@@ -33,6 +33,7 @@ export type AIBridgeContext = {
   readonly onViewIntent: ((intent: AIViewIntent) => void) | undefined;
   readonly onViewOperation: ((operation: AIBridgeViewOperation, args: Readonly<Record<string, unknown>>) => void) | undefined;
   readonly onSetSelection: ((target: Readonly<{ entityType: AISelectionEntityType; entityId: string }>) => void) | undefined;
+  readonly onRevealEntity: ((target: Readonly<{ entityType: AISelectionEntityType; entityId: string }>) => void) | undefined;
   // #395 PR4: propose_edit's only effect is building a Preview (exactly
   // what clicking Preview in the UI does) -- it never validates or
   // applies on its own. There is deliberately no bridge-side "apply" tool
@@ -121,6 +122,20 @@ function executeAIBridgeToolCore(tool: string, args: Record<string, unknown>, co
     if (!context.onSetSelection) throw new Error("set_selection is not available in the current surface.");
     context.onSetSelection({ entityType: entityType as AISelectionEntityType, entityId });
     return { selected: { entityType, entityId, name: entityName }, canonicalDelta: 0, historyDelta: 0, dirtyDelta: 0 };
+  }
+  if (tool === "reveal_entity") {
+    const { entityType, entityId } = args;
+    if (typeof entityType !== "string" || !["signal", "group", "transaction", "annotation", "bookmark"].includes(entityType) || typeof entityId !== "string" || !entityId) throw new Error("reveal_entity requires entityType and a stable entityId.");
+    const signal = entityType === "signal" ? indexById(context.document.signals).get(entityId) : undefined;
+    const exists = entityType === "signal" ? signal !== undefined && signal.type !== "commentRow"
+      : entityType === "group" ? getSignalGroupIndexes(context.document.signalGroups).byId.has(entityId)
+        : entityType === "transaction" ? indexById(context.document.transactions).has(entityId)
+          : entityType === "annotation" ? indexById(context.document.annotations).has(entityId)
+            : indexById(context.document.bookmarks).has(entityId);
+    if (!exists) throw new Error(`${entityType} '${entityId}' does not exist in the current document.`);
+    if (!context.onRevealEntity) throw new Error("reveal_entity is not available in the current surface.");
+    context.onRevealEntity({ entityType: entityType as AISelectionEntityType, entityId });
+    return { revealed: { entityType, entityId }, canonicalDelta: 0, historyDelta: 0, dirtyDelta: 0 };
   }
   if (tool === "fit_all") {
     if (!context.onViewIntent) throw new Error("fit_all is not available in the current surface.");

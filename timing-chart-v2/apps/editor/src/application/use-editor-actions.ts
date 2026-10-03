@@ -86,6 +86,7 @@ export interface EditorActions {
   readonly selectBookmark: (id: BookmarkId) => void;
   readonly clearBookmarkSelection: () => void;
   readonly selectAIEntity: (target: Readonly<{ entityType: AISelectionEntityType; entityId: string }>) => void;
+  readonly revealAIEntity: (target: Readonly<{ entityType: AISelectionEntityType; entityId: string }>) => void;
   readonly addBookmarkAtCycle: (cycle: number) => void;
   readonly revealBookmark: (start: number) => void;
   readonly deleteBottomBookmark: (bookmarkId?: BookmarkId) => void;
@@ -182,6 +183,31 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     else if (entityType === "transaction") selectTransaction(entityId as TransactionId);
     else if (entityType === "annotation") selectAnnotation(entityId as AnnotationId);
     else selectBookmark(entityId as BookmarkId);
+  };
+  const revealAIEntity = ({ entityType, entityId }: { readonly entityType: AISelectionEntityType; readonly entityId: string }) => {
+    selectAIEntity({ entityType, entityId });
+    let sourceCycle: number | undefined;
+    let selector: string;
+    if (entityType === "signal") selector = `[data-role='left-tree-rows'] [data-row-id='${CSS.escape(entityId)}']`;
+    else if (entityType === "group") selector = `[data-role='left-group-header'][data-group-id='${CSS.escape(entityId)}'], [role='treeitem'][data-row-id='${CSS.escape(entityId)}:header'], [data-transaction-group-id='${CSS.escape(entityId)}']`;
+    else if (entityType === "transaction") {
+      const transaction = input.document.transactions.find((item) => item.id === entityId);
+      sourceCycle = transaction?.start;
+      selector = `[data-transaction-id='${CSS.escape(entityId)}'][data-selected], [data-transaction-tree-id='${CSS.escape(entityId)}']`;
+    } else if (entityType === "bookmark") {
+      const bookmark = input.document.bookmarks.find((item) => item.id === entityId);
+      sourceCycle = bookmark?.start;
+      selector = `[data-bookmark-id='${CSS.escape(entityId)}']`;
+    } else {
+      const annotation = input.document.annotations.find((item) => item.id === entityId);
+      const anchors = [annotation?.anchor, annotation?.start, annotation?.end, annotation?.from, annotation?.to];
+      sourceCycle = anchors.find((anchor) => anchor !== undefined && Number.isFinite(anchor.cycle))?.cycle;
+      selector = `[data-role='annotation-owner'][data-annotation-id='${CSS.escape(entityId)}']`;
+    }
+    if (sourceCycle !== undefined) input.navigation.navigateToCycle(sourceCycle);
+    const revealElement = () => host.current?.querySelector<HTMLElement>(selector)?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => requestAnimationFrame(revealElement));
+    else revealElement();
   };
   const addBookmarkAtCycle = (cycle: number) => {
     const maxCycle = Math.max(0, input.document.timeline.cycleCount - 1);
@@ -458,6 +484,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     selectBookmark,
     clearBookmarkSelection,
     selectAIEntity,
+    revealAIEntity,
     addBookmarkAtCycle,
     revealBookmark,
     deleteBottomBookmark,

@@ -14,6 +14,7 @@ export function useEditorAiAssistantModel(input: Pick<PanelProps, "document" | "
   readonly onFitSelection: () => void;
   readonly onOpenTimeline: () => void;
   readonly onSetSelection: (target: Readonly<{ entityType: AISelectionEntityType; entityId: string }>) => void;
+  readonly onRevealEntity: (target: Readonly<{ entityType: AISelectionEntityType; entityId: string }>) => void;
   readonly onViewOperation: (operation: AIBridgeViewOperation, args: Readonly<Record<string, unknown>>) => void;
   readonly setRuntimeDiagnostics: (updater: (current: readonly DocumentProblem[]) => readonly DocumentProblem[]) => void;
 }) {
@@ -41,6 +42,7 @@ export function useEditorAiAssistantModel(input: Pick<PanelProps, "document" | "
     onViewIntent,
     onViewOperation: input.onViewOperation,
     onSetSelection: input.onSetSelection,
+    onRevealEntity: input.onRevealEntity,
     onDiagnostic,
     icon: null,
     bridgeHost: "127.0.0.1",

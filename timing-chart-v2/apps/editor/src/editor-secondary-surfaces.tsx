@@ -262,6 +262,7 @@ export function useEditorSecondarySurfaces(
     onFitAll: input.ai.fitAll,
     onFitSelection: input.ai.fitSelection,
     onSetSelection: input.actions.selectAIEntity,
+    onRevealEntity: input.actions.revealAIEntity,
     onOpenTimeline: () => workspace.setRibbonTab("Timeline"),
     onViewOperation: (operation: AIBridgeViewOperation, args: Readonly<Record<string, unknown>>) => {
       if (operation === "switch_mode") {
