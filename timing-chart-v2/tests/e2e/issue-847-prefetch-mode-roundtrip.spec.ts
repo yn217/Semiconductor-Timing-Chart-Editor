@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { resolve } from "node:path";
 import { startInCycleMode } from "./cycle-startup.js";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 startInCycleMode(test);
 
@@ -26,9 +27,7 @@ for (const bottomVisible of [true, false]) {
     await expect.poll(async () => (await counters()).wavePrefetchOwnerCount).toBeGreaterThan(0);
     await expect.poll(async () => (await counters()).wavePrefetchRequestedCount).toBeGreaterThan(0);
     const before = {
-      revision: await host.getAttribute("data-canonical-revision"),
-      history: await page.getByTestId("history-status").textContent(),
-      dirty: await page.getByTestId("dirty-status").textContent(),
+      ...(await documentState(page)),
       requested: (await counters()).wavePrefetchRequestedCount,
       planOwners: (await counters()).wavePrefetchOwnerCount,
       scrollTop: await page.getByTestId("cycle-viewport").evaluate((element) => element.scrollTop),
@@ -51,9 +50,7 @@ for (const bottomVisible of [true, false]) {
       rebuiltPlanOwners: returned.wavePrefetchOwnerCount,
     });
 
-    expect(await host.getAttribute("data-canonical-revision")).toBe(before.revision);
-    expect(await page.getByTestId("history-status").textContent()).toBe(before.history);
-    expect(await page.getByTestId("dirty-status").textContent()).toBe(before.dirty);
+    await expectViewOnly(page, { revision: before.revision, history: before.history, dirty: before.dirty });
     const viewport = page.getByTestId("cycle-viewport");
     expect(await viewport.evaluate((element) => element.scrollTop)).toBe(before.scrollTop);
     const mountedOwners = await surface.locator("[data-role='wave-owner']:has(svg), [data-role='wave-owner']:has(canvas[data-wave-canvas])").count();
@@ -76,8 +73,6 @@ for (const bottomVisible of [true, false]) {
         return owner !== null && (owner.querySelector("svg, canvas[data-wave-canvas]") !== null || owner.hasAttribute("data-wave-error"));
       });
     })).toBe(true);
-    expect(await host.getAttribute("data-canonical-revision")).toBe(before.revision);
-    expect(await page.getByTestId("history-status").textContent()).toBe(before.history);
-    expect(await page.getByTestId("dirty-status").textContent()).toBe(before.dirty);
+    await expectViewOnly(page, { revision: before.revision, history: before.history, dirty: before.dirty });
   });
 }

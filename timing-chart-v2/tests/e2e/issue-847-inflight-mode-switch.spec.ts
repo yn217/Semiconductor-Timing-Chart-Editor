@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { resolve } from "node:path";
 import { startInCycleMode } from "./cycle-startup.js";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 startInCycleMode(test);
 
@@ -32,7 +33,7 @@ for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }])
       const surface = page.locator("[data-role='timing-chart-surface']");
       const counters = async () => surface.evaluate((element) => JSON.parse((element as HTMLElement).dataset.performanceCounters ?? "{}")) as Promise<Counters>;
       await expect.poll(async () => (await counters()).wavePrefetchRequestedCount).toBeGreaterThan(0);
-      const before = { revision: await host.getAttribute("data-canonical-revision"), history: await page.getByTestId("history-status").textContent(), dirty: await page.getByTestId("dirty-status").textContent() };
+      const before = await documentState(page);
 
       // Throttle the CPU so the prefetch the scroll rebuilds is still running when the mode switches.
       const cdp = await page.context().newCDPSession(page);
@@ -81,9 +82,7 @@ for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }])
         return "ok";
       }), { timeout: 15_000 }).toBe("ok");
 
-      expect(await host.getAttribute("data-canonical-revision")).toBe(before.revision);
-      expect(await page.getByTestId("history-status").textContent()).toBe(before.history);
-      expect(await page.getByTestId("dirty-status").textContent()).toBe(before.dirty);
+      await expectViewOnly(page, before);
       expect(problems).toEqual([]);
     });
   }
