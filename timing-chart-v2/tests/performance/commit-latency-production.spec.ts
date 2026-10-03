@@ -12,7 +12,7 @@ async function cdpMetrics(cdp: CDPSession): Promise<Record<string, number>> {
  * accepted command; measure press-Enter -> Canonical revision advanced -> editor idle, plus Long Tasks. Meant for the PRODUCTION build
  * (playwright.prod-closure.config.ts picks this file up through testMatch).
  */
-test("production Inspector rename on perf_1000x1000 reaches editor-idle quickly with no Long Task", async ({ page }) => {
+test("production Inspector rename on perf_1000x1000 measures idle latency and unprofiled Long Tasks", async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1_672, height: 941 });
   await page.goto("/");
@@ -72,7 +72,10 @@ test("production Inspector rename on perf_1000x1000 reaches editor-idle quickly 
     .sort((left, right) => (right.hitCount ?? 0) - (left.hitCount ?? 0))
     .slice(0, 12)
     .map((node) => ({ functionName: node.callFrame.functionName, url: node.callFrame.url, line: node.callFrame.lineNumber, column: node.callFrame.columnNumber, sampleCount: node.hitCount ?? 0 }));
-  const longTasks = await page.evaluate(() => (window as unknown as { __lt: number[] }).__lt);
+  // Only the five normal interaction windows contribute to the summary.
+  // The profiled diagnostic run is deliberately excluded from both timing
+  // and Long Task aggregates; profiler overhead is not product evidence.
+  const longTasks = samples.flatMap((sample) => sample.longTasks);
   const sorted = [...samples.map((sample) => sample.elapsedMs)].sort((left, right) => left - right);
   console.log(`[commit-latency-production] ${JSON.stringify({ workload: "perf_1000x1000_virtualized", command: "Inspector rename", samples, medianMs: sorted[2], p95Ms: sorted[Math.ceil(sorted.length * 0.95) - 1], longTasks: { count: longTasks.length, maxMs: Math.round(Math.max(0, ...longTasks)) }, separateDiagnosticProfile: { excludedFromTimingSamples: true, hottestJs } })}`);
   expect(sorted[2]!, "median press-Enter -> editor-idle").toBeLessThan(1_000);
