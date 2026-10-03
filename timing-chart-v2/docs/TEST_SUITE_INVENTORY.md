@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 397 spec files and 1155 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 399 spec files and 1160 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1155/1155 cases reviewed.
+Semantic review progress: 1160/1160 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,10 +10,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 579 |
+| `integration` | 581 |
 | `nightly` | 226 |
 | `performance` | 65 |
-| `pr` | 364 |
+| `pr` | 367 |
 | `visual` | 178 |
 
 ## Top recorded per-case runtimes
@@ -114,6 +114,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `feature-showcase-startup.spec.ts` | 3 | 3/3 reviewed |
 | `file-beforeunload-dirty-guard.spec.ts` | 1 | 1/1 reviewed |
 | `file-ribbon-blank-controls.spec.ts` | 1 | 1/1 reviewed |
+| `find-replace-journey.spec.ts` | 3 | 3/3 reviewed |
 | `font-style-commit-contract.spec.ts` | 1 | 1/1 reviewed |
 | `full-gui.spec.ts` | 42 | 42/42 reviewed |
 | `ghost-trace-delete.spec.ts` | 1 | 1/1 reviewed |
@@ -148,6 +149,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `interaction-visual-scenarios.spec.ts` | 11 | 11/11 reviewed |
 | `issue-1004-group-hierarchy.spec.ts` | 2 | 2/2 reviewed |
 | `issue-1007-transaction-add-menu.spec.ts` | 4 | 4/4 reviewed |
+| `issue-175-scrollbar-geometry-matrix.spec.ts` | 2 | 2/2 reviewed |
 | `issue-208-open-epoch-coherence.spec.ts` | 1 | 1/1 reviewed |
 | `issue-426-event-selection-scope.spec.ts` | 1 | 1/1 reviewed |
 | `issue-426-external-bottom-draft-update.spec.ts` | 3 | 3/3 reviewed |
@@ -472,6 +474,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `empty-group-tree-projection.spec.ts` | dataset, explicitWait |
 | `feature-showcase-startup.spec.ts` | geometryRead |
 | `file-ribbon-blank-controls.spec.ts` | getComputedStyle, geometryRead |
+| `find-replace-journey.spec.ts` | dataset |
 | `gui-density-tokens.spec.ts` | getComputedStyle |
 | `gui-left-pane-resize.spec.ts` | getComputedStyle, geometryRead |
 | `gui-reference-v8.spec.ts` | getComputedStyle, dataset, geometryRead |
@@ -481,6 +484,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `insert-timeline-ribbon.spec.ts` | getComputedStyle, dataset, geometryRead |
 | `inspector-hide-compacts-rows.spec.ts` | dataset, geometryRead |
 | `issue-1004-group-hierarchy.spec.ts` | querySelector, getComputedStyle, geometryRead |
+| `issue-175-scrollbar-geometry-matrix.spec.ts` | geometryRead |
 | `issue-208-open-epoch-coherence.spec.ts` | querySelector |
 | `issue-441-ribbon-label-integrity.spec.ts` | getComputedStyle, geometryRead |
 | `issue-573-combined-shared-time-axis.spec.ts` | geometryRead, explicitWait |

@@ -484,6 +484,23 @@
       "replacementTest": null
     },
     {
+      "file": "find-replace-journey.spec.ts",
+      "domain": "find-replace",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Find & Replace previews view-only, renames all matches in one History entry, Undo restores them, and ribbon floating panels reopen visibly.",
+      "duplicateGroup": "find-replace",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Acceptance journey for the Find & Replace plan plus the reopen regression; no other spec exercises Replace All/Undo.",
+      "replacementTest": null
+    },
+    {
       "file": "full-gui.spec.ts",
       "domain": "full-gui-journey",
       "originIssue": null,
@@ -549,6 +566,23 @@
       ],
       "decision": "KEEP",
       "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-175-scrollbar-geometry-matrix.spec.ts",
+      "domain": "timeline-scrollbar",
+      "originIssue": 175,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "The Timeline horizontal scrollbar keeps following its current scroll owner through panel, resize, zoom, mode and document changes.",
+      "duplicateGroup": "timeline-scrollbar",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Regression guard for effect-lifecycle optimisations of TimelineHorizontalScrollbar (#175 / PR #1025 regressed it).",
       "replacementTest": null
     },
     {
