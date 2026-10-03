@@ -108,6 +108,35 @@ describe("MiniMap overview derivation", () => {
     expect(updated.rows).toEqual(buildMiniMapTransactionOverview(next).rows);
   });
 
+  it("bounds a dense single-lane Transaction overview to pixel-scale segments", () => {
+    const source = canonicalFixture();
+    const transactions = Array.from({ length: 10_000 }, (_, index) => ({
+      id: `txn_dense_lane_${index}`,
+      name: `Transaction ${index}`,
+      start: index,
+      end: index + 1,
+      laneId: "lane_dense",
+      color: index % 2 === 0 ? "#112233" : "#aabbcc",
+      linkedSignals: [],
+    }));
+    const before = { ...source, timeline: { ...source.timeline, cycleCount: 10_000, end: 10_000 }, transactions };
+    const previous = buildMiniMapTransactionOverview(before);
+    const row = previous.rows[0]!;
+    expect(previous.rows).toHaveLength(1);
+    expect(row.segments.length).toBeLessThanOrEqual(1_024);
+    expect(row.segments[0]?.start).toBe(0);
+    expect(row.segments.at(-1)?.end).toBe(10_000);
+
+    const edited = { ...transactions[5_000]!, color: "#445566" };
+    const nextTransactions = [...transactions];
+    nextTransactions[5_000] = edited;
+    const next = { ...before, transactions: nextTransactions };
+    const updated = updateMiniMapTransactionOverview(previous, transactions, before.transactionGroups, next, [edited.id as never]);
+    expect(updated.laneBucketsRebuilt).toBe(1);
+    expect(updated.rows[0]?.segments.length).toBeLessThanOrEqual(1_024);
+    expect(updated.rows).toEqual(buildMiniMapTransactionOverview(next).rows);
+  });
+
   it("reuses the partial transaction index across consecutive change-set updates", () => {
     const source = canonicalFixture();
     const transactions = Array.from({ length: 10_000 }, (_, index) => ({
@@ -328,4 +357,3 @@ describe("MiniMap dense Signal rows stay pixel-bounded (#856)", () => {
     expect(halves.row.segments.map((segment) => segment.tone)).toEqual(["low", "high"]);
   });
 });
-
