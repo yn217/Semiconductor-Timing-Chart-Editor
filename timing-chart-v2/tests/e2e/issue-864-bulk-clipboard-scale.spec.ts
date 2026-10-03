@@ -5,9 +5,10 @@ import { startInCycleMode } from "./cycle-startup.js";
 startInCycleMode(test);
 
 /**
- * #864 browser acceptance (production route): multi-entity Copy/Paste, Cut/Paste and Delete of ALL Signals (1k and 10k, Cycle) and ALL
- * Transactions (1k and 10k, Transaction mode) through the Home ribbon. Each bulk operation must be one History entry, finish (apply-to-idle) in
- * a bounded time, keep Long Tasks bounded, double/restore the entity count exactly, and be undoable in one step.
+ * #864 browser acceptance (production route): multi-entity Copy/Paste, Cut/Paste and Delete of Signals (1k, and 10k limit-rejection check, Cycle)
+ * and Transactions (1k and 10k, Transaction mode) through the Home ribbon. Successful bulk operations must be one History entry, finish
+ * (apply-to-idle) in a bounded time, keep Long Tasks bounded, double/restore the entity count exactly, and be undoable in one step. A Paste
+ * that exceeds the Canonical resource budget must instead be rejected atomically with visible feedback.
  */
 const sizes = [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] as const;
 const home = (page: Page) => page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
@@ -23,10 +24,8 @@ async function timed(page: Page, action: () => Promise<void>): Promise<{ ms: num
 }
 
 for (const count of [1_000, 10_000]) for (const size of count === 10_000 ? [sizes[1]] : sizes) {
-  test(`Signals x${count}: Select All -> Copy -> Paste, Cut, Delete are single bounded History steps at ${size.width}x${size.height}`, async ({ page }) => {
+  test(`Signals x${count}: ${count === 10_000 ? "over-limit Paste is rejected with feedback" : "Copy/Paste, Cut, Delete are single bounded History steps"} at ${size.width}x${size.height}`, async ({ page }) => {
     test.setTimeout(600_000);
-    // #864 finding: at 10k Signals Select All -> Copy -> Paste is silently rejected (History 0, revision 0, no status/diagnostic). Remove test.fail when fixed.
-    test.fail(count === 10_000, "#864: 10k Signal Paste is rejected without feedback");
     await page.setViewportSize(size);
     await page.goto("/");
     const surface = page.getByTestId("cycle-surface");
@@ -46,8 +45,22 @@ for (const count of [1_000, 10_000]) for (const size of count === 10_000 ? [size
     await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 120_000 });
     await ribbon.getByRole("button", { name: "Copy", exact: true }).click();
     const h0 = await historyDepth();
+    const revisionBeforePaste = await page.getByTestId("revision-status").textContent();
+    const dirtyBeforePaste = await page.getByTestId("dirty-status").textContent();
     results.paste = await timed(page, () => ribbon.getByRole("button", { name: "Paste", exact: true }).click());
     results.pasteStatus = await ribbon.getByTestId("clipboard-status").textContent();
+    if (count === 10_000) {
+      await expect.poll(signalCount, { timeout: 120_000, message: "Over-limit Paste must leave the Canonical Signal count unchanged" }).toBe(String(count));
+      expect(await historyDepth(), "Rejected Paste does not add History").toBe(h0);
+      expect(await page.getByTestId("revision-status").textContent(), "Rejected Paste does not change Canonical revision").toBe(revisionBeforePaste);
+      expect(await page.getByTestId("dirty-status").textContent(), "Rejected Paste does not dirty the document").toBe(dirtyBeforePaste);
+      await expect(ribbon.getByTestId("clipboard-status")).toContainText(/Paste rejected:.*resource limit exceeded for signals/i);
+      await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems", exact: true }).click();
+      await expect(page.getByTestId("problems-panel")).toContainText("RESOURCE_LIMIT_EXCEEDED");
+      await expect(page.getByTestId("problems-panel")).toContainText("signals");
+      console.log("E864-SIGNALS", JSON.stringify(results));
+      return;
+    }
     await expect.poll(signalCount, { timeout: 120_000, message: `Paste doubled the Signals (${String(results.pasteStatus)})` }).toBe(String(count * 2));
     expect(await historyDepth() - h0, "Paste is one History entry").toBe(1);
     await page.keyboard.press("Control+z");
