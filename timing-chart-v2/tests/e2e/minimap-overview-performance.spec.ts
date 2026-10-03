@@ -110,9 +110,11 @@ test("non-overview Signal property commits reuse the static MiniMap overview", a
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const minimap = page.getByTestId("minimap");
   const before = await readState(page);
+  expect(before.overviewRows).toBeGreaterThan(0);
   await page.getByTestId("inspector").locator("input[aria-label='Inspector signal name']").fill("REQUEST_RENAMED");
   await page.getByTestId("inspector").locator("input[aria-label='Inspector signal name']").press("Enter");
   await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(minimap).toHaveAttribute("aria-busy", "false");
   const after = await readState(page);
   expect(after.overviewBuilds).toBe(before.overviewBuilds);
   // data-overview-signal-lookups reports the LAST derivation's work (not a cumulative total): a reused overview does zero lookups.
