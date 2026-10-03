@@ -65,4 +65,31 @@ describe("renderer overlay refresh reasons", () => {
 
     expect(renderer.updateOverlays.mock.lastCall?.[0]).toMatchObject([{ id: "ann", anchors: [{ x: 40 }] }]);
   });
+
+  it("writes selection state only when an Annotation selection actually changes", () => {
+    const base = canonicalFixture();
+    const signal = base.signals[0]!;
+    const document = { ...base, annotations: [{ id: "ann" as never, type: "text" as const, label: "A", visible: true, anchor: { signalId: signal.id, cycle: 2, point: "cycle-start" as const } }] };
+    const geometry: LocalGeometryMap = { signalId: signal.id, find(anchor) { return anchor.signalId === signal.id ? { signalId: signal.id, anchor, point: { x: anchor.cycle * 10, y: 0 } } : undefined; } };
+    const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
+    const timeAxisMetrics = Object.freeze({ generation: 1, timeAxis: resolveTimeAxisGeometry(document, new Map([[signal.id, geometry]])), mapping, presentationScale: 1, displayCycleCount: mapping.displayCycleCount, sourceBoundaryToContentX: (cycle: number) => cycle * 10 }) satisfies TimeAxisMetrics;
+    const writes: string[] = [];
+    let selected = "false";
+    const dataset = { annotationId: "ann" } as DOMStringMap;
+    Object.defineProperty(dataset, "selected", { configurable: true, get: () => selected, set: (value: string) => { selected = value; writes.push(value); } });
+    const owner = { dataset } as HTMLElement;
+    const root = { dataset: {}, querySelectorAll: () => [owner] } as unknown as HTMLDivElement;
+    const host = { current: root };
+    const renderer = { updateEdgeCounters: vi.fn(), updateOverlays: vi.fn() };
+    const refresh = (selectedAnnotationId: string | undefined) => refreshRendererForReason(renderer, host, "selection", document, projection(), new Map([[signal.id, geometry]]), timeAxisMetrics, { start: 0, end: 8 }, 0, selectedAnnotationId);
+
+    refresh(undefined);
+    expect(writes).toEqual([]);
+    refresh("ann");
+    expect(writes).toEqual(["true"]);
+    refresh("ann");
+    expect(writes).toEqual(["true"]);
+    refresh(undefined);
+    expect(writes).toEqual(["true", "false"]);
+  });
 });

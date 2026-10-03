@@ -44,7 +44,41 @@ test("horizontal scroll over 20,000 Annotations keeps mounted Annotation owners 
     return { scrollWidth: element.scrollWidth, clientWidth: element.clientWidth, maxMounted, steps, p50: pick(0.5), p95: pick(0.95), max: sorted.at(-1)!, longTasks: longTasks.length, longTaskMax: Math.max(0, ...longTasks) };
   });
   console.log("E863", JSON.stringify(result));
+
+  const selectionSync = await owner.evaluate(async (element) => {
+    const viewport = element as HTMLElement;
+    const host = document.querySelector<HTMLElement>("[data-annotation-projection-duration-ms]");
+    if (!host) throw new Error("annotation projection host is not mounted");
+    const existingOwners = new Set(host.querySelectorAll<HTMLElement>("[data-annotation-id]"));
+    if (existingOwners.size === 0) throw new Error("expected mounted Annotation owners before the scroll");
+    const identityAttributes = new Set(["data-annotation-id", "role", "tabindex", "data-annotation-type", "data-annotation-shape", "data-visible", "data-line-type", "data-arrowhead", "data-measurement-lane", "data-measurement-arrow-layout", "data-source-signal-id", "data-trace-offset-cycles", "data-locked", "aria-label"]);
+    const destination = Math.max(0, viewport.scrollLeft - 1);
+    const scrollSeen = new Promise<void>((resolve) => viewport.addEventListener("scroll", () => resolve(), { once: true }));
+    const projectionPromise = new Promise<MutationRecord[]>((resolve, reject) => {
+      const records: MutationRecord[] = [];
+      const observer = new MutationObserver((batch) => {
+        records.push(...batch);
+        if (batch.some((record) => record.target === host && record.attributeName === "data-annotation-projection-duration-ms")) {
+          observer.disconnect();
+          window.clearTimeout(timeout);
+          resolve(records);
+        }
+      });
+      observer.observe(host, { subtree: true, attributes: true, attributeFilter: ["data-selected", "data-annotation-projection-duration-ms", ...identityAttributes] });
+      const timeout = window.setTimeout(() => { observer.disconnect(); reject(new Error("scroll Annotation projection did not publish")); }, 10_000);
+    });
+    viewport.scrollLeft = destination;
+    await scrollSeen;
+    const projectionRecords = await projectionPromise;
+    const unchangedOwnerWrites = projectionRecords.filter((record) => record.attributeName === "data-selected" && existingOwners.has(record.target as HTMLElement)).length;
+    const unchangedIdentityWrites = projectionRecords.filter((record) => identityAttributes.has(record.attributeName ?? "") && existingOwners.has(record.target as HTMLElement)).length;
+    return { unchangedOwnerWrites, unchangedIdentityWrites, selectedOwnerCount: host.querySelectorAll("[data-annotation-id][data-selected='true']").length };
+  });
+  console.log("E863_SELECTION_SYNC", JSON.stringify(selectionSync));
   expect(result.scrollWidth, "the timeline really spans many viewports").toBeGreaterThan(result.clientWidth * 3);
   expect(result.maxMounted, "mounted Annotation owners are bounded by the viewport window, not the 20,000").toBeLessThan(4000);
   expect(result.p95, "p95 frame time of a scroll step (loose, machine independent)").toBeLessThan(500);
+  expect(selectionSync.unchangedOwnerWrites, "scrolling without a selection change does not rewrite selection state on preexisting overlays").toBe(0);
+  expect(selectionSync.unchangedIdentityWrites, "scrolling without semantic changes does not rewrite identity/accessibility metadata on preexisting overlays").toBe(0);
+  expect(selectionSync.selectedOwnerCount, "no Annotation is selected during this scroll-only pass").toBe(0);
 });
