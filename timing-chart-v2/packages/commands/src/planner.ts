@@ -794,6 +794,24 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       const changeSet: ChangeSet = { rowPresentation: [signal.id] };
       return { ok: true, document: replaceSignal(document, index, { ...signal, name, display: { ...signal.display, name } }), changeSet, inverseChangeSet: changeSet };
     }
+    case "signal.bulkRename": {
+      if (command.updates.length === 0) return fail("no-op", "NO_OP", "$.updates", "No Signals were selected for rename.");
+      const signalIndex = new Map(document.signals.map((signal, index) => [signal.id, index] as const));
+      const renamedById = new Map<SignalId, Signal>();
+      for (const [updateIndex, update] of command.updates.entries()) {
+        const index = signalIndex.get(update.signalId);
+        if (index === undefined) return fail("invalid", "SIGNAL_NOT_FOUND", `$.updates[${updateIndex}].signalId`, `Signal '${update.signalId}' does not exist.`);
+        const signal = renamedById.get(update.signalId) ?? document.signals[index]!;
+        const name = update.name.trim();
+        if (!name) return fail("invalid", "INVALID_NAME", `$.updates[${updateIndex}].name`, "Signal name cannot be empty.");
+        if (signal.name === name) return fail("no-op", "NO_OP", "$.updates", "Signal already has this name.");
+        renamedById.set(update.signalId, { ...signal, name, display: { ...signal.display, name } });
+      }
+      const signals = document.signals.map((signal) => renamedById.get(signal.id) ?? signal);
+      const affected = [...renamedById.keys()];
+      const changeSet: ChangeSet = { rowPresentation: affected };
+      return { ok: true, document: { ...document, signals }, changeSet, inverseChangeSet: changeSet };
+    }
     case "signal.move": return moveSignal(document, command);
     case "signal.setVisibility": {
       const index = document.signals.findIndex((signal) => signal.id === command.signalId);

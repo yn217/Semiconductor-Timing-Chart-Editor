@@ -5,6 +5,7 @@ import { deriveTimingDiagnostics, TIMING_DIAGNOSTIC_CATEGORIES } from "@timing-c
 import { DEFAULT_MEASUREMENT_LAYOUT, MAX_MEASUREMENT_LANE, canonicalReferenceMetrics, parseDocument, serializeValidatedCanonicalDocument, type Annotation, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type GroupId, type Signal, type SignalId, type SpacerId, type TransactionGroupId, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import { valueChangeIdAllocator } from "../../packages/commands/src/value-change-id-allocator.js";
+import { generatePerformanceDocument } from "../../packages/testing/src/index.js";
 
 const commandId = (id: string) => id as CommandId;
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -835,6 +836,29 @@ describe("command execution and atomic history", () => {
     expect(session.executeBatch(commandId("cmd_rejected_batch"), rejected)).toMatchObject({ ok: false, reason: "invalid" });
     expect(session.getSnapshot()).toBe(beforeRejected);
     expect(session.metrics()).toEqual({ validationRuns: rejectedMetrics.validationRuns + 1, commits: rejectedMetrics.commits });
+  });
+
+  it("plans a 10k Signal rename batch once and keeps one-step undo atomic", () => {
+    const document = generatePerformanceDocument({ signalCount: 10_000, cycleCount: 4 });
+    const session = new CommandHistorySession(document);
+    const commands: SemanticCommand[] = document.signals.map((signal, index) => ({ id: commandId(`rename_${index}`), type: "signal.rename", signalId: signal.id, name: `RENAMED_${index}` }));
+    const beforePlanner = commandPlannerMetrics();
+
+    expect(session.executeBatch(commandId("rename_all"), commands)).toMatchObject({ ok: true });
+    expect(commandPlannerMetrics().calls - beforePlanner.calls).toBe(1);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.getSnapshot().document.signals.at(-1)).toMatchObject({ name: "RENAMED_9999", display: { name: "RENAMED_9999" } });
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.signals).toEqual(document.signals);
+    const beforeRejected = session.getSnapshot();
+    const beforeHistory = session.historyState();
+    const rejected = session.executeBatch(commandId("rename_batch_rejected"), [
+      { id: commandId("rename_first"), type: "signal.rename", signalId: document.signals[0]!.id, name: "VALID_FIRST" },
+      { id: commandId("rename_missing"), type: "signal.rename", signalId: "sig_missing" as SignalId, name: "INVALID_SECOND" },
+    ]);
+    expect(rejected).toMatchObject({ ok: false, reason: "invalid" });
+    expect(session.getSnapshot()).toBe(beforeRejected);
+    expect(session.historyState()).toEqual(beforeHistory);
   });
 
   it("bulk-registers signals with preserved hardware paths in one history entry", () => {

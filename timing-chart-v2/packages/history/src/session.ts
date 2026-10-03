@@ -125,13 +125,18 @@ export class CommandHistorySession implements CanonicalStore, SemanticCommandDis
     let candidate = before.document;
     const forward: ChangeSet[] = [];
     const inverse: ChangeSet[] = [];
-    for (const command of commands) {
+    const renameCommands = commands.every((command): command is Extract<SemanticCommand, { type: "signal.rename" }> => command.type === "signal.rename") ? commands : undefined;
+    const commandsToPlan: readonly SemanticCommand[] = renameCommands && renameCommands.length > 1
+      ? [{ id, type: "signal.bulkRename", updates: renameCommands.map(({ signalId, name }) => ({ signalId, name })) }]
+      : commands;
+    for (const command of commandsToPlan) {
       const plan = planCommand(candidate, command);
       if (!plan.ok) return { ok: false, reason: plan.reason, problems: plan.problems };
       candidate = plan.document;
       forward.push(plan.changeSet);
-      inverse.unshift(plan.inverseChangeSet);
+      inverse.push(plan.inverseChangeSet);
     }
+    inverse.reverse();
     const action: RecordedAction = { id, type: "batch", commands };
     return this.#commit(action, before, candidate, mergeChangeSets(forward), mergeChangeSets(inverse));
   }
