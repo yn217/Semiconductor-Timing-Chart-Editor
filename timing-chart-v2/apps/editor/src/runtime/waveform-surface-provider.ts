@@ -5,7 +5,7 @@ import type { EditorSessionController } from "./editor-session-controller.js";
 import type { CanonicalDocument, Signal, SignalId, SignalValueChange } from "@timing-chart-v2/schema";
 import { valueSignalWaveDomain } from "@timing-chart-v2/schema";
 import type { WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
-import { analyticLocalGeometry, toWaveJsonMappedClock, toWaveJsonWindow, type RenderedWave, type WaveDromAdapter, type WaveJsonSignal } from "@timing-chart-v2/wavedrom-adapter";
+import { analyticLocalGeometry, semanticValuesForWindow, toWaveJsonMappedClock, toWaveJsonWindow, type RenderedWave, type WaveDromAdapter, type WaveJsonSignal } from "@timing-chart-v2/wavedrom-adapter";
 import type { DisplayTimeMapping, DisplayTimeMappingCache } from "@timing-chart-v2/projection";
 import type { GeometryRegistry } from "./geometry-registry.js";
 import { displayWindowForSource } from "./display-boundary.js";
@@ -93,9 +93,7 @@ function projectWaveSignal(input: {
   const displaySignal = signal.type === "commentRow" ? signal : signal.type === "clock"
     ? foldedClock ? signal : { ...signal, ...(signal.enable ? { enable: input.remapValueChanges(signal.enable, mapping) } : {}) }
     : (remappedValues = input.remapValueChanges(signal.values, mapping), { ...signal, values: remappedValues });
-  const semanticValues = remappedValues !== undefined && signal.type !== "clock" && signal.type !== "commentRow" && valueSignalWaveDomain(signal.type) === "data"
-    ? remappedValues.map((change: { readonly value: string | number }) => String(change.value))
-    : undefined;
+  const semanticDomain = remappedValues !== undefined && signal.type !== "clock" && signal.type !== "commentRow" && valueSignalWaveDomain(signal.type) === "data";
   const source = { signal: displaySignal, cycleCount: mapping.displayCycleCount, enumDefinitions: document.enumDefinitions };
   const displayWindow = sourceWindow === undefined ? undefined : displayWindowForSource(mapping, { sourceStart: sourceWindow.start, sourceEnd: sourceWindow.end }, document.timeline.cycleCount);
   const displayStart = displayWindow?.displayStart;
@@ -137,6 +135,15 @@ function projectWaveSignal(input: {
       start: rendererStart === 0 ? 0 : (mapping.displayToSource(rendererStart) ?? sourceWindow.start),
       end: rendererEnd === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource(rendererEnd) ?? sourceWindow.end),
     });
+  // Label semantics bind positionally to WaveJSON `data`. A bounded window
+  // emits only the values carried into/changing inside it, so its semantic
+  // values must be windowed identically; the complete history misaligned every
+  // window after the first change and also defeated the shared label-free
+  // WaveDrom artifact (one SVG image parse per mounted bus row on scroll).
+  const windowedValues = !foldedClock && sourceWindow !== undefined && rendererStart !== undefined && rendererEnd !== undefined && rendererEnd > rendererStart;
+  const semanticValues = !semanticDomain || remappedValues === undefined ? undefined
+    : windowedValues ? semanticValuesForWindow(remappedValues, rendererStart, rendererEnd)
+    : remappedValues.map((change: { readonly value: string | number }) => String(change.value));
   const mappedWaveJson = foldedClock
     ? waveJson
     : sourceWindow === undefined || rendererStart === undefined || rendererEnd === undefined || rendererEnd <= rendererStart
