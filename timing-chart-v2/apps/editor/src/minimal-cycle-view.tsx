@@ -1,4 +1,4 @@
-import { timelineScrollOwner } from "./runtime/timeline-scroll-owner.js";
+import { cursorSourceCycleAtClientX, cursorViewportXForSourceCycle } from "./runtime/cursor-screen-geometry.js";
 import { startTransition, useEffect, useMemo, useRef } from "react";
 import type { RefObject } from "react";
 import type { CommandResult } from "@timing-chart-v2/commands";
@@ -780,12 +780,10 @@ export function MinimalCycleView() {
       onViewportKeyDown: onCursorKeyDown,
       onSetCursorAtCycle: (which: "a" | "b", cycle: number) => setCursor(which, cycle),
       resolveCursorCycleAtClientX: (clientX: number, viewportElement: HTMLDivElement) => {
-        const runtime = timelineRuntimeRef.current;
-        if (!runtime) return undefined;
-        const scroller = timelineScrollOwner(viewportElement);
-        const rect = scroller.getBoundingClientRect();
-        const scrollLeft = scroller.scrollLeft;
-        return runtime.screenXToSourceCycle(clientX - rect.left + scrollLeft);
+        return cursorSourceCycleAtClientX(timelineRuntimeRef.current, clientX, viewportElement);
+      },
+      resolveCursorViewportXForCycle: (cycle: number, viewportElement: HTMLDivElement, rulerContent: HTMLDivElement) => {
+        return cursorViewportXForSourceCycle(timelineRuntimeRef.current, snapshot.document, cycle, viewportElement, rulerContent, zoom);
       },
     },
   };

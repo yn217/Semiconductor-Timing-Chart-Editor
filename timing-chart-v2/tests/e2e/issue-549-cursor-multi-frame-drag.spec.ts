@@ -11,6 +11,17 @@ startInCycleMode(test);
 for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] as const) {
   test(`Cursor A keeps following a >=5-step real pointer drag (rAF between moves) at ${size.width}x${size.height}`, async ({ page }) => {
     await page.setViewportSize(size);
+    await page.addInitScript(() => {
+      const original = Element.prototype.querySelectorAll;
+      let rulerCycleQueries = 0;
+      Element.prototype.querySelectorAll = new Proxy(original, {
+        apply(target, thisArg, args: [string, ...unknown[]]) {
+          if (args[0] === "[data-cycle]" && thisArg instanceof Element && thisArg.matches(".cycle-ruler")) rulerCycleQueries += 1;
+          return Reflect.apply(target, thisArg, args);
+        },
+      });
+      Object.defineProperty(window, "__cursorRulerCycleQueries", { get: () => rulerCycleQueries });
+    });
     await page.goto("/");
     await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
     await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
@@ -18,6 +29,7 @@ for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] 
     const line = page.locator("[data-role='cursor-line'][data-cursor='a']:visible").first();
     await expect(line).toBeVisible();
     const before = await documentState(page);
+    const rulerCycleQueriesBeforeDrag = await page.evaluate(() => Number(Reflect.get(window, "__cursorRulerCycleQueries")));
     const startCycle = Number(await line.getAttribute("data-cycle"));
     const tick = (cycle: number) => page.locator(`.cycle-ruler [data-cycle][data-source-cycle='${cycle}']`).first();
     const viewport = page.getByTestId("cycle-viewport");
@@ -35,8 +47,12 @@ for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] 
     }
     await expect.poll(async () => Number(await viewport.getAttribute("data-cursor-drag-pointer-moves"))).toBeGreaterThan(1);
     await expect.poll(async () => Number(await viewport.getAttribute("data-cursor-drag-preview-frames"))).toBeGreaterThan(1);
+    expect(await page.evaluate(() => Number(Reflect.get(window, "__cursorRulerCycleQueries"))), "Cursor movement must use shared time geometry instead of scanning ruler ticks").toBe(rulerCycleQueriesBeforeDrag);
     await page.mouse.up();
     await expect.poll(async () => Number(await line.getAttribute("data-cycle")), { message: "cursor followed the pointer to the last tick" }).toBe(targets.at(-1));
+    const finalLineBox = (await line.boundingBox())!;
+    const finalTickBox = (await tick(targets.at(-1)!).boundingBox())!;
+    expect(Math.abs(finalLineBox.x - finalTickBox.x), "cursor guide remains aligned to the same source-cycle boundary").toBeLessThanOrEqual(1);
     await expect(page.getByTestId("cursor-status")).toContainText(`A ${targets.at(-1)}`);
     await expectViewOnly(page, before);
 
@@ -47,6 +63,24 @@ for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] 
     expect(Number(await line.getAttribute("data-cycle"))).toBe(settled);
   });
 }
+
+test("Combined Cursor A projects source cycles through the shared time geometry", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
+  await expect(page.locator(".split-signal-content")).toBeVisible();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("cursor-set-a").click();
+  const line = page.locator("[data-role='cursor-line'][data-cursor='a']:visible").first();
+  await expect(line).toBeVisible();
+  const cycle = Number(await line.getAttribute("data-cycle"));
+  const tick = page.locator(`.cycle-ruler [data-cycle][data-source-cycle='${cycle}']`).first();
+  await expect(tick).toBeVisible();
+  const lineBox = (await line.boundingBox())!;
+  const tickBox = (await tick.boundingBox())!;
+  expect(Math.abs(lineBox.x - tickBox.x), "Combined cursor guide and ruler use the same source-cycle X").toBeLessThanOrEqual(1);
+});
 
 test("pointercancel ends a Cursor drag without another cursor update", async ({ page }) => {
   await page.goto("/");

@@ -72,6 +72,7 @@ export interface EditorWorkspaceViewModel {
     readonly onViewportKeyDown?: KeyboardEventHandler<HTMLDivElement>;
     readonly onSetCursorAtCycle?: (which: "a" | "b", cycle: number) => void;
     readonly resolveCursorCycleAtClientX?: (clientX: number, viewport: HTMLDivElement) => number | undefined;
+    readonly resolveCursorViewportXForCycle?: (cycle: number, viewport: HTMLDivElement, rulerContent: HTMLDivElement) => number | undefined;
   };
 }
 
@@ -251,65 +252,20 @@ export function EditorWorkspaceView({
   const { bottomVisible, bottomHeight, inspectorVisible, inspectorWidth } = viewModel.layout;
   const { viewport, gridLayer, ruler, host, viewportLower, gridLayerLower, rulerLower, hostLower } = viewModel.refs;
   const { bottom, inspector } = viewModel.content;
-  const { onBottomReset, onInspectorReset, onBottomKeyDown, onBottomPointerDown, onBottomPointerMove, onBottomPointerUp, onInspectorKeyDown, onInspectorPointerDown, onInspectorPointerMove, onInspectorPointerUp, onSetCursorAtCycle, resolveCursorCycleAtClientX } = viewModel.interactions;
+  const { onBottomReset, onInspectorReset, onBottomKeyDown, onBottomPointerDown, onBottomPointerMove, onBottomPointerUp, onInspectorKeyDown, onInspectorPointerDown, onInspectorPointerMove, onInspectorPointerUp, onSetCursorAtCycle, resolveCursorCycleAtClientX, resolveCursorViewportXForCycle } = viewModel.interactions;
   const activeDragCleanupsRef = useRef(new Set<() => void>());
   useEffect(() => {
-    // Cursor A/B are workspace-only source-cycle markers. The ruler is the
-    // shared display-time owner, so resolve each marker from the rendered
-    // source-cycle tick instead of deriving a second x scale in React.
-    const viewports = [
-      [viewport.current, ruler.current],
-      [viewportLower.current, rulerLower.current],
-    ] as const;
+    // Cursor A/B are workspace-only source-cycle markers. Resolve their
+    // presentation through shared time geometry; never enumerate ruler ticks
+    // as an alternate cycle-to-X authority.
+    const viewports = [[viewport.current, ruler.current], [viewportLower.current, rulerLower.current]] as const;
     const cursors = [
       ["a", cursor.a, "Cursor A"],
       ["b", cursor.b, "Cursor B"],
     ] as const;
-    const rulerElements = () => [ruler.current, rulerLower.current].filter((element): element is HTMLDivElement => element !== null);
-    const tickCache = new WeakMap<HTMLDivElement, { ticks: readonly { readonly x: number; readonly cycle: number }[]; byCycle: ReadonlyMap<number, HTMLElement>; scrollLeft: number }>();
-    const cacheTicks = (rulerElement: HTMLDivElement, scrollOwner: HTMLDivElement = rulerElement) => {
-      const measured = [...rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")].map((candidate) => ({ candidate, x: candidate.getBoundingClientRect().left, cycle: Number(candidate.dataset.sourceCycle ?? candidate.dataset.cycle) }));
-      const valid = measured.filter((tick) => Number.isFinite(tick.x) && Number.isFinite(tick.cycle));
-      const next = valid.map(({ x, cycle }) => ({ x, cycle })).sort((left, right) => left.x - right.x);
-      tickCache.set(rulerElement, { ticks: next, byCycle: new Map(valid.map(({ cycle, candidate }) => [cycle, candidate])), scrollLeft: scrollOwner.scrollLeft });
-      return next;
-    };
-    const shiftCachedTicks = (rulerElement: HTMLDivElement, scrollOwner: HTMLDivElement) => {
-      const cached = tickCache.get(rulerElement);
-      if (!cached) return cacheTicks(rulerElement, scrollOwner);
-      const nextScrollLeft = scrollOwner.scrollLeft;
-      const delta = cached.scrollLeft - nextScrollLeft;
-      if (delta === 0) return cached.ticks;
-      const ticks = cached.ticks.map((tick) => ({ ...tick, x: tick.x + delta }));
-      tickCache.set(rulerElement, { ...cached, ticks, scrollLeft: nextScrollLeft });
-      return ticks;
-    };
-    const nearestCachedTick = (rulerElement: HTMLDivElement, clientX: number) => {
-      const ticks = tickCache.get(rulerElement)?.ticks ?? cacheTicks(rulerElement);
-      if (ticks.length === 0) return undefined;
-      let low = 0;
-      let high = ticks.length - 1;
-      while (low < high) {
-        const middle = Math.floor((low + high) / 2);
-        if (ticks[middle]!.x < clientX) low = middle + 1; else high = middle;
-      }
-      const right = ticks[low]!;
-      const left = ticks[Math.max(0, low - 1)]!;
-      return Math.abs(left.x - clientX) <= Math.abs(right.x - clientX) ? left : right;
-    };
-    const findTick = (sourceRuler: HTMLDivElement, cycle: number) => {
-      const rulers = [sourceRuler, ...rulerElements().filter((element) => element !== sourceRuler)];
-      for (const element of rulers) {
-        const cached = tickCache.get(element) ?? (cacheTicks(element), tickCache.get(element));
-        const candidate = cached?.byCycle.get(cycle);
-        if (candidate) return candidate;
-      }
-      return undefined;
-    };
     const update = () => {
-      for (const [viewportElement, rulerElement] of viewports) {
-        if (!viewportElement || !rulerElement) continue;
-        shiftCachedTicks(rulerElement, timelineScrollOwner(viewportElement) as HTMLDivElement);
+      for (const [viewportElement, rulerContent] of viewports) {
+        if (!viewportElement || !rulerContent) continue;
         let overlay = viewportElement.querySelector<HTMLElement>("[data-role='cursor-overlay']");
         if (!overlay) {
           overlay = viewportElement.ownerDocument.createElement("div");
@@ -331,9 +287,8 @@ export function EditorWorkspaceView({
             line.setAttribute("aria-label", label);
             overlay.append(line);
           }
-          const tick = findTick(rulerElement, cycle);
-          if (!tick) { line.hidden = true; continue; }
-          const tickRect = tick.getBoundingClientRect();
+          const x = resolveCursorViewportXForCycle?.(cycle, viewportElement, rulerContent);
+          if (x === undefined || !Number.isFinite(x)) { line.hidden = true; continue; }
           line.hidden = false;
           // Keep the dynamically-created guide independently hit-testable even
           // before the stylesheet/layout pass has assigned the overlay rule.
@@ -345,7 +300,7 @@ export function EditorWorkspaceView({
           const visibleHeight = splitterTop !== undefined && splitterTop > viewportRect.top && splitterTop < viewportRect.bottom ? splitterTop - viewportRect.top : viewportElement.clientHeight;
           line.style.height = `${Math.max(visibleHeight, 250)}px`;
           line.style.pointerEvents = "auto";
-          line.style.left = `${tickRect.left - viewportRect.left}px`;
+          line.style.left = `${x}px`;
           line.dataset.cycle = String(cycle);
         }
       }
@@ -363,8 +318,8 @@ export function EditorWorkspaceView({
     // The active drag owner outlives this effect: its own output (cursor.a/b) is in the dependency list, so an effect re-run must not tear the
     // gesture down (#549). The set is owned by a ref and cleared on unmount / mode change below.
     const activeDragCleanups = activeDragCleanupsRef.current;
-    for (const [viewportElement, rulerElement] of viewports) {
-      if (!viewportElement || !rulerElement || !onSetCursorAtCycle) continue;
+    for (const [viewportElement, rulerContent] of viewports) {
+      if (!viewportElement || !rulerContent || !onSetCursorAtCycle) continue;
       const onPointerDown = (event: PointerEvent) => {
         // Cursor A/B has one workspace-wide drag owner. A second pointer
         // must not install another window-level move/up handler while the
@@ -386,10 +341,6 @@ export function EditorWorkspaceView({
         const applyCursorAt = (clientX: number) => {
           const resolved = resolveCursorCycleAtClientX?.(clientX, viewportElement);
           if (resolved !== undefined) onSetCursorAtCycle(which, resolved);
-          else {
-            const nearest = nearestCachedTick(rulerElement, clientX);
-            if (nearest) onSetCursorAtCycle(which, nearest.cycle);
-          }
         };
         const move = (moveEvent: PointerEvent) => {
           pendingClientX = moveEvent.clientX;
@@ -422,7 +373,7 @@ export function EditorWorkspaceView({
       for (const [target, handler] of dragHandlers) target.removeEventListener("pointerdown", handler, true);
       window.removeEventListener("resize", update);
     };
-  }, [ruler, rulerLower, cursor.a, cursor.b, cursorPresentationRevision, zoom, viewport, viewportLower]);
+  }, [ruler, rulerLower, cursor.a, cursor.b, cursorPresentationRevision, zoom, viewport, viewportLower, onSetCursorAtCycle, resolveCursorCycleAtClientX, resolveCursorViewportXForCycle]);
   // Cursor drag handlers survive their own cursor.a/b state updates, but a
   // mode owner change ends the gesture so stale viewport listeners cannot leak.
   useEffect(() => () => { for (const cleanupDrag of [...activeDragCleanupsRef.current]) cleanupDrag(); }, [viewMode]);
