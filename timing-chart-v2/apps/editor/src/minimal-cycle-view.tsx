@@ -779,8 +779,8 @@ export function MinimalCycleView() {
       onSignalSplitKeyDown: resizeSignalSplitByKeyboard, onSignalSplitPointerDown: startSignalSplitResize, onSignalSplitPointerMove: moveSignalSplitResize, onSignalSplitPointerUp: finishSignalSplitResize,
       onViewportKeyDown: onCursorKeyDown,
       onSetCursorAtCycle: (which: "a" | "b", cycle: number) => setCursor(which, cycle),
-      resolveCursorCycleAtClientX: (clientX: number, viewportElement: HTMLDivElement) => {
-        return cursorSourceCycleAtClientX(timelineRuntimeRef.current, clientX, viewportElement);
+      resolveCursorCycleAtClientX: (clientX: number, viewportElement: HTMLDivElement, rulerContent?: HTMLDivElement) => {
+        return cursorSourceCycleAtClientX(timelineRuntimeRef.current, clientX, viewportElement, rulerContent);
       },
       resolveCursorViewportXForCycle: (cycle: number, viewportElement: HTMLDivElement, rulerContent: HTMLDivElement) => {
         return cursorViewportXForSourceCycle(timelineRuntimeRef.current, snapshot.document, cycle, viewportElement, rulerContent, zoom);

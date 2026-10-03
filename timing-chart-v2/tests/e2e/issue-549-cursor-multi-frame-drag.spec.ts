@@ -54,7 +54,7 @@ for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] 
     const lineBox = (await line.boundingBox())!;
     const y = lineBox.y + Math.max(1, lineBox.height / 2);
     const frame = () => page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
-    await page.mouse.move(lineBox.x + lineBox.width / 2, y);
+    await page.mouse.move(lineBox.x + lineBox.width / 2, y!);
     await page.mouse.down();
     // Walk right across five distinct ticks, one rAF apart.
     const targets = [startCycle + 1, startCycle + 2, startCycle + 3, startCycle + 4, startCycle + 5, startCycle + 6];
@@ -161,3 +161,102 @@ test("switching mode cancels an active Cursor drag owner", async ({ page }) => {
   expect(Number(await viewport.getAttribute("data-cursor-drag-preview-frames"))).toBe(previewFramesBeforeModeChange);
   await page.mouse.up();
 });
+
+const sizes549 = [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] as const;
+const trackWindowPointerMove = () => {
+  const live = new Set<unknown>();
+  const counts = { adds: 0, removes: 0 };
+  const originalAdd = EventTarget.prototype.addEventListener;
+  const originalRemove = EventTarget.prototype.removeEventListener;
+  EventTarget.prototype.addEventListener = function (this: EventTarget, type: string, handler: unknown, options?: unknown) {
+    if (this === window && type === "pointermove" && handler && !live.has(handler)) { live.add(handler); counts.adds += 1; }
+    return Reflect.apply(originalAdd, this, [type, handler, options]);
+  } as typeof originalAdd;
+  EventTarget.prototype.removeEventListener = function (this: EventTarget, type: string, handler: unknown, options?: unknown) {
+    if (this === window && type === "pointermove" && live.delete(handler)) counts.removes += 1;
+    return Reflect.apply(originalRemove, this, [type, handler, options]);
+  } as typeof originalRemove;
+  Object.defineProperty(window, "__windowPointerMove", { get: () => ({ live: live.size, ...counts }) });
+};
+
+for (const size of sizes549) {
+  for (const target of ["Transaction", "Combined"] as const) {
+    test(`Cycle->${target} mid-drag cancels the Cursor gesture exactly once without leaking pointermove at ${size.width}x${size.height}`, async ({ page }) => {
+      await page.setViewportSize(size);
+      await page.addInitScript(trackWindowPointerMove);
+      await page.goto("/");
+      await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+      await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+      await page.getByTestId("cursor-set-a").click();
+      const line = page.locator("[data-role='cursor-line'][data-cursor='a']:visible").first();
+      await expect(line).toBeVisible();
+      const before = await documentState(page);
+      const startCycle = Number(await line.getAttribute("data-cycle"));
+      const box = (await line.boundingBox())!;
+      const y = box.y + Math.max(1, box.height / 2);
+      const frame = () => page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      const tick = (cycle: number) => page.locator(`.cycle-ruler [data-cycle][data-source-cycle='${cycle}']`).first();
+      const listeners = () => page.evaluate(() => Reflect.get(window, "__windowPointerMove") as { live: number; adds: number; removes: number });
+      const idle = await listeners();
+      await page.mouse.move(box.x + box.width / 2, y);
+      await page.mouse.down();
+      const during = await listeners();
+      expect(during.adds - idle.adds, "pointerdown installs exactly one window pointermove handler").toBe(1);
+      await page.mouse.move((await tick(startCycle + 2).boundingBox())!.x + 1, y); await frame();
+      await expect.poll(async () => Number(await line.getAttribute("data-cycle"))).toBe(startCycle + 2);
+      const laterX = (await tick(startCycle + 5).boundingBox())!.x + 1;
+      await page.locator(".view-mode").getByRole("button", { name: target, exact: true }).focus();
+      await page.keyboard.press("Enter");
+      await expect(page.locator(".cycle-panel")).toHaveAttribute("data-view-mode", target === "Combined" ? "Split" : target);
+      const afterSwitch = await listeners();
+      expect(afterSwitch.removes - during.removes, "mode switch cancels the gesture exactly once").toBe(1);
+      expect(afterSwitch.live, "no leaked window pointermove handler").toBe(idle.live);
+      await page.mouse.move(laterX, y); await frame();
+      await page.mouse.move(laterX + 40, y); await frame();
+      const visibleLine = page.locator("[data-role='cursor-line'][data-cursor='a']:visible").first();
+      if (await visibleLine.count()) expect(Number(await visibleLine.getAttribute("data-cycle")), "no cursor update after switch").toBe(startCycle + 2);
+      await page.mouse.up();
+      const end = await listeners();
+      expect(end.removes, "pointerup after cancel removes nothing twice").toBe(afterSwitch.removes);
+      expect(end.live).toBe(idle.live);
+      await expect(page.getByTestId("cursor-status")).toContainText(`A ${startCycle + 2}`);
+      await expectViewOnly(page, before);
+    });
+  }
+
+  test(`Combined real Cursor A drag from the line follows shared source-time at ${size.width}x${size.height}`, async ({ page }) => {
+    await page.setViewportSize(size);
+    await page.goto("/");
+    await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+    await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
+    await expect(page.locator(".split-signal-content")).toBeVisible();
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+    await page.getByTestId("cursor-set-a").click();
+    const line = page.locator("[data-role='cursor-line'][data-cursor='a']:visible").first();
+    await expect(line).toBeVisible();
+    const before = await documentState(page);
+    const startCycle = Number(await line.getAttribute("data-cycle"));
+    const tick = (cycle: number) => page.locator(`.cycle-ruler [data-cycle][data-source-cycle='${cycle}']`).first();
+    const lineBox = (await line.boundingBox())!;
+    const frame = () => page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    // The first Y (top-down) where the visible Cursor line is the actual hit target, i.e. where a user can grab it.
+    const y = await page.evaluate(([x, top, height]) => {
+      for (let yy = top + 1; yy < top + height; yy += 2) {
+        if (document.elementFromPoint(x, yy)?.closest("[data-role='cursor-line']")?.getAttribute("data-cursor") === "a") return yy;
+      }
+      return null;
+    }, [lineBox.x + lineBox.width / 2, lineBox.y, lineBox.height] as const);
+    expect(y, "the Combined Cursor line is grabbable somewhere, not fully covered by the range-selection/transaction surface").not.toBeNull();
+    await page.mouse.move(lineBox.x + lineBox.width / 2, y!);
+    await page.mouse.down();
+    const targets = [1, 2, 3, 4, 5].map((d) => startCycle + d);
+    for (const cycle of targets) { await page.mouse.move((await tick(cycle).boundingBox())!.x + 1, y!); await frame(); }
+    await page.mouse.up();
+    await expect.poll(async () => Number(await line.getAttribute("data-cycle"))).toBe(targets.at(-1));
+    const finalLine = (await line.boundingBox())!;
+    const finalTick = (await tick(targets.at(-1)!).boundingBox())!;
+    expect(Math.abs(finalLine.x - finalTick.x)).toBeLessThanOrEqual(1);
+    await expect(page.getByTestId("cursor-status")).toContainText(`A ${targets.at(-1)}`);
+    await expectViewOnly(page, before);
+  });
+}
