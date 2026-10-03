@@ -20,8 +20,7 @@ const owners = (page: Page) => page.evaluate(() => {
 });
 
 for (const size of sizes) {
-  // Known defect (#573 reopen, HANDOFF -> CODEX): two scroll owners; test.fail flips to a real failure once fixed so the annotation must then be removed.
-  test.fail(`Combined has exactly one horizontal scroll owner across zoom/panels at ${size.width}x${size.height}`, async ({ page }) => {
+  test(`Combined has exactly one horizontal scroll owner across zoom/panels at ${size.width}x${size.height}`, async ({ page }) => {
     test.setTimeout(150_000);
     await page.setViewportSize(size);
     await page.goto("/");
@@ -32,6 +31,8 @@ for (const size of sizes) {
     await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
     await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
     await expect(page.getByTestId("view-mode-status")).toHaveText(/Mode: (Combined|Split)/);
+    await expect(page.getByTestId("cycle-viewport")).toHaveAttribute("data-time-viewport-owner", "combined-viewport");
+    await expect(page.getByTestId("timeline-hscroll")).toHaveCount(0);
     await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 30_000 });
     const failures: string[] = [];
     const check = async (label: string) => {

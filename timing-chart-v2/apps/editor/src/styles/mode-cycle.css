@@ -1,32 +1,31 @@
-/* Cycle Mode workspace owner. Every rule here is keyed off the shell's data-view-mode="Cycle"
-   (published by EditorShellView), so Cycle layout never depends on DOM structure or on
-   Transaction/Combined selectors. Loaded right after app-shell.css. */
+/* Cycle Mode workspace owner. Layout rules are keyed to the active ModeWorkspace boundary;
+   the shared shell mode label remains status only. Loaded right after app-shell.css. */
 /* Cycle Mode still owns its WaveDrom frozen label columns inside the timeline
    surface. Keep that established owner intact while Transaction/Combined use
    the real left-column + center-column composition above. */
-.editor-shell[data-view-mode="Cycle"] .desktop-workspace {
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] {
   grid-template-rows: minmax(260px, 1fr) 10px var(--gui-bottom-height);
 }
-.editor-shell[data-view-mode="Cycle"] .cycle-panel {
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .cycle-panel {
   --time-domain-left: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px));
 }
-.editor-shell[data-bottom-visible="false"][data-view-mode="Cycle"] .desktop-workspace {
+.editor-shell[data-bottom-visible="false"] .desktop-workspace[data-workspace-owner="CycleWorkspace"] {
   grid-template-rows: minmax(0, 1fr) 0 0;
 }
-.editor-shell[data-view-mode="Cycle"] .workspace-header { display: none; }
-.editor-shell[data-view-mode="Cycle"] .cycle-panel { grid-column: 1 / 3; grid-row: 1; }
-.editor-shell[data-view-mode="Cycle"] .left-workspace-rail { grid-column: 1; grid-row: 1 / 4; }
-.editor-shell[data-view-mode="Cycle"] .inspector-shell { grid-column: 3; grid-row: 1 / 4; }
-.editor-shell[data-view-mode="Cycle"] .bottom-resize-track { grid-column: 2; grid-row: 2; }
-.editor-shell[data-view-mode="Cycle"] .bottom-editor { grid-column: 2; grid-row: 3; }
-.editor-shell[data-view-mode="Cycle"] .cycle-panel .cycle-viewport { height: calc(100% - 37px); }
-.editor-shell[data-view-mode="Cycle"] .split-signal-content { position: relative; }
-.editor-shell[data-view-mode="Cycle"] .left-workspace-rail { pointer-events: none; background: transparent; }
-.editor-shell[data-view-mode="Cycle"] .left-workspace-rail > .left-panel-tail { pointer-events: auto; }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .workspace-header { display: none; }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .cycle-panel { grid-column: 1 / 3; grid-row: 1; }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .left-workspace-rail { grid-column: 1; grid-row: 1 / 4; }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .inspector-shell { grid-column: 3; grid-row: 1 / 4; }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .bottom-resize-track { grid-column: 2; grid-row: 2; }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .bottom-editor { grid-column: 2; grid-row: 3; }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .cycle-panel .cycle-viewport { height: calc(100% - 37px); }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .split-signal-content { position: relative; }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .left-workspace-rail { pointer-events: none; background: transparent; }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .left-workspace-rail > .left-panel-tail { pointer-events: auto; }
 /* #756: the Signals/Groups tree lives in the timing surface (row 1). Below it the left rail continues as one closed,
    tinted footer panel that spans the splitter + Bottom rows, so the left side no longer reads as a detached blank shell.
    A grid ::after keeps it exactly as tall as those rows (0 when Bottom is hidden). */
-.editor-shell[data-view-mode="Cycle"] .desktop-workspace::after {
+.desktop-workspace[data-workspace-owner="CycleWorkspace"]::after {
   content: ""; grid-column: 1; grid-row: 2 / 4; z-index: 1; pointer-events: none;
   background: #f9fbfd; border-top: 1px solid #b9c4d2; border-right: 1px solid #b9c4d2; box-sizing: border-box;
 }
@@ -40,43 +39,43 @@
    TimelineViewport wrapper is the sole horizontal scroll owner; its local X starts at 0 and its scrollWidth excludes the fixed
    widths. Transaction/Combined keep the wrapper as `display: contents`, so their geometry is untouched. */
 .surface-host [data-role="timeline-viewport"] { display: contents; }
-.editor-shell[data-view-mode="Cycle"] .surface-host { width: 100% !important; }
-.editor-shell[data-view-mode="Cycle"] .surface-host [data-role="timing-chart-surface"] { width: 100% !important; grid-template-columns: var(--gui-left-width) var(--gui-frozen-width) minmax(0, 1fr) !important; }
-.editor-shell[data-view-mode="Cycle"] .surface-host [data-role="left-tree-rows"],
-.editor-shell[data-view-mode="Cycle"] .surface-host [data-role="frozen-label-rows"] { position: relative !important; left: auto !important; }
-.editor-shell[data-view-mode="Cycle"] .surface-host [data-role="timeline-viewport"] {
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .surface-host { width: 100% !important; }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .surface-host [data-role="timing-chart-surface"] { width: 100% !important; grid-template-columns: var(--gui-left-width) var(--gui-frozen-width) minmax(0, 1fr) !important; }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .surface-host [data-role="left-tree-rows"],
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .surface-host [data-role="frozen-label-rows"] { position: relative !important; left: auto !important; }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .surface-host [data-role="timeline-viewport"] {
   display: grid !important; position: relative !important; grid-column: 3; grid-row: 1; min-width: 0;
   grid-template-columns: var(--timeline-min-width, var(--wave-width, 640px)); overflow-x: scroll; overflow-y: hidden; scrollbar-width: none;
   transform: translateY(-35px);
 }
-.editor-shell[data-view-mode="Cycle"] .surface-host [data-role="timeline-viewport"]::-webkit-scrollbar { display: none; }
-.editor-shell[data-view-mode="Cycle"] .surface-host [data-role="timeline-viewport"] > [data-role] { grid-column: 1; grid-row: 1; transform: none; }
-.editor-shell[data-view-mode="Cycle"] .cycle-viewport { overflow-x: hidden; }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .surface-host [data-role="timeline-viewport"]::-webkit-scrollbar { display: none; }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .surface-host [data-role="timeline-viewport"] > [data-role] { grid-column: 1; grid-row: 1; transform: none; }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .cycle-viewport { overflow-x: hidden; }
 /* The grid follows the Timeline owner's scroll and is clipped to the visible Timeline column (clip bounds are in the grid's own,
    pre-scale coordinates: scroll/zoom and scroll+width/zoom, published with --timeline-scroll-left). */
-.editor-shell[data-view-mode="Cycle"] .geometry-grid { translate: calc(-1px * var(--timeline-scroll-left, 0)) 0; clip-path: inset(0 calc(100% - var(--grid-clip-right, 1000000px)) 0 var(--grid-clip-left, 0px)); }
-.editor-shell[data-view-mode="Cycle"] .range-selection-band { translate: calc(-1px * var(--timeline-scroll-left, 0)) 0; }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .geometry-grid { translate: calc(-1px * var(--timeline-scroll-left, 0)) 0; clip-path: inset(0 calc(100% - var(--grid-clip-right, 1000000px)) 0 var(--grid-clip-left, 0px)); }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .range-selection-band { translate: calc(-1px * var(--timeline-scroll-left, 0)) 0; }
 
 /* #756: the Signals / Groups rail is one column spanning Main + Bottom. The Cycle panel (fixed columns + Timeline) spans the whole
    content height; the opaque Bottom splitter/editor (center column) sits above the timing area, and the left tree column simply
    continues below it. */
-.editor-shell[data-view-mode="Cycle"] .cycle-panel { grid-row: 1 / 4; }
-.editor-shell[data-view-mode="Cycle"] .desktop-workspace::after { display: none; }
-.editor-shell[data-view-mode="Cycle"] .bottom-resize-track,
-.editor-shell[data-view-mode="Cycle"] .bottom-editor { position: relative; z-index: 40; }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .cycle-panel { grid-row: 1 / 4; }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"]::after { display: none; }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .bottom-resize-track,
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .bottom-editor { position: relative; z-index: 40; }
 /* 28px = the rail's count/scope footer, which always overlays the bottom of the tree column. */
-.editor-shell[data-view-mode="Cycle"] { --cycle-bottom-cover: 0px; --cycle-cover: calc(var(--cycle-bottom-cover) + 28px); }
-.editor-shell[data-view-mode="Cycle"][data-bottom-visible="true"] { --cycle-bottom-cover: calc(var(--gui-bottom-height) + 10px); }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] { --cycle-bottom-cover: 0px; --cycle-cover: calc(var(--cycle-bottom-cover) + 28px); }
+.editor-shell[data-bottom-visible="true"] .desktop-workspace[data-workspace-owner="CycleWorkspace"] { --cycle-bottom-cover: calc(var(--gui-bottom-height) + 10px); }
 /* The column resize handles cover only the visible Main area (Bottom sits above the rest of the panel). */
-.editor-shell[data-view-mode="Cycle"] .left-pane-resize-handle, .editor-shell[data-view-mode="Cycle"] .frozen-pane-resize-handle { bottom: var(--cycle-bottom-cover); }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .left-pane-resize-handle, .desktop-workspace[data-workspace-owner="CycleWorkspace"] .frozen-pane-resize-handle { bottom: var(--cycle-bottom-cover); }
 /* Keep the resize affordances attached to the fixed-column header rather
    than painting short, detached marks halfway down an otherwise empty pane.
    The full-height separator hit targets and continuous column borders remain
    unchanged; only their visible grips move into the 37px heading band. */
-.editor-shell[data-view-mode="Cycle"] .left-pane-resize-handle::after,
-.editor-shell[data-view-mode="Cycle"] .frozen-pane-resize-handle::after { top: 6px; height: 24px; transform: none; }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .left-pane-resize-handle::after,
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .frozen-pane-resize-handle::after { top: 6px; height: 24px; transform: none; }
 /* The surface fills the whole viewport (--cycle-fill, published by the Timeline track owner) so the rail columns reach the bottom; the
    cover is padding so the last rows stay reachable above Bottom, and the rail layers extend over it. */
-.editor-shell[data-view-mode="Cycle"] .surface-host [data-role="timing-chart-surface"] { box-sizing: content-box; padding-bottom: var(--cycle-cover); min-height: calc(var(--cycle-fill, 0px) - var(--cycle-cover)); }
-.editor-shell[data-view-mode="Cycle"] .surface-host [data-role="left-tree-rows"],
-.editor-shell[data-view-mode="Cycle"] .surface-host [data-role="frozen-label-rows"] { margin-bottom: calc(-1 * var(--cycle-cover)); }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .surface-host [data-role="timing-chart-surface"] { box-sizing: content-box; padding-bottom: var(--cycle-cover); min-height: calc(var(--cycle-fill, 0px) - var(--cycle-cover)); }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .surface-host [data-role="left-tree-rows"],
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .surface-host [data-role="frozen-label-rows"] { margin-bottom: calc(-1 * var(--cycle-cover)); }

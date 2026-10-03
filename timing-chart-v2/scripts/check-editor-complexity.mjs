@@ -187,6 +187,16 @@ for (const [ratchetFile, ceiling] of Object.entries(ratchet)) {
   const ratchetLines = (await readFile(resolve(root, ratchetFile), "utf8")).split("\n").length;
   if (ratchetLines > ceiling) violations.push(`${ratchetFile} grew past its ratchet ceiling ${ceiling} (${ratchetLines}); extract an owner or lower the ceiling with the refactor`);
 }
+// #258 lifecycle ratchet: EditorWorkspaceView currently owns Cursor/scrollbar listener + ResizeObserver lifecycles; they may not regrow.
+const lifecycleRatchet = JSON.parse(await readFile(resolve(root, "architecture/lifecycle-ratchet.json"), "utf8"));
+for (const [lifecycleFile, ceilings] of Object.entries(lifecycleRatchet)) {
+  if (lifecycleFile.startsWith("_")) continue;
+  const lifecycleSource = await readFile(resolve(root, lifecycleFile), "utf8");
+  for (const [primitive, ceiling] of Object.entries(ceilings)) {
+    const count = lifecycleSource.split(`${primitive}(`).length - 1;
+    if (count > ceiling) violations.push(`${lifecycleFile} owns ${count} '${primitive}(' (ceiling ${ceiling}); extract the lifecycle to a typed runtime owner or lower the ceiling with the refactor`);
+  }
+}
 const effectBodies = [...source.matchAll(/use(?:Layout)?Effect\(\(\) => \{([\s\S]*?)\n\s*\},/g)];
 for (const [index, match] of effectBodies.entries()) {
   const effectLines = match[1].split(/\r?\n/).length;

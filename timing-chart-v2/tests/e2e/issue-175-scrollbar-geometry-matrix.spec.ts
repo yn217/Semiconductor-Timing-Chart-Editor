@@ -12,7 +12,8 @@ startInCycleMode(test);
 const sizes = [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] as const;
 
 const geometry = (page: Page) => page.evaluate(() => {
-  const bar = document.querySelector<HTMLElement>("[data-testid='timeline-hscroll']")!;
+  const bar = document.querySelector<HTMLElement>("[data-testid='timeline-hscroll']");
+  if (!bar) return null; // not mounted (Combined, once the single-owner slice lands): nothing to follow
   const view = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']")!;
   const wrapper = document.querySelector<HTMLElement>(".editor-shell[data-view-mode='Cycle'] [data-role='timeline-viewport']");
   const owner = wrapper ?? view;
@@ -23,6 +24,7 @@ const geometry = (page: Page) => page.evaluate(() => {
 async function expectFollowsOwner(page: Page, label: string): Promise<void> {
   await expect.poll(async () => {
     const g = await geometry(page);
+    if (g === null) return "ok";
     if (g.hidden === g.scrolls) return `${label}: hidden=${g.hidden} but owner scrolls=${g.scrolls}`;
     if (g.hidden) return "ok";
     if (Math.abs(g.barWidth - g.ownerClient) > 2) return `${label}: bar width ${g.barWidth} vs owner client ${g.ownerClient}`;

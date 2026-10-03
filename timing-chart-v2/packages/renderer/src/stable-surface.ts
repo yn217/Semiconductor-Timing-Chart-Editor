@@ -46,7 +46,7 @@ function nextBrowserFrame(): Promise<void> {
 interface Layers {
   readonly root: HTMLElement;
   readonly left: HTMLElement;
-  readonly frozen: HTMLElement;
+  frozen: HTMLElement | undefined;
   readonly timing: HTMLElement;
   readonly waves: HTMLElement;
   readonly overlays: HTMLElement;
@@ -115,7 +115,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     if (this.#layers) throw new Error("Timing chart renderer is already mounted.");
     const root = element(host, "div", "timing-chart-surface");
     const left = element(host, "div", "left-tree-rows");
-    const frozen = element(host, "div", "frozen-label-rows");
+    const frozen = this.#cyclePresentationActive(host) ? element(host, "div", "frozen-label-rows") : undefined;
     const timing = element(host, "div", "timing-semantic-rows");
     const waves = element(host, "div", "stable-waveform-surface");
     const overlays = element(host, "div", "annotation-overlay-surface");
@@ -127,7 +127,9 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     // it the horizontal scroll owner so the fixed columns are never inside a horizontal overflow box).
     const timelineViewport = element(host, "div", "timeline-viewport");
     for (const layer of [timing, waves, overlays, interactive]) timelineViewport.append(layer);
-    for (const layer of [left, frozen, timelineViewport]) root.append(layer);
+    root.append(left);
+    if (frozen) root.append(frozen);
+    root.append(timelineViewport);
     host.replaceChildren(root);
     this.#layers = { root, left, frozen, timing, waves, overlays, interactive };
     Object.defineProperty(root, "requestPerformanceSnapshot", { configurable: true, value: () => this.diagnostics() });
@@ -138,6 +140,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   update(projection: RenderProjection): void {
     const layers = this.#layers;
     if (!layers) throw new Error("Timing chart renderer must be mounted before update.");
+    const frozenLayer = this.#syncFrozenLayer(layers);
     assertCrossSurfaceInvariant(projection);
     this.#diagnostics = { ...this.#diagnostics, projectionUpdates: this.#diagnostics.projectionUpdates + 1, mountedRows: projection.mountedRowIds.length };
     const rows = this.#indexedRows(projection.rowLayout, false);
@@ -159,8 +162,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     }
     this.#diagnostics = { ...this.#diagnostics, rowsVisited: visitedRowIds.size, documentEpoch: this.#documentEpoch, rowYSize: this.#rowY.size, rowYStaleCount: 0, rowYPrunePasses: this.#rowYPrunePasses };
     this.#counters = { ...this.#counters, rowPositionUpdates: this.#counters.rowPositionUpdates + changedRows.size };
-    const shellStats = [syncShellLayer(layers.left, this.#leftRows, projection.leftRowIds, navigationRows, "left"), syncShellLayer(layers.frozen, this.#frozenRows, projection.frozenLabelRowIds, rows, "frozen"), syncShellLayer(layers.timing, this.#timingRows, projection.timingRowIds, rows, "timing")];
-    const headerStats = [syncGroupHeaderLayer(layers.left, this.#leftGroupHeaders, projection.mountedLeftGroupHeaderIds, projection.leftGroupHeaders, "left"), syncGroupHeaderLayer(layers.frozen, this.#frozenGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "frozen"), syncGroupHeaderLayer(layers.timing, this.#timingGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "timing")];
+    const shellStats = [syncShellLayer(layers.left, this.#leftRows, projection.leftRowIds, navigationRows, "left"), ...(frozenLayer ? [syncShellLayer(frozenLayer, this.#frozenRows, projection.frozenLabelRowIds, rows, "frozen")] : []), syncShellLayer(layers.timing, this.#timingRows, projection.timingRowIds, rows, "timing")];
+    const headerStats = [syncGroupHeaderLayer(layers.left, this.#leftGroupHeaders, projection.mountedLeftGroupHeaderIds, projection.leftGroupHeaders, "left"), ...(frozenLayer ? [syncGroupHeaderLayer(frozenLayer, this.#frozenGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "frozen")] : []), syncGroupHeaderLayer(layers.timing, this.#timingGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "timing")];
     this.#diagnostics = { ...this.#diagnostics, domNodeCreates: this.#diagnostics.domNodeCreates + shellStats.concat(headerStats).reduce((sum, item) => sum + item.creates, 0), domNodeDestroys: this.#diagnostics.domNodeDestroys + shellStats.concat(headerStats).reduce((sum, item) => sum + item.destroys, 0), domNodeMoves: this.#diagnostics.domNodeMoves + shellStats.concat(headerStats).reduce((sum, item) => sum + item.moves, 0) };
     // The Left Tree shows every row (hidden signals and empty-group headers
     // included) and can legitimately need more vertical space than
@@ -296,11 +299,12 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   updatePresentation(projection: RenderProjection): void {
     const layers = this.#layers;
     if (!layers) throw new Error("Timing chart renderer must be mounted before update.");
+    const frozenLayer = this.#syncFrozenLayer(layers);
     assertCrossSurfaceInvariant(projection);
     const rows = this.#indexedRows(projection.rowLayout, false);
     const navigationRows = this.#indexedRows(projection.navigationRowLayout, true);
     syncShellLayer(layers.left, this.#leftRows, projection.leftRowIds, navigationRows, "left");
-    syncShellLayer(layers.frozen, this.#frozenRows, projection.frozenLabelRowIds, rows, "frozen");
+    if (frozenLayer) syncShellLayer(frozenLayer, this.#frozenRows, projection.frozenLabelRowIds, rows, "frozen");
     syncShellLayer(layers.timing, this.#timingRows, projection.timingRowIds, rows, "timing");
     for (const signalId of projection.mountedSignalIds) {
       const owner = this.#waveOwners.get(signalId);
@@ -344,6 +348,33 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       canonicalRowIds: Object.freeze([...(this.#documentRowIdsSource ?? [])]),
       visibleRowIds: Object.freeze([...(this.#visibleRowIdsSource ?? [])]),
     });
+  }
+
+  #cyclePresentationActive(host: HTMLElement): boolean {
+    const mode = host.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode;
+    return mode !== "Transaction";
+  }
+
+  #syncFrozenLayer(layers: Layers): HTMLElement | undefined {
+    const active = this.#cyclePresentationActive(layers.root);
+    if (active && !layers.frozen) {
+      const frozen = element(layers.root.ownerDocument, "div", "frozen-label-rows");
+      const timeline = layers.root.querySelector<HTMLElement>("[data-role='timeline-viewport']");
+      if (!timeline) throw new Error("Cannot mount the Cycle frozen-column layer without its timeline viewport.");
+      layers.root.insertBefore(frozen, timeline);
+      layers.frozen = frozen;
+      return frozen;
+    }
+    if (!active && layers.frozen) {
+      const removedCount = this.#frozenRows.size + this.#frozenGroupHeaders.size;
+      layers.frozen.remove();
+      layers.frozen = undefined;
+      this.#frozenRows.clear();
+      this.#frozenGroupHeaders.clear();
+      this.#diagnostics = { ...this.#diagnostics, domNodeDestroys: this.#diagnostics.domNodeDestroys + removedCount };
+      return undefined;
+    }
+    return layers.frozen;
   }
 
   diagnostics(): Readonly<RendererDiagnostics> {

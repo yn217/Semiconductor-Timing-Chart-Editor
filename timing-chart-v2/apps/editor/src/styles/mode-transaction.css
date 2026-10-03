@@ -1,5 +1,6 @@
 /* Transaction Mode workspace owner: every rule scoped by .cycle-panel.mode-transaction, moved here
    from app-shell/center-columns/bottom-editor so the mode has one stylesheet (#593). */
+.desktop-workspace[data-workspace-owner="TransactionWorkspace"] { --gui-workspace-header-height: 58px; }
 /* Transaction mode's tree header is 58px tall (line 140), not the plain
    37px `.column-headings` height every other mode uses -- `.cycle-viewport`
    kept the flat 37px offset, so its bottom 21px (exactly enough to swallow
@@ -52,10 +53,10 @@
   left: 0;
   width: calc(var(--wave-width, 640px) * var(--transaction-zoom, 1));
 }
-.editor-shell[data-view-mode="Transaction"] .transaction-list-row > button { height: 28px; }
-.editor-shell[data-view-mode="Transaction"] .transaction-list-row-editor { min-height: 28px; }
-.editor-shell[data-view-mode="Transaction"] .bottom-tabs { flex-basis: 36px; height: 36px; }
-.editor-shell[data-view-mode="Transaction"] .bottom-tabs button { height: 35px; }
+.desktop-workspace[data-workspace-owner="TransactionWorkspace"] .transaction-list-row > button { height: 28px; }
+.desktop-workspace[data-workspace-owner="TransactionWorkspace"] .transaction-list-row-editor { min-height: 28px; }
+.desktop-workspace[data-workspace-owner="TransactionWorkspace"] .bottom-tabs { flex-basis: 36px; height: 36px; }
+.desktop-workspace[data-workspace-owner="TransactionWorkspace"] .bottom-tabs button { height: 35px; }
 /* The lane-label layer spans the whole time surface in standalone Transaction Mode. As a sticky z-2 stacking context it sat
    under the bar track (z 3), which made every Group header control (collapse chevron, inline rename, Ungroup) unclickable.
    Lift the (transparent, non-interactive) layer above the track and let only the header controls take pointer input, so bars
@@ -68,7 +69,7 @@
 
 /* #750: standalone Transaction shows only the lanes; the (hidden) Cycle surface must not widen the scroll area with its left/frozen
    columns, so the scroll extent is exactly the presented content. */
-.editor-shell[data-view-mode="Transaction"] .surface-host { overflow-x: clip; }
+.desktop-workspace[data-workspace-owner="TransactionWorkspace"] .surface-host { overflow-x: clip; }
 
 /* #765: the Cycle signal-row plane (surface host + its left tree rows) is invisible in standalone Transaction; keep it laid out for mode
    round-trips but stop it from contributing its height to the timeline's scrollable overflow (a phantom vertical scrollbar when the lanes fit).
