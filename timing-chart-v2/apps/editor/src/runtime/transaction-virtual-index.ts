@@ -76,22 +76,45 @@ function bookmarkRange<T extends Readonly<{ start: number }>>(
 }
 
 export type HiddenBookmarkFoldSummary = Readonly<{ start: number; end: number; count: number }>;
+type FoldRanges = readonly (readonly [start: number, end: number])[];
+/** Optional deterministic counter: number of fold ranges read by a query. */
+export type FoldScanStats = { foldsVisited: number };
+
+/** First index of start-ordered, non-overlapping folds whose end reaches `cycle`
+ * (`end >= cycle`, or `end > cycle` when `strict`). Folds before it cannot
+ * touch a window starting at `cycle`, so scroll queries skip them in O(log F). */
+function firstFoldEndingAtOrAfter(folds: FoldRanges, cycle: number, strict: boolean): number {
+  let low = 0;
+  let high = folds.length;
+  while (low < high) {
+    const middle = low + Math.floor((high - low) / 2);
+    const end = folds[middle]![1];
+    if (strict ? end <= cycle : end < cycle) low = middle + 1;
+    else high = middle;
+  }
+  return low;
+}
 
 /** Query visible bookmark points without enumerating bookmarks hidden by a collapsed fold. */
 export function bookmarksOutsideFolds<T extends Readonly<{ start: number }>>(
-  ordered: readonly T[], folds: readonly (readonly [start: number, end: number])[], sourceWindow: TransactionSourceWindowState, pinnedBookmark?: T,
+  ordered: readonly T[], folds: FoldRanges, sourceWindow: TransactionSourceWindowState, pinnedBookmark?: T, stats?: FoldScanStats,
 ): readonly T[] {
   if (sourceWindow === null) return [];
   const window = sourceWindow ?? (ordered.length === 0 ? { start: 0, end: 0 } : { start: ordered[0]!.start, end: ordered.at(-1)!.start });
   const result: T[] = [];
   let cursor = window.start;
-  for (const [foldStart, foldEnd] of folds) {
-    if (foldEnd < cursor || foldStart > window.end) continue;
+  // Folds are half-open [start,end): the end cycle itself is visible, so every
+  // visible run (including the tail after a fold) starts inclusively.
+  for (let index = firstFoldEndingAtOrAfter(folds, cursor, false); index < folds.length; index += 1) {
+    if (stats) stats.foldsVisited += 1;
+    const [foldStart, foldEnd] = folds[index]!;
+    if (foldStart > window.end) break;
+    if (foldEnd < cursor) continue;
     if (foldStart > cursor) result.push(...bookmarkRange(ordered, cursor, Math.min(foldStart, window.end), true, false));
     cursor = Math.max(cursor, foldEnd);
     if (cursor >= window.end) break;
   }
-  if (cursor <= window.end) result.push(...bookmarkRange(ordered, cursor, window.end, cursor === window.start, true));
+  if (cursor <= window.end) result.push(...bookmarkRange(ordered, cursor, window.end, true, true));
   // A selected Bookmark remains addressable by stable ID even when its source
   // cycle is hidden by a fold or lies outside the ordinary viewport window.
   if (pinnedBookmark !== undefined && !result.includes(pinnedBookmark)) {
@@ -103,25 +126,19 @@ export function bookmarksOutsideFolds<T extends Readonly<{ start: number }>>(
 
 /** One lightweight marker per visible collapsed fold, regardless of hidden Bookmark count. */
 export function hiddenBookmarkFoldSummaries<T extends Readonly<{ start: number }>>(
-  ordered: readonly T[], folds: readonly (readonly [start: number, end: number])[], sourceWindow: TransactionSourceWindowState,
+  ordered: readonly T[], folds: FoldRanges, sourceWindow: TransactionSourceWindowState,
 ): readonly HiddenBookmarkFoldSummary[] {
   if (sourceWindow === null) return [];
   const window = sourceWindow ?? (ordered.length === 0 ? { start: 0, end: 0 } : { start: ordered[0]!.start, end: ordered.at(-1)!.start });
   // Fold ranges are merged and ordered by source time. Find the first range
   // that can touch the visible window, then visit only visible summaries;
   // scrolling must not enumerate every collapsed fold in the document.
-  let low = 0;
-  let high = folds.length;
-  while (low < high) {
-    const middle = low + Math.floor((high - low) / 2);
-    if (folds[middle]![1] < window.start) low = middle + 1;
-    else high = middle;
-  }
   const summaries: HiddenBookmarkFoldSummary[] = [];
-  for (let index = low; index < folds.length; index += 1) {
+  for (let index = firstFoldEndingAtOrAfter(folds, window.start, false); index < folds.length; index += 1) {
     const [start, end] = folds[index]!;
     if (start > window.end) break;
-    const [first, last] = bookmarkRangeBounds(ordered, start, end, true, true);
+    // Half-open fold: a Bookmark at `end` is visible, not hidden.
+    const [first, last] = bookmarkRangeBounds(ordered, start, end, true, false);
     const count = last - first;
     if (count > 0) summaries.push({ start, end, count });
   }
@@ -229,17 +246,21 @@ export function transactionIntervalsForSourceWindowState<T extends TransactionIn
  * and filtered after materializing the whole fold. */
 export function transactionIntervalsOutsideFolds<T extends TransactionInterval>(
   index: TransactionIntervalIndex<T>,
-  folds: readonly (readonly [start: number, end: number])[],
+  folds: FoldRanges,
   sourceWindow: TransactionSourceWindowState,
   pinnedIds?: ReadonlySet<string>,
+  stats?: FoldScanStats,
 ): readonly T[] {
   if (sourceWindow === null) return [];
   if (folds.length === 0) return transactionIntervalsForSourceWindowState(index, sourceWindow, pinnedIds);
   const window = sourceWindow ?? (index.ordered.length === 0 ? { start: 0, end: 0 } : { start: index.ordered[0]!.start, end: index.maxEndTree[1]! });
   const result = new Map<string, T>();
   let cursor = window.start;
-  for (const [foldStart, foldEnd] of folds) {
-    if (foldEnd <= cursor || foldStart >= window.end) continue;
+  for (let foldIndex = firstFoldEndingAtOrAfter(folds, cursor, true); foldIndex < folds.length; foldIndex += 1) {
+    if (stats) stats.foldsVisited += 1;
+    const [foldStart, foldEnd] = folds[foldIndex]!;
+    if (foldStart >= window.end) break;
+    if (foldEnd <= cursor) continue;
     if (foldStart > cursor) {
       for (const transaction of transactionIntervalsInWindow(index, cursor, Math.min(foldStart, window.end)).items) result.set(transaction.id, transaction);
     }
@@ -263,9 +284,11 @@ export function transactionIntervalsOutsideFolds<T extends TransactionInterval>(
     }
     return low;
   };
-  for (const [foldStart, foldEnd] of folds) {
+  for (let foldIndex = firstFoldEndingAtOrAfter(folds, window.start, false); foldIndex < folds.length; foldIndex += 1) {
     if (representativeIds.size >= representativeLimit) break;
-    if (foldEnd < window.start || foldStart > window.end) continue;
+    if (stats) stats.foldsVisited += 1;
+    const [foldStart, foldEnd] = folds[foldIndex]!;
+    if (foldStart > window.end) break;
     const first = startsAtOrAfter(foldStart);
     // Bound both the number of emitted affordances and per-fold probing. A
     // selected hidden ID is handled separately below and is never subject to
