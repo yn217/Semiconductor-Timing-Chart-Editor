@@ -52,6 +52,7 @@ async function assertLayoutEvidence(page: Page, beforeHeight: number): Promise<v
 test("dragging the dedicated splitter from left, center, and right resizes continuously without mutation", async ({ page }) => {
   for (const fraction of [0.1, 0.5, 0.9]) {
     await page.goto("/");
+    await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-canonical-revision", /^\d+$/);
     const before = await state(page);
     const splitter = page.getByTestId("bottom-resizer");
     await expect(splitter).toHaveAttribute("aria-valuenow", String(before.bottomHeight));
@@ -81,6 +82,7 @@ test("clamps splitter height to the supported minimum and maximum", async ({ pag
 
 test("pointer capture and pointercancel clean up the splitter gesture", async ({ page }) => {
   await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const before = await state(page);
   const splitter = page.getByTestId("bottom-resizer");
   const box = await splitter.boundingBox();

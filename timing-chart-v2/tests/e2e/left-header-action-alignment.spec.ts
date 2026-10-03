@@ -55,6 +55,7 @@ test("right-aligns Left Tree header actions without changing command behavior", 
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const header = page.locator(".left-column-heading");
   const add = page.locator(".left-column-actions > .tree-add-button");
   const more = page.locator(".left-column-actions > .tree-more-button");

@@ -42,6 +42,7 @@ test("long-lived ruler/grid callbacks read current pane metrics after resize", a
   const host = page.getByTestId("cycle-surface");
   const shell = page.locator(".editor-shell");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const before = {
     revision: await host.getAttribute("data-canonical-revision"),
     history: await host.getAttribute("data-history-depth"),
