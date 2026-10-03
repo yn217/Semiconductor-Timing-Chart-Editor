@@ -23,7 +23,8 @@ export function TransactionTimeScalePanel({ document, cyclesPerTc: activeCyclesP
   const [position, setPosition] = useState<{ readonly left: number; readonly top: number; readonly maxHeight: number }>();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  useDialogFocusLoop(panelRef, triggerRef, open);
+  // See FindReplacePanel: a persistent trigger ref must not be handed to the hook (it nulls it on close).
+  useDialogFocusLoop(panelRef, undefined, open);
 
   useEffect(() => {
     if (!open) return;

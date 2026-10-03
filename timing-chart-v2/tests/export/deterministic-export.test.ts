@@ -1256,16 +1256,70 @@ describe("deterministic document export", () => {
     // The DMA transaction (source 2..12) ends inside the collapsed [5,15) range and must clamp to
     // the display-5 fold-resume boundary rather than extending past the compressed export width.
     const transaction = scene.transactions.find((item) => item.id === "txn_export");
-    // The mid-fold annotation (source cycle 10, hidden inside the fold) must clamp to the last
-    // visible display cycle (4) rather than being placed at its raw, no-longer-meaningful source position.
-    const annotation = scene.annotations.find((item) => item.id === "ann_export");
+    // #444: the mid-fold marker (source cycle 10, hidden inside the collapsed fold) follows the live projection's "omit" policy: it is not
+    // exported at all, instead of being clamped onto a neighbouring visible cycle.
     expect(transaction).toBeDefined();
-    expect(annotation).toBeDefined();
     const foldBoundaryX = scene.ruler.x + (5 - scene.ruler.start) * scene.ruler.cycleWidth;
-    const lastVisibleX = scene.ruler.x + (4 - scene.ruler.start) * scene.ruler.cycleWidth;
     expect(transaction!.x + transaction!.width).toBeCloseTo(foldBoundaryX, 5);
-    expect(annotation!.x1).toBeCloseTo(lastVisibleX, 5);
-    expect(annotation!.x1).toBeLessThan(foldBoundaryX);
+    expect(scene.annotations.find((item) => item.id === "ann_export")).toBeUndefined();
+  });
+
+  describe("#444 folded Annotation anchors follow the live omit / continuous policy", () => {
+    const fixture = (annotations: CanonicalDocument["annotations"], extra: Partial<CanonicalDocument> = {}) => ({ ...foldedFixture(), annotations, ...extra }) as CanonicalDocument;
+    const signalId = () => foldedFixture().signals[1]!.id;
+    const marker = (id: string, cycle: number, point: "cycle-start" | "cycle-center" | "cycle-end", extra: Record<string, unknown> = {}) => ({ id: id as AnnotationId, type: "marker" as const, label: id, anchor: { signalId: signalId(), cycle, point }, ...extra });
+    const exported = (document: CanonicalDocument, settings: Record<string, unknown> = {}) => buildExportScene(document, { format: "svg", scope: "document", foldPolicy: "respect", ...settings } as never);
+    const xAt = (scene: ReturnType<typeof exported>, displayCycle: number) => scene.ruler.x + (displayCycle - scene.ruler.start) * scene.ruler.cycleWidth;
+
+    it("omits hidden cycle-start, cycle-center and cycle-end anchors and keeps visible ones with source-exact positions", () => {
+      const scene = exported(fixture([marker("hid_start", 7, "cycle-start"), marker("hid_center", 7, "cycle-center"), marker("hid_end", 7, "cycle-end"), marker("vis_start", 2, "cycle-start"), marker("vis_center", 2, "cycle-center"), marker("vis_end", 2, "cycle-end")]));
+      expect(scene.annotations.map((item) => item.id).sort()).toEqual(["vis_center", "vis_end", "vis_start"]);
+      const byId = (id: string) => scene.annotations.find((item) => item.id === id)!;
+      expect(byId("vis_start").x1).toBeCloseTo(xAt(scene, 2), 5);
+      expect(byId("vis_center").x1).toBeCloseTo(xAt(scene, 2.5), 5);
+      expect(byId("vis_end").x1).toBeCloseTo(xAt(scene, 3), 5);
+    });
+
+    it("drops a Measurement with one hidden endpoint instead of stretching it to a neighbouring cycle", () => {
+      const measurement = (id: string, from: number, to: number) => ({ id: id as AnnotationId, type: "measurement" as const, label: id, start: { signalId: signalId(), cycle: from, point: "cycle-start" as const }, end: { signalId: signalId(), cycle: to, point: "cycle-start" as const } });
+      const scene = exported(fixture([measurement("m_hidden_end", 2, 8), measurement("m_visible", 1, 3)]));
+      expect(scene.annotations.map((item) => item.id)).toEqual(["m_visible"]);
+    });
+
+    it("free-position anchors use the shared continuous policy: interpolated between visible cycles, still omitted inside a fully hidden fold", () => {
+      const scene = exported(fixture([marker("free_visible", 2.5, "cycle-start", { positionMode: "free" }), marker("free_hidden", 10, "cycle-start", { positionMode: "free" })]));
+      expect(scene.annotations.map((item) => item.id)).toEqual(["free_visible"]);
+      expect(scene.annotations[0]!.x1).toBeCloseTo(xAt(scene, 2.5), 5);
+    });
+
+    it("keeps the terminal-boundary anchor and agrees between full-document and selected-range Respect Folds", () => {
+      const document = fixture([marker("terminal", 20, "cycle-start"), marker("hid", 7, "cycle-start"), marker("vis", 3, "cycle-start")]);
+      const full = exported(document);
+      expect(full.annotations.map((item) => item.id).sort()).toEqual(["terminal", "vis"]);
+      expect(full.annotations.find((item) => item.id === "terminal")!.x1).toBeCloseTo(xAt(full, full.ruler.start + (full.ruler.end - full.ruler.start)), 5);
+      const ranged = exported(document, { scope: "selected-range", range: { start: 0, end: 20 } });
+      expect(ranged.annotations.map((item) => item.id).sort()).toEqual(full.annotations.map((item) => item.id).sort());
+    });
+
+    it("multiple folds and folds at the document start/end keep exactly the visible anchors at source-exact display slots", () => {
+      const groups = [
+        { id: "tg_a" as TimeGroupId, name: "Head", start: 0, end: 2, presentation: { collapsed: true } },
+        { id: "tg_b" as TimeGroupId, name: "Mid", start: 6, end: 9, presentation: { collapsed: true } },
+        { id: "tg_c" as TimeGroupId, name: "Tail", start: 17, end: 20, presentation: { collapsed: true } },
+      ];
+      const scene = exported({ ...fixture([marker("in_head", 1, "cycle-start"), marker("after_head", 2, "cycle-start"), marker("in_mid", 7, "cycle-center"), marker("between", 12, "cycle-start"), marker("in_tail", 18, "cycle-end")]), timeGroups: groups } as CanonicalDocument);
+      expect(scene.annotations.map((item) => item.id).sort()).toEqual(["after_head", "between"]);
+      // Source cycle 2 is the first visible cycle after the head fold (display 0); source 12 is display 12 - 2 - 3 = 7.
+      expect(scene.annotations.find((item) => item.id === "after_head")!.x1).toBeCloseTo(xAt(scene, 0), 5);
+      expect(scene.annotations.find((item) => item.id === "between")!.x1).toBeCloseTo(xAt(scene, 7), 5);
+    });
+
+    it("exports every anchor at its source-exact position when nothing is folded (Expand All)", () => {
+      const scene = exported({ ...fixture([marker("a", 7, "cycle-start"), marker("b", 7, "cycle-end")]), timeGroups: [] } as CanonicalDocument);
+      expect(scene.annotations.map((item) => item.id).sort()).toEqual(["a", "b"]);
+      expect(scene.annotations.find((item) => item.id === "a")!.x1).toBeCloseTo(xAt(scene, 7), 5);
+      expect(scene.annotations.find((item) => item.id === "b")!.x1).toBeCloseTo(xAt(scene, 8), 5);
+    });
   });
 
   it("#200: treats Signal Split as view-only during export", () => {

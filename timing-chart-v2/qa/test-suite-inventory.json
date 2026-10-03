@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-03T08:23:30.825Z",
+  "generatedAt": "2026-10-03T10:05:55.883Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 397,
-  "caseCount": 1155,
-  "reviewedCaseCount": 1155,
+  "specFileCount": 400,
+  "caseCount": 1163,
+  "reviewedCaseCount": 1163,
   "curatedProfileCounts": {
-    "integration": 579,
+    "integration": 581,
     "nightly": 226,
     "performance": 65,
-    "pr": 364,
+    "pr": 370,
     "visual": 178
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -6095,6 +6095,84 @@
       "contractId": "file-ribbon-visible-control-layout"
     },
     {
+      "file": "find-replace-journey.spec.ts",
+      "suitePath": [],
+      "line": 13,
+      "title": "Find & Replace previews, renames all matches in one step and undoes at 1280x720",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "find-replace",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Find & Replace previews view-only, renames all matches in one History entry, Undo restores them, and ribbon floating panels reopen visibly.",
+      "duplicateGroup": "find-replace",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Acceptance journey for the Find & Replace plan plus the reopen regression; no other spec exercises Replace All/Undo.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "find-replace"
+    },
+    {
+      "file": "find-replace-journey.spec.ts",
+      "suitePath": [],
+      "line": 13,
+      "title": "Find & Replace previews, renames all matches in one step and undoes at 1672x941",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "find-replace",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Find & Replace previews view-only, renames all matches in one History entry, Undo restores them, and ribbon floating panels reopen visibly.",
+      "duplicateGroup": "find-replace",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Acceptance journey for the Find & Replace plan plus the reopen regression; no other spec exercises Replace All/Undo.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "find-replace"
+    },
+    {
+      "file": "find-replace-journey.spec.ts",
+      "suitePath": [],
+      "line": 59,
+      "title": "Find & Replace and Transaction Time Scale panels reopen visibly after Cancel/Escape",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "find-replace",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Find & Replace previews view-only, renames all matches in one History entry, Undo restores them, and ribbon floating panels reopen visibly.",
+      "duplicateGroup": "find-replace",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Acceptance journey for the Find & Replace plan plus the reopen regression; no other spec exercises Replace All/Undo.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "find-replace"
+    },
+    {
       "file": "font-style-commit-contract.spec.ts",
       "suitePath": [],
       "line": 10,
@@ -9790,6 +9868,58 @@
       "contractId": "transaction-add-menu"
     },
     {
+      "file": "issue-175-scrollbar-geometry-matrix.spec.ts",
+      "suitePath": [],
+      "line": 36,
+      "title": "Timeline scrollbar follows its owner through panel, zoom, mode and document changes at 1280x720",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "timeline-scrollbar",
+      "originIssue": 175,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "The Timeline horizontal scrollbar keeps following its current scroll owner through panel, resize, zoom, mode and document changes.",
+      "duplicateGroup": "timeline-scrollbar",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Regression guard for effect-lifecycle optimisations of TimelineHorizontalScrollbar (#175 / PR #1025 regressed it).",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ],
+      "contractId": "timeline-scrollbar"
+    },
+    {
+      "file": "issue-175-scrollbar-geometry-matrix.spec.ts",
+      "suitePath": [],
+      "line": 36,
+      "title": "Timeline scrollbar follows its owner through panel, zoom, mode and document changes at 1672x941",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "timeline-scrollbar",
+      "originIssue": 175,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "The Timeline horizontal scrollbar keeps following its current scroll owner through panel, resize, zoom, mode and document changes.",
+      "duplicateGroup": "timeline-scrollbar",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Regression guard for effect-lifecycle optimisations of TimelineHorizontalScrollbar (#175 / PR #1025 regressed it).",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ],
+      "contractId": "timeline-scrollbar"
+    },
+    {
       "file": "issue-208-open-epoch-coherence.spec.ts",
       "suitePath": [],
       "line": 12,
@@ -10360,6 +10490,84 @@
         "pr"
       ],
       "contractId": "bus-literal"
+    },
+    {
+      "file": "issue-549-cursor-multi-frame-drag.spec.ts",
+      "suitePath": [],
+      "line": 12,
+      "title": "Cursor A keeps following a >=5-step real pointer drag (rAF between moves) at 1280x720",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "cursor-drag",
+      "originIssue": 549,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A Cursor A/B drag follows the pointer across many frames, commits on pointerup, stops on pointercancel and is view-only.",
+      "duplicateGroup": "cursor-drag",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Existing cursor drag specs use one move + mouseup and could not see the drag tearing itself down after the first preview frame.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "cursor-drag"
+    },
+    {
+      "file": "issue-549-cursor-multi-frame-drag.spec.ts",
+      "suitePath": [],
+      "line": 12,
+      "title": "Cursor A keeps following a >=5-step real pointer drag (rAF between moves) at 1672x941",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "cursor-drag",
+      "originIssue": 549,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A Cursor A/B drag follows the pointer across many frames, commits on pointerup, stops on pointercancel and is view-only.",
+      "duplicateGroup": "cursor-drag",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Existing cursor drag specs use one move + mouseup and could not see the drag tearing itself down after the first preview frame.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "cursor-drag"
+    },
+    {
+      "file": "issue-549-cursor-multi-frame-drag.spec.ts",
+      "suitePath": [],
+      "line": 51,
+      "title": "pointercancel ends a Cursor drag without another cursor update",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "cursor-drag",
+      "originIssue": 549,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A Cursor A/B drag follows the pointer across many frames, commits on pointerup, stops on pointercancel and is view-only.",
+      "duplicateGroup": "cursor-drag",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Existing cursor drag specs use one move + mouseup and could not see the drag tearing itself down after the first preview frame.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "cursor-drag"
     },
     {
       "file": "issue-554-transaction-journey.spec.ts",
@@ -31068,6 +31276,17 @@
       "semanticReviewStatus": "REVIEWED"
     },
     {
+      "file": "find-replace-journey.spec.ts",
+      "caseCount": 3,
+      "reviewedCaseCount": 3,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [
+        "dataset"
+      ],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
       "file": "font-style-commit-contract.spec.ts",
       "caseCount": 1,
       "reviewedCaseCount": 1,
@@ -31404,6 +31623,17 @@
       "semanticReviewStatus": "REVIEWED"
     },
     {
+      "file": "issue-175-scrollbar-geometry-matrix.spec.ts",
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
+      "originIssue": "175",
+      "declaredTimeoutMs": 240,
+      "candidateSignals": [
+        "geometryRead"
+      ],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
       "file": "issue-208-open-epoch-coherence.spec.ts",
       "caseCount": 1,
       "reviewedCaseCount": 1,
@@ -31503,6 +31733,15 @@
       "caseCount": 1,
       "reviewedCaseCount": 1,
       "originIssue": "456",
+      "declaredTimeoutMs": null,
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "issue-549-cursor-multi-frame-drag.spec.ts",
+      "caseCount": 3,
+      "reviewedCaseCount": 3,
+      "originIssue": "549",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
       "semanticReviewStatus": "REVIEWED"
