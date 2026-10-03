@@ -756,6 +756,23 @@
       "replacementTest": null
     },
     {
+      "file": "issue-549-cursor-multi-frame-drag.spec.ts",
+      "domain": "cursor-drag",
+      "originIssue": 549,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A Cursor A/B drag follows the pointer across many frames, commits on pointerup, stops on pointercancel and is view-only.",
+      "duplicateGroup": "cursor-drag",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Existing cursor drag specs use one move + mouseup and could not see the drag tearing itself down after the first preview frame.",
+      "replacementTest": null
+    },
+    {
       "file": "issue-573-combined-divider-pinned.spec.ts",
       "domain": "combined-divider-scroll-and-resize",
       "originIssue": 573,

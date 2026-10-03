@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-03T09:52:09.437Z",
+  "generatedAt": "2026-10-03T10:05:55.883Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 399,
-  "caseCount": 1160,
-  "reviewedCaseCount": 1160,
+  "specFileCount": 400,
+  "caseCount": 1163,
+  "reviewedCaseCount": 1163,
   "curatedProfileCounts": {
     "integration": 581,
     "nightly": 226,
     "performance": 65,
-    "pr": 367,
+    "pr": 370,
     "visual": 178
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -10490,6 +10490,84 @@
         "pr"
       ],
       "contractId": "bus-literal"
+    },
+    {
+      "file": "issue-549-cursor-multi-frame-drag.spec.ts",
+      "suitePath": [],
+      "line": 12,
+      "title": "Cursor A keeps following a >=5-step real pointer drag (rAF between moves) at 1280x720",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "cursor-drag",
+      "originIssue": 549,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A Cursor A/B drag follows the pointer across many frames, commits on pointerup, stops on pointercancel and is view-only.",
+      "duplicateGroup": "cursor-drag",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Existing cursor drag specs use one move + mouseup and could not see the drag tearing itself down after the first preview frame.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "cursor-drag"
+    },
+    {
+      "file": "issue-549-cursor-multi-frame-drag.spec.ts",
+      "suitePath": [],
+      "line": 12,
+      "title": "Cursor A keeps following a >=5-step real pointer drag (rAF between moves) at 1672x941",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "cursor-drag",
+      "originIssue": 549,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A Cursor A/B drag follows the pointer across many frames, commits on pointerup, stops on pointercancel and is view-only.",
+      "duplicateGroup": "cursor-drag",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Existing cursor drag specs use one move + mouseup and could not see the drag tearing itself down after the first preview frame.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "cursor-drag"
+    },
+    {
+      "file": "issue-549-cursor-multi-frame-drag.spec.ts",
+      "suitePath": [],
+      "line": 51,
+      "title": "pointercancel ends a Cursor drag without another cursor update",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "cursor-drag",
+      "originIssue": 549,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A Cursor A/B drag follows the pointer across many frames, commits on pointerup, stops on pointercancel and is view-only.",
+      "duplicateGroup": "cursor-drag",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Existing cursor drag specs use one move + mouseup and could not see the drag tearing itself down after the first preview frame.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "cursor-drag"
     },
     {
       "file": "issue-554-transaction-journey.spec.ts",
@@ -31655,6 +31733,15 @@
       "caseCount": 1,
       "reviewedCaseCount": 1,
       "originIssue": "456",
+      "declaredTimeoutMs": null,
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "issue-549-cursor-multi-frame-drag.spec.ts",
+      "caseCount": 3,
+      "reviewedCaseCount": 3,
+      "originIssue": "549",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
       "semanticReviewStatus": "REVIEWED"
