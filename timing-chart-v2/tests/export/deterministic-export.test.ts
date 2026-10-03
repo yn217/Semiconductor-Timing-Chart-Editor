@@ -1312,6 +1312,15 @@ describe("deterministic document export", () => {
       // Source cycle 2 is the first visible cycle after the head fold (display 0); source 12 is display 12 - 2 - 3 = 7.
       expect(scene.annotations.find((item) => item.id === "after_head")!.x1).toBeCloseTo(xAt(scene, 0), 5);
       expect(scene.annotations.find((item) => item.id === "between")!.x1).toBeCloseTo(xAt(scene, 7), 5);
+
+      // Assert the final SVG geometry too, not only the intermediate scene projection.
+      const svg = renderExportSvg(scene);
+      expect(svg).not.toContain('data-annotation-id="in_mid"');
+      const markerMarkup = svg.match(/<g data-annotation-id="between"[^>]*>(.*?)<\/g>/)?.[1];
+      const tick = markerMarkup?.match(/<line data-role="marker-tick" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"/);
+      expect(tick).not.toBeNull();
+      expect(Number(tick![1])).toBeCloseTo(xAt(scene, 7), 5);
+      expect(Number(tick![3])).toBeCloseTo(xAt(scene, 7), 5);
     });
 
     it("exports every anchor at its source-exact position when nothing is folded (Expand All)", () => {
