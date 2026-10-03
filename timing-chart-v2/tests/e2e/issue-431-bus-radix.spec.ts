@@ -16,7 +16,14 @@ function busDocument() {
   return { document: { ...base, signals: [base.signals[0]!, bus, base.signals[2]!], signalGroups: [{ ...base.signalGroups[0]!, rows: [base.signals[0]!.id, bus.id, base.signals[2]!.id] }] }, id: "sig_bus_radix" };
 }
 
-const expectedLabels = { hex: ["0x00", "0xA5", "0x0F"], decimal: ["0", "165", "15"], binary: ["0b00000000", "0b10100101", "0b00001111"] } as const;
+const expectedLabels = {
+  hex: ["0x00", "0xA5", "0x0F"],
+  decimal: ["0", "165", "15"],
+  binary: ["0b00000000", "0b10100101", "0b00001111"],
+  signed: ["0", "-91", "15"],
+  unsigned: ["0", "165", "15"],
+  symbolic: ["00", "A5", "0F"],
+} as const;
 
 for (const size of sizes) {
   test(`Bus format agrees across waveform labels, Bottom event table and Save/Open at ${size.width}x${size.height}`, async ({ page }) => {
@@ -45,7 +52,7 @@ for (const size of sizes) {
     await page.getByTestId("cycle-ruler").locator("[data-cycle='4']").click();
     await expect(inspectorValue).toHaveText("0xA5");
 
-    for (const format of ["decimal", "binary"] as const) {
+    for (const format of ["decimal", "binary", "signed", "unsigned", "symbolic"] as const) {
       await inspector.getByLabel("Inspector bus format").selectOption(format);
       await inspector.getByRole("button", { name: /Apply/ }).first().click();
       await expect.poll(async () => same(await waveLabels(), expectedLabels[format]), { message: `waveform labels follow ${format}` }).toBe(true);
@@ -59,16 +66,16 @@ for (const size of sizes) {
     await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).first().click();
     const saved = await readFile((await (await download).path())!);
     const savedSignal = JSON.parse(saved.toString("utf8")).signals.find((signal: { id: string }) => signal.id === id);
-    expect(savedSignal.displayFormat).toBe("binary");
+    expect(savedSignal.displayFormat).toBe("symbolic");
     expect(savedSignal.values.map((change: { value: string }) => change.value)).toEqual(["00", "A5", "0F"]);
     await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).first().click();
     await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
     await fileInput(page).setInputFiles({ name: "saved-radix431.tcd.json", mimeType: "application/json", buffer: saved });
     await expect(page.locator(".editor-shell")).toHaveAttribute("data-signal-count", "3", { timeout: 60_000 });
     await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
-    await expect.poll(async () => same(await waveLabels(), expectedLabels.binary)).toBe(true);
+    await expect.poll(async () => same(await waveLabels(), expectedLabels.symbolic)).toBe(true);
     await surface.locator(`[data-role='frozen-row'][data-row-id='${id}']`).click();
-    await expect(page.getByTestId("inspector").getByLabel("Inspector bus format")).toHaveValue("binary");
+    await expect(page.getByTestId("inspector").getByLabel("Inspector bus format")).toHaveValue("symbolic");
     await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
   });
 }
