@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-03T08:19:26.732Z",
+  "generatedAt": "2026-10-03T08:23:30.825Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 396,
-  "caseCount": 1153,
-  "reviewedCaseCount": 1153,
+  "specFileCount": 397,
+  "caseCount": 1155,
+  "reviewedCaseCount": 1155,
   "curatedProfileCounts": {
     "integration": 579,
     "nightly": 226,
     "performance": 65,
-    "pr": 362,
+    "pr": 364,
     "visual": 178
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -9970,6 +9970,58 @@
         "pr"
       ],
       "contractId": "inspector-bookmark"
+    },
+    {
+      "file": "issue-431-bus-radix.spec.ts",
+      "suitePath": [],
+      "line": 22,
+      "title": "Bus format agrees across waveform labels, Bottom event table and Save/Open at 1280x720",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "bus-radix",
+      "originIssue": 431,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Per-Signal Bus format agrees across waveform labels, Bottom event table and Save/Open.",
+      "duplicateGroup": "bus-radix",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Added in the #431 non-Scenario verification pass; no duplicate coverage of the shared formatter across surfaces.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "bus-radix"
+    },
+    {
+      "file": "issue-431-bus-radix.spec.ts",
+      "suitePath": [],
+      "line": 22,
+      "title": "Bus format agrees across waveform labels, Bottom event table and Save/Open at 1672x941",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "bus-radix",
+      "originIssue": 431,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Per-Signal Bus format agrees across waveform labels, Bottom event table and Save/Open.",
+      "duplicateGroup": "bus-radix",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Added in the #431 non-Scenario verification pass; no duplicate coverage of the shared formatter across surfaces.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "bus-radix"
     },
     {
       "file": "issue-431-enum-state-save-open.spec.ts",
@@ -31386,6 +31438,15 @@
       "reviewedCaseCount": 2,
       "originIssue": "426",
       "declaredTimeoutMs": null,
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "issue-431-bus-radix.spec.ts",
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
+      "originIssue": "431",
+      "declaredTimeoutMs": 180,
       "candidateSignals": [],
       "semanticReviewStatus": "REVIEWED"
     },
