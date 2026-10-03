@@ -4,7 +4,7 @@ import { defineConfig, devices } from "@playwright/test";
 const port = process.env.PW_TEST_PORT ?? "4199";
 export default defineConfig({
   testDir: "./tests/performance",
-  testMatch: /(open-closure|commit-latency)-production\.spec\.ts/,
+  testMatch: /(open-closure|commit-latency|snap-first-interaction)-production\.spec\.ts/,
   fullyParallel: false,
   retries: 0,
   reporter: [["list"]],
