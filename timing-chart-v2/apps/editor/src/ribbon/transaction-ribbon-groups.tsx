@@ -1,4 +1,4 @@
-import type { CanonicalDocument, TransactionGroup, TransactionId } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, Transaction, TransactionGroup, TransactionId } from "@timing-chart-v2/schema";
 import type { EditorSurfaceCommandController } from "../application/editor-surface-command-controller.js";
 import { nextEntityId } from "../entity-id.js";
 import { TransactionTimeScalePanel } from "../transaction-time-scale-panel.js";
@@ -10,6 +10,7 @@ export type TransactionRibbonContext = Readonly<{
   range: { readonly start: number; readonly end: number };
   commands: EditorSurfaceCommandController;
   selectedTransactionId: TransactionId | undefined;
+  selectedTransaction: Transaction | undefined;
   onTransactionCreated: (id: TransactionId) => void;
   viewMode: "Cycle" | "Transaction" | "Split";
   activeContext: ActiveContext;
@@ -23,14 +24,14 @@ export type TransactionRibbonContext = Readonly<{
  * Ribbon itself; the two are merged by composeRibbon.
  */
 export function buildTransactionRibbonGroups(context: TransactionRibbonContext): readonly RibbonGroupSpec[] {
-  const { document, range, commands, selectedTransactionId, onTransactionCreated, viewMode, activeContext, cyclesPerTc, onCyclesPerTcChange } = context;
+  const { document, range, commands, selectedTransactionId, selectedTransaction, onTransactionCreated, viewMode, activeContext, cyclesPerTc, onCyclesPerTcChange } = context;
   const addTransaction = () => {
     const id = nextEntityId("transaction", document) as TransactionId;
     const result = commands.createTransaction({ id, name: `Transaction ${document.transactions.length + 1}`, start: range.start, end: Math.max(range.start + 1, Math.min(document.timeline.cycleCount, range.end)), laneId: "lane_0" });
     if (result.ok) onTransactionCreated(id);
   };
   const duplicateTransaction = () => {
-    const source = selectedTransactionId === undefined ? undefined : document.transactions.find((item) => item.id === selectedTransactionId);
+    const source = selectedTransaction;
     if (!source) return;
     const id = nextEntityId("transaction", document) as TransactionId;
     const result = commands.duplicateTransaction({ ...source, id, name: `${source.name} Copy` });
@@ -41,7 +42,7 @@ export function buildTransactionRibbonGroups(context: TransactionRibbonContext):
   // selected Transaction's Group without hunting for the small header
   // control, using the same already-existing `transactionGroup.delete`
   // command (atomically ungroups every member Transaction).
-  const selectedTransactionGroupId = selectedTransactionId === undefined ? undefined : document.transactions.find((item) => item.id === selectedTransactionId)?.groupId;
+  const selectedTransactionGroupId = selectedTransaction?.groupId;
   const ungroupSelectedTransaction = () => {
     if (selectedTransactionGroupId !== undefined) commands.deleteTransactionGroup(selectedTransactionGroupId);
   };

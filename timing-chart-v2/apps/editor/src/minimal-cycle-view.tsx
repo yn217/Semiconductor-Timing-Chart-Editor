@@ -694,6 +694,7 @@ export function MinimalCycleView() {
       onWorkspacePresetChange: applyWorkspacePreset,
       onResetLayout: resetWorkspaceLayout,
       selectedTransactionId,
+      selectedTransaction,
       clipboardStatus,
       clipboardAvailable,
       hasSelectedSignal,
