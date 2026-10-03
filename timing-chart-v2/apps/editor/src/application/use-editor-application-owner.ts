@@ -107,7 +107,9 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     // advance both owners so the next ChangeSet is compared with the actual
     // previous document (including repeated presentation-only commands).
     timingDiagnosticsDocumentRef.current = nextDocument;
-    if (diagnosticsUpdate.recomputed) timingDiagnosticsRef.current = diagnosticsUpdate.diagnostics;
+    // Always retain the result that was published: disabling a Check category returns a filtered list with recomputed=false, and keeping
+    // the stale pre-filter list made a later re-enable keep the old findings AND derive them again (duplicate Problems).
+    timingDiagnosticsRef.current = diagnosticsUpdate.diagnostics;
     setValidationDiagnostics(diagnosticsUpdate.diagnostics);
     setValidationPending(false);
     completePendingOpenDiagnostics?.();
