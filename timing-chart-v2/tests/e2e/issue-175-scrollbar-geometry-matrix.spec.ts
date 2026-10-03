@@ -13,7 +13,7 @@ const sizes = [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] as co
 
 const geometry = (page: Page) => page.evaluate(() => {
   const bar = document.querySelector<HTMLElement>("[data-testid='timeline-hscroll']");
-  if (!bar) return null; // not mounted (Combined, once the single-owner slice lands): nothing to follow
+  if (!bar) return null; // deliberately not mounted in Combined; its outer viewport is the single shared time-axis owner
   const view = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']")!;
   const wrapper = document.querySelector<HTMLElement>(".editor-shell[data-view-mode='Cycle'] [data-role='timeline-viewport']");
   const owner = wrapper ?? view;
@@ -89,7 +89,7 @@ for (const size of sizes) {
     for (const mode of ["Transaction", "Combined", "Cycle"] as const) {
       await page.locator(".view-mode").getByRole("button", { name: mode, exact: true }).click();
       await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 30_000 });
-      // Combined has two horizontal owners until #573 lands, so the single-owner oracle only applies to Cycle/Transaction.
+      // Combined has no Cycle scrollbar track; its outer viewport remains the sole shared horizontal time-axis owner.
       if (mode !== "Combined") await expectFollowsOwner(page, `mode ${mode}`);
     }
     // A different document: the owner's content size changes with no user layout action on the bar.

@@ -1,4 +1,4 @@
 {
   "_doc": "#258 lifecycle ratchet: counts of raw imperative lifecycle primitives a composition shell may own. A file may never exceed its ceiling; lower the ceiling in the same change that extracts the Cursor A/B gesture/geometry lifecycle (and the Timeline scrollbar layout owner) into a typed runtime owner.",
-  "apps/editor/src/editor-workspace-view.tsx": { "addEventListener": 10, "new ResizeObserver": 2 }
+  "apps/editor/src/editor-workspace-view.tsx": { "addEventListener": 0, "new ResizeObserver": 0 }
 }
