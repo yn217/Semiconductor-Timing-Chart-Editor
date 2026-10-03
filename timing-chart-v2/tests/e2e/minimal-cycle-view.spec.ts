@@ -69,8 +69,8 @@ test("synchronizes scrolling through one viewport without regenerating waveforms
   const projectionBefore = JSON.parse(await host.getAttribute("data-session-counters") ?? "null") as { fullVisibleRowScans: number; viewportOnlyBuilds: number; rowLayoutBuilds: number };
   const svgBefore = await surface.locator("[data-signal-id='sig_cycle_clock'] > svg").elementHandle();
 
-  await timelineOwner(page).evaluate((element) => { element.scrollLeft = 240; element.dispatchEvent(new Event("scroll")); });
-  const scroll = await viewport.evaluate((element) => { element.scrollTop = 80; element.dispatchEvent(new Event("scroll")); return { top: element.scrollTop, left: 240 }; });
+  await timelineOwner(page).evaluate(async (element) => { element.scrollLeft = 240; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
+  const scroll = await viewport.evaluate(async (element) => { element.scrollTop = 80; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); return { top: element.scrollTop, left: 240 }; });
   expect(scroll.left).toBeGreaterThan(0);
   await expect(host).toHaveAttribute("data-viewport-start-y", String(Math.max(0, scroll.top - 34)));
   expect(await surface.getAttribute("data-render-counters")).toBe(countersBefore);
@@ -83,7 +83,7 @@ test("synchronizes scrolling through one viewport without regenerating waveforms
   expect(Math.abs(frozenLeft - headingLeft)).toBeLessThanOrEqual(1);
 
   await timelineOwner(page).evaluate((element) => { element.scrollLeft = 0; });
-  await viewport.evaluate((element) => { element.scrollTop = 0; element.dispatchEvent(new Event("scroll")); });
+  await viewport.evaluate(async (element) => { element.scrollTop = 0; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
   await expect(host).toHaveAttribute("data-viewport-start-y", "0");
   const svgAfter = await surface.locator("[data-signal-id='sig_cycle_clock'] > svg").elementHandle();
   expect(await svgBefore!.evaluate((before, after) => before === after, svgAfter)).toBe(true);

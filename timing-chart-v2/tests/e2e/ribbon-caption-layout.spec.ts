@@ -1,4 +1,6 @@
+import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
+import { visualArtifactRoot } from "./artifact-output.js";
 
 for (const width of [1280, 1672]) test(`Ribbon caption layout survives mode changes at ${width}`, async ({ page }) => {
   await page.setViewportSize({ width, height: width === 1280 ? 720 : 941 });
@@ -23,5 +25,5 @@ for (const width of [1280, 1672]) test(`Ribbon caption layout survives mode chan
       expect(group.pseudo).toBe("none");
     }
   }
-  await page.screenshot({ path: `artifacts/ribbon-layout-${width}.png` });
+  await page.screenshot({ path: resolve(visualArtifactRoot(), `ribbon-layout-${width}.png`) });
 });

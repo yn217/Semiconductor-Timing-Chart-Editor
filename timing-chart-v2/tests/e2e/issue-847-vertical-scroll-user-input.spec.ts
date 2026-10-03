@@ -40,7 +40,7 @@ for (const viewportSize of [{ width: 1280, height: 720 }, { width: 1672, height:
       const annotationLabel = annotation.locator("[data-role='annotation-label']");
       await expect(annotationLabel).toBeVisible();
       // At 1280x720 the label can sit under the Bottom panel (it overlays the viewport's lower edge); centre it in the VISIBLE part of the scroll viewport before hit-testing.
-      await annotationLabel.evaluate((label) => { const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']")!; const box = label.getBoundingClientRect(); const view = viewport.getBoundingClientRect(); const visibleBottom = document.querySelector<HTMLElement>(".bottom-resize-track")?.getBoundingClientRect().top ?? view.bottom; viewport.scrollTop += box.top - (view.top + (visibleBottom - view.top) / 2); viewport.dispatchEvent(new Event("scroll")); });
+      await annotationLabel.evaluate(async (label) => { const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']")!; const box = label.getBoundingClientRect(); const view = viewport.getBoundingClientRect(); const visibleBottom = document.querySelector<HTMLElement>(".bottom-resize-track")?.getBoundingClientRect().top ?? view.bottom; viewport.scrollTop += box.top - (view.top + (visibleBottom - view.top) / 2); await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
       await page.waitForTimeout(300);
       const labelBox = (await annotationLabel.boundingBox())!;
       const labelHitPoints = await page.evaluate((box) => {

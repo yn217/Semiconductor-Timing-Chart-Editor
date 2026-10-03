@@ -40,7 +40,7 @@ for (const { name, signalCount, cycleCount, anchorCycle, scrollToFarWindow } of 
       const dimensions = await page.locator("[data-role='timeline-viewport']").evaluate((element) => ({ scrollWidth: element.scrollWidth, clientWidth: element.clientWidth }));
       expect(dimensions.scrollWidth).toBeGreaterThan(dimensions.clientWidth);
       const timelineViewport = page.locator("[data-role='timeline-viewport']");
-      await timelineViewport.evaluate((element) => { element.scrollLeft = element.scrollWidth - element.clientWidth; element.dispatchEvent(new Event("scroll", { bubbles: true })); });
+      await timelineViewport.evaluate(async (element) => { element.scrollLeft = element.scrollWidth - element.clientWidth; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
       await expect.poll(() => timelineViewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
       await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
     }

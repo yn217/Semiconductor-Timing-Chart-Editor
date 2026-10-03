@@ -316,6 +316,25 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     // work without changing the row lookup contents.
   }
 
+  updateViewport(projection: RenderProjection): void {
+    if (!this.#layers) throw new Error("Timing chart renderer must be mounted before viewport update.");
+    assertCrossSurfaceInvariant(projection);
+    for (const signalId of projection.mountedSignalIds) {
+      const owner = this.#waveOwners.get(signalId);
+      if (!owner || !owner.isConnected) {
+        // A row/owner was unexpectedly evicted; restore the complete projection
+        // contract instead of silently leaving a mounted Signal without a wave.
+        this.update(projection);
+        return;
+      }
+      const sourceWindow = this.#provider.getSourceWindow?.(owner);
+      const sourceWindowChanged = sourceWindow !== undefined
+        && (owner.dataset.renderedSourceWindowStart !== String(sourceWindow.start)
+          || owner.dataset.renderedSourceWindowEnd !== String(sourceWindow.end));
+      if (this.#dirtyWaves.has(signalId) || sourceWindowChanged) this.#queueWave(signalId, owner);
+    }
+  }
+
   counters(): Readonly<RenderCounters> {
     return Object.freeze({ ...this.#counters });
   }

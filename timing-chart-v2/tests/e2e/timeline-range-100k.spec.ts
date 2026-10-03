@@ -49,7 +49,7 @@ test("selects an unsampled 100k-cycle boundary through shared geometry", async (
   await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 120_000 });
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   // The wave window is viewport-bounded (#757), so bring cycle 1000 into view first; the window then rebases around it.
-  await timelineOwner(page).evaluate((element) => { element.scrollLeft = 1000 * 40 - 806; element.dispatchEvent(new Event("scroll", { bubbles: true })); }); // cycle 1000 lands inside the Timeline viewport, left of the Inspector
+  await timelineOwner(page).evaluate(async (element) => { element.scrollLeft = 1000 * 40 - 806; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); }); // cycle 1000 lands inside the Timeline viewport, left of the Inspector
   const clockOwner = page.locator("[data-role='wave-owner'][data-signal-id]").first();
   await expect.poll(async () => clockOwner.evaluate((owner) => {
     const requestPositions = (owner as HTMLElement & { requestCycleBoundaryPositions?: (cycles: readonly number[]) => Readonly<Record<number, number>> }).requestCycleBoundaryPositions;
@@ -161,7 +161,7 @@ test("re-evaluates mounted waveform source windows after horizontal scroll", asy
   });
   const maxScroll = await viewport.evaluate((element) => element.scrollWidth - element.clientWidth);
   expect(maxScroll).toBeGreaterThan(0);
-  await viewport.evaluate((element) => { element.scrollLeft = element.scrollWidth - element.clientWidth; element.dispatchEvent(new Event("scroll", { bubbles: true })); });
+  await viewport.evaluate(async (element) => { element.scrollLeft = element.scrollWidth - element.clientWidth; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
   await expect.poll(async () => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(before.scrollLeft);
   await expect.poll(async () => ({ start: await owner.getAttribute("data-rendered-source-window-start"), end: await owner.getAttribute("data-rendered-source-window-end") }), { timeout: 30_000 }).not.toEqual({ start: before.start, end: before.end });
 });

@@ -51,7 +51,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     const maxHorizontalScroll = await owner(page).evaluate((el) => el.scrollWidth - el.clientWidth);
     expect(maxHorizontalScroll).toBeGreaterThan(1);
     const verticalBeforeHorizontalScroll = await owner(page).evaluate((el) => el.scrollTop);
-    await owner(page).evaluate((el) => { el.scrollLeft = Math.min(80, el.scrollWidth - el.clientWidth); el.dispatchEvent(new Event("scroll", { bubbles: true })); });
+    await owner(page).evaluate(async (el) => { el.scrollLeft = Math.min(80, el.scrollWidth - el.clientWidth); await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
     await expect.poll(() => owner(page).evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
     expect(await owner(page).evaluate((el) => el.scrollTop)).toBe(verticalBeforeHorizontalScroll);
     // When the lanes fit (always at 1672x941 with Bottom shrunk) there must be no vertical overflow at all.

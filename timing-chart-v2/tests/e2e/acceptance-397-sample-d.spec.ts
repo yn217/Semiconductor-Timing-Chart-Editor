@@ -96,10 +96,10 @@ test("Signal Split ON shows the same 24-Signal row sequence in both panes with i
 
   // Independent vertical scroll: Upper scrolling doesn't move Lower and
   // vice versa.
-  await upper.evaluate((el) => { el.scrollTop = 100; el.dispatchEvent(new Event("scroll", { bubbles: true })); });
+  await upper.evaluate(async (el) => { el.scrollTop = 100; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
   await expect.poll(() => upper.evaluate((el) => el.scrollTop)).toBe(100);
   expect(await lower.evaluate((el) => el.scrollTop)).toBe(0);
-  await lower.evaluate((el) => { el.scrollTop = 50; el.dispatchEvent(new Event("scroll", { bubbles: true })); });
+  await lower.evaluate(async (el) => { el.scrollTop = 50; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
   await expect.poll(() => lower.evaluate((el) => el.scrollTop)).toBe(50);
   expect(await upper.evaluate((el) => el.scrollTop)).toBe(100);
 
@@ -154,7 +154,7 @@ test("Signal Split default export includes each canonical Signal exactly once in
   await expect(lower).toBeVisible();
   // Scroll Lower deep into the Pipeline group before exporting -- export
   // geometry must stay deterministic regardless of scroll position.
-  await lower.evaluate((el) => { el.scrollTop = el.scrollHeight; el.dispatchEvent(new Event("scroll", { bubbles: true })); });
+  await lower.evaluate(async (el) => { el.scrollTop = el.scrollHeight; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
 
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
   await page.getByRole("button", { name: "Export", exact: true }).click();

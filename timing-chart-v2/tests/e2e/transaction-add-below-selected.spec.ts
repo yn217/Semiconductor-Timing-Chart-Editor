@@ -25,6 +25,7 @@ test("Tree Add and Bottom Add insert below the selected Transaction in its Group
   // Select the first Memory-group Transaction and Add from the tree header.
   await tree.filter({ has: page.locator(`xpath=self::*[@data-transaction-tree-id="${read}"]`) }).first().click();
   await page.getByTestId("add-transaction-tree").click();
+  await page.getByTestId("add-transaction-menu-item").click();
   await expect.poll(async () => (await treeOrder()).length).toBe(before.length + 1);
   const after = await treeOrder();
   const created = after.find((id) => !before.includes(id))!;
