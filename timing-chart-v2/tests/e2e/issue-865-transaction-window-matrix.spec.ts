@@ -22,6 +22,10 @@ const counts = (page: Page) => page.evaluate(() => ({
   bars: document.querySelectorAll("[data-testid='transaction-lanes'] [data-transaction-id]").length,
   markers: document.querySelectorAll(".transaction-bookmark-markers button").length,
   nodes: document.querySelectorAll("*").length,
+  candidates: Number(document.querySelector("[data-horizontal-candidate-transactions]")?.getAttribute("data-horizontal-candidate-transactions") ?? "-1"),
+  guides: document.querySelectorAll(".transaction-geometry-line").length,
+  foldSummaries: document.querySelectorAll("[data-hidden-bookmark-count]").length,
+  miniMapSegments: document.querySelectorAll(".minimap-segment-transaction").length,
   total: Number(document.querySelector("[data-testid='transaction-lanes']")?.getAttribute("data-total-transactions") ?? "0"),
 }));
 
@@ -40,13 +44,13 @@ for (const mode of ["Transaction", "Combined"] as const) for (const size of size
     const owner = page.getByTestId("cycle-viewport");
     const before = await documentState(page);
 
-    const seen: Array<{ at: string; bars: number; markers: number; nodes: number }> = [];
+    const seen: Array<Record<string, number | string>> = [];
     for (const fraction of [0, 0.5, 1]) {
       await owner.evaluate(async (el, f) => { el.scrollLeft = Math.floor((el.scrollWidth - el.clientWidth) * f); await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))); }, fraction);
       await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
       await page.waitForTimeout(400);
       const c = await counts(page);
-      seen.push({ at: `scroll ${fraction}`, bars: c.bars, markers: c.markers, nodes: c.nodes });
+      seen.push({ at: `scroll ${fraction}`, ...c });
       expect(c.total, "document total is intact").toBe(10_000);
       expect(c.bars, `mounted TransactionBars at ${fraction}`).toBeLessThan(400);
       expect(c.markers, `mounted Bookmark markers at ${fraction}`).toBeLessThan(600);
