@@ -300,3 +300,32 @@ describe("MiniMap overview derivation", () => {
     expect(incrementallyUpdated.rows.find((row) => row.groupId === "a" && row.laneId === "b:c")).toBeUndefined();
   });
 });
+
+describe("MiniMap dense Signal rows stay pixel-bounded (#856)", () => {
+  const dense = (cycleCount: number, pick: (index: number) => number) => {
+    const fixture = canonicalFixture();
+    const signal = fixture.signals.find((item) => item.type === "binary" || item.type === "bus")!;
+    const values = Array.from({ length: cycleCount }, (_, index) => ({ start: index, value: pick(index) }));
+    const document = { ...fixture, timeline: { ...fixture.timeline, cycleCount, end: cycleCount }, signals: fixture.signals.map((item) => item.id === signal.id ? { ...item, values } as typeof item : item) };
+    const overview = buildMiniMapOverview(document);
+    return { row: overview.rows.find((item) => item.rowId === signal.id)!, cycleCount };
+  };
+
+  it("keeps small rows exact and caps a 20,000-change row at the overview resolution", () => {
+    const exact = dense(500, (index) => index % 2);
+    expect(exact.row.segments).toHaveLength(500);
+    const large = dense(20_000, (index) => index % 2);
+    expect(large.row.segments.length).toBeLessThanOrEqual(1_024);
+    expect(large.row.segments[0]!.start).toBe(0);
+    expect(large.row.segments.at(-1)!.end).toBeLessThanOrEqual(20_000);
+  });
+
+  it("reflects the dominant tone of a dense region and keeps contiguous equal tones merged", () => {
+    const mostlyHigh = dense(20_000, (index) => (index < 10_000 ? 1 : (index % 10 === 0 ? 0 : 1)));
+    expect(new Set(mostlyHigh.row.segments.map((segment) => segment.tone))).toEqual(new Set(["high"]));
+    expect(mostlyHigh.row.segments).toHaveLength(1);
+    const halves = dense(20_000, (index) => (index < 10_000 ? 0 : 1));
+    expect(halves.row.segments.map((segment) => segment.tone)).toEqual(["low", "high"]);
+  });
+});
+
