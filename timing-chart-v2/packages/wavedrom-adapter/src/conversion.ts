@@ -366,17 +366,13 @@ export function toWaveJson(source: CanonicalSignalSource): WaveJsonSignal {
 }
 
 /** Convert a bounded source interval, reconstructing the value at its left edge. */
-export function toWaveJsonWindow(source: CanonicalSignalSource, start: number, end: number, semanticWindow: Readonly<{ start: number; end: number }> = { start, end }, geometryWindow: Readonly<{ start: number; end: number }> = semanticWindow): WaveJsonSignal {
-  validateSource(source);
-  if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end <= start || end > source.cycleCount) {
-    throw new WaveDromAdapterError("INVALID_CYCLE_WINDOW", "WaveDrom conversion requires a non-empty in-bounds source window.");
-  }
-  if (source.signal.type === "commentRow") throw new WaveDromAdapterError("NON_WAVEFORM_SIGNAL", `Comment row '${source.signal.id}' has no WaveDrom waveform.`);
-  const geometryMetadata = geometryWindow.start === semanticWindow.start && geometryWindow.end === semanticWindow.end ? {} : { geometryWindow };
-  if (source.signal.type === "clock") return { ...clockToWaveJsonWindow(source, start, end), sourceWindow: semanticWindow, ...geometryMetadata, displayWindow: { start, end } };
-  const changes = source.signal.values;
-  // Canonical value changes are strictly ordered. Use an upper bound to find
-  // the value carried into the window without walking its entire history.
+/**
+ * The canonical value changes a bounded window converts, in WaveJSON data
+ * order: the value carried into the window followed by every change inside
+ * it. Canonical value changes are strictly ordered, so an upper bound finds
+ * the carried value without walking the entire history.
+ */
+function valueChangesInWindow(changes: readonly SignalValueChange[], start: number, end: number): readonly SignalValueChange[] {
   let low = 0;
   let high = changes.length;
   while (low < high) {
@@ -386,12 +382,35 @@ export function toWaveJsonWindow(source: CanonicalSignalSource, start: number, e
   }
   const current = changes[low - 1] ?? changes[0];
   if (!current) throw new WaveDromAdapterError("EMPTY_SIGNAL_VALUES", "Bounded value conversion requires at least one canonical value.");
-  const localChanges = [{ start: 0, value: current.value, ...(current.displayLabel === undefined ? {} : { displayLabel: current.displayLabel }) }];
+  const selected = [current];
   for (let index = low; index < changes.length; index += 1) {
     const change = changes[index]!;
     if (change.start >= end) break;
-    localChanges.push({ start: change.start - start, value: change.value, ...(change.displayLabel === undefined ? {} : { displayLabel: change.displayLabel }) });
+    selected.push(change);
   }
+  return selected;
+}
+
+/**
+ * Semantic values index-aligned with the `data` labels emitted by
+ * {@link toWaveJsonWindow} for the same value changes and window. Label
+ * binding is positional, so a bounded render must not receive the complete
+ * document history (whose index 0 is the first change of the whole Signal).
+ */
+export function semanticValuesForWindow(changes: readonly SignalValueChange[], start: number, end: number): readonly string[] {
+  return valueChangesInWindow(changes, start, end).map((change) => String(change.value));
+}
+
+export function toWaveJsonWindow(source: CanonicalSignalSource, start: number, end: number, semanticWindow: Readonly<{ start: number; end: number }> = { start, end }, geometryWindow: Readonly<{ start: number; end: number }> = semanticWindow): WaveJsonSignal {
+  validateSource(source);
+  if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end <= start || end > source.cycleCount) {
+    throw new WaveDromAdapterError("INVALID_CYCLE_WINDOW", "WaveDrom conversion requires a non-empty in-bounds source window.");
+  }
+  if (source.signal.type === "commentRow") throw new WaveDromAdapterError("NON_WAVEFORM_SIGNAL", `Comment row '${source.signal.id}' has no WaveDrom waveform.`);
+  const geometryMetadata = geometryWindow.start === semanticWindow.start && geometryWindow.end === semanticWindow.end ? {} : { geometryWindow };
+  if (source.signal.type === "clock") return { ...clockToWaveJsonWindow(source, start, end), sourceWindow: semanticWindow, ...geometryMetadata, displayWindow: { start, end } };
+  const localChanges = valueChangesInWindow(source.signal.values, start, end)
+    .map((change, index) => ({ start: index === 0 ? 0 : change.start - start, value: change.value, ...(change.displayLabel === undefined ? {} : { displayLabel: change.displayLabel }) }));
   const localSignal = { ...source.signal, values: localChanges };
   const localGaps = (source.gapCycles ?? []).filter((cycle) => cycle > start && cycle < end).map((cycle) => cycle - start);
   return { ...valueSignalToWaveJson(localSignal, end - start, localGaps, source.enumDefinitions), sourceWindow: semanticWindow, ...geometryMetadata, displayWindow: { start, end } };
