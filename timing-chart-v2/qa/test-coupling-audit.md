@@ -21,8 +21,8 @@ USER_OBSERVABLE_KEEP / ARCHITECTURE_GUARD / MOVE_LAYER / REWRITE / MERGE / DELET
 | `mode-isolation-journey.spec.ts` | `getComputedStyle(...).left` of `geometry-grid`, `--gui-left-width` / `--gui-frozen-width` custom properties | REWRITE to measured pane/ruler X (user effect); the journey itself stays (USER_JOURNEY) |
 | `view-ribbon-slot.spec.ts` | `getComputedStyle` on ribbon buttons, `owner.children` topology | KEEP style assertions (visual contract); REWRITE the `owner.children` topology check to "no control leaves its group box" (geometry) |
 | `bottom-tab-header-visibility.spec.ts` | `classList.contains("active")` | REWRITE to `aria-selected` / `aria-current` (accessible state); colours stay |
-| `gui-left-pane-resize.spec.ts` | `gridTemplateColumns` of `.column-headings` | REWRITE to measured heading widths |
-| `transaction-lane-scaling.spec.ts` | 11 `querySelector` + 24 `data-*` | KEEP data hooks; REWRITE the 11 selectors to Locators |
+| `gui-left-pane-resize.spec.ts` | `gridTemplateColumns` of `.column-headings` | KEEP for now (header-column layout contract; no semantic hook exists for the heading cells — a rewrite needs one in production, see follow-up) |
+| `transaction-lane-scaling.spec.ts` | 11 `querySelector` + 24 `data-*` | KEEP: the selectors bulk-count 10k mounted owners page-side (virtualization contract); Locator round trips per element would be prohibitively slow |
 | `issue-755-canvas-production-acceptance.spec.ts` | 10 `querySelector` on canvas internals | KEEP (canvas pixel/geometry contract needs in-page access); candidate to share `wave-probe`-style helper |
 | `wavedrom-shared-definitions.spec.ts`, `issue-895-canvas-wave-semantics.spec.ts`, `design-system-foundation.spec.ts` | build their own DOM in the page | KEEP as browser-required component harnesses (iframe/canvas/pixel rendering); they test renderer/design-system output, not the app workspace — ARCHITECTURE_GUARD tier |
 | `full-gui.spec.ts`, `timeline-editor.spec.ts`, `transaction-export.spec.ts`, `annotation-snap.spec.ts` | many `data-*` reads | USER_OBSERVABLE_KEEP (agreed hooks) |
