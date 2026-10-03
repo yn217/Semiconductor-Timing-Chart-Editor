@@ -2690,6 +2690,23 @@
       "replacementTest": null
     },
     {
+      "file": "issue-865-transaction-window-matrix.spec.ts",
+      "domain": "transaction-virtualization",
+      "originIssue": 865,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "10k Transactions over 100k cycles: mounted bars/markers/DOM stay bounded by the horizontal window in Transaction and Combined, reveal-by-ID works and MiniMap states stay bounded.",
+      "duplicateGroup": "transaction-virtualization",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Large-document virtualization acceptance matrix (both viewports, both modes).",
+      "replacementTest": null
+    },
+    {
       "file": "issue-869-minimap-single-edit-incremental.spec.ts",
       "domain": "minimap-incremental",
       "originIssue": 869,
