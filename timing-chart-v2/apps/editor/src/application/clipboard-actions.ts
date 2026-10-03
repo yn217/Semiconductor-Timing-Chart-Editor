@@ -1,10 +1,11 @@
 import { useRef, useState } from "react";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
 import { referencesToAny } from "@timing-chart-v2/schema";
-import type { Annotation, AnnotationId, GroupId, Signal, SignalGroup, SignalId, SpacerId, SpacerRow, Transaction, TransactionId } from "@timing-chart-v2/schema";
+import type { AnnotationId, GroupId, Signal, SignalGroup, SignalId, SpacerId, SpacerRow, Transaction, TransactionId } from "@timing-chart-v2/schema";
 import { nextCommandId } from "../command-id.js";
 import { createEntityIdAllocator, nextEntityId } from "../entity-id.js";
 import { groupId, signalId } from "../minimal-cycle-view-fixture-helpers.js";
+import { annotationClipboardStatus, captureAnnotationClipboard, createAnnotationsFromClipboard, cutAnnotations, selectedAnnotations, type AnnotationClipboard } from "./annotation-clipboard.js";
 import { captureGroupTransactionLinks, remapGroupTransactionLinks, type GroupTransactionSignalLink } from "./group-clipboard-links.js";
 import { createClipboardIndexes, resolveClipboardSignalGroupTarget, resolveGroupSignalsInRowOrder } from "./group-clipboard-selection.js";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
@@ -15,13 +16,16 @@ type GroupClipboardItem = Readonly<{ group: SignalGroup; rows: readonly Signal[]
 type SpacerClipboardItem = Readonly<{ spacer: SpacerRow; groupId: GroupId; index: number }>;
 const spacerId = (value: string) => value as SpacerId;
 export const NO_SIGNAL_GROUP_STATUS = "No Signal Group to insert into";
+/** Mixed Signal + Annotation selection keeps the existing precedence: Copy/Cut act on the Signals (the status says the Annotations were
+ * left out), Duplicate/Delete act on the Annotations. */
+const mixedNote = (annotations: number) => annotations > 0 ? ` (${annotations} selected annotation${annotations === 1 ? "" : "s"} not included: Signals take precedence)` : "";
 
 export function useClipboardActions({ application, selection }: { application: EditorApplicationOwner; selection: SelectionOwner }) {
   const [status, setStatus] = useState("Empty");
   const [available, setAvailable] = useState(false);
   const signalsRef = useRef<readonly SignalClipboardItem[]>([]);
   const groupRef = useRef<GroupClipboardItem | undefined>(undefined);
-  const annotationRef = useRef<Annotation | undefined>(undefined);
+  const annotationRef = useRef<AnnotationClipboard | undefined>(undefined);
   const transactionsRef = useRef<readonly Transaction[]>([]);
   const spacerRef = useRef<SpacerClipboardItem | undefined>(undefined);
   const cutSignalsRef = useRef(false);
@@ -42,13 +46,13 @@ export function useClipboardActions({ application, selection }: { application: E
       group,
       signalById: signalsIndex?.byId,
       spacer: state.spacerId === undefined ? undefined : group?.spacers?.find((item) => item.id === state.spacerId),
-      annotation: state.annotationId === undefined ? undefined : current.annotations.find((item) => item.id === state.annotationId),
+      annotations: selectedAnnotations(current, state.annotationIds),
       transaction: state.transactionId === undefined ? undefined : transactionsIndex?.byId.get(state.transactionId) ?? current.transactions.find((item) => item.id === state.transactionId),
       transactions: transactionsIndex === undefined ? [] : [...state.transactionIds].flatMap((id) => { const transaction = transactionsIndex.byId.get(id); return transaction ? [transaction] : []; }).sort((left, right) => transactionsIndex.order.get(left.id)! - transactionsIndex.order.get(right.id)!),
       signals: signalsIndex === undefined ? [] : [...state.signalIds].flatMap((id) => { const signal = signalsIndex.byId.get(id); const owner = signalsIndex.owner.get(id); return signal && owner ? [{ signal, ...owner }] : []; }).sort((left, right) => signalsIndex.order.get(left.signal.id)! - signalsIndex.order.get(right.signal.id)!),
     };
   };
-  const setClipboard = ({ signals = [], group, annotation, transactions = [], spacer, cutSignals = false, signalLinks = [] }: { signals?: readonly SignalClipboardItem[]; group?: GroupClipboardItem; annotation?: Annotation; transactions?: readonly Transaction[]; spacer?: SpacerClipboardItem; cutSignals?: boolean; signalLinks?: readonly Readonly<{ transactionId: TransactionId; signalId: SignalId }>[] }) => {
+  const setClipboard = ({ signals = [], group, annotation, transactions = [], spacer, cutSignals = false, signalLinks = [] }: { signals?: readonly SignalClipboardItem[]; group?: GroupClipboardItem; annotation?: AnnotationClipboard; transactions?: readonly Transaction[]; spacer?: SpacerClipboardItem; cutSignals?: boolean; signalLinks?: readonly Readonly<{ transactionId: TransactionId; signalId: SignalId }>[] }) => {
     signalsRef.current = signals;
     groupRef.current = group;
     annotationRef.current = annotation;
@@ -87,15 +91,15 @@ export function useClipboardActions({ application, selection }: { application: E
       const rows = value.group.rows.flatMap((rowId) => { const signal = value.signalById?.get(rowId as SignalId); return signal ? [signal] : []; });
       setClipboard({ group: { group: value.group, rows, sourceIndex: value.document.signalGroups.indexOf(value.group) } });
       setStatus(`Copied ${value.group.name} group`);
-    } else if (value.transactions.length > 0 && value.signals.length === 0 && !value.annotation) {
+    } else if (value.transactions.length > 0 && value.signals.length === 0 && value.annotations.length === 0) {
       setClipboard({ transactions: value.transactions });
       setStatus(`Copied ${value.transactions.length} transaction${value.transactions.length === 1 ? "" : "s"}`);
-    } else if (value.annotation && value.signals.length === 0) {
-      setClipboard({ annotation: value.annotation });
-      setStatus(`Copied ${value.annotation.label || value.annotation.type} annotation`);
+    } else if (value.annotations.length > 0 && value.signals.length === 0) {
+      setClipboard({ annotation: captureAnnotationClipboard(value.document, value.annotations) });
+      setStatus(annotationClipboardStatus("Copied", value.annotations));
     } else if (value.signals.length > 0) {
       setClipboard({ signals: value.signals });
-      setStatus(value.signals.length === 1 ? `Copied ${value.signals[0]!.signal.display.name}` : `Copied ${value.signals.length} signals`);
+      setStatus(`${value.signals.length === 1 ? `Copied ${value.signals[0]!.signal.display.name}` : `Copied ${value.signals.length} signals`}${mixedNote(value.annotations.length)}`);
     } else setStatus("Select a signal, Comment Row, Annotation, or Transaction to copy");
   };
 
@@ -137,18 +141,19 @@ export function useClipboardActions({ application, selection }: { application: E
       } else setStatus("Cannot cut Group: one or more rows have dependent Annotations or protected references.");
       return;
     }
-    if (value.transactions.length > 0 && value.signals.length === 0 && !value.annotation) {
+    if (value.transactions.length > 0 && value.signals.length === 0 && value.annotations.length === 0) {
       const result = application.execute({ id: nextCommandId("cut_transactions"), type: "transaction.bulkDelete", transactionIds: value.transactions.map((transaction) => transaction.id) });
       if (!result.ok) { setStatus(cutRejectedStatus(result)); return; }
       setClipboard({ transactions: value.transactions });
       { selection.clear(); setStatus(`Cut ${value.transactions.length} transaction${value.transactions.length === 1 ? "" : "s"}`); }
       return;
     }
-    if (value.annotation && value.signals.length === 0) {
-      const result = application.execute({ id: nextCommandId("cut_annotation"), type: "annotation.delete", annotationId: value.annotation.id });
+    if (value.annotations.length > 0 && value.signals.length === 0) {
+      const annotationClipboard = captureAnnotationClipboard(value.document, value.annotations);
+      const result = cutAnnotations(application, value.annotations);
       if (!result.ok) { setStatus(cutRejectedStatus(result)); return; }
-      setClipboard({ annotation: value.annotation });
-      { selection.clear(); setStatus(`Cut ${value.annotation.label || value.annotation.type} annotation`); }
+      setClipboard({ annotation: annotationClipboard });
+      { selection.clear(); setStatus(annotationClipboardStatus("Cut", value.annotations)); }
       return;
     }
     if (value.signals.length === 0) { setStatus("Select a signal, Comment Row, Annotation, or Transaction to cut"); return; }
@@ -159,7 +164,7 @@ export function useClipboardActions({ application, selection }: { application: E
     const result = application.execute({ id: nextCommandId("cut"), type: "signal.bulkDelete", signalIds: value.signals.map(({ signal }) => signal.id) });
     if (!result.ok) { setStatus(cutRejectedStatus(result)); return; }
     setClipboard({ signals: value.signals, cutSignals: true, signalLinks });
-    { selection.clear(); setStatus(value.signals.length === 1 ? `Cut ${value.signals[0]!.signal.display.name}` : `Cut ${value.signals.length} signals`); }
+    { selection.clear(); setStatus(`${value.signals.length === 1 ? `Cut ${value.signals[0]!.signal.display.name}` : `Cut ${value.signals.length} signals`}${mixedNote(value.annotations.length)}`); }
   };
 
   const moveCutSignals = () => {
@@ -284,12 +289,7 @@ export function useClipboardActions({ application, selection }: { application: E
       setStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${input.group.name} group`);
     } else setStatus(`Cannot ${operation} Group: its linked references could not be preserved.`);
   };
-  const createAnnotation = (source: Annotation, operation: "paste" | "duplicate") => {
-    const annotation = { ...source, id: nextEntityId("annotation", document()) as AnnotationId };
-    const result = application.execute({ id: nextCommandId(`${operation}_annotation`), type: "annotation.create", annotation });
-    if (result.ok) { selection.selectAnnotation(annotation.id); setStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${annotation.label || annotation.type} annotation`); }
-    else setStatus(`${operation === "paste" ? "Paste" : "Duplicate"} rejected: ${result.problems[0]?.message ?? result.reason}`);
-  };
+  const createAnnotation = (clipboard: AnnotationClipboard, operation: "paste" | "duplicate") => setStatus(createAnnotationsFromClipboard(application, selection, clipboard, operation));
   const createTransactions = (sources: readonly Transaction[], operation: "paste" | "duplicate") => {
     const current = document();
     const allocateId = createEntityIdAllocator(current);
@@ -327,7 +327,7 @@ export function useClipboardActions({ application, selection }: { application: E
     const value = selected();
     if (value.spacer && value.group) createSpacer({ spacer: value.spacer, groupId: value.group.id, index: value.group.rows.indexOf(value.spacer.id) }, "duplicate");
     else if (value.group) createGroup({ group: value.group, rows: value.group.rows.flatMap((rowId) => { const signal = value.signalById?.get(rowId as SignalId); return signal ? [signal] : []; }), sourceIndex: value.document.signalGroups.indexOf(value.group) }, "duplicate");
-    else if (value.annotation) createAnnotation(value.annotation, "duplicate");
+    else if (value.annotations.length > 0) createAnnotation(captureAnnotationClipboard(value.document, value.annotations), "duplicate");
     else if (value.transactions.length > 0) createTransactions(value.transactions, "duplicate");
     else createSignals(value.signals, "duplicate");
   };
@@ -335,7 +335,7 @@ export function useClipboardActions({ application, selection }: { application: E
     const value = selected();
     const result = value.transactions.length > 1 ? application.execute({ id: nextCommandId("route_delete_transactions"), type: "transaction.bulkDelete", transactionIds: value.transactions.map((transaction) => transaction.id) })
       : value.transaction ? application.execute({ id: nextCommandId("route_delete_transaction"), type: "transaction.delete", transactionId: value.transaction.id })
-      : value.annotation ? application.execute({ id: nextCommandId("route_delete_annotation"), type: "annotation.delete", annotationId: value.annotation.id })
+      : value.annotations.length > 0 ? cutAnnotations(application, value.annotations)
       : value.signals.length > 1 ? application.execute({ id: nextCommandId("route_delete_selection"), type: "signal.bulkDelete", signalIds: value.signals.map(({ signal }) => signal.id) })
       : value.signals[0] ? application.execute({ id: nextCommandId("route_delete_signal"), type: "signal.delete", signalId: value.signals[0].signal.id })
       : value.spacer ? application.execute({ id: nextCommandId("route_delete_spacer"), type: "spacer.delete", spacerId: value.spacer.id })

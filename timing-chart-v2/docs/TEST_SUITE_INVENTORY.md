@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 407 spec files and 1208 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 407 spec files and 1213 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1206/1208 cases reviewed.
+Semantic review progress: 1211/1213 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,10 +10,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 608 |
+| `integration` | 612 |
 | `nightly` | 226 |
 | `performance` | 66 |
-| `pr` | 386 |
+| `pr` | 387 |
 | `visual` | 180 |
 
 ## Top recorded per-case runtimes
@@ -122,7 +122,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `golden-samples.spec.ts` | 2 | 2/2 reviewed |
 | `grid-zoom-alignment.spec.ts` | 1 | 1/1 reviewed |
 | `group-band.spec.ts` | 3 | 3/3 reviewed |
-| `group-clipboard-parity.spec.ts` | 3 | 3/3 reviewed |
+| `group-clipboard-parity.spec.ts` | 4 | 4/4 reviewed |
 | `gui-bottom-resize.spec.ts` | 1 | 1/1 reviewed |
 | `gui-density-tokens.spec.ts` | 1 | 1/1 reviewed |
 | `gui-inspector-resize.spec.ts` | 1 | 1/1 reviewed |
@@ -292,7 +292,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-863-annotation-scroll-cost.spec.ts` | 1 | 1/1 reviewed |
 | `issue-863-viewport-cache-invalidation.spec.ts` | 4 | 4/4 reviewed |
 | `issue-864-bulk-clipboard-one-history.spec.ts` | 1 | 1/1 reviewed |
-| `issue-864-bulk-clipboard-scale.spec.ts` | 14 | 14/14 reviewed |
+| `issue-864-bulk-clipboard-scale.spec.ts` | 18 | 18/18 reviewed |
 | `issue-865-transaction-window-matrix.spec.ts` | 4 | 4/4 reviewed |
 | `issue-869-minimap-single-edit-incremental.spec.ts` | 1 | 1/1 reviewed |
 | `issue-869-minimap-transaction-incremental.spec.ts` | 3 | 3/3 reviewed |

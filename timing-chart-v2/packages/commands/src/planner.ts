@@ -28,6 +28,7 @@ import type { CommandPolicyCode } from "./policy.js";
 import { mergeChangeSets } from "./changeset.js";
 import { resolveTimeGroupRange, promoteTimeGroupChildren } from "./time-group.js";
 import { valueChangeIdAllocator } from "./value-change-id-allocator.js";
+import { planAnnotationBulkCreate, planAnnotationBulkDelete } from "./annotation-bulk.js";
 
 export type CommandPlanResult =
   | Readonly<{ ok: true; document: CanonicalDocument; changeSet: ChangeSet; inverseChangeSet: ChangeSet }>
@@ -1669,6 +1670,8 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       const changeSet: ChangeSet = { annotationPosition: [command.annotation.id], annotationStyle: [command.annotation.id], minimapOverview: true };
       return { ok: true, document: { ...document, annotations: [...document.annotations, command.annotation] }, changeSet, inverseChangeSet: changeSet };
     }
+    case "annotation.bulkCreate": return planAnnotationBulkCreate(document, command.annotations, command.groups);
+    case "annotation.bulkDelete": return planAnnotationBulkDelete(document, command.annotationIds);
     case "annotation.replaceCollection": {
       const importedIds = new Set<AnnotationId>();
       for (const [index, annotation] of command.annotations.entries()) {
