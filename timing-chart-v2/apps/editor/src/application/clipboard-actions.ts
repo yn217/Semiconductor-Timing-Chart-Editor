@@ -288,6 +288,7 @@ export function useClipboardActions({ application, selection }: { application: E
     const annotation = { ...source, id: nextEntityId("annotation", document()) as AnnotationId };
     const result = application.execute({ id: nextCommandId(`${operation}_annotation`), type: "annotation.create", annotation });
     if (result.ok) { selection.selectAnnotation(annotation.id); setStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${annotation.label || annotation.type} annotation`); }
+    else setStatus(`${operation === "paste" ? "Paste" : "Duplicate"} rejected: ${result.problems[0]?.message ?? result.reason}`);
   };
   const createTransactions = (sources: readonly Transaction[], operation: "paste" | "duplicate") => {
     const current = document();
@@ -299,6 +300,7 @@ export function useClipboardActions({ application, selection }: { application: E
     }
     const result = application.execute({ id: nextCommandId(`${operation}_transactions`), type: "transaction.bulkCreate", transactions: created });
     if (result.ok) { const ids = created.map((transaction) => transaction.id); selection.selectTransactions(new Set(ids), ids[0]); setStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${created.length} transaction${created.length === 1 ? "" : "s"}`); }
+    else setStatus(`${operation === "paste" ? "Paste" : "Duplicate"} rejected: ${result.problems[0]?.message ?? result.reason}`);
   };
   const createSpacer = (input: SpacerClipboardItem, operation: "paste" | "duplicate") => {
     const current = document();
