@@ -249,6 +249,77 @@ test("switching mode cancels an active Cursor drag owner", async ({ page }) => {
 });
 
 const sizes549 = [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] as const;
+
+/**
+ * #549 "keyboard/drag source range bounded": Cursor A (Shift+Arrow) and B (Alt+Arrow) clamp to source cycles [0, cycleCount-1]
+ * (use-workspace-ui-state setCursor/moveCursor) at both ends under repeated presses, a drag past either viewport edge clamps to the
+ * same bounds, a collapsed fold never yields a hidden source cycle, and none of it touches Canonical/History/Dirty.
+ */
+for (const size of sizes549) {
+  test(`Cursor A/B keyboard and edge drags clamp to the source range through a collapsed fold at ${size.width}x${size.height}`, async ({ page }) => {
+    await page.setViewportSize(size);
+    await page.goto("/");
+    const host = page.getByTestId("cycle-surface");
+    await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+    const fixture = canonicalFixture();
+    const last = fixture.timeline.cycleCount! - 1;
+    const document = { ...fixture, timeGroups: [{ id: "cursor_fold" as TimeGroupId, name: "Fold", start: 2, end: 5, presentation: { collapsed: true } }] };
+    await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "cursor-bounds.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+    await expect(host).toHaveAttribute("data-editor-idle", "true");
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+    await page.getByTestId("cursor-set-a").click();
+    await page.getByTestId("cursor-set-b").click();
+    const before = await documentState(page);
+    const viewport = page.getByTestId("cycle-viewport");
+    const lineOf = (which: "a" | "b") => viewport.locator(`[data-role='cursor-line'][data-cursor='${which}']`);
+    const hiddenSource = new Set([3, 4]);
+    for (const [which, modifier] of [["a", "Shift"], ["b", "Alt"]] as const) {
+      const line = lineOf(which);
+      const seen: number[] = [];
+      for (let index = 0; index < last + 6; index += 1) { await viewport.press(`${modifier}+ArrowRight`); seen.push(Number(await line.getAttribute("data-cycle"))); }
+      await expect(line).toHaveAttribute("data-cycle", String(last));
+      for (let index = 0; index < last + 6; index += 1) { await viewport.press(`${modifier}+ArrowLeft`); seen.push(Number(await line.getAttribute("data-cycle"))); }
+      await expect(line).toHaveAttribute("data-cycle", "0");
+      expect(seen.every((cycle) => Number.isInteger(cycle) && cycle >= 0 && cycle <= last), JSON.stringify(seen)).toBe(true);
+    }
+    await expectViewOnly(page, before);
+
+    const viewportBox = (await viewport.boundingBox())!;
+    const frame = () => page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    const grabY = async (which: "a" | "b") => {
+      const box = (await lineOf(which).boundingBox())!;
+      const y = await page.evaluate(([x, top, height, id]) => {
+        for (let yy = top + 1; yy < top + height; yy += 2) if (document.elementFromPoint(x as number, yy)?.closest("[data-role='cursor-line']")?.getAttribute("data-cursor") === id) return yy;
+        return null;
+      }, [box.x + 1, box.y, box.height, which] as const);
+      expect(y, `Cursor ${which} is grabbable`).not.toBeNull();
+      return { x: box.x + 1, y: y! };
+    };
+    // Separate B from A (both at 0) so each line is the hit target for its own drag; A is back at 0 before B is dragged.
+    await viewport.press("Alt+ArrowRight");
+    await expect(lineOf("b")).toHaveAttribute("data-cycle", "1");
+    for (const which of ["a", "b"] as const) {
+      const line = lineOf(which);
+      let grip = await grabY(which);
+      await page.mouse.move(grip.x, grip.y); await page.mouse.down();
+      await page.mouse.move(viewportBox.x + viewportBox.width - 5, grip.y); await frame();
+      await page.mouse.move(size.width - 1, grip.y); await frame();
+      await page.mouse.up();
+      await expect(line, `Cursor ${which} drag past the right edge clamps to cycleCount-1`).toHaveAttribute("data-cycle", String(last));
+      grip = await grabY(which);
+      await page.mouse.move(grip.x, grip.y); await page.mouse.down();
+      // One fast move from cycle `last` to beyond the time origin (over the frozen name pane), as a real flick would produce.
+      await page.mouse.move(0, grip.y); await frame();
+      await expect(line, `Cursor ${which} preview past the left edge clamps to 0`).toHaveAttribute("data-cycle", "0");
+      await page.mouse.up();
+      const cycle = Number(await line.getAttribute("data-cycle"));
+      expect(cycle, `Cursor ${which} drag past the left edge clamps to 0`).toBe(0);
+      expect(hiddenSource.has(cycle)).toBe(false);
+      await expect(page.getByTestId("cursor-status")).toContainText(`${which.toUpperCase()} 0`);
+    }
+    await expectViewOnly(page, before);
+  });
+}
 const trackWindowPointerMove = () => {
   const live = new Set<unknown>();
   const counts = { adds: 0, removes: 0 };

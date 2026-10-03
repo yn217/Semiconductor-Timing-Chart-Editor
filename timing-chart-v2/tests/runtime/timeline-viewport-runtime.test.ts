@@ -109,6 +109,6 @@ describe("TimelineViewportRuntime", () => {
     runtime.attach();
 
     expect(runtime.screenXToSourceCycle(80)).toBe(4);
-    expect(inverse).toHaveBeenCalledWith(40);
+    expect(inverse).toHaveBeenCalledWith(40, { clamp: true });
   });
 });

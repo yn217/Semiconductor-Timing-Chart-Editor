@@ -53,7 +53,7 @@ export interface TimeAxisMetrics {
   /** Converts display-domain boundaries to the same unscrolled content-X space. */
   readonly displayBoundaryToContentX: (displayCycle: number) => number | undefined;
   /** Resolves content X to the nearest canonical source boundary in this generation. */
-  readonly localXToSourceBoundary: (localX: number) => number | undefined;
+  readonly localXToSourceBoundary: (localX: number, options?: { readonly clamp?: boolean }) => number | undefined;
 }
 
 /** Read-only authority for semantic -> display -> local -> screen timeline geometry. */
@@ -108,10 +108,12 @@ export class TimelineGeometryOwner {
           : mapping.displayToSource(displayCycle);
         return sourceCycle === undefined ? undefined : sourceBoundaryToContentX(sourceCycle);
       },
-      localXToSourceBoundary: (localX: number): number | undefined => {
+      localXToSourceBoundary: (localX: number, options?: { readonly clamp?: boolean }): number | undefined => {
         if (!Number.isFinite(localX) || pxPerDisplayCycle === undefined || !Number.isFinite(pxPerDisplayCycle) || pxPerDisplayCycle <= 0
           || screenOriginX === undefined || !Number.isFinite(screenOriginX)) return undefined;
-        const displayBoundary = Math.round((localX - screenOriginX) / pxPerDisplayCycle);
+        const rawBoundary = Math.round((localX - screenOriginX) / pxPerDisplayCycle);
+        // Pointer gestures (Cursor A/B drag) pass clamp so a pointer beyond either end pins to the range instead of being ignored.
+        const displayBoundary = options?.clamp ? Math.max(0, Math.min(mapping.displayCycleCount, rawBoundary)) : rawBoundary;
         if (displayBoundary < 0 || displayBoundary > mapping.displayCycleCount) return undefined;
         return displayBoundary === mapping.displayCycleCount
           ? mapping.sourceCycleCount
