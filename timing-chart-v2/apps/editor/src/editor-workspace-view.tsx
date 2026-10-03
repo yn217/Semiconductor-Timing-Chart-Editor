@@ -49,11 +49,42 @@ function TimelineHorizontalScrollbar({ viewport }: { readonly viewport: RefObjec
     const observer = new ResizeObserver(layout);
     observer.observe(view);
     if (view.firstElementChild) observer.observe(view.firstElementChild);
-    const owner = timelineScrollOwner(view);
-    if (owner !== view) { observer.observe(owner); for (const child of owner.children) observer.observe(child); }
+    let observedOwner: HTMLElement = view;
+    const observedOwnerChildren = new Set<Element>();
+    const refreshObservedOwner = () => {
+      const owner = timelineScrollOwner(view);
+      if (owner === observedOwner) return;
+      if (observedOwner !== view) observer.unobserve(observedOwner);
+      for (const child of observedOwnerChildren) observer.unobserve(child);
+      observedOwnerChildren.clear();
+      observedOwner = owner;
+      if (owner !== view) {
+        observer.observe(owner);
+        for (const child of owner.children) { observer.observe(child); observedOwnerChildren.add(child); }
+      }
+      layout();
+    };
+    const mutationObserver = new MutationObserver((records) => {
+      const shell = view.closest<HTMLElement>(".editor-shell");
+      const modeChanged = records.some((record) => record.target === shell && record.attributeName === "data-view-mode");
+      if (modeChanged) {
+        refreshObservedOwner();
+        layout();
+        return;
+      }
+      const containsTimelineOwner = (node: Node): boolean => node instanceof Element
+        ? node.matches("[data-role='timeline-viewport']") || Boolean(node.querySelector("[data-role='timeline-viewport']"))
+        : node instanceof DocumentFragment && Boolean(node.querySelector("[data-role='timeline-viewport']"));
+      if (records.some((record) => record.attributeName === "data-role"
+        || [...record.addedNodes, ...record.removedNodes].some(containsTimelineOwner))) refreshObservedOwner();
+    });
+    mutationObserver.observe(view, { attributes: true, attributeFilter: ["data-role"], childList: true, subtree: true });
+    const shell = view.closest<HTMLElement>(".editor-shell");
+    if (shell) mutationObserver.observe(shell, { attributes: true, attributeFilter: ["data-view-mode"] });
+    refreshObservedOwner();
     window.addEventListener("resize", layout);
     view.addEventListener("timeline-viewport-resize", layout);
-    return () => { view.removeEventListener("scroll", onViewScroll, true); bar.removeEventListener("scroll", onBarScroll); observer.disconnect(); window.removeEventListener("resize", layout); view.removeEventListener("timeline-viewport-resize", layout); delete view.dataset.ownHscroll; };
+    return () => { view.removeEventListener("scroll", onViewScroll, true); bar.removeEventListener("scroll", onBarScroll); mutationObserver.disconnect(); observer.disconnect(); window.removeEventListener("resize", layout); view.removeEventListener("timeline-viewport-resize", layout); delete view.dataset.ownHscroll; };
   }, [viewport]);
   return <div className="timeline-hscroll" ref={track} data-testid="timeline-hscroll" role="scrollbar" aria-orientation="horizontal" aria-label="Timeline horizontal scroll" hidden><div ref={inner} style={{ height: 1 }} /></div>;
 }
