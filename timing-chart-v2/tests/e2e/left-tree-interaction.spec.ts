@@ -5,6 +5,7 @@ test.use({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1 });
 async function ready(page: import("@playwright/test").Page) {
   await page.goto("/?visual-reference");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-canonical-revision", /^\d+$/);
 }
 
 test("collapses only Left Tree descendants and restores stable rows without a canonical mutation", async ({ page }) => {

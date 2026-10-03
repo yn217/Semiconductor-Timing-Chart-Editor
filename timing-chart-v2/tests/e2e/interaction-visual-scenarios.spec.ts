@@ -14,6 +14,7 @@ test("captures Signal visibility before/after/undo/redo visual bundles", async (
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const output = testInfo.outputPath("signal-visibility");
   await mkdir(output, { recursive: true });
   const gitHead = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
@@ -44,6 +45,7 @@ test("proves Signal visibility PNG reversibility by region", async ({ page }) =>
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const before = PNG.sync.read(await page.screenshot({ animations: "disabled" }));
   await host.locator("[data-role='left-row'][data-row-id='sig_cycle_ready'] [data-role='tree-visibility']").click();
   await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']")).toHaveCount(0);
@@ -62,6 +64,7 @@ test("proves Annotation PNG reversibility by region", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const before = PNG.sync.read(await page.screenshot({ animations: "disabled" }));
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
@@ -87,6 +90,7 @@ test("captures Annotation add/undo/redo visual bundles", async ({ page }, testIn
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const output = testInfo.outputPath("annotation-lifecycle");
   await mkdir(output, { recursive: true });
   const gitHead = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
@@ -116,6 +120,7 @@ test("captures Group collapse/expand visual bundles without canonical mutation",
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const output = testInfo.outputPath("group-collapse");
   await mkdir(output, { recursive: true });
   const gitHead = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
@@ -143,6 +148,7 @@ test("captures Signal selection visual state without semantic mutation", async (
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const output = testInfo.outputPath("signal-selection");
   await mkdir(output, { recursive: true });
   const gitHead = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
@@ -169,6 +175,7 @@ test("captures Zoom/Fit visual round-trip without semantic mutation", async ({ p
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const output = testInfo.outputPath("zoom-fit");
   await mkdir(output, { recursive: true });
   const gitHead = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
@@ -195,6 +202,7 @@ test("captures left pane resize visual before/after without semantic mutation", 
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const output = testInfo.outputPath("left-pane-resize");
   await mkdir(output, { recursive: true });
   const gitHead = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
@@ -224,6 +232,7 @@ test("captures timeline insert visual reversibility", async ({ page }, testInfo)
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const output = testInfo.outputPath("timeline-insert");
   await mkdir(output, { recursive: true });
   const gitHead = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
@@ -252,6 +261,7 @@ test("captures Bottom Editor resize visual state without semantic mutation", asy
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const output = testInfo.outputPath("bottom-resize");
   await mkdir(output, { recursive: true });
   const gitHead = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
@@ -280,6 +290,7 @@ test("captures Inspector resize visual state without semantic mutation", async (
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const output = testInfo.outputPath("inspector-resize");
   await mkdir(output, { recursive: true });
   const gitHead = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();

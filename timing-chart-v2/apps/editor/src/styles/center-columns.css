@@ -339,6 +339,7 @@
 .transaction-left-tree-group-header[data-drop-target="true"] { outline: 2px solid #3478f6; outline-offset: -2px; background: #e6f1ff; }
 .transaction-left-tree-swatch, .transaction-left-tree-row i { flex: 0 0 14px; width: 14px; height: 14px; border-radius: 3px; }
 .transaction-left-tree-row { display: flex; align-items: center; width: 100%; min-height: var(--transaction-tree-row-height, 29px); height: var(--transaction-tree-row-height, 29px); gap: 7px; padding: 0 10px 0 31px; overflow: hidden; border: 0; background: transparent; color: #304b6a; font-size: 11px; text-align: left; white-space: nowrap; }
+.transaction-left-tree-row > .transaction-left-tree-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .transaction-left-tree-row-wrap { position: relative; display: block; width: 100%; height: var(--transaction-tree-row-height, 29px); }
 /* Bookmark markers are interactive time anchors and must sit above bars at
    the same source time; only each narrow marker button opts into hit testing. */

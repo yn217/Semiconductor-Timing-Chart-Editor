@@ -41,8 +41,7 @@ for (const viewportSize of [
     const farBar = page.locator("[data-transaction-id='txn_far']");
     await expect(tree).toBeVisible();
     await expect(nearBar).toBeVisible();
-    await expect(midBar).toBeVisible();
-    await expect(farBar).toBeVisible();
+    // Horizontal virtualization (#865): off-screen bars are not mounted until revealed/selected, so only the near bar is required here.
     const scrollMetrics = await viewport.evaluate((element) => ({
       rect: element.getBoundingClientRect().toJSON(),
       scrollWidth: element.scrollWidth,
@@ -79,9 +78,11 @@ for (const viewportSize of [
     const preMidSelection = await viewport.evaluate((element) => element.scrollLeft);
 
     await expect(midRow).toBeVisible();
-    const preMidBar = await midBar.evaluate((element) => element.getBoundingClientRect().toJSON());
-    const preMidViewport = await viewport.evaluate((element) => element.getBoundingClientRect().toJSON());
-    expect(preMidBar.left >= preMidViewport.right || preMidBar.right <= preMidViewport.left).toBe(true);
+    if (await midBar.count() > 0) {
+      const preMidBar = await midBar.evaluate((element) => element.getBoundingClientRect().toJSON());
+      const preMidViewport = await viewport.evaluate((element) => element.getBoundingClientRect().toJSON());
+      expect(preMidBar.left >= preMidViewport.right || preMidBar.right <= preMidViewport.left).toBe(true);
+    }
     const treeLeftBeforeMid = await tree.evaluate((element) => element.getBoundingClientRect().left);
     await midRow.click();
     await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).not.toBe(preMidSelection);
@@ -111,6 +112,6 @@ for (const viewportSize of [
     await expect(page.getByTestId("dirty-status")).toHaveText(baseline.dirty!);
     await expect(tree).toBeVisible();
     await testInfo.attach("transaction-tree-select-reveal.png", { body: await page.screenshot(), contentType: "image/png" });
-    console.log(JSON.stringify({ viewportSize, maxScroll: scrollMetrics.maxScroll, midScroll, farScroll, finalBarRects: { mid: await midBar.boundingBox(), far: await farBar.boundingBox() } }));
+    console.log(JSON.stringify({ viewportSize, maxScroll: scrollMetrics.maxScroll, midScroll, farScroll, finalBarRects: { mid: await midBar.count() > 0 ? await midBar.boundingBox() : null, far: await farBar.count() > 0 ? await farBar.boundingBox() : null } }));
   });
 }

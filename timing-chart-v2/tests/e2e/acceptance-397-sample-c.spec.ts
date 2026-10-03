@@ -44,7 +44,8 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     const surface = page.locator("[data-role='timing-chart-surface']");
     await expect(lanes).toBeVisible();
     await expect(surface).toBeVisible();
-    await expect(lanes.locator("[data-transaction-id]")).toHaveCount(4);
+    // Bars are horizontally virtualized: at least one mounted; the full set lives in the Tree/Bottom table.
+    expect(await lanes.locator("[data-transaction-id]").count()).toBeGreaterThan(0);
 
     // View mode switch itself is view-only.
     await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-canonical-revision", before.revision!);

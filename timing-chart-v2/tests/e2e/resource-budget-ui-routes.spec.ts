@@ -32,6 +32,7 @@ async function openDocument(page: Page, document: CanonicalDocument) {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({
     name: "resource-budget.tcd.json",
     mimeType: "application/json",
@@ -98,6 +99,7 @@ test("annotation import is rejected at the resource boundary without replacing t
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   // The reload-persisted default document ships its own pre-existing
   // showcase annotations, which would otherwise inflate the "Annotations: 1"
   // count assertion below -- start from a genuinely blank document.
@@ -136,6 +138,7 @@ test("annotation import rejects deeply nested JSON before migration or replaceme
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
@@ -157,6 +160,7 @@ test("Signal Event Import rejects deeply nested JSON before values are replaced"
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const editor = page.getByTestId("signal-editor");
@@ -174,6 +178,7 @@ test("Signal Event Import rejects an oversized file before it is read as JSON", 
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const editor = page.getByTestId("signal-editor");
@@ -195,6 +200,7 @@ test("Advanced JSON rejects a resource overflow before document replacement", as
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const beforeRevision = await host.getAttribute("data-canonical-revision");
   const bottom = page.getByTestId("bottom-editor");
   await bottom.getByRole("tab", { name: "JSON", exact: true }).click();
