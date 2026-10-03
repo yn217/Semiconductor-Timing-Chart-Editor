@@ -112,11 +112,15 @@ test("snaps a clockless transaction against the actual non-first TimeAxis owner 
   const editor = page.getByTestId("transaction-editor");
   await editor.getByLabel("New Transaction name").fill("Owner snap");
   await editor.getByLabel("New Transaction start").fill("0");
-  await editor.getByLabel("New Transaction end").fill("1");
+  // Transaction form fields and the Inspector are in TC (1 TC = 10 cycles): 0..0.1 TC = cycle 0..1; the Transaction ruler is addressed by source cycle.
+  await editor.getByLabel("New Transaction end").fill("0.1");
   await editor.getByRole("button", { name: "Create Transaction", exact: true }).click();
   const transaction = page.getByTestId("transaction-lanes").locator("[data-transaction-id]");
   const body = transaction.locator("span");
-  const target = await page.getByTestId("cycle-ruler").locator("[data-cycle='3']").boundingBox();
+  // The Transaction ruler only ticks the 0 and 8 boundaries of this 8-cycle document, so the bar is dragged to the cycle-8 tick.
+  const tickStart = await page.getByTestId("cycle-ruler").locator("[data-source-cycle='0']").boundingBox();
+  const tickEnd = await page.getByTestId("cycle-ruler").locator("[data-source-cycle='8']").boundingBox();
+  const target = tickStart && tickEnd ? { x: tickEnd.x } : null;
   const before = await body.boundingBox();
   expect(target).not.toBeNull();
   expect(before).not.toBeNull();
@@ -124,9 +128,9 @@ test("snaps a clockless transaction against the actual non-first TimeAxis owner 
   await page.mouse.down();
   await page.mouse.move(target!.x, before!.y + before!.height / 2);
   await page.mouse.up();
-  // Snapping resolves through the shared TimeAxisGeometry (the visible owner row), not the hidden first row: the drop lands on
-  // the ruler's cycle-3 boundary.
-  await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("3");
+  // Snapping resolves through the shared TimeAxisGeometry (the visible owner row), not the hidden first row: the bar is
+  // centred on cycle 8 and snaps to the whole-cycle start 7 (0.7 TC).
+  await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("0.7");
   await expect(transaction).toHaveAttribute("style", /left/);
 });
 
@@ -158,11 +162,12 @@ test("Transaction clipboard preserves semantic fields and uses fresh IDs", async
   expect(await page.getByTestId("history-status").textContent()).toBe(before);
   await edit.getByRole("button", { name: "Duplicate", exact: true }).click();
   await expect(lanes.locator("[data-transaction-id]")).toHaveCount(2);
-  const copied = lanes.locator("[data-transaction-id]").filter({ hasText: "Read burst Copy" });
+  // Lane bars no longer carry the Transaction name, so the duplicate is the one whose id is not the original.
+  const copied = lanes.locator("[data-transaction-id]:not([data-transaction-id='txn_original'])");
   await expect(copied).toHaveCount(1);
   await copied.click();
-  await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("1");
-  await expect(page.getByTestId("inspector").getByLabel("Transaction end")).toHaveValue("5");
+  await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("0.1");
+  await expect(page.getByTestId("inspector").getByLabel("Transaction end")).toHaveValue("0.5");
   await expect(page.getByTestId("inspector").getByLabel("Transaction lane")).toHaveValue("lane_0");
 });
 

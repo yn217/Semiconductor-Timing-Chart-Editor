@@ -36,7 +36,7 @@ export function InspectorFooter({ changeCount, onCancel, onApply, applyDisabled,
   return <div className="inspector-sticky-footer">
     {changeCount !== undefined && changeCount > 0 && <output className="draft-unapplied-indicator" data-testid="inspector-footer-unapplied">● {changeCount} change{changeCount === 1 ? "" : "s"}</output>}
     <span className="inspector-footer-buttons">
-      <button type="button" data-testid={cancelTestId} onClick={onCancel}>Revert</button>
+      <button type="button" data-testid={cancelTestId} aria-label="Discard unapplied Inspector draft" title="Discard unapplied changes and restore the last applied values" onClick={onCancel}>Revert draft</button>
       <button type="button" data-testid={applyTestId} disabled={applyDisabled} onClick={onApply}>Apply</button>
     </span>
   </div>;

@@ -4,10 +4,7 @@ import type { CommandResult } from "@timing-chart-v2/commands";
 import type { CanonicalDocument, Signal, SignalId, Transaction, TransactionId } from "@timing-chart-v2/schema";
 import { RibbonIcon } from "./ribbon-icon.js";
 import { useDialogFocusLoop } from "./dialog-focus-loop.js";
-
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
+import { compileLiteralFindReplace } from "./find-replace-model.js";
 const itemName = (item: Signal | Transaction) => "display" in item ? item.display.name : item.name;
 
 /** Self-contained trigger + floating panel, same portal/position/dismiss
@@ -73,25 +70,45 @@ export function FindReplacePanel({ document, mode = "signals", onRenameSignals, 
     };
   }, [open]);
 
-  // #859: typing stays responsive at 10k names — the collection search follows the input at deferred priority.
+  // Keep large collection searches at deferred priority and compile one
+  // escaped literal expression per settled query.
   const needle = useDeferredValue(findText.trim());
   // #859: compile the escaped literal needle ONCE per query (the search regex has no `g`, so .test() is stateless; String.replace resets
   // lastIndex of a global regex on every call) and recompute only when the owning collection, mode, needle or replacement changes.
   const deferredReplaceText = useDeferredValue(replaceText);
-  const { matches, preview } = useMemo(() => {
-    if (!needle) return { matches: [] as readonly (typeof document.signals[number] | typeof document.transactions[number])[], preview: [] as { item: typeof document.signals[number] | typeof document.transactions[number]; nextName: string }[] };
-    const search = new RegExp(escapeRegExp(needle), "i");
-    const replacement = new RegExp(escapeRegExp(needle), "gi");
-    const found = mode === "transactions" ? document.transactions.filter((transaction) => search.test(transaction.name)) : document.signals.filter((signal) => search.test(signal.display.name));
-    const rows = found.map((item) => ({ item, nextName: itemName(item).replace(replacement, deferredReplaceText).trim() })).filter((item) => item.nextName.length > 0);
-    return { matches: found, preview: rows };
-  }, [document.signals, document.transactions, mode, needle, deferredReplaceText]);
-  const skippedCount = matches.length - preview.length;
+  const expressions = useMemo(() => compileLiteralFindReplace(needle), [needle]);
+  const searchExpression = expressions?.search;
+  const replacementExpression = expressions?.replace;
+  const matches = useMemo(() => {
+    if (!searchExpression) return [];
+    const collection = mode === "transactions" ? document.transactions : document.signals;
+    return mode === "transactions"
+      ? (collection as readonly Transaction[]).filter((transaction) => searchExpression.test(transaction.name))
+      : (collection as readonly Signal[]).filter((signal) => searchExpression.test(signal.display.name));
+  }, [document.signals, document.transactions, mode, searchExpression]);
+  const preview = useMemo(() => {
+    const rows: Array<{ readonly item: Signal | Transaction; readonly nextName: string }> = [];
+    let validCount = 0;
+    if (replacementExpression) {
+      for (const item of matches) {
+        const nextName = itemName(item).replace(replacementExpression, deferredReplaceText).trim();
+        if (nextName.length === 0) continue;
+        validCount += 1;
+        if (rows.length < 20) rows.push({ item, nextName });
+      }
+    }
+    return { rows, validCount, skippedCount: matches.length - validCount };
+  }, [matches, replacementExpression, deferredReplaceText]);
+  const inputIsSettled = needle === findText.trim() && deferredReplaceText === replaceText;
 
   const replaceAll = () => {
-    if (preview.length === 0) return;
-    if (mode === "transactions") onRenameTransactions?.(preview.map(({ item, nextName }) => ({ transactionId: item.id as TransactionId, name: nextName })));
-    else onRenameSignals?.(preview.map(({ item, nextName }) => ({ signalId: item.id as SignalId, name: nextName })));
+    if (!inputIsSettled || preview.validCount === 0 || !replacementExpression) return;
+    const replacements = matches.flatMap((item) => {
+      const nextName = itemName(item).replace(replacementExpression, deferredReplaceText).trim();
+      return nextName.length === 0 ? [] : [{ item, nextName }];
+    });
+    if (mode === "transactions") onRenameTransactions?.(replacements.map(({ item, nextName }) => ({ transactionId: item.id as TransactionId, name: nextName })));
+    else onRenameSignals?.(replacements.map(({ item, nextName }) => ({ signalId: item.id as SignalId, name: nextName })));
     setOpen(false);
   };
 
@@ -104,10 +121,10 @@ export function FindReplacePanel({ document, mode = "signals", onRenameSignals, 
     {open && createPortal(<div ref={panelRef} className="find-replace-panel" role="dialog" aria-label="Find and Replace" data-testid="find-replace-panel" style={{ left: `${position?.left ?? 0}px`, top: `${position?.top ?? 0}px`, maxHeight: `${position?.maxHeight ?? 200}px`, visibility: position ? "visible" : "hidden" }}>
       <label>Find<input aria-label="Find" data-testid="find-replace-find" value={findText} onChange={(event) => setFindText(event.target.value)} autoFocus /></label>
       <label>Replace with<input aria-label="Replace with" data-testid="find-replace-replace" value={replaceText} onChange={(event) => setReplaceText(event.target.value)} /></label>
-      <output data-testid="find-replace-count">{needle ? `${preview.length} ${mode === "transactions" ? "transaction" : "signal"}${preview.length === 1 ? "" : "s"} will be renamed${skippedCount > 0 ? ` (${skippedCount} skipped: would become empty)` : ""}` : "Enter text to search for"}</output>
-      {preview.length > 0 && <ul className="find-replace-preview">{preview.slice(0, 20).map(({ item, nextName }) => <li key={item.id}><span>{itemName(item)}</span><RibbonIcon name="i-chevron-right" /><span>{nextName}</span></li>)}{preview.length > 20 && <li className="find-replace-more">…and {preview.length - 20} more</li>}</ul>}
+      <output data-testid="find-replace-count">{needle ? `${preview.validCount} ${mode === "transactions" ? "transaction" : "signal"}${preview.validCount === 1 ? "" : "s"} will be renamed${preview.skippedCount > 0 ? ` (${preview.skippedCount} skipped: would become empty)` : ""}` : "Enter text to search for"}</output>
+      {preview.validCount > 0 && <ul className="find-replace-preview">{preview.rows.map(({ item, nextName }) => <li key={item.id}><span>{itemName(item)}</span><RibbonIcon name="i-chevron-right" /><span>{nextName}</span></li>)}{preview.validCount > preview.rows.length && <li className="find-replace-more">…and {preview.validCount - preview.rows.length} more</li>}</ul>}
       <div className="find-replace-actions">
-        <button type="button" data-testid="find-replace-apply" disabled={preview.length === 0} onClick={replaceAll}>Replace All</button>
+        <button type="button" data-testid="find-replace-apply" disabled={!inputIsSettled || preview.validCount === 0} onClick={replaceAll}>Replace All</button>
         <button type="button" onClick={() => setOpen(false)}>Cancel</button>
       </div>
     </div>, window.document.body)}

@@ -162,6 +162,9 @@ test.describe("Edge Counter compact layout", () => {
     await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "edge-counter-100k.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
     const host = page.getByTestId("cycle-surface");
     await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+    // The 100k-cycle document replaces the startup one asynchronously; the counters only describe it once it has loaded and settled.
+    await expect(page.locator(".editor-shell")).toHaveAttribute("data-signal-count", "1", { timeout: 60_000 });
+    await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
     const before = JSON.parse(await host.getAttribute("data-session-counters") ?? "{}") as Record<string, number>;
     expect(before.edgeCounterCyclesProbed).toBe(0);
     expect(before.edgeCounterGeometryLookups).toBe(0);

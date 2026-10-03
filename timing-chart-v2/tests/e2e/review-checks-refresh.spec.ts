@@ -5,6 +5,7 @@ test("Review Refresh Checks is view-only", async ({ page }) => {
   const host = page.getByTestId("cycle-surface");
   const surface = host.locator("[data-role='timing-chart-surface']");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const before = {
     revision: await host.getAttribute("data-canonical-revision"),
     history: await page.getByTestId("history-status").textContent(),
@@ -24,6 +25,7 @@ test("Review Refresh Checks is view-only", async ({ page }) => {
 test("Problems exposes Clear Filter for filter clearing", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const problems = page.getByTestId("problems-panel");
   await page.getByTestId("bottom-tabs").getByRole("tab", { name: "Problems", exact: true }).click();
   await expect(problems.getByRole("button", { name: "Clear Filter", exact: true })).toBeVisible();

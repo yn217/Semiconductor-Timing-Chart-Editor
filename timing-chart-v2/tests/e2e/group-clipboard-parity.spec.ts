@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+import { canonicalFixture } from "../fixtures/canonical.js";
+import type { SignalId, TransactionId } from "@timing-chart-v2/schema";
 import { startInCycleSample } from "./cycle-startup.js";
 
 startInCycleSample(test);
@@ -7,6 +10,7 @@ test("copies, pastes, and duplicates a group as one semantic batch", async ({ pa
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/); // published after the first render
   const surface = host.locator("[data-role='timing-chart-surface']");
   const ribbon = page.getByTestId("ribbon");
   const sourceRows = surface.locator("[data-role='left-row'][data-group-id='grp_cycle_control'][data-row-id]");
@@ -44,9 +48,9 @@ test("copies, pastes, and duplicates a group as one semantic batch", async ({ pa
 
   const download = page.waitForEvent("download");
   await ribbon.getByRole("button", { name: "Save", exact: true }).click();
-  await download;
+  const savedFile = await download;
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
-  const savedDocument = await page.evaluate(() => JSON.parse(localStorage.getItem("timing-chart-v2.recent") ?? "null"));
+  const savedDocument = JSON.parse(await readFile((await savedFile.path())!, "utf8"));
   expect(savedDocument.signalGroups).toHaveLength(5);
   const originalGroup = savedDocument.signalGroups.find((group: { id: string }) => group.id === "grp_cycle_control");
   const copiedGroups = savedDocument.signalGroups.filter((group: { name: string }) => group.name === originalGroup.name);
@@ -86,10 +90,54 @@ test("cuts and pastes a group with its rows as one semantic batch", async ({ pag
   await expect(page.getByTestId("selection-status")).toHaveText("Payload");
   const download = page.waitForEvent("download");
   await ribbon.getByRole("button", { name: "Save", exact: true }).click();
-  await download;
-  const savedDocument = await page.evaluate(() => JSON.parse(localStorage.getItem("timing-chart-v2.recent") ?? "null"));
+  const savedFile = await download;
+  const savedDocument = JSON.parse(await readFile((await savedFile.path())!, "utf8"));
   const groups = savedDocument.signalGroups.filter((group: { name: string }) => group.name === "Payload");
   expect(groups).toHaveLength(1);
   expect(groups[0].id).not.toBe("grp_cycle_payload");
   expect(groups[0].rows).toHaveLength(3);
+});
+
+test("Group Cut → Paste preserves external Transaction links through the production clipboard route", async ({ page }) => {
+  const source = canonicalFixture();
+  const clockId = source.signals[0]!.id;
+  const linkedSignal = source.signals[1]!;
+  const document = {
+    ...source,
+    signalGroups: [
+      { ...source.signalGroups[0]!, rows: [clockId] },
+      { id: "grp_linked_payload", name: "Linked Payload", rows: [linkedSignal.id] },
+    ],
+    transactions: [{ id: "txn_linked_payload" as TransactionId, name: "Read", start: 1, end: 5, laneId: "lane_0", linkedSignals: [linkedSignal.id, clockId] }],
+  };
+
+  await page.goto("/");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({
+    name: "group-cut-links.tcd.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(document)),
+  });
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const ribbon = page.getByTestId("ribbon");
+  const groupHeader = host.locator("[data-role='left-group-header'][data-group-id='grp_linked_payload']");
+  await groupHeader.locator("[data-role='tree-branch']").click();
+  await ribbon.getByRole("button", { name: "Cut", exact: true }).click();
+  await expect(page.getByTestId("clipboard-status")).toHaveText("Cut Linked Payload group");
+  await ribbon.getByRole("button", { name: "Paste", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+
+  const download = page.waitForEvent("download");
+  await ribbon.getByRole("button", { name: "Save", exact: true }).click();
+  const saved = JSON.parse(await readFile((await (await download).path())!, "utf8")) as {
+    signalGroups: readonly { id: string; name: string; rows: readonly string[] }[];
+    transactions: readonly { id: string; linkedSignals?: readonly string[] }[];
+  };
+  const pastedGroup = saved.signalGroups.find((group) => group.name === "Linked Payload");
+  expect(pastedGroup).toBeTruthy();
+  expect(pastedGroup!.id).not.toBe("grp_linked_payload");
+  expect(pastedGroup!.rows).toHaveLength(1);
+  expect(pastedGroup!.rows[0]).not.toBe(linkedSignal.id);
+  expect(saved.transactions.find((transaction) => transaction.id === "txn_linked_payload")?.linkedSignals)
+    .toEqual([clockId, pastedGroup!.rows[0] as SignalId]);
 });

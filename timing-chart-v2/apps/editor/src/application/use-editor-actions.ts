@@ -11,7 +11,7 @@ import type { AISelectionEntityType } from "../ai-bridge-client.js";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
 import type { DocumentLifecycleOwner } from "./use-document-lifecycle.js";
 import { groupId, signalId, valueSignal } from "../minimal-cycle-view-fixture-helpers.js";
-import { nextEntityId } from "../entity-id.js";
+import { createEntityIdAllocator, nextEntityId } from "../entity-id.js";
 import { resolveGroupInsertionIndex, resolveInsertionTarget } from "../insertion-target.js";
 import { parseBulkSignalDefinitions } from "../bulk-signal-parser.js";
 import { createAnnotation } from "../create-annotation.js";
@@ -19,6 +19,7 @@ import type { CommandHistorySession } from "@timing-chart-v2/history";
 import { createFileActionController } from "./file-action-controller.js";
 import { createSelectionActions } from "./selection-actions.js";
 import { createBottomEditorActions } from "./bottom-editor-actions.js";
+import { transactionInsertion } from "../transaction-insertion.js";
 
 export interface EditorActionsInput {
   readonly document: CanonicalDocument;
@@ -61,6 +62,7 @@ export interface EditorActionsInput {
   readonly bottomPinned: boolean;
   readonly setBottomPinned: (value: boolean) => void;
   readonly followSelection: boolean;
+  readonly setFollowSelection: (value: boolean) => void;
   readonly pinnedBottomSelection: { readonly signalId?: SignalId; readonly groupId?: GroupId; readonly annotationId?: AnnotationId; readonly transactionId?: TransactionId; readonly bookmarkId?: BookmarkId } | undefined;
   readonly setPinnedBottomSelection: (value: { readonly signalId?: SignalId; readonly groupId?: GroupId; readonly annotationId?: AnnotationId; readonly transactionId?: TransactionId; readonly bookmarkId?: BookmarkId } | undefined) => void;
   readonly selectedSignalId: SignalId | undefined;
@@ -82,12 +84,13 @@ export interface EditorActions {
   readonly selectedBookmarkId: BookmarkId | undefined;
   readonly selectedBookmark: Bookmark | undefined;
   readonly selectBookmark: (id: BookmarkId) => void;
+  readonly clearBookmarkSelection: () => void;
   readonly selectAIEntity: (target: Readonly<{ entityType: AISelectionEntityType; entityId: string }>) => void;
   readonly addBookmarkAtCycle: (cycle: number) => void;
   readonly revealBookmark: (start: number) => void;
   readonly deleteBottomBookmark: (bookmarkId?: BookmarkId) => void;
   readonly navigateToBookmark: (cycle: number, bookmarkId?: BookmarkId) => void;
-  readonly navigateProblem: (path: string) => void;
+  readonly navigateProblem: (path: string, problem?: DocumentProblem) => void;
   readonly createSelectedAnnotation: (annotation: Annotation) => void;
   readonly createSelectedAnnotationForType: (type: AnnotationType) => void;
   readonly replaceDocument: (document: CanonicalDocument) => CommandResult;
@@ -99,7 +102,7 @@ export interface EditorActions {
   readonly selectTransaction: (id: TransactionId, additive?: boolean) => void;
   readonly selectTransactions: (ids: ReadonlySet<TransactionId>, primary?: TransactionId) => void;
   readonly toggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => CommandResult;
-  readonly createTransaction: () => void;
+  readonly createTransaction: (groupId?: TransactionGroup["id"]) => void;
   readonly createTransactionGroup: () => void;
   readonly renameTransactionGroup: (groupId: TransactionGroup["id"], name: string) => void;
   readonly duplicateAnnotation: (annotation: Annotation) => void;
@@ -157,7 +160,18 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
   const host = input.hostRef;
   const viewport = input.viewportRef;
 
-  const selectBookmark = (id: BookmarkId) => setSelectedBookmarkId(id);
+  const selectBookmark = (id: BookmarkId) => {
+    // Bookmark rows have their own stable-ID selection owner rather than
+    // replacing the semantic primary selection. Make that local Bottom target
+    // explicit: while Following Selection is enabled, selecting a Bookmark
+    // freezes the Bottom panel on it and advertises the non-following state.
+    if (input.followSelection && !input.bottomPinned) input.setFollowSelection(false);
+    setSelectedBookmarkId(id);
+    // setFollowSelection(false) captures the prior primary selection. The
+    // explicit row selection must win that initial snapshot in this same event.
+    input.setPinnedBottomSelection({ bookmarkId: id });
+  };
+  const clearBookmarkSelection = () => setSelectedBookmarkId(undefined);
   const selectLegend = () => {
     setSelectedBookmarkId(undefined);
     input.selection.selectLegend();
@@ -179,7 +193,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
       bookmark: { id, name: "Bookmark " + start, start },
     });
     if (result.ok) {
-      setSelectedBookmarkId(id);
+      selectBookmark(id);
       input.setBottomTab("Bookmarks");
       input.setBottomVisible(true);
     }
@@ -249,14 +263,13 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     selectedBookmarkId,
   });
   const { deleteBottomSignal, deleteBottomAnnotation, deleteBottomTransaction, toggleTransactionSignal, toggleBottomPin } = bottomActions;
-  const createTransaction = () => {
+  const createTransaction = (groupId?: TransactionGroup["id"]) => {
     const id = nextEntityId("transaction", input.document) as TransactionId;
+    const at = transactionInsertion(input.document, input.selectedTransactionId, groupId);
     const result = input.commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", {
-      id: input.nextCommandId("tree_transaction_create"),
-      type: "transaction.create",
-      transaction: { id, name: `Transaction ${input.document.transactions.length + 1}`, start: 0, end: Math.min(4, input.document.timeline.cycleCount), laneId: "lane_0" },
-    });
-    if (result.ok) input.selection.selectTransaction(id);
+      id: input.nextCommandId("tree_transaction_create"), type: "transaction.create", ...(at.afterTransactionId === undefined ? {} : { afterTransactionId: at.afterTransactionId }),
+      transaction: { id, name: `Transaction ${input.document.transactions.length + 1}`, start: at.startCycle ?? 0, end: Math.min((at.startCycle ?? 0) + 4, input.document.timeline.cycleCount), ...at.fields },
+    }); if (result.ok) input.selection.selectTransaction(id);
   };
   // #397 Transaction Mode GUI Closure: `transactionGroup.create` already
   // existed at the command/planner layer (full create/rename/update/delete
@@ -353,8 +366,9 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
       return;
     }
     const signals: Signal[] = [];
+    const allocateId = createEntityIdAllocator(input.document);
     for (const [index, definition] of input.bulkRegistrationPreview.definitions.entries()) {
-      const id = signalId(`${nextEntityId("signal", input.document)}_bulk_${index}`);
+      const id = signalId(`${allocateId("signal")}_bulk_${index}`);
       if (definition.kind === "clock") {
         signals.push({ id, name: definition.signalName, type: "clock", role: "internal", source: { instancePath: definition.instancePath, signalName: definition.signalName }, display: { name: definition.signalName }, generator: { start: 0, period: 2, duty: 0.5, phase: 0, initial: 0, polarity: "positive" }, edgeCounter: { show: false, mode: "both", startNumber: 1, countFrom: "signal-start", labelEvery: 1, position: "above", offset: { x: 0, y: -6 } } });
       } else {
@@ -414,8 +428,8 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     };
   }, []);
 
-  const navigateProblem = (path: string) => {
-    const problem = diagnostics.find((item) => item.path === path);
+  const navigateProblem = (path: string, problem?: DocumentProblem) => {
+    problem ??= diagnostics.find((item) => item.path === path);
     const target = resolveProblemTarget(path, snapshot.document, problem);
     const targetSignal = target.kind === "signal" ? snapshot.document.signals.find((signal) => signal.id === target.id) : undefined;
     const valueIndex = /^\$\.signals\[\d+\]\.values\[(\d+)\]/.exec(path)?.[1];
@@ -444,6 +458,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     selectedBookmarkId,
     selectedBookmark,
     selectBookmark,
+    clearBookmarkSelection,
     selectAIEntity,
     addBookmarkAtCycle,
     revealBookmark,

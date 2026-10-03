@@ -4,7 +4,47 @@ import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
 import { resolveTimeAxisGeometry, type LocalGeometryMap, type TimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { renderGeometryGrid } from "../render-geometry-grid.js";
 import type { ViewMetricsOwner } from "./view-metrics.js";
+import type { TimeAxisMetrics } from "./timeline-geometry-owner.js";
 import { buildRuler } from "./build-ruler.js";
+import { displayWindowForSource } from "./display-boundary.js";
+import { waveOwnerPlacement } from "./wave-owner-placement.js";
+
+/** Reapply ruler-owned boundaries and already-mounted waveform owners from the just-published generation. */
+export function applyPublishedTimeAxisMetrics(ruler: HTMLElement, viewport: HTMLElement | undefined, metrics: TimeAxisMetrics): void {
+  for (const boundary of ruler.querySelectorAll<HTMLElement>("[data-geometry-source-cycle]")) {
+    const cycle = Number(boundary.dataset.geometrySourceCycle);
+    if (!Number.isInteger(cycle)) continue;
+    const x = metrics.sourceBoundaryToContentX(cycle);
+    if (x === undefined || !Number.isFinite(x)) continue;
+    boundary.style.left = `${x}px`;
+    const endCycle = Number(boundary.dataset.geometryEndSourceCycle);
+    if (Number.isInteger(endCycle)) {
+      const endX = metrics.sourceBoundaryToContentX(endCycle);
+      if (endX !== undefined && Number.isFinite(endX)) boundary.style.width = `${Math.max(18, endX - x)}px`;
+    }
+  }
+  const widthOwner = viewport ?? ruler.closest<HTMLElement>("[data-testid='cycle-viewport']");
+  if (!widthOwner || metrics.pxPerDisplayCycle === undefined || metrics.screenOriginX === undefined) return;
+  for (const owner of widthOwner.querySelectorAll<HTMLElement>("[data-wave-owner]")) {
+    if (owner.tagName !== "DIV") continue;
+    const sourceStart = Number(owner.dataset.renderedSourceWindowStart);
+    const sourceEnd = Number(owner.dataset.renderedSourceWindowEnd);
+    if (!Number.isInteger(sourceStart) || !Number.isInteger(sourceEnd) || sourceEnd <= sourceStart) continue;
+    const displayWindow = displayWindowForSource(metrics.mapping, { sourceStart, sourceEnd }, metrics.mapping.sourceCycleCount);
+    if (!displayWindow) continue;
+    const placement = waveOwnerPlacement({
+      displayStart: displayWindow.displayStart,
+      displayEnd: displayWindow.displayEnd,
+      pxPerDisplayCycle: metrics.pxPerDisplayCycle,
+      waveOriginPx: metrics.screenOriginX,
+      presentationScale: metrics.presentationScale,
+      viewBoxWidth: owner.querySelector<SVGSVGElement>(":scope > svg")?.viewBox.baseVal.width,
+      metrics,
+    });
+    owner.style.width = `${placement.width}px`;
+    owner.style.left = `${placement.left}px`;
+  }
+}
 
 // #572 introduced a reference-SVG screen-scale measurement meant only to
 // correct browser sub-pixel/DPI rounding around build-ruler.ts's own
@@ -37,13 +77,13 @@ export function rebuildRulerPresentation(ruler: HTMLElement, document: Canonical
   return { timeAxis, scale, waveWidthPxPerDisplayCycle, waveOriginPx };
 }
 
-export function refreshGridPresentation(grid: HTMLElement, document: CanonicalDocument, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, mappingCache: Pick<DisplayTimeMappingCache, "get">, enabled: boolean, totalHeight: number, viewportWidth: number, screenGeometryScale: number, cyclesPerTc = 10): void {
-  const timeAxis = resolveTimeAxisGeometry(document, geometryMaps);
+export function refreshGridPresentation(grid: HTMLElement, document: CanonicalDocument, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, mappingCache: Pick<DisplayTimeMappingCache, "get">, enabled: boolean, totalHeight: number, viewportWidth: number, screenGeometryScale: number, cyclesPerTc = 10, sharedMetrics?: TimeAxisMetrics): void {
+  const timeAxis = sharedMetrics?.timeAxis ?? resolveTimeAxisGeometry(document, geometryMaps);
   // #765: standalone Transaction hides the Cycle signal rows, so their summed height must not size the grid (it made the scroll owner overflow
   // vertically); the grid spans the Transaction lanes instead.
   const standaloneTransaction = grid.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction";
   const gridHeight = standaloneTransaction ? (grid.parentElement?.querySelector<HTMLElement>(".transaction-lanes")?.offsetHeight ?? 0) : totalHeight;
-  renderGeometryGrid(grid, timeAxis.geometry, timeAxis.ownerSignalId, enabled, gridHeight, mappingCache.get(document.timeline, document.timeGroups), Math.max(160, viewportWidth), screenGeometryScale, timeAxis.mode, grid.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction" ? cyclesPerTc : 1);
+  renderGeometryGrid(grid, timeAxis.geometry, timeAxis.ownerSignalId, enabled, gridHeight, sharedMetrics?.mapping ?? mappingCache.get(document.timeline, document.timeGroups), Math.max(160, viewportWidth), sharedMetrics?.presentationScale ?? screenGeometryScale, timeAxis.mode, grid.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction" ? cyclesPerTc : 1, sharedMetrics);
 }
 
 export function refreshRulerAndGridIfNeeded(isInitialized: () => boolean, refreshRuler: () => void, refreshGrid: () => void): void {
@@ -61,16 +101,16 @@ export function refreshPlayheadPresentation(ruler: HTMLElement, cycle: number, b
   playhead.style.left = `${playheadX}px`;
 }
 
-export function refreshRangeBandPresentation(viewport: HTMLElement, ruler: HTMLElement, rendererHost: HTMLElement, active: boolean, preview: string | undefined, range: { readonly start: number; readonly end: number }, boundaryToLocalX: (cycle: number) => number | undefined, zoom: number, timeDomainLeft: number, totalHeight: number): void {
+export function refreshRangeBandPresentation(viewport: HTMLElement, ruler: HTMLElement, rendererHost: HTMLElement, active: boolean, preview: string | undefined, range: { readonly start: number; readonly end: number }, boundaryToLocalX: (cycle: number, metrics: TimeAxisMetrics) => number | undefined, metrics: TimeAxisMetrics, timeDomainLeft: number, totalHeight: number): void {
   const band = viewport.querySelector<HTMLElement>("[data-role='range-selection-band']");
   const rulerBand = ruler.querySelector<HTMLElement>("[data-role='range-selection-ruler-band']");
   if (!band) return;
   if (!active && !preview) { band.hidden = true; if (rulerBand) rulerBand.hidden = true; for (const tick of ruler.querySelectorAll<HTMLElement>("[data-cycle]")) delete tick.dataset.rangeSelected; return; }
   const [startText, endText] = (preview ?? `${range.start}:${range.end}`).split(":");
   const start = Number(startText); const end = Number(endText);
-  const startLocalX = boundaryToLocalX(start); const endLocalX = boundaryToLocalX(end);
+  const startLocalX = boundaryToLocalX(start, metrics); const endLocalX = boundaryToLocalX(end, metrics);
   if (startLocalX === undefined || endLocalX === undefined || !Number.isInteger(start) || !Number.isInteger(end) || end <= start) { band.hidden = true; return; }
-  const startX = startLocalX * zoom; const endX = endLocalX * zoom;
+  const startX = startLocalX * metrics.zoom; const endX = endLocalX * metrics.zoom;
   if (!Number.isFinite(startX) || !Number.isFinite(endX) || endX <= startX) { band.hidden = true; return; }
   band.hidden = false; band.dataset.rangeStart = String(start); band.dataset.rangeEnd = String(end); band.dataset.source = "ruler-local-geometry"; band.style.left = `${timeDomainLeft + startX}px`; band.style.width = `${endX - startX}px`; band.style.top = "34px"; band.style.height = `${Math.max(totalHeight, viewport.clientHeight - 34)}px`; band.setAttribute("aria-label", `Selected time range [${start}, ${end})`);
   if (rulerBand) { rulerBand.hidden = false; rulerBand.dataset.rangeStart = String(start); rulerBand.dataset.rangeEnd = String(end); rulerBand.dataset.source = "ruler-local-geometry"; rulerBand.style.left = `${startLocalX}px`; rulerBand.style.width = `${endLocalX - startLocalX}px`; rulerBand.setAttribute("aria-label", `Selected time range [${start}, ${end})`); }
@@ -81,10 +121,14 @@ export function refreshRangeBandPresentation(viewport: HTMLElement, ruler: HTMLE
 export function refreshTimelinePresentation(context: {
   readonly reason: string; readonly document: CanonicalDocument; readonly ruler: HTMLElement; readonly grid: HTMLElement; readonly viewport: HTMLElement; readonly host: HTMLElement; readonly rulerViewport: HTMLElement; readonly geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>; readonly geometrySvgs: ReadonlyMap<SignalId, SVGSVGElement>; readonly mappingCache: Pick<DisplayTimeMappingCache, "get">; readonly metricsOwner: Pick<ViewMetricsOwner, "update" | "snapshot">; readonly currentZoom: number; readonly previousScale: number; readonly rulerInitialized: boolean; readonly timeAxis: TimeAxisGeometry; readonly totalHeight: number; readonly gridEnabled: boolean; readonly markOpenPhase: (phase: string) => void; readonly onPlayhead: () => void; readonly onRange: () => void; readonly onResize: () => void;
   readonly cyclesPerTc: number;
+  readonly publishTimeAxisMetrics?: (timeAxis: TimeAxisGeometry, presentationScale: number, pxPerDisplayCycle: number | undefined, screenOriginX: number, zoom: number) => TimeAxisMetrics;
+  readonly publishTimeAxisZoom?: (zoom: number) => TimeAxisMetrics;
+  readonly getTimeAxisMetrics?: () => TimeAxisMetrics;
 }): { readonly timeAxis: TimeAxisGeometry; readonly screenGeometryScale: number; readonly rulerInitialized: boolean; readonly waveWidthPxPerDisplayCycle: number | undefined; readonly waveOriginPx: number | undefined } {
   let timeAxis = context.timeAxis; let screenGeometryScale = context.previousScale; let rulerInitialized = context.rulerInitialized;
   let waveWidthPxPerDisplayCycle: number | undefined;
   let waveOriginPx: number | undefined;
+  let sharedMetrics = context.getTimeAxisMetrics?.();
   if (context.reason === "ruler" || context.reason === "resize") {
     context.metricsOwner.update({ viewportWidth: context.viewport.clientWidth });
     const metrics = context.metricsOwner.snapshot();
@@ -93,13 +137,18 @@ export function refreshTimelinePresentation(context: {
     const minimumWaveWidth = Math.max(160, inTransaction ? metrics.viewportWidth : metrics.viewportWidth - metrics.leftPaneWidth - metrics.frozenPaneWidth);
     const currentTimeAxis = resolveTimeAxisGeometry(context.document, context.geometryMaps);
     const rebuilt = rebuildRulerPresentation(context.ruler, context.document, context.geometryMaps, context.mappingCache, rulerInitialized ? screenGeometryScale : undefined, currentTimeAxis.ownerSignalId ? context.geometrySvgs.get(currentTimeAxis.ownerSignalId) : undefined, metrics.zoom, minimumWaveWidth, context.viewport, context.cyclesPerTc);
-    timeAxis = rebuilt.timeAxis; screenGeometryScale = rebuilt.scale; waveWidthPxPerDisplayCycle = rebuilt.waveWidthPxPerDisplayCycle; waveOriginPx = rebuilt.waveOriginPx; rulerInitialized = true; context.markOpenPhase("ruler-painted"); syncPresentationScale(context.host, context.currentZoom, screenGeometryScale);
+    timeAxis = rebuilt.timeAxis; screenGeometryScale = rebuilt.scale; waveWidthPxPerDisplayCycle = rebuilt.waveWidthPxPerDisplayCycle; waveOriginPx = rebuilt.waveOriginPx; rulerInitialized = true;
+    sharedMetrics = context.publishTimeAxisMetrics?.(timeAxis, screenGeometryScale, waveWidthPxPerDisplayCycle, waveOriginPx, context.currentZoom) ?? sharedMetrics;
+    if (sharedMetrics) applyPublishedTimeAxisMetrics(context.ruler, context.viewport, sharedMetrics);
+    context.markOpenPhase("ruler-painted"); syncPresentationScale(context.host, context.currentZoom, screenGeometryScale);
+  } else {
+    sharedMetrics = context.publishTimeAxisZoom?.(context.currentZoom) ?? sharedMetrics;
   }
-  if (context.reason !== "scroll") { context.metricsOwner.update({ viewportWidth: context.viewport.clientWidth }); const metrics = context.metricsOwner.snapshot(); refreshGridPresentation(context.grid, context.document, context.geometryMaps, context.mappingCache, context.gridEnabled, context.totalHeight, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth, screenGeometryScale, context.cyclesPerTc); }
+  if (context.reason !== "scroll") { context.metricsOwner.update({ viewportWidth: context.viewport.clientWidth }); const metrics = context.metricsOwner.snapshot(); refreshGridPresentation(context.grid, context.document, context.geometryMaps, context.mappingCache, context.gridEnabled, context.totalHeight, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth, screenGeometryScale, context.cyclesPerTc, sharedMetrics); }
   if (context.reason === "playhead") context.onPlayhead();
   if (context.reason === "range") context.onRange();
   if (context.reason === "resize") context.onResize();
-  if (context.reason !== "scroll") syncRulerScroll(context.ruler, context.viewport, context.currentZoom);
+  if (context.reason !== "scroll") syncRulerScroll(context.ruler, context.viewport, sharedMetrics?.zoom ?? context.currentZoom);
   return { timeAxis, screenGeometryScale, rulerInitialized, waveWidthPxPerDisplayCycle, waveOriginPx };
 }
 

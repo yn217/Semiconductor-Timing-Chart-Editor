@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildMiniMapOverview, buildMiniMapTransactionOverview, updateMiniMapTransactionOverview } from "@timing-chart-v2/projection";
-import type { SignalId } from "@timing-chart-v2/schema";
+import { buildMiniMapOverview, buildMiniMapTransactionOverview, transactionLaneIdentityKey, updateMiniMapTransactionOverview } from "@timing-chart-v2/projection";
+import type { SignalId, TransactionGroupId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 describe("MiniMap overview derivation", () => {
@@ -34,10 +34,114 @@ describe("MiniMap overview derivation", () => {
     const before = { ...source, transactions };
     const previous = buildMiniMapTransactionOverview(before);
     const next = { ...before, transactions: [{ ...transactions[0]!, start: 2, end: 5 }, transactions[1]!] };
-    const updated = updateMiniMapTransactionOverview(previous, before.transactions, before.transactionGroups, next);
+    const updated = updateMiniMapTransactionOverview(previous, before.transactions, before.transactionGroups, next, [transactions[0]!.id as never]);
     expect(updated).not.toBe(previous);
-    expect(updated.rows.find((row) => row.key === "ungrouped:lane_0")?.segments[0]).toEqual({ start: 2, end: 5, color: "#8895a7" });
-    expect(updated.rows.find((row) => row.key === "ungrouped:lane_1")).toBe(previous.rows.find((row) => row.key === "ungrouped:lane_1"));
+    expect(updated.rows.find((row) => row.groupId === undefined && row.laneId === "lane_0")?.segments[0]).toEqual({ start: 2, end: 5, color: "#8895a7" });
+    expect(updated.rows.find((row) => row.groupId === undefined && row.laneId === "lane_1")).toBe(previous.rows.find((row) => row.groupId === undefined && row.laneId === "lane_1"));
+    expect(updated.transactionsVisited).toBe(3);
+    expect(updated.laneBucketsRebuilt).toBe(1);
+    expect(updated.rows).toEqual(buildMiniMapTransactionOverview(next).rows);
+
+    const editedAgain = { ...next, transactions: [next.transactions[0]!, { ...next.transactions[1]!, start: 6, end: 9 }] };
+    const updatedAgain = updateMiniMapTransactionOverview(updated, next.transactions, next.transactionGroups, editedAgain, [transactions[1]!.id as never]);
+    expect(updatedAgain.transactionsVisited).toBe(3);
+    expect(updatedAgain.rows).toEqual(buildMiniMapTransactionOverview(editedAgain).rows);
+  });
+
+  it("reuses the immutable Transaction Group presentation index across affected-lane updates", () => {
+    const source = canonicalFixture();
+    const groups = [{ id: "txn_group_index" as TransactionGroupId, name: "Memory", order: 0, color: "#334455" }];
+    let groupVisits = 0;
+    const observedGroups = new Proxy(groups, {
+      get(target, property, receiver) {
+        if (typeof property === "string" && /^\d+$/.test(property) && Number(property) < target.length) groupVisits += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const groupId = groups[0]!.id;
+    const transactions = [
+      { id: "txn_group_index_a", name: "A", start: 1, end: 4, laneId: "lane_a", groupId, linkedSignals: [] },
+      { id: "txn_group_index_b", name: "B", start: 5, end: 8, laneId: "lane_b", groupId, linkedSignals: [] },
+    ];
+    const before = { ...source, transactionGroups: observedGroups, transactions };
+    const previous = buildMiniMapTransactionOverview(before);
+    expect(groupVisits).toBe(groups.length);
+
+    groupVisits = 0;
+    const nextTransactions = transactions.map((transaction, index) => ({ ...transaction, color: index === 0 ? "#123456" : "#654321" }));
+    const next = { ...before, transactions: nextTransactions };
+    const updated = updateMiniMapTransactionOverview(previous, transactions, observedGroups, next, transactions.map((transaction) => transaction.id as never));
+
+    expect(groupVisits).toBe(0);
+    expect(updated.laneBucketsRebuilt).toBe(2);
+    expect(updated.rows).toEqual(buildMiniMapTransactionOverview(next).rows);
+  });
+
+  it("keeps a one-Transaction update bounded across a 10k overview", () => {
+    const source = canonicalFixture();
+    const transactions = Array.from({ length: 10_000 }, (_, index) => ({
+      id: `txn_scale_${index}`,
+      name: `Transaction ${index}`,
+      start: index % 500,
+      end: (index % 500) + 2,
+      laneId: `lane_${index % 100}`,
+      linkedSignals: [],
+    }));
+    const before = { ...source, transactions };
+    const previous = buildMiniMapTransactionOverview(before);
+    const changedIndex = 4_567;
+    const edited = { ...transactions[changedIndex]!, color: "#123456" };
+    const nextTransactions = [...transactions];
+    nextTransactions[changedIndex] = edited;
+    const next = { ...before, transactions: nextTransactions };
+
+    const updated = updateMiniMapTransactionOverview(previous, transactions, before.transactionGroups, next, [edited.id as never]);
+
+    expect(updated.transactionsVisited).toBe(201); // changed item + old/new 100-entry bucket
+    expect(updated.laneBucketsRebuilt).toBe(1);
+    expect(updated.rows).toHaveLength(100);
+    for (const row of updated.rows) {
+      const oldRow = previous.rows.find((candidate) => candidate.key === row.key)!;
+      if (row.laneId === edited.laneId) expect(row).not.toBe(oldRow);
+      else expect(row).toBe(oldRow);
+    }
+    expect(updated.rows).toEqual(buildMiniMapTransactionOverview(next).rows);
+  });
+
+  it("reuses the partial transaction index across consecutive change-set updates", () => {
+    const source = canonicalFixture();
+    const transactions = Array.from({ length: 10_000 }, (_, index) => ({
+      id: `txn_consecutive_${index}`,
+      name: `Transaction ${index}`,
+      start: index % 500,
+      end: (index % 500) + 2,
+      laneId: `lane_${index % 100}`,
+      linkedSignals: [],
+    }));
+    const before = { ...source, transactions };
+    let overview = buildMiniMapTransactionOverview(before);
+    const firstIndex = 4_567;
+    const firstChanged = [...transactions];
+    firstChanged[firstIndex] = { ...transactions[firstIndex]!, color: "#123456" };
+    const firstGuarded = new Proxy(firstChanged, {
+      get(target, property, receiver) {
+        if (property === Symbol.iterator || property === "map" || property === "filter" || property === "entries") {
+          return () => { throw new Error(`unexpected whole-collection traversal via ${String(property)}`); };
+        }
+        return Reflect.get(target, property, receiver) as unknown;
+      },
+    });
+    overview = updateMiniMapTransactionOverview(overview, transactions, before.transactionGroups, { ...before, transactions: firstGuarded } as never, [transactions[firstIndex]!.id as never]);
+    expect(overview.transactionsVisited).toBe(201);
+
+    const secondIndex = 4_667;
+    const secondChanged = [...firstChanged];
+    secondChanged[secondIndex] = { ...firstChanged[secondIndex]!, color: "#654321" };
+    const second = updateMiniMapTransactionOverview(overview, firstGuarded, before.transactionGroups, { ...before, transactions: secondChanged } as never, [transactions[secondIndex]!.id as never]);
+
+    expect(second.transactionsVisited).toBe(201);
+    expect(second.laneBucketsRebuilt).toBe(1);
+    expect(second.rows).toEqual(buildMiniMapTransactionOverview({ ...before, transactions: secondChanged }).rows);
   });
 
   it("falls back to a full overview when a new lane is introduced", () => {
@@ -50,6 +154,33 @@ describe("MiniMap overview derivation", () => {
     expect(updated.rows).toHaveLength(2);
   });
 
+  it("updates only old/new lane buckets when a 10k Transaction move removes and creates lanes", () => {
+    const source = canonicalFixture();
+    const transactions = Array.from({ length: 10_000 }, (_, index) => ({
+      id: `txn_lane_topology_${index}`,
+      name: `Transaction ${index}`,
+      start: index % 500,
+      end: (index % 500) + 2,
+      laneId: index === 0 ? "lane_rare" : `lane_${index % 100}`,
+      linkedSignals: [],
+    }));
+    const before = { ...source, transactions };
+    const previous = buildMiniMapTransactionOverview(before);
+    const movedIndex = 0;
+    const moved = { ...transactions[movedIndex]!, laneId: "lane_new" };
+    const nextTransactions = [...transactions];
+    nextTransactions[movedIndex] = moved;
+    const next = { ...before, transactions: nextTransactions };
+
+    const updated = updateMiniMapTransactionOverview(previous, transactions, before.transactionGroups, next, [moved.id as never]);
+
+    expect(updated.transactionsVisited).toBe(3);
+    expect(updated.laneBucketsRebuilt).toBe(2);
+    expect(updated.rows.some((row) => row.laneId === "lane_rare")).toBe(false);
+    expect(updated.rows.some((row) => row.laneId === "lane_new")).toBe(true);
+    expect(updated.rows).toEqual(buildMiniMapTransactionOverview(next).rows);
+  });
+
   it("refreshes both buckets when a Transaction moves between lanes", () => {
     const source = canonicalFixture();
     const transactions = [
@@ -60,16 +191,18 @@ describe("MiniMap overview derivation", () => {
     const before = { ...source, transactions };
     const previous = buildMiniMapTransactionOverview(before);
     const next = { ...before, transactions: [{ ...transactions[0]!, laneId: "lane_1" }, transactions[1]!, transactions[2]!] };
-    const updated = updateMiniMapTransactionOverview(previous, before.transactions, before.transactionGroups, next);
-    expect(updated.rows.find((row) => row.key === "ungrouped:lane_0")?.segments).toEqual([
+    const updated = updateMiniMapTransactionOverview(previous, before.transactions, before.transactionGroups, next, [transactions[0]!.id as never]);
+    expect(updated.rows.find((row) => row.groupId === undefined && row.laneId === "lane_0")?.segments).toEqual([
       { start: 9, end: 10, color: "#8895a7" },
     ]);
-    expect(updated.rows.find((row) => row.key === "ungrouped:lane_1")?.segments).toEqual([
+    expect(updated.rows.find((row) => row.groupId === undefined && row.laneId === "lane_1")?.segments).toEqual([
       { start: 1, end: 4, color: "#8895a7" },
       { start: 5, end: 8, color: "#8895a7" },
     ]);
     expect(updated.rows).toHaveLength(2);
-    expect(updated.rows.map((row) => row.key)).toEqual(["ungrouped:lane_0", "ungrouped:lane_1"]);
+    expect(updated.rows.map((row) => [row.groupId, row.laneId])).toEqual([[undefined, "lane_0"], [undefined, "lane_1"]]);
+    expect(updated.transactionsVisited).toBe(7);
+    expect(updated.laneBucketsRebuilt).toBe(2);
   });
 
   it("rebuilds exact rows when the last Transaction is deleted", () => {
@@ -131,7 +264,68 @@ describe("MiniMap overview derivation", () => {
     const previous = buildMiniMapTransactionOverview(before);
     const next = { ...before, transactionGroups: [{ ...groups[1]!, order: 0, color: "#bbbbbb" }, { ...groups[0]!, order: 1 }] };
     const updated = updateMiniMapTransactionOverview(previous, before.transactions, before.transactionGroups, next);
-    expect(updated.rows.map((row) => row.key)).toEqual(["group_b:lane_0", "group_a:lane_0"]);
+    expect(updated.rows.map((row) => [row.groupId, row.laneId])).toEqual([["group_b", "lane_0"], ["group_a", "lane_0"]]);
     expect(updated.rows[0]?.segments[0]?.color).toBe("#bbbbbb");
   });
+
+  it("keeps synthetic ungrouped and delimiter-bearing Group/Lane tuples distinct in full and incremental MiniMap paths", () => {
+    const source = canonicalFixture();
+    const transactionGroups = [
+      { id: "ungrouped", name: "Real ungrouped", order: 0, color: "#111111", transactionIds: [] },
+      { id: "a:b", name: "A:B", order: 1, color: "#222222", transactionIds: [] },
+      { id: "a", name: "A", order: 2, color: "#333333", transactionIds: [] },
+    ];
+    const transactions = [
+      { id: "txn_synthetic", name: "Synthetic", start: 1, end: 2, laneId: "lane_0", linkedSignals: [] },
+      { id: "txn_real", name: "Real", start: 2, end: 3, laneId: "lane_0", groupId: "ungrouped", linkedSignals: [] },
+      { id: "txn_colon_left", name: "Left", start: 3, end: 4, laneId: "c", groupId: "a:b", linkedSignals: [] },
+      { id: "txn_colon_right", name: "Right", start: 4, end: 5, laneId: "b:c", groupId: "a", linkedSignals: [] },
+    ];
+    const before = { ...source, transactionGroups, transactions };
+    const overview = buildMiniMapTransactionOverview(before);
+    expect(overview.rows).toHaveLength(4);
+    expect(new Set(overview.rows.map((row) => row.key)).size).toBe(4);
+    expect(overview.rows.map((row) => [row.groupId, row.laneId])).toEqual([
+      ["ungrouped", "lane_0"], ["a:b", "c"], ["a", "b:c"], [undefined, "lane_0"],
+    ]);
+    expect(overview.rows.map((row) => row.segments[0]?.color)).toEqual(["#111111", "#222222", "#333333", "#8895a7"]);
+    expect(transactionLaneIdentityKey(undefined, "lane_0")).not.toBe(transactionLaneIdentityKey("ungrouped", "lane_0"));
+    expect(transactionLaneIdentityKey("a:b", "c")).not.toBe(transactionLaneIdentityKey("a", "b:c"));
+
+    const nextTransactions = transactions.map((transaction) => transaction.id === "txn_colon_right" ? { ...transaction, laneId: "c", groupId: "a:b" } : transaction);
+    const next = { ...before, transactions: nextTransactions };
+    const incrementallyUpdated = updateMiniMapTransactionOverview(overview, transactions, transactionGroups, next);
+    expect(incrementallyUpdated.rows).toEqual(buildMiniMapTransactionOverview(next).rows);
+    expect(incrementallyUpdated.rows.find((row) => row.groupId === "a:b" && row.laneId === "c")?.segments).toHaveLength(2);
+    expect(incrementallyUpdated.rows.find((row) => row.groupId === "a" && row.laneId === "b:c")).toBeUndefined();
+  });
 });
+
+describe("MiniMap dense Signal rows stay pixel-bounded (#856)", () => {
+  const dense = (cycleCount: number, pick: (index: number) => number) => {
+    const fixture = canonicalFixture();
+    const signal = fixture.signals.find((item) => item.type === "binary" || item.type === "bus")!;
+    const values = Array.from({ length: cycleCount }, (_, index) => ({ start: index, value: pick(index) }));
+    const document = { ...fixture, timeline: { ...fixture.timeline, cycleCount, end: cycleCount }, signals: fixture.signals.map((item) => item.id === signal.id ? { ...item, values } as typeof item : item) };
+    const overview = buildMiniMapOverview(document);
+    return { row: overview.rows.find((item) => item.rowId === signal.id)!, cycleCount };
+  };
+
+  it("keeps small rows exact and caps a 20,000-change row at the overview resolution", () => {
+    const exact = dense(500, (index) => index % 2);
+    expect(exact.row.segments).toHaveLength(500);
+    const large = dense(20_000, (index) => index % 2);
+    expect(large.row.segments.length).toBeLessThanOrEqual(1_024);
+    expect(large.row.segments[0]!.start).toBe(0);
+    expect(large.row.segments.at(-1)!.end).toBeLessThanOrEqual(20_000);
+  });
+
+  it("reflects the dominant tone of a dense region and keeps contiguous equal tones merged", () => {
+    const mostlyHigh = dense(20_000, (index) => (index < 10_000 ? 1 : (index % 10 === 0 ? 0 : 1)));
+    expect(new Set(mostlyHigh.row.segments.map((segment) => segment.tone))).toEqual(new Set(["high"]));
+    expect(mostlyHigh.row.segments).toHaveLength(1);
+    const halves = dense(20_000, (index) => (index < 10_000 ? 0 : 1));
+    expect(halves.row.segments.map((segment) => segment.tone)).toEqual(["low", "high"]);
+  });
+});
+

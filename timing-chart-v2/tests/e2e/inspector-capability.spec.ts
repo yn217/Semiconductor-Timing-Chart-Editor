@@ -7,6 +7,7 @@ test("Inspector header has no inert control besides the real Close button", asyn
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const inspector = page.getByTestId("inspector");
   const before = {
     revision: await host.getAttribute("data-canonical-revision"),
@@ -36,6 +37,7 @@ test("Signal Inspector exposes parity fields and applies one transient draft com
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_data']").click();
 
   const inspector = page.getByTestId("inspector");

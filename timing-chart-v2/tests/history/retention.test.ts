@@ -65,6 +65,23 @@ describe("CommandHistorySession retention", () => {
     expect(session.historyState().dirty).toBe(false);
   });
 
+  it("keeps the clean marker non-owning when its document falls outside the Undo horizon", () => {
+    const session = new CommandHistorySession(generatePerformanceDocument({ signalCount: 10, cycleCount: 10 }));
+    for (let index = 0; index < 5; index += 1) {
+      expect(session.execute({ id: `cmd_clean_horizon_${index}` as CommandId, type: "signal.rename", signalId: "sig_perf_1" as SignalId, name: `SAVED_${index}` }).ok).toBe(true);
+    }
+    session.markClean();
+    for (let index = 0; index < HISTORY_RETENTION_LIMIT + 20; index += 1) {
+      expect(session.execute({ id: `cmd_past_clean_horizon_${index}` as CommandId, type: "signal.rename", signalId: "sig_perf_1" as SignalId, name: `AFTER_SAVE_${index}` }).ok).toBe(true);
+    }
+
+    expect(session.historyState()).toMatchObject({ undoDepth: HISTORY_RETENTION_LIMIT, dirty: true });
+    for (let index = 0; index < HISTORY_RETENTION_LIMIT; index += 1) expect(session.undo().ok).toBe(true);
+    expect(session.historyState()).toMatchObject({ canUndo: false, canRedo: true, dirty: true });
+    expect(session.redo().ok).toBe(true);
+    expect(session.historyState().dirty).toBe(true);
+  });
+
   it("does not force the historical chain to remain reachable forever after markClean", () => {
     const session = new CommandHistorySession(generatePerformanceDocument({ signalCount: 10, cycleCount: 10 }));
     for (let index = 0; index < 5; index += 1) {

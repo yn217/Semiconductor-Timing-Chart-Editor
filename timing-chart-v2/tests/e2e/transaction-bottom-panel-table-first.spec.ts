@@ -6,7 +6,7 @@ import { startInCycleSample } from "./cycle-startup.js";
 startInCycleSample(test);
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
-const samplePath = path.resolve(dirname, "../../samples/acceptance-429/sample-transaction-mode-closure.tcd.json");
+const samplePath = path.resolve(dirname, "../../samples/old/pre-reset-2026-10-02/acceptance-429/sample-transaction-mode-closure.tcd.json");
 
 test("Bottom Transaction Panel stays table-first with no persistent selected-item editor", async ({ page }) => {
   await page.goto("/");

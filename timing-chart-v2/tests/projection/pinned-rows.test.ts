@@ -10,6 +10,26 @@ function row(rowId: string, y: number, visible = true): RowLayoutEntry {
 }
 
 describe("Signal pin row projection", () => {
+  it("does not traverse the visible layout when there are no sticky rows", () => {
+    const source = new Proxy([] as RowLayoutEntry[], {
+      get(target, property, receiver) {
+        if (property === "filter" || property === Symbol.iterator) throw new Error("unexpected full visible-row traversal");
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const result = projectPinnedRows({
+      visibleRowLayout: source,
+      rowLayout: source,
+      navigationRowLayout: source,
+      stickyRowIds: [],
+      viewportStartY: 100,
+      leadingHeaderHeight: 32,
+    });
+    expect(result.rowLayout).toBe(source);
+    expect(result.navigationRowLayout).toBe(source);
+    expect(result.pinnedRowIds).toEqual([]);
+  });
+
   it("pins by stable ID, stacks multiple rows, and leaves source order/objects untouched", () => {
     const source = [row("signal-a", 32), row("signal-b", 66), row("signal-c", 100)];
     const original = source.map((entry) => ({ ...entry }));

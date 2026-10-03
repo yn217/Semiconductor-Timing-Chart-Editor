@@ -14,6 +14,234 @@ function withSignals(document: CanonicalDocument, signals: CanonicalDocument["si
 }
 
 describe("derived timing diagnostics", () => {
+  it("recomputes unknown-value diagnostics only for Signals whose semantic inputs changed", () => {
+    const source = canonicalFixture();
+    let unchangedValueVisits = 0;
+    const unchangedValues = new Proxy([{ start: 0, value: "01" }], {
+      get(target, property, receiver) {
+        if (property === Symbol.iterator || property === "forEach" || (typeof property === "string" && /^\\d+$/.test(property))) unchangedValueVisits += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const unchangedSignal = { ...source.signals[1]!, id: "sig_data_2" as SignalId, name: "DATA2", values: unchangedValues };
+    const previous = withSignals(source, [source.signals[0]!, source.signals[1]!, unchangedSignal]);
+    const previousDiagnostics = deriveTimingDiagnostics(previous);
+    unchangedValueVisits = 0;
+    const next = withSignals(previous, [source.signals[0]!, { ...source.signals[1]!, values: [{ start: 0, value: "X" }] }, unchangedSignal]);
+
+    const incremental = deriveTimingDiagnosticsIfInputsChanged(previous, next, previousDiagnostics);
+    expect(unchangedValueVisits).toBe(0);
+    expect(incremental.recomputed).toBe(true);
+    expect(incremental.diagnostics).toEqual(deriveTimingDiagnostics(next));
+    expect(incremental.diagnostics.find((diagnostic) => diagnostic.entityId === source.signals[1]!.id)).toMatchObject({ code: "UNKNOWN_SIGNAL_VALUE", path: "$.signals[1].values[0].value" });
+  });
+
+  it("re-evaluates only protocol constraints that depend on changed Signals", () => {
+    const source = canonicalFixture();
+    const template = source.signals[1]!;
+    const requestChanged = { ...template, id: "sig_req_changed" as SignalId, name: "REQ_CHANGED", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 2, value: 1 }] };
+    const acknowledgeChanged = { ...template, id: "sig_ack_changed" as SignalId, name: "ACK_CHANGED", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 5, value: 1 }] };
+    const changedPayload = { ...template, id: "sig_data_changed" as SignalId, values: [{ start: 0, value: "00" }, { start: 3, value: "01" }] };
+    const requestShared = { ...template, id: "sig_req_shared" as SignalId, name: "REQ_SHARED", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 2, value: 1 }] };
+    const acknowledgeShared = { ...template, id: "sig_ack_shared" as SignalId, name: "ACK_SHARED", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 5, value: 1 }] };
+    const requestUnchanged = { ...template, id: "sig_req_unchanged" as SignalId, name: "REQ_UNCHANGED", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 2, value: 1 }] };
+    const acknowledgeUnchangedBase = { ...template, id: "sig_ack_unchanged" as SignalId, name: "ACK_UNCHANGED", type: "binary" as const, values: [{ start: 0, value: 0 }] };
+    let unrelatedValueReads = 0;
+    const unrelatedValues = new Proxy([{ start: 0, value: 0 }], {
+      get(target, property, receiver) {
+        if (property === Symbol.iterator || property === "forEach" || (typeof property === "string" && /^\\d+$/.test(property))) unrelatedValueReads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const acknowledgeUnchanged = { ...acknowledgeUnchangedBase, values: unrelatedValues };
+    const unchangedPayload = { ...template, id: "sig_data_unchanged" as SignalId, values: [{ start: 0, value: "00" }, { start: 3, value: "01" }] };
+    const changedConstraint: Constraint = { id: "constraint_changed", type: "handshake", data: { requestSignalId: requestChanged.id, acknowledgeSignalId: acknowledgeChanged.id, stableSignalIds: [changedPayload.id] } };
+    const sharedConstraint: Constraint = { id: "constraint_changed_shared", type: "handshake", data: { requestSignalId: requestShared.id, acknowledgeSignalId: acknowledgeShared.id, stableSignalIds: [changedPayload.id] } };
+    const latencyRangeConstraint: Constraint = { id: "constraint_latency_range_changed", type: "latency-range", data: { requestSignalId: requestChanged.id, acknowledgeSignalId: acknowledgeChanged.id, minCycles: 1, maxCycles: 3 } };
+    const latencyConstraint: Constraint = { id: "constraint_latency_changed", type: "latency", data: { triggerSignalId: requestChanged.id, triggerEdge: "rising", responseSignalId: acknowledgeChanged.id, responseEdge: "rising", minCycles: 1, maxCycles: 3 } };
+    const unchangedConstraint: Constraint = { id: "constraint_unchanged", type: "handshake", data: { requestSignalId: requestUnchanged.id, acknowledgeSignalId: acknowledgeUnchanged.id, stableSignalIds: [unchangedPayload.id] } };
+    const constraints = [changedConstraint, sharedConstraint, latencyRangeConstraint, latencyConstraint, unchangedConstraint];
+    const initial = withSignals(source, [source.signals[0]!, requestChanged, acknowledgeChanged, changedPayload, requestShared, acknowledgeShared, requestUnchanged, acknowledgeUnchanged, unchangedPayload], constraints);
+    const previous = { ...initial, checkSettings: { ...initial.checkSettings, enabledCategories: ["protocol", "stability"] as const } };
+    const previousDiagnostics = deriveTimingDiagnostics(previous);
+    expect(previousDiagnostics.some((item) => item.code === "HANDSHAKE_NO_ACK" && item.objectId === unchangedConstraint.id)).toBe(true);
+    unrelatedValueReads = 0;
+
+    const next = withSignals(previous, [previous.signals[0]!, { ...requestChanged, values: [{ start: 0, value: 0 }, { start: 4, value: 1 }] }, acknowledgeChanged, changedPayload, requestShared, acknowledgeShared, requestUnchanged, acknowledgeUnchanged, unchangedPayload], constraints);
+    const incremental = deriveTimingDiagnosticsIfInputsChanged(previous, next, previousDiagnostics);
+    expect(unrelatedValueReads).toBe(0);
+    expect(incremental.diagnostics).toEqual(deriveTimingDiagnostics(next));
+    expect(incremental.diagnostics.filter((item) => item.code === "HANDSHAKE_DATA_UNSTABLE" && item.entityId === changedPayload.id)).toHaveLength(1);
+  });
+
+  it("builds the previous Signal ID/index map once during incremental diagnostics", () => {
+    const previous = canonicalFixture();
+    const previousDiagnostics = deriveTimingDiagnostics(previous);
+    let previousMapPasses = 0;
+    const previousSignals = new Proxy(previous.signals, {
+      get(target, property, receiver) {
+        const value = Reflect.get(target, property, receiver);
+        if (property !== "map") return value;
+        return (...args: unknown[]) => {
+          previousMapPasses += 1;
+          return Reflect.apply(value as (...items: unknown[]) => unknown, target, args);
+        };
+      },
+    });
+    const next = { ...previous, signals: previous.signals.map((signal) => signal.id === previous.signals[1]!.id ? { ...signal, name: "RENAMED" } : signal) };
+
+    const incremental = deriveTimingDiagnosticsIfInputsChanged({ ...previous, signals: previousSignals }, next, previousDiagnostics);
+
+    expect(incremental.diagnostics).toEqual(deriveTimingDiagnostics(next));
+    expect(previousMapPasses).toBe(1);
+  });
+
+  it("reevaluates only changed non-Handshake constraints when Signals and settings are shared", () => {
+    const source = canonicalFixture();
+    const first: Constraint = { id: "constraint_incremental_first", type: "latency", data: {} };
+    const unchanged: Constraint = { id: "constraint_incremental_unchanged", type: "latency", data: {} };
+    const previous = { ...source, constraints: [first, unchanged] };
+    const previousDiagnostics = deriveTimingDiagnostics(previous);
+    const changedFirst: Constraint = { ...first, data: { triggerSignalId: "missing" } };
+    const expected = { ...previous, constraints: [changedFirst, unchanged] };
+    const expectedDiagnostics = deriveTimingDiagnostics(expected);
+    Object.defineProperty(unchanged, "data", { get() { throw new Error("unchanged constraint must not be reevaluated"); } });
+
+    const incremental = deriveTimingDiagnosticsIfInputsChanged(previous, expected, previousDiagnostics);
+
+    expect(incremental.recomputed).toBe(true);
+    expect(incremental.diagnostics).toEqual(expectedDiagnostics);
+  });
+
+  it("reuses Signal indexes across constraint edits and rebuilds them for a new Signal collection", () => {
+    const source = canonicalFixture();
+    let signalCollectionPasses = 0;
+    const signals = new Proxy(source.signals, {
+      get(target, property, receiver) {
+        if (property === "forEach") return (callback: Parameters<typeof target.forEach>[0], thisArg?: unknown) => {
+          signalCollectionPasses += 1;
+          return target.forEach(callback, thisArg);
+        };
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const initialConstraint: Constraint = { id: "constraint_index_cache", type: "latency", data: {} };
+    const previous = { ...source, signals, constraints: [initialConstraint] };
+    const previousDiagnostics = deriveTimingDiagnostics(previous);
+    signalCollectionPasses = 0;
+
+    const firstConstraint: Constraint = { ...initialConstraint, data: { triggerSignalId: "missing_first" } };
+    const firstDocument = { ...previous, constraints: [firstConstraint] };
+    const first = deriveTimingDiagnosticsIfInputsChanged(previous, firstDocument, previousDiagnostics);
+    const passesAfterFirstEdit = signalCollectionPasses;
+    const secondConstraint: Constraint = { ...firstConstraint, data: { triggerSignalId: "missing_second" } };
+    const secondDocument = { ...firstDocument, constraints: [secondConstraint] };
+    const second = deriveTimingDiagnosticsIfInputsChanged(firstDocument, secondDocument, first.diagnostics);
+
+    expect(signalCollectionPasses).toBe(passesAfterFirstEdit);
+    expect(first.diagnostics).toEqual(deriveTimingDiagnostics(firstDocument));
+    expect(second.diagnostics).toEqual(deriveTimingDiagnostics(secondDocument));
+
+    let replacementCollectionPasses = 0;
+    const replacementSignals = new Proxy([...signals], {
+      get(target, property, receiver) {
+        if (property === "forEach") return (callback: Parameters<typeof target.forEach>[0], thisArg?: unknown) => {
+          replacementCollectionPasses += 1;
+          return target.forEach(callback, thisArg);
+        };
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const replacementDocument = { ...secondDocument, signals: replacementSignals };
+    const replacementConstraint: Constraint = { ...secondConstraint, data: { triggerSignalId: "missing_replacement" } };
+    const replacementNext = { ...replacementDocument, constraints: [replacementConstraint] };
+    const replacement = deriveTimingDiagnosticsIfInputsChanged(secondDocument, replacementNext, second.diagnostics);
+    expect(replacement.diagnostics).toEqual(deriveTimingDiagnostics(replacementNext));
+    const passesAfterCollectionReplacement = replacementCollectionPasses;
+    const finalConstraint: Constraint = { ...replacementConstraint, data: { triggerSignalId: "missing_final" } };
+    const finalDocument = { ...replacementNext, constraints: [finalConstraint] };
+    const final = deriveTimingDiagnosticsIfInputsChanged(replacementNext, finalDocument, replacement.diagnostics);
+    expect(replacementCollectionPasses).toBe(passesAfterCollectionReplacement);
+    expect(final.diagnostics).toEqual(deriveTimingDiagnostics(finalDocument));
+  });
+
+  it("evaluates an added constraint only and rebases retained diagnostic paths after insertion", () => {
+    const source = canonicalFixture();
+    const retained: Constraint = { id: "constraint_structure_retained", type: "latency", data: {} };
+    const previous = { ...source, constraints: [retained] };
+    const previousDiagnostics = deriveTimingDiagnostics(previous);
+    const added: Constraint = { id: "constraint_structure_added", type: "latency", data: { triggerSignalId: "missing" } };
+    const next = { ...previous, constraints: [added, retained] };
+    const expected = deriveTimingDiagnostics(next);
+    Object.defineProperty(retained, "data", { get() { throw new Error("unchanged constraint must not be reevaluated after insertion"); } });
+
+    const incremental = deriveTimingDiagnosticsIfInputsChanged(previous, next, previousDiagnostics);
+
+    expect(incremental.diagnostics).toEqual(expected);
+    expect(incremental.diagnostics.find((item) => item.objectId === added.id)).toMatchObject({ path: "$.constraints[0].data" });
+  });
+
+  it("removes deleted constraint findings and rebases retained paths without reevaluating unchanged constraints", () => {
+    const source = canonicalFixture();
+    const removed: Constraint = { id: "constraint_structure_removed", type: "latency", data: { triggerSignalId: "missing_removed" } };
+    const retained: Constraint = { id: "constraint_structure_after_remove", type: "latency", data: { triggerSignalId: "missing_retained" } };
+    const previous = { ...source, constraints: [removed, retained] };
+    const previousDiagnostics = deriveTimingDiagnostics(previous);
+    const next = { ...previous, constraints: [retained] };
+    const expected = deriveTimingDiagnostics(next);
+    Object.defineProperty(retained, "data", { get() { throw new Error("unchanged constraint must not be reevaluated after deletion"); } });
+
+    const incremental = deriveTimingDiagnosticsIfInputsChanged(previous, next, previousDiagnostics);
+
+    expect(incremental.diagnostics).toEqual(expected);
+    expect(incremental.diagnostics.some((item) => item.objectId === removed.id)).toBe(false);
+    expect(incremental.diagnostics.find((item) => item.objectId === retained.id)).toMatchObject({ path: "$.constraints[0].data" });
+  });
+
+  it("updates changed Handshakes and only refreshes peers sharing affected stable Signals", () => {
+    const source = canonicalFixture();
+    const template = source.signals[1]!;
+    const requestA = { ...template, id: "sig_edit_req_a" as SignalId, name: "REQ_A", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 2, value: 1 }] };
+    const ackA = { ...template, id: "sig_edit_ack_a" as SignalId, name: "ACK_A", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 8, value: 1 }] };
+    const requestB = { ...template, id: "sig_edit_req_b" as SignalId, name: "REQ_B", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 3, value: 1 }] };
+    const ackB = { ...template, id: "sig_edit_ack_b" as SignalId, name: "ACK_B", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 9, value: 1 }] };
+    const payloadA = { ...template, id: "sig_edit_payload_a" as SignalId, values: [{ start: 0, value: "00" }, { start: 4, value: "01" }] };
+    const payloadB = { ...template, id: "sig_edit_payload_b" as SignalId, values: [{ start: 0, value: "00" }, { start: 5, value: "01" }] };
+    const unrelatedRequestBase = { ...template, id: "sig_edit_req_unrelated" as SignalId, name: "REQ_UNRELATED", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 2, value: 1 }] };
+    let unrelatedRequestReads = 0;
+    const unrelatedRequest = { ...unrelatedRequestBase, values: new Proxy(unrelatedRequestBase.values, {
+      get(target, property, receiver) {
+        if (property === Symbol.iterator || property === "forEach" || (typeof property === "string" && /^\\d+$/.test(property))) unrelatedRequestReads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    }) };
+    const unrelatedAck = { ...ackA, id: "sig_edit_ack_unrelated" as SignalId };
+    const changed: Constraint = { id: "constraint_edit_changed", type: "handshake", data: { requestSignalId: requestA.id, acknowledgeSignalId: ackA.id, stableSignalIds: [payloadA.id] } };
+    const shared: Constraint = { id: "constraint_edit_shared", type: "handshake", data: { requestSignalId: requestB.id, acknowledgeSignalId: ackB.id, stableSignalIds: [payloadA.id] } };
+    const invalidShared: Constraint = { id: "constraint_edit_invalid_shared", type: "handshake", data: { requestSignalId: requestB.id, acknowledgeSignalId: "missing_ack", stableSignalIds: [payloadA.id] } };
+    const unrelated: Constraint = { id: "constraint_edit_unrelated", type: "handshake", data: { requestSignalId: unrelatedRequest.id, acknowledgeSignalId: unrelatedAck.id, stableSignalIds: [] } };
+    const signals = [source.signals[0]!, requestA, ackA, requestB, ackB, payloadA, payloadB, unrelatedRequest, unrelatedAck];
+
+    for (const categories of [["protocol", "stability"], ["stability"], ["protocol"]] as const) {
+      const baseDocument = withSignals(source, signals, [changed, invalidShared, shared, unrelated]);
+      const previous = { ...baseDocument, checkSettings: { ...baseDocument.checkSettings, enabledCategories: categories } };
+      const previousDiagnostics = deriveTimingDiagnostics(previous);
+      const nextChanged: Constraint = { ...changed, data: { ...changed.data, stableSignalIds: [payloadB.id] } };
+      const next = { ...previous, constraints: [nextChanged, invalidShared, shared, unrelated] };
+      unrelatedRequestReads = 0;
+
+      const incremental = deriveTimingDiagnosticsIfInputsChanged(previous, next, previousDiagnostics);
+      expect(unrelatedRequestReads).toBe(0);
+      expect(incremental.diagnostics).toEqual(deriveTimingDiagnostics(next));
+      expect(incremental.diagnostics).toContainEqual(expect.objectContaining({ code: "HANDSHAKE_CONSTRAINT_INVALID", objectId: invalidShared.id, path: "$.constraints[1].data.acknowledgeSignalId" }));
+      if (categories.includes("stability")) {
+        expect(incremental.diagnostics.filter((item) => item.code === "HANDSHAKE_DATA_UNSTABLE").map((item) => item.entityId).sort()).toEqual([payloadA.id, payloadB.id].sort());
+      } else {
+        expect(incremental.diagnostics.some((item) => item.category === "stability")).toBe(false);
+      }
+    }
+  });
+
   it("reuses derived Problems for unrelated immutable edits and invalidates every diagnostic input", () => {
     const source = canonicalFixture();
     const current = withSignals(source, [source.signals[0]!, { ...source.signals[1]!, values: [{ start: 1, value: "X" }] }]);
@@ -40,7 +268,41 @@ describe("derived timing diagnostics", () => {
     const changedConstraints = { ...current, constraints: [...current.constraints] };
     expect(deriveTimingDiagnosticsIfInputsChanged(current, changedConstraints, currentDiagnostics).recomputed).toBe(true);
     const changedSettings = { ...current, checkSettings: { enabledCategories: ["protocol"] as const } };
-    expect(deriveTimingDiagnosticsIfInputsChanged(current, changedSettings, currentDiagnostics).recomputed).toBe(true);
+    const settingsResult = deriveTimingDiagnosticsIfInputsChanged(current, changedSettings, currentDiagnostics);
+    expect(settingsResult.recomputed).toBe(false);
+    expect(settingsResult.diagnostics).toEqual(deriveTimingDiagnostics(changedSettings));
+  });
+
+  it("changes enabled diagnostic categories without reevaluating retained or disabled rule domains", () => {
+    const source = canonicalFixture();
+    const constraint: Constraint = { id: "constraint_category_cache", type: "latency", data: { triggerSignalId: "missing_trigger" } };
+    const previous = { ...source, constraints: [constraint], checkSettings: { enabledCategories: ["unknown-value"] as const } };
+    const previousDiagnostics = deriveTimingDiagnostics(previous);
+    const enabledProtocol = { ...previous, checkSettings: { enabledCategories: ["unknown-value", "protocol"] as const } };
+    const enabled = deriveTimingDiagnosticsIfInputsChanged(previous, enabledProtocol, previousDiagnostics);
+    expect(enabled.recomputed).toBe(true);
+    expect(enabled.diagnostics).toEqual(deriveTimingDiagnostics(enabledProtocol));
+    expect(enabled.diagnostics).toContainEqual(expect.objectContaining({ code: "LATENCY_CONSTRAINT_INVALID", objectId: constraint.id }));
+
+    let signalCollectionReads = 0;
+    const guardedSignals = new Proxy(enabledProtocol.signals, {
+      get(target, property, receiver) {
+        if ([Symbol.iterator, "map", "forEach", "filter", "find", "some"].includes(property as never)) {
+          signalCollectionReads += 1;
+          throw new Error(`disabled category removal scanned Signals via ${String(property)}`);
+        }
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const withoutProtocol = { ...enabledProtocol, signals: guardedSignals, checkSettings: { enabledCategories: ["unknown-value"] as const } };
+    const disabled = deriveTimingDiagnosticsIfInputsChanged(
+      { ...enabledProtocol, signals: guardedSignals },
+      withoutProtocol,
+      enabled.diagnostics,
+    );
+    expect(signalCollectionReads).toBe(0);
+    expect(disabled.recomputed).toBe(false);
+    expect(disabled.diagnostics).toEqual(deriveTimingDiagnostics(enabledProtocol, { enabledCategories: ["unknown-value"] }));
   });
 
   it("evaluates through a shared rule registry with stable semantic keys", () => {
@@ -110,6 +372,45 @@ describe("derived timing diagnostics", () => {
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0]).toMatchObject({ code: "HANDSHAKE_DATA_UNSTABLE", path: "$.signals[3].values[1].start", objectId: payload.id });
     expect(deriveTimingDiagnostics({ ...document, signals: document.signals.map((signal) => signal.id === acknowledge.id ? { ...signal, values: [{ start: 0, value: 0 }] } : signal) })).toEqual(expect.arrayContaining([expect.objectContaining({ code: "HANDSHAKE_NO_ACK", objectId: constraint.id })]));
+  });
+
+  it("evaluates Handshake protocol and stability categories independently in full and incremental paths", () => {
+    const source = canonicalFixture();
+    const template = source.signals[1]!;
+    const request = { ...template, id: "sig_req_stability" as SignalId, name: "REQ", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 2, value: 1 }] };
+    const acknowledge = { ...template, id: "sig_ack_stability" as SignalId, name: "ACK", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 5, value: 1 }] };
+    const requestWithoutAck = { ...template, id: "sig_req_no_ack" as SignalId, name: "REQ_NO_ACK", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 6, value: 1 }] };
+    const payload = { ...template, id: "sig_payload_stability" as SignalId, name: "PAYLOAD", values: [{ start: 0, value: "00" }] };
+    const stableConstraint: Constraint = { id: "constraint_stability", type: "handshake", data: { requestSignalId: request.id, acknowledgeSignalId: acknowledge.id, stableSignalIds: [payload.id] } };
+    const missingAckConstraint: Constraint = { id: "constraint_no_ack", type: "handshake", data: { requestSignalId: requestWithoutAck.id, acknowledgeSignalId: acknowledge.id } };
+    const baseDocument = withSignals(source, [source.signals[0]!, request, acknowledge, requestWithoutAck, payload], [stableConstraint, missingAckConstraint]);
+    const base = { ...baseDocument, checkSettings: { ...baseDocument.checkSettings, enabledCategories: ["stability"] as const } };
+
+    const stabilityOnly = deriveTimingDiagnostics(base, { enabledCategories: ["stability"] });
+    expect(stabilityOnly).toEqual([]);
+    const changedPayload = { ...payload, values: [{ start: 0, value: "00" }, { start: 3, value: "01" }] };
+    const next = withSignals(base, [base.signals[0]!, request, acknowledge, requestWithoutAck, changedPayload], [stableConstraint, missingAckConstraint]);
+    const incremental = deriveTimingDiagnosticsIfInputsChanged(base, next, stabilityOnly);
+    expect(incremental.recomputed).toBe(true);
+    expect(incremental.diagnostics).toEqual(deriveTimingDiagnostics(next));
+    expect(incremental.diagnostics).toMatchObject([{ code: "HANDSHAKE_DATA_UNSTABLE", category: "stability", entityId: payload.id }]);
+    expect(incremental.diagnostics.some((item) => item.category === "protocol")).toBe(false);
+
+    const protocolOnly = deriveTimingDiagnostics(next, { enabledCategories: ["protocol"] });
+    expect(protocolOnly.some((item) => item.code === "HANDSHAKE_NO_ACK" && item.objectId === missingAckConstraint.id)).toBe(true);
+    expect(protocolOnly.some((item) => item.category === "stability")).toBe(false);
+
+    const both = deriveTimingDiagnostics(next, { enabledCategories: ["protocol", "stability"] });
+    expect(both.some((item) => item.code === "HANDSHAKE_NO_ACK" && item.objectId === missingAckConstraint.id)).toBe(true);
+    expect(both.some((item) => item.code === "HANDSHAKE_DATA_UNSTABLE" && item.entityId === payload.id)).toBe(true);
+
+    for (const categories of [["stability"], ["protocol"], ["protocol", "stability"]] as const) {
+      const configuredBase = { ...baseDocument, checkSettings: { ...baseDocument.checkSettings, enabledCategories: categories } };
+      const configuredNext = withSignals(configuredBase, [configuredBase.signals[0]!, request, acknowledge, requestWithoutAck, changedPayload], [stableConstraint, missingAckConstraint]);
+      const previousFindings = deriveTimingDiagnostics(configuredBase);
+      const incrementalFindings = deriveTimingDiagnosticsIfInputsChanged(configuredBase, configuredNext, previousFindings).diagnostics;
+      expect(incrementalFindings).toEqual(deriveTimingDiagnostics(configuredNext));
+    }
   });
 
   it("uses indexed acknowledge and stable-change windows without changing overlapping-request findings", () => {

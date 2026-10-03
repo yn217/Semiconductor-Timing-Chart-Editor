@@ -1,0 +1,662 @@
+{
+  "topLevelFields": {
+    "annotationGroups": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "annotations": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "bookmarks": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "checkSettings": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "constraints": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "document": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "formatVersion": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "layout": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "legend": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "signalGroups": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "signals": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "timeGroups": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "timeline": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "transactions": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ]
+  },
+  "signalTypes": {
+    "binary": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "bus": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "clock": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "commentRow": [
+      "01_cycle_signals.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "event": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "logic": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "pulse": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "state": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ]
+  },
+  "signalRoles": {
+    "input": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "internal": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "output": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ]
+  },
+  "displayFormats": {
+    "binary": [
+      "06_layout_export.tcd.json"
+    ],
+    "decimal": [
+      "06_layout_export.tcd.json"
+    ],
+    "hex": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "signed": [
+      "06_layout_export.tcd.json"
+    ],
+    "symbolic": [
+      "06_layout_export.tcd.json"
+    ],
+    "unsigned": [
+      "06_layout_export.tcd.json"
+    ]
+  },
+  "annotationTypes": {
+    "arrow": [
+      "02_annotations.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "bracket": [
+      "02_annotations.tcd.json"
+    ],
+    "callout": [
+      "02_annotations.tcd.json"
+    ],
+    "connector": [
+      "02_annotations.tcd.json"
+    ],
+    "dependency": [
+      "02_annotations.tcd.json"
+    ],
+    "ellipse": [
+      "02_annotations.tcd.json"
+    ],
+    "ghostTrace": [
+      "02_annotations.tcd.json"
+    ],
+    "highlight": [
+      "02_annotations.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "marker": [
+      "02_annotations.tcd.json"
+    ],
+    "measurement": [
+      "02_annotations.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "range": [
+      "02_annotations.tcd.json"
+    ],
+    "rectangle": [
+      "02_annotations.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "text": [
+      "02_annotations.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "textbox": [
+      "02_annotations.tcd.json"
+    ],
+    "timingRegion": [
+      "02_annotations.tcd.json"
+    ],
+    "verticalLine": [
+      "02_annotations.tcd.json"
+    ]
+  },
+  "anchorPoints": {
+    "cycle-center": [
+      "02_annotations.tcd.json"
+    ],
+    "cycle-end": [
+      "02_annotations.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "cycle-start": [
+      "02_annotations.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "falling-edge": [
+      "02_annotations.tcd.json"
+    ],
+    "rising-edge": [
+      "02_annotations.tcd.json"
+    ],
+    "row-center": [
+      "02_annotations.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "transition-center": [
+      "02_annotations.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "transition-end": [
+      "02_annotations.tcd.json"
+    ],
+    "transition-start": [
+      "02_annotations.tcd.json"
+    ],
+    "value-center": [
+      "02_annotations.tcd.json"
+    ],
+    "value-start": [
+      "02_annotations.tcd.json"
+    ]
+  },
+  "anchorTransitionKinds": {
+    "ratio": [
+      "02_annotations.tcd.json"
+    ],
+    "threshold": [
+      "02_annotations.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ]
+  },
+  "signalNameAlign": {
+    "center": [
+      "06_layout_export.tcd.json"
+    ],
+    "left": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "right": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ]
+  },
+  "signalNameOverflow": {
+    "ellipsis": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "expand": [
+      "06_layout_export.tcd.json"
+    ],
+    "wrap": [
+      "06_layout_export.tcd.json"
+    ]
+  },
+  "clockFeatures": {
+    "duty": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "edgeCounter": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "enable": [
+      "01_cycle_signals.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "period": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "phase": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "polarity": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "referenceClock": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "suppressedPeriods": [
+      "01_cycle_signals.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ]
+  },
+  "annotationLineTypes": {
+    "curve": [
+      "02_annotations.tcd.json"
+    ],
+    "diagonal": [
+      "02_annotations.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "orthogonal": [
+      "02_annotations.tcd.json"
+    ],
+    "straight": [
+      "02_annotations.tcd.json"
+    ]
+  },
+  "annotationArrowheads": {
+    "bidirectional": [
+      "02_annotations.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "end": [
+      "02_annotations.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "none": [
+      "02_annotations.tcd.json"
+    ],
+    "start": [
+      "02_annotations.tcd.json"
+    ]
+  },
+  "measurementProfiles": {
+    "10-90": [
+      "02_annotations.tcd.json"
+    ],
+    "20-80": [
+      "02_annotations.tcd.json"
+    ],
+    "30-70": [
+      "02_annotations.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "50%": [
+      "02_annotations.tcd.json"
+    ],
+    "custom": [
+      "02_annotations.tcd.json"
+    ],
+    "cycle": [
+      "02_annotations.tcd.json"
+    ]
+  },
+  "measurementLayoutStartMarkers": {
+    "arrow": [
+      "02_annotations.tcd.json"
+    ],
+    "bar": [
+      "02_annotations.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "none": [
+      "02_annotations.tcd.json"
+    ]
+  },
+  "measurementLayoutEndMarkers": {
+    "arrow": [
+      "02_annotations.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "bar": [
+      "02_annotations.tcd.json"
+    ],
+    "none": [
+      "02_annotations.tcd.json"
+    ]
+  },
+  "measurementLayoutArrowLayouts": {
+    "auto": [
+      "02_annotations.tcd.json"
+    ],
+    "inward": [
+      "02_annotations.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "outward": [
+      "02_annotations.tcd.json"
+    ]
+  },
+  "measurementLayoutExtensions": {
+    "both": [
+      "02_annotations.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "end": [
+      "02_annotations.tcd.json"
+    ],
+    "none": [
+      "02_annotations.tcd.json"
+    ],
+    "start": [
+      "02_annotations.tcd.json"
+    ]
+  },
+  "markerSpanModes": {
+    "auto": [
+      "02_annotations.tcd.json"
+    ],
+    "custom": [
+      "02_annotations.tcd.json"
+    ],
+    "rows": [
+      "02_annotations.tcd.json"
+    ]
+  },
+  "highlightPositionModes": {
+    "cycle-snap": [
+      "02_annotations.tcd.json"
+    ],
+    "free": [
+      "02_annotations.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ]
+  },
+  "annotationLabelPlacements": {
+    "above": [
+      "02_annotations.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "below": [
+      "02_annotations.tcd.json"
+    ],
+    "center": [
+      "02_annotations.tcd.json"
+    ],
+    "end": [
+      "02_annotations.tcd.json"
+    ],
+    "start": [
+      "02_annotations.tcd.json"
+    ]
+  },
+  "annotationAlignments": {
+    "center": [
+      "02_annotations.tcd.json"
+    ],
+    "left": [
+      "02_annotations.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "right": [
+      "02_annotations.tcd.json"
+    ]
+  },
+  "resetPolarities": {
+    "active-high": [
+      "01_cycle_signals.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "active-low": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ]
+  },
+  "resetSynchronizations": {
+    "asynchronous": [
+      "01_cycle_signals.tcd.json",
+      "02_annotations.tcd.json",
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json",
+      "06_layout_export.tcd.json"
+    ],
+    "synchronous": [
+      "01_cycle_signals.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ]
+  },
+  "transactionFeatures": {
+    "category": [
+      "03_transactions.tcd.json"
+    ],
+    "color": [
+      "03_transactions.tcd.json"
+    ],
+    "description": [
+      "03_transactions.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "grouped": [
+      "03_transactions.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "laneId": [
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "linkedSignals": [
+      "03_transactions.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "metadata": [
+      "03_transactions.tcd.json"
+    ],
+    "phases": [
+      "03_transactions.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "style": [
+      "03_transactions.tcd.json"
+    ],
+    "transactionGroups": [
+      "03_transactions.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "transactionTimeScale": [
+      "03_transactions.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "ungrouped": [
+      "03_transactions.tcd.json",
+      "04_timegroups_bookmarks.tcd.json"
+    ]
+  },
+  "timeGroupFeatures": {
+    "axisBreak": [
+      "04_timegroups_bookmarks.tcd.json"
+    ],
+    "bookmarks": [
+      "02_annotations.tcd.json",
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "compactFold": [
+      "04_timegroups_bookmarks.tcd.json",
+      "05_combined_protocol.tcd.json"
+    ],
+    "nestedParent": [
+      "04_timegroups_bookmarks.tcd.json"
+    ],
+    "resumeLabelAnchor": [
+      "04_timegroups_bookmarks.tcd.json"
+    ],
+    "terminalBoundary": [
+      "04_timegroups_bookmarks.tcd.json"
+    ]
+  }
+}

@@ -151,6 +151,7 @@ file-dialog Save/Open UI journey has not been run for this feature. Those gaps
 remain explicit in DATA-03; do not mutate the immutable Golden fixture to make
 the matrix appear complete.
 
+
 The `legacyIssueCoverage` array retains every discovered pre-V2 issue number
 from the repository audit. Issues are grouped by contract where one V2 owner
 is appropriate; grouping does not remove the original traceability obligation.

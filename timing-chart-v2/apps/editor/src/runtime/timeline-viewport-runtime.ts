@@ -1,4 +1,5 @@
 import type { RefObject } from "react";
+import type { TimeAxisMetrics } from "./timeline-geometry-owner.js";
 
 export type TimelineViewportRuntimeContext = {
   readonly dom: {
@@ -11,7 +12,7 @@ export type TimelineViewportRuntimeContext = {
     readonly playheadRef: RefObject<HTMLElement | null>;
   };
   readonly geometry: {
-    readonly getDisplayTimeMapping: () => unknown;
+    readonly getTimeAxisMetrics: () => Pick<TimeAxisMetrics, "zoom" | "localXToSourceBoundary">;
     readonly getTimeAxisGeometry: () => unknown;
     readonly getLocalGeometryMap: () => unknown;
     readonly sourceCycleToLocalX: (cycle: number) => number | undefined;
@@ -120,7 +121,7 @@ export function createTimelineViewportRuntime(context: TimelineViewportRuntimeCo
       // becomes idle. Once the initial presentation is applied, reapplying
       // the same zoom only schedules another scroll-layout/render pass (most
       // notably on Inspector property commits) without changing the view.
-      if (zoomPresentationApplied && context.viewport.getZoom() === nextZoom) return;
+      if (zoomPresentationApplied && context.viewport.getZoom() === nextZoom && context.geometry.getTimeAxisMetrics().zoom === nextZoom) return;
       zoomPresentationApplied = true;
       context.viewport.setZoom(nextZoom);
       render("zoom");
@@ -153,21 +154,31 @@ export function createTimelineViewportRuntime(context: TimelineViewportRuntimeCo
     navigateToCycle: (cycle) => {
       assertActive();
       if (!attached) return;
+      const requestEpoch = documentEpoch;
       const document = context.document.getSnapshot();
       let retries = 0;
       const maxRetries = 8;
+      const isRequestCurrent = () => attached
+        && !disposed
+        && documentEpoch === requestEpoch
+        && context.lifecycle.isCurrentEpoch(requestEpoch);
       const move = () => {
+        // Renderer-idle callbacks can outlive the document that initiated a
+        // Bookmark reveal. Never apply an old source-cycle target to a newly
+        // opened/replaced document.
+        if (!isRequestCurrent()) return;
         const localX = context.geometry.sourceBoundaryToLocalX(document, cycle);
         if (localX === undefined) {
           if (retries++ >= maxRetries) return;
           context.geometry.requestSourceCycle(cycle);
           render("navigate-cycle-retry");
-          const retry = () => { if (attached) void context.render.waitForRendererIdle().then(move); };
+          const retry = () => { if (isRequestCurrent()) void context.render.waitForRendererIdle().then(move); };
           if (typeof globalThis.requestAnimationFrame === "function") globalThis.requestAnimationFrame(retry);
           else globalThis.setTimeout(retry, 0);
           return;
         }
-        context.viewport.setScrollState({ left: Math.max(0, Math.round(context.geometry.localXToScreenX(localX) * context.viewport.getZoom() - context.viewport.getMetrics().width * 0.35)) });
+        const { zoom } = context.geometry.getTimeAxisMetrics();
+        context.viewport.setScrollState({ left: Math.max(0, Math.round(context.geometry.localXToScreenX(localX) * zoom - context.viewport.getMetrics().width * 0.35)) });
         context.geometry.clearRequestedSourceCycle();
         render("navigate-cycle");
       };
@@ -177,7 +188,7 @@ export function createTimelineViewportRuntime(context: TimelineViewportRuntimeCo
       void context.render.waitForRendererIdle().then(move);
     },
     sourceBoundaryToLocalX: (document, cycle) => { assertActive(); return context.geometry.sourceBoundaryToLocalX(document, cycle); },
-    screenXToSourceCycle: (screenX) => { assertActive(); const zoom = context.viewport.getZoom(); if (!Number.isFinite(zoom) || zoom <= 0) return undefined; const localX = screenX / zoom; const mapping = context.geometry.getDisplayTimeMapping(); return typeof mapping === "object" && mapping !== null && "displayToSourceCycle" in mapping && typeof mapping.displayToSourceCycle === "function" ? (mapping.displayToSourceCycle as (x: number) => number | undefined)(localX) : undefined; },
+    screenXToSourceCycle: (screenX) => { assertActive(); const metrics = context.geometry.getTimeAxisMetrics(); if (!Number.isFinite(metrics.zoom) || metrics.zoom <= 0) return undefined; return metrics.localXToSourceBoundary(screenX / metrics.zoom); },
     refreshRuler: () => { render("ruler"); },
     refreshGrid: () => { render("grid"); },
     refreshPlayhead: () => { render("playhead"); },

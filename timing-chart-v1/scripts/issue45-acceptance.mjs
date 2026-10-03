@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process';
 import { chromium } from 'playwright';
 
 const root = 'artifacts/issue45';
-const sampleRoot = '../timing-chart-v2/samples/golden-protocol/timing_chart_sample_pack/samples';
+const sampleRoot = '../timing-chart-v2/samples/old/pre-reset-2026-10-02/golden-protocol/timing_chart_sample_pack/samples';
 const files = fs.readdirSync(sampleRoot).filter(file => file.endsWith('.json')).sort();
 fs.mkdirSync(root, { recursive: true });
 const server = spawn('python', ['-m', 'http.server', '4245'], { stdio: 'ignore' });

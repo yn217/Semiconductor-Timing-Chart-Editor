@@ -10,7 +10,7 @@ import type {
   RefObject,
   SetStateAction,
 } from "react";
-import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
+import type { ChangeSet, CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { HistoryState } from "@timing-chart-v2/history";
 import type {
   Annotation,
@@ -67,6 +67,8 @@ import {
 } from "./runtime/presentation-preview.js";
 import type { ContextMenuState } from "./workspace/use-dialog-menu-state.js";
 import { cycleUnitWord } from "./transaction-tc.js";
+import { withStaleImportDiagnostic } from "./application/stale-import-diagnostics.js";
+import { SignalTreeFooter } from "./signal-tree-footer.js";
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 type Ref<T> = RefObject<T | null>;
@@ -74,6 +76,7 @@ type Ref<T> = RefObject<T | null>;
 export interface EditorSecondarySurfacesInput {
   readonly setBottomVisible: (visible: boolean) => void;
   readonly document: CanonicalDocument;
+  readonly changeSet: ChangeSet;
   readonly validationDiagnostics: readonly DocumentProblem[];
   readonly validationPending: boolean;
   readonly documentEpoch: number;
@@ -89,8 +92,11 @@ export interface EditorSecondarySurfacesInput {
     readonly transactionBoundaryX: MutableRefObject<
       (cycle: number) => number | undefined
     >;
+    readonly transactionSourceWindow: MutableRefObject<
+      (viewport: HTMLElement) => Readonly<{ start: number; end: number }> | undefined
+    >;
     readonly snapTransactionCycle: MutableRefObject<
-      (clientX: number, surfaceLeft?: number) => number | undefined
+      (clientX: number, surfaceLeft?: number, horizontalScroll?: number) => number | undefined
     >;
   };
   readonly command: {
@@ -187,7 +193,7 @@ export interface EditorSecondarySurfacesInput {
   readonly editActions: ClipboardActions;
   readonly actions: EditorActions;
   readonly setRuntimeDiagnostics: EditorApplicationOwner["setRuntimeDiagnostics"];
-  readonly navigateProblem: (path: string) => void;
+  readonly navigateProblem: (path: string, problem?: DocumentProblem) => void;
   readonly ai: { readonly getZoom: () => number; readonly fitAll: () => void; readonly fitSelection: () => void; readonly fitSourceRange: (startCycle: number, endCycle: number) => boolean };
 }
 
@@ -210,21 +216,7 @@ export function useEditorSecondarySurfaces(
 ): EditorSecondarySurfacesOutput {
   const execute = input.command.execute;
   const surfaceCommands = createEditorSurfaceCommandController(input.command);
-  const reportStaleImport = (domain: "annotation" | "event", message: string) => {
-    const detail = `stale-import:${domain}`;
-    input.setRuntimeDiagnostics((current) => [...current.filter((item) => item.detail !== detail), {
-      code: domain === "annotation" ? "ANNOTATION_IMPORT_STALE" : "EVENT_IMPORT_STALE",
-      path: "$.import",
-      message,
-      severity: "warning",
-      operation: `${domain}.import`,
-      operationLabel: domain === "annotation" ? "Import annotations" : "Import Signal events",
-      source: "parser",
-      stage: "commit",
-      recommendation: "Retry the import after the current document and target are stable.",
-      detail,
-    }]);
-  };
+  const reportStaleImport = (domain: "annotation" | "event", message: string) => input.setRuntimeDiagnostics((current) => withStaleImportDiagnostic(current, domain, message));
   const undo = input.command.undo;
   const redo = input.command.redo;
   const { selected, bottom, workspace, dialog, refs } = input;
@@ -458,7 +450,7 @@ export function useEditorSecondarySurfaces(
               onFilterChange: workspace.setTransactionTreeFilter,
               filterMode: workspace.transactionTreeFilterMode,
               onFilterModeChange: workspace.setTransactionTreeFilterMode,
-              onAdd: input.actions.createTransaction,
+              onAdd: () => input.actions.createTransaction(),
               onAddGroup: input.actions.createTransactionGroup,
               onExpandAll: () => disclosure.expandAll(),
               onCollapseAll: () => disclosure.collapseAll(),
@@ -479,6 +471,10 @@ export function useEditorSecondarySurfaces(
   const transactionBoundaryX = useCallback(
     (cycle: number) => refs.transactionBoundaryX.current(cycle),
     [refs.transactionBoundaryX],
+  );
+  const transactionVisibleSourceWindow = useCallback(
+    (viewport: HTMLElement) => refs.transactionSourceWindow.current(viewport),
+    [refs.transactionSourceWindow],
   );
   // #759: one Group disclosure owner for the Left Tree and the center Group headers.
   const disclosure = useTransactionDisclosure(input.document, input.documentEpoch);
@@ -505,9 +501,10 @@ export function useEditorSecondarySurfaces(
             : ""
         }
         getBoundaryX={transactionBoundaryX}
+        getVisibleSourceWindow={transactionVisibleSourceWindow}
         onSelect={input.actions.selectTransaction}
-        onSnap={(clientX, surfaceLeft) =>
-          refs.snapTransactionCycle.current(clientX, surfaceLeft)
+        onSnap={(clientX, surfaceLeft, horizontalScroll) =>
+          refs.snapTransactionCycle.current(clientX, surfaceLeft, horizontalScroll)
         }
         commands={surfaceCommands}
         onContextMenu={openTransactionContextMenu}
@@ -547,7 +544,8 @@ export function useEditorSecondarySurfaces(
           surfaceCommands.moveTransactionToNewGroup(transactionId, { id: nextEntityId("transactionGroup", input.document) as TransactionGroup["id"], name: `Group ${order + 1}`, order });
         }}
         onContextMenu={openTransactionContextMenu}
-        onCreateTransaction={input.actions.createTransaction}
+        onCreateTransaction={() => input.actions.createTransaction()}
+        onCreateTransactionInGroup={input.actions.createTransaction}
         onClearSelection={input.actions.clearSelection}
         onFocusTransaction={(transactionId) =>
           refs.viewport.current
@@ -576,21 +574,7 @@ export function useEditorSecondarySurfaces(
         onRenameTransaction={(transactionId, name) => surfaceCommands.renameTransactions([{ transactionId, name }])}
       />
     ) : null;
-  const workspaceLeftRail = (
-    <div className="left-panel-tail">
-      <span data-testid="left-tree-signal-count">
-        {input.document.signals.length} signals
-      </span>
-      {selected.signal && (
-        <span className="scope-breadcrumb" data-testid="scope-breadcrumb">
-          Scope:{" "}
-          {selected.signal.source.instancePath.length
-            ? selected.signal.source.instancePath.join(" / ")
-            : "(root)"}
-        </span>
-      )}
-    </div>
-  );
+  const workspaceLeftRail = <SignalTreeFooter signalCount={input.document.signals.length} selectedSignal={selected.signal} />;
   const activeBottomContent = workspace.bottomTab === "Signal" ? (
     signalEditor
   ) : workspace.bottomTab === "Annotation" ? (
@@ -632,6 +616,7 @@ export function useEditorSecondarySurfaces(
       onFollowSelectionChange={workspace.setFollowSelection}
       pinned={workspace.bottomPinned}
       onTogglePinned={workspace.toggleBottomPin}
+      targetLabel={bottom.bookmark ? `Bookmark ${bottom.bookmark.name}` : bottom.transaction ? `Transaction ${bottom.transaction.name}` : bottom.annotation ? `Annotation ${bottom.annotation.label || bottom.annotation.type}` : bottom.signal ? `Signal ${bottom.signal.display.name}` : bottom.group ? `Group ${bottom.group.name}` : undefined}
       {...(workspace.bottomTab === "Annotation" ? { contentClassName: "bottom-content-annotation" } : {})}
       content={
         <>
@@ -672,6 +657,7 @@ export function useEditorSecondarySurfaces(
       }
       registry={input.command.registry.current}
       document={input.document}
+      changeSet={input.changeSet}
       cyclesPerTc={workspace.cyclesPerTc}
       viewport={refs.viewport}
       commands={surfaceCommands}

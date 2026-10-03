@@ -80,8 +80,15 @@ for (const size of sizes) {
       };
       const zero = await tickX(0);
       const sixty = await tickX(60);
-      const barBox = (await bar.boundingBox())!;
       const sourceTenX = zero + (10 / 60) * (sixty - zero);
+      // Horizontal virtualization (#865): a Transaction that starts beyond the visible time domain is not mounted. Assert that contract
+      // instead of measuring a bar that is legitimately off-screen at extreme TC-scale + zoom.
+      const viewportRight = (await page.getByTestId("cycle-viewport").boundingBox())!.x + (await page.getByTestId("cycle-viewport").boundingBox())!.width;
+      if (sourceTenX > viewportRight + 2) {
+        expect(await bar.count(), "off-screen Transaction is not mounted").toBe(0);
+        return;
+      }
+      const barBox = (await bar.boundingBox())!;
       expect(Math.abs(barBox.x - sourceTenX), "Transaction start at source cycle 10").toBeLessThan(2);
       expect(Math.abs(barBox.x + barBox.width - sixty), "Transaction end at source cycle 60").toBeLessThan(2);
       const expected = new Map([["Address", [10, 20]], ["Read Data", [20, 50]], ["Response", [50, 60]]]);

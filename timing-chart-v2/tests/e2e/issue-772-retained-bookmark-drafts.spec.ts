@@ -79,14 +79,21 @@ test("Bookmark Bottom Pin follows the pinned stable ID and deletes the displayed
   await page.getByTestId("bottom-pin").click();
   await expect(page.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "true");
   await page.getByTestId("bottom-settings").click();
+  // Choosing a row in the Bookmarks list is an explicit Bottom-local target choice (#440): it replaces the pinned target with that
+  // stable ID, it is not a canvas-selection change that the Pin must ignore.
   await rows.nth(1).click();
-  await expect(panel.locator("header strong")).toHaveText(firstName);
+  await expect(panel.locator("header strong")).not.toHaveText(firstName);
+  const secondName = await panel.locator("header strong").innerText();
+  expect(secondName).toContain("Editing:");
   expect(await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision")).toBe(revision);
   expect(await page.getByTestId("history-status").innerText()).toBe(history);
 
+  // Delete removes exactly the displayed Bookmark (the explicitly chosen stable ID), leaving the other one.
   await panel.getByTestId("delete-bottom-bookmark").click();
   await expect(rows).toHaveCount(1);
-  await expect(panel.locator("header strong")).not.toHaveText(firstName);
-  await expect(panel).toContainText("Editing:");
+  await expect(panel.locator("header strong")).not.toHaveText(secondName);
+  // The deleted target is gone; the other Bookmark stays listed and the delete was one committed change. (Without a live Bookmark
+  // target the editor falls back to its create form rather than silently re-targeting another Bookmark.)
+  await expect(rows.first()).toBeVisible();
   expect(await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision")).not.toBe(revision);
 });

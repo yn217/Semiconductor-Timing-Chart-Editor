@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { commandPolicyCodes, commandPolicyDescriptors, planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
+import { commandPlannerMetrics, commandPolicyCodes, commandPolicyDescriptors, planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
 import { deriveTimingDiagnostics, TIMING_DIAGNOSTIC_CATEGORIES } from "@timing-chart-v2/core";
-import { DEFAULT_MEASUREMENT_LAYOUT, MAX_MEASUREMENT_LANE, parseDocument, serializeValidatedCanonicalDocument, type Annotation, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type GroupId, type Signal, type SignalId, type SpacerId, type TransactionGroupId, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
+import { DEFAULT_MEASUREMENT_LAYOUT, MAX_MEASUREMENT_LANE, canonicalReferenceMetrics, parseDocument, serializeValidatedCanonicalDocument, type Annotation, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type GroupId, type Signal, type SignalId, type SpacerId, type TransactionGroupId, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import { valueChangeIdAllocator } from "../../packages/commands/src/value-change-id-allocator.js";
 
@@ -15,6 +15,18 @@ function extraSignal(id = "sig_extra"): Signal {
 }
 
 describe("pure Semantic Command planning", () => {
+  it("reports planner duration and multi-row reference invalidation counts", () => {
+    const document = canonicalFixture();
+    const before = commandPlannerMetrics();
+    const result = planCommand(document, { id: commandId("cmd_metric_move"), type: "signal.move", signalId: "sig_data" as SignalId, targetGroupId: "grp_main" as GroupId, index: 0 });
+    const after = commandPlannerMetrics();
+
+    expect(result.ok).toBe(true);
+    expect(after.calls - before.calls).toBe(1);
+    expect(after.durationMs).toBeGreaterThanOrEqual(before.durationMs);
+    expect(after.affectedSignalCount - before.affectedSignalCount).toBeGreaterThanOrEqual(2);
+  });
+
   it("owns Transaction Groups and preserves group/color/description semantics atomically", () => {
     const document = canonicalFixture();
     const groupId = "txn_group_main" as TransactionGroupId;
@@ -406,6 +418,45 @@ describe("pure Semantic Command planning", () => {
     expect(session.getSnapshot().document.signals.some((signal) => signal.id === "sig_clk")).toBe(false);
   });
 
+  it("bulk-deletes Signals through one indexed dependency query and one exact History action", () => {
+    const untouched = { id: "txn_bulk_untouched" as TransactionId, name: "Untouched", start: 5, end: 7 };
+    const linkedAfter = { id: "txn_bulk_linked_after" as TransactionId, name: "Also linked", start: 7, end: 8, linkedSignals: ["sig_data" as SignalId] };
+    const source = { ...canonicalFixture(), transactions: [{ id: "txn_bulk_links" as TransactionId, name: "Linked", start: 1, end: 4, linkedSignals: ["sig_clk" as SignalId, "sig_data" as SignalId] }, untouched, linkedAfter] };
+    const session = new CommandHistorySession(source);
+    const untouchedBefore = session.getSnapshot().document.transactions[1];
+    const before = canonicalReferenceMetrics();
+    const result = session.execute({ id: commandId("cmd_bulk_signal_delete"), type: "signal.bulkDelete", signalIds: ["sig_data" as SignalId, "sig_clk" as SignalId] });
+    const after = canonicalReferenceMetrics();
+
+    expect(result).toMatchObject({ ok: true, changeSet: { removedSignals: ["sig_data", "sig_clk"], transactionSemantics: ["txn_bulk_links", "txn_bulk_linked_after"], timelineSemantics: true } });
+    expect(session.getSnapshot().document.signals).toEqual([]);
+    expect(session.getSnapshot().document.signalGroups[0]?.rows).toEqual([]);
+    expect(session.getSnapshot().document.timeline).not.toHaveProperty("referenceClock");
+    expect(session.getSnapshot().document.transactions[0]?.linkedSignals).toEqual([]);
+    expect(session.getSnapshot().document.transactions[1]).toBe(untouchedBefore);
+    expect(session.getSnapshot().document.transactions[2]?.linkedSignals).toEqual([]);
+    expect(after.targetQueries - before.targetQueries).toBe(1);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document).toEqual(source);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.signals).toEqual([]);
+  });
+
+  it("rejects bulk deletion atomically when any selected Signal has Annotation dependents", () => {
+    const source = {
+      ...canonicalFixture(),
+      annotations: [{ id: "ann_bulk_guard" as AnnotationId, type: "text" as const, label: "Keep", visible: true, anchor: { signalId: "sig_data" as SignalId, cycle: 2, point: "cycle-start" as const } }],
+    };
+    const session = new CommandHistorySession(source);
+    const before = session.getSnapshot();
+    const result = session.execute({ id: commandId("cmd_bulk_signal_delete_rejected"), type: "signal.bulkDelete", signalIds: ["sig_clk" as SignalId, "sig_data" as SignalId] });
+
+    expect(result).toMatchObject({ ok: false, reason: "invalid", problems: [expect.objectContaining({ code: "SIGNAL_HAS_DEPENDENTS", path: "$.signalIds" })] });
+    expect(session.getSnapshot()).toBe(before);
+    expect(session.historyState()).toMatchObject({ undoDepth: 0, redoDepth: 0, dirty: false });
+  });
+
   it("keeps the reference Clock identity when moving it between Groups", () => {
     const source = canonicalFixture();
     const targetGroupId = "grp_clock_target" as GroupId;
@@ -560,6 +611,56 @@ describe("pure Semantic Command planning", () => {
     }
   });
 
+  it("changes selected Signal visibility in one planner/history action with atomic mixed updates", () => {
+    const initial = canonicalFixture();
+    const additions = Array.from({ length: 998 }, (_, index) => {
+      const signal = extraSignal(`sig_bulk_visibility_${index}`);
+      return { ...signal, name: `Bulk ${index}`, display: { ...signal.display, name: `Bulk ${index}`, ...(index === 10 ? { visible: false } : {}) } };
+    });
+    const baseGroup = initial.signalGroups[0]!;
+    const document = {
+      ...initial,
+      signals: [...initial.signals, ...additions],
+      signalGroups: initial.signalGroups.map((group) => group.id === baseGroup.id ? { ...group, rows: [...group.rows, ...additions.map((signal) => signal.id)] } : group),
+    };
+    const session = new CommandHistorySession(document);
+    const beforeSignals = session.getSnapshot().document.signals;
+    const beforePlans = commandPlannerMetrics().internalPlans;
+    const changed = ["sig_data" as SignalId, additions[10]!.id, additions[900]!.id];
+
+    expect(session.execute({
+      id: commandId("cmd_signal_bulk_visibility"),
+      type: "signal.bulkSetVisibility",
+      updates: changed.map((signalId, index) => ({ signalId, visible: index === 1 })),
+    }).ok).toBe(true);
+
+    const afterSignals = session.getSnapshot().document.signals;
+    expect(commandPlannerMetrics().internalPlans - beforePlans).toBe(1);
+    expect(afterSignals.find((signal) => signal.id === "sig_data")?.display.visible).toBe(false);
+    expect(afterSignals.find((signal) => signal.id === additions[10]!.id)?.display.visible).toBe(true);
+    expect(afterSignals.find((signal) => signal.id === additions[900]!.id)?.display.visible).toBe(false);
+    expect(afterSignals[0]).toBe(beforeSignals[0]);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.signals).toBe(beforeSignals);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.signals).toBe(afterSignals);
+  });
+
+  it("rejects invalid or duplicate IDs in a bulk Signal visibility update without mutation", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const before = session.getSnapshot();
+    const missing = session.execute({ id: commandId("cmd_signal_bulk_visibility_missing"), type: "signal.bulkSetVisibility", updates: [{ signalId: "sig_missing" as SignalId, visible: false }] });
+    expect(missing).toMatchObject({ ok: false, reason: "invalid" });
+    const duplicate = session.execute({ id: commandId("cmd_signal_bulk_visibility_duplicate"), type: "signal.bulkSetVisibility", updates: [
+      { signalId: "sig_data" as SignalId, visible: false },
+      { signalId: "sig_data" as SignalId, visible: true },
+    ] });
+    expect(duplicate).toMatchObject({ ok: false, reason: "invalid" });
+    expect(session.getSnapshot()).toBe(before);
+    expect(session.historyState().undoDepth).toBe(0);
+  });
+
   it("plans Signal Editor changes with precise render domains", () => {
     const source = canonicalFixture();
     const moved = planCommand(source, { id: commandId("cmd_move_value"), type: "signal.moveValue", signalId: "sig_data" as SignalId, fromStart: 4, toStart: 3 });
@@ -682,6 +783,18 @@ describe("command execution and atomic history", () => {
     expect(session.historyState()).toEqual(historyBefore);
   });
 
+  it("atomically rejects radix-invalid bus literals even when they contain X/Z", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const before = session.getSnapshot();
+    const historyBefore = session.historyState();
+
+    const rejected = session.execute({ id: commandId("cmd_invalid_radix_unknown"), type: "signal.updateValue", signalId: "sig_data" as SignalId, start: 0, value: "4'b2X" });
+
+    expect(rejected).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_BUS_LITERAL" }] });
+    expect(session.getSnapshot()).toBe(before);
+    expect(session.historyState()).toEqual(historyBefore);
+  });
+
   it("keeps Event data values and Pulse logic values type-safe on atomic edits", () => {
     const source = canonicalFixture();
     const event: Signal = { id: "sig_event" as SignalId, name: "EVENT", type: "event", role: "internal", source: { instancePath: [], signalName: "EVENT" }, display: { name: "EVENT" }, values: [{ start: 0, value: "NONE" }] };
@@ -726,13 +839,399 @@ describe("command execution and atomic history", () => {
     const first = extraSignal("sig_bulk_status");
     const second = { ...extraSignal("sig_bulk_data"), source: { instancePath: ["dut", "core"], signalName: "data" } } as Signal;
     const before = session.metrics();
+    const beforePlanner = commandPlannerMetrics();
     expect(session.execute({ id: commandId("cmd_bulk_register"), type: "signal.bulkCreate", signals: [first, second], targetGroupId: "grp_main" as GroupId, index: 2 })).toMatchObject({ ok: true });
+    expect(commandPlannerMetrics().internalPlans - beforePlanner.internalPlans).toBe(1);
     expect(session.metrics()).toEqual({ validationRuns: before.validationRuns + 1, commits: before.commits + 1 });
     expect(session.historyState().undoDepth).toBe(1);
     expect(session.getSnapshot().document.signals.find((signal) => signal.id === second.id)?.source.instancePath).toEqual(["dut", "core"]);
     expect(session.undo()).toMatchObject({ ok: true });
     expect(session.getSnapshot().document.signals.some((signal) => signal.id === first.id)).toBe(false);
   });
+
+  it("bulk-creates Signals across multiple destination Groups in one planner rebuild", () => {
+    const source = canonicalFixture();
+    const secondGroup: CanonicalDocument["signalGroups"][number] = { id: "grp_bulk_second" as GroupId, name: "Second", rows: [] };
+    const session = new CommandHistorySession({ ...source, signalGroups: [...source.signalGroups, secondGroup] });
+    const first = extraSignal("sig_bulk_multi_first");
+    const second = extraSignal("sig_bulk_multi_second");
+    const beforePlans = commandPlannerMetrics().internalPlans;
+
+    expect(session.execute({ id: commandId("cmd_bulk_multi_group"), type: "signal.bulkCreateAcrossGroups", signals: [first, second], placements: [
+      { targetGroupId: "grp_main" as GroupId, index: 1, signalIds: [first.id] },
+      { targetGroupId: secondGroup.id, index: 0, signalIds: [second.id] },
+    ] })).toMatchObject({ ok: true });
+
+    expect(commandPlannerMetrics().internalPlans - beforePlans).toBe(1);
+    expect(session.getSnapshot().document.signals.map((signal) => signal.id)).toEqual(["sig_clk", "sig_data", first.id, second.id]);
+    expect(session.getSnapshot().document.signalGroups.map((group) => group.rows)).toEqual([["sig_clk", first.id, "sig_data"], [second.id]]);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.signals).toEqual(source.signals);
+    expect(session.getSnapshot().document.signalGroups).toEqual([...source.signalGroups, secondGroup]);
+  });
+
+  it("rejects a multi-Group Signal bulk placement atomically when any Signal is unassigned", () => {
+    const source = canonicalFixture();
+    const session = new CommandHistorySession(source);
+    const before = session.getSnapshot();
+    const assigned = extraSignal("sig_bulk_multi_assigned");
+    const unassigned = extraSignal("sig_bulk_multi_unassigned");
+    const result = session.execute({ id: commandId("cmd_bulk_multi_group_reject"), type: "signal.bulkCreateAcrossGroups", signals: [assigned, unassigned], placements: [
+      { targetGroupId: "grp_main" as GroupId, index: 2, signalIds: [assigned.id] },
+    ] });
+
+    expect(result).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "MISSING_CROSS_REFERENCE" }] });
+    expect(session.getSnapshot()).toBe(before);
+    expect(session.historyState()).toMatchObject({ undoDepth: 0, dirty: false });
+  });
+
+  it("rejects a bulk registration with duplicate incoming IDs before changing the document", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const before = session.getSnapshot();
+    const result = session.execute({
+      id: commandId("cmd_bulk_register_duplicate"),
+      type: "signal.bulkCreate",
+      signals: [extraSignal("sig_bulk_duplicate"), extraSignal("sig_bulk_duplicate")],
+      targetGroupId: "grp_main" as GroupId,
+      index: 0,
+    });
+    expect(result).toMatchObject({ ok: false, reason: "invalid" });
+    expect(session.getSnapshot()).toBe(before);
+    expect(session.historyState()).toMatchObject({ undoDepth: 0, dirty: false });
+  });
+
+  it("plans a product-limit Signal registration with one indexed pass", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const template = extraSignal("sig_bulk_template");
+    const signals = Array.from({ length: 9_998 }, (_, index) => {
+      const name = `BULK_${index}`;
+      return {
+        ...template,
+        id: `sig_bulk_${index}` as SignalId,
+        name,
+        source: { ...template.source, signalName: name },
+        display: { ...template.display, name },
+      };
+    });
+    const beforePlans = commandPlannerMetrics().internalPlans;
+    expect(session.execute({ id: commandId("cmd_bulk_register_product_limit"), type: "signal.bulkCreate", signals, targetGroupId: "grp_main" as GroupId, index: 2 }).ok).toBe(true);
+    expect(commandPlannerMetrics().internalPlans - beforePlans).toBe(1);
+    expect(session.getSnapshot().document.signals).toHaveLength(10_000);
+    expect(session.getSnapshot().document.signalGroups[0]!.rows).toHaveLength(10_000);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.signals).toHaveLength(2);
+  });
+
+  it("bulk-creates, duplicates, and deletes Transactions with one planner/history action each", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const items = [
+      { id: "txn_bulk_a" as TransactionId, name: "A", start: 1, end: 3, laneId: "lane_0" },
+      { id: "txn_bulk_b" as TransactionId, name: "B", start: 4, end: 7, laneId: "lane_1" },
+    ];
+    const beforeCreate = commandPlannerMetrics().internalPlans;
+    expect(session.execute({ id: commandId("cmd_txn_bulk_create"), type: "transaction.bulkCreate", transactions: items }).ok).toBe(true);
+    expect(commandPlannerMetrics().internalPlans - beforeCreate).toBe(1);
+    expect(session.historyState().undoDepth).toBe(1);
+
+    const beforeDuplicate = commandPlannerMetrics().internalPlans;
+    expect(session.execute({ id: commandId("cmd_txn_bulk_duplicate"), type: "transaction.bulkDuplicate", items: [
+      { transactionId: items[0]!.id, newTransactionId: "txn_bulk_a_copy" as TransactionId },
+      { transactionId: items[1]!.id, newTransactionId: "txn_bulk_b_copy" as TransactionId },
+    ] }).ok).toBe(true);
+    expect(commandPlannerMetrics().internalPlans - beforeDuplicate).toBe(1);
+    expect(session.historyState().undoDepth).toBe(2);
+
+    const beforeDelete = commandPlannerMetrics().internalPlans;
+    expect(session.execute({ id: commandId("cmd_txn_bulk_delete"), type: "transaction.bulkDelete", transactionIds: [items[0]!.id, items[1]!.id] }).ok).toBe(true);
+    expect(commandPlannerMetrics().internalPlans - beforeDelete).toBe(1);
+    expect(session.getSnapshot().document.transactions.map((item) => item.id)).toEqual(["txn_bulk_a_copy", "txn_bulk_b_copy"]);
+    expect(session.historyState().undoDepth).toBe(3);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.transactions).toHaveLength(4);
+  });
+
+  it("validates and rebuilds a bulk Transaction deletion in one document pass", () => {
+    const source = canonicalFixture();
+    const transactions = Array.from({ length: 40 }, (_, index) => ({
+      ...source.transactions[0]!,
+      id: `txn_single_pass_${index}` as TransactionId,
+    }));
+    let transactionVisits = 0;
+    const observedTransactions = new Proxy(transactions, {
+      get(target, property, receiver) {
+        if (typeof property === "string" && /^\d+$/.test(property) && Number(property) < target.length) transactionVisits += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const document = { ...source, transactions: observedTransactions };
+    const result = planCommand(document, {
+      id: commandId("cmd_txn_single_pass_delete"),
+      type: "transaction.bulkDelete",
+      transactionIds: [transactions[4]!.id, transactions[30]!.id],
+    });
+
+    expect(result).toMatchObject({ ok: true, changeSet: { transactionSemantics: [transactions[4]!.id, transactions[30]!.id] } });
+    expect(transactionVisits).toBe(transactions.length);
+    if (result.ok) {
+      expect(result.document.transactions.map((transaction) => transaction.id)).toEqual(transactions.filter((_, index) => index !== 4 && index !== 30).map((transaction) => transaction.id));
+      expect(result.document.transactions[3]).toBe(transactions[3]);
+    }
+
+    transactionVisits = 0;
+    const rejected = planCommand(document, {
+      id: commandId("cmd_txn_single_pass_delete_missing"),
+      type: "transaction.bulkDelete",
+      transactionIds: [transactions[4]!.id, "txn_missing" as TransactionId],
+    });
+    expect(rejected).toMatchObject({ ok: false, problems: [{ code: "TRANSACTION_NOT_FOUND" }] });
+    expect(transactionVisits).toBe(transactions.length);
+  });
+
+  it("keeps product-scale Transaction create, duplicate, and delete to one planner and one History action each", () => {
+    const initial = canonicalFixture();
+    const transactions = Array.from({ length: 9_000 }, (_, index) => ({
+      id: `txn_product_${index}` as TransactionId,
+      name: `Transaction ${index}`,
+      start: index % 7,
+      end: (index % 7) + 1,
+      laneId: `lane_${index % 20}`,
+      linkedSignals: [],
+    }));
+    const session = new CommandHistorySession(initial);
+
+    const beforeCreatePlans = commandPlannerMetrics().internalPlans;
+    expect(session.execute({ id: commandId("cmd_txn_product_create"), type: "transaction.bulkCreate", transactions }).ok).toBe(true);
+    expect(commandPlannerMetrics().internalPlans - beforeCreatePlans).toBe(1);
+    expect(session.getSnapshot().document.transactions).toHaveLength(9_000);
+    expect(session.historyState().undoDepth).toBe(1);
+
+    const duplicatedIds = transactions.slice(0, 1_000).map((transaction) => `${transaction.id}_copy` as TransactionId);
+    const beforeDuplicatePlans = commandPlannerMetrics().internalPlans;
+    expect(session.execute({
+      id: commandId("cmd_txn_product_duplicate"),
+      type: "transaction.bulkDuplicate",
+      items: transactions.slice(0, 1_000).map((transaction, index) => ({ transactionId: transaction.id, newTransactionId: duplicatedIds[index]! })),
+    }).ok).toBe(true);
+    expect(commandPlannerMetrics().internalPlans - beforeDuplicatePlans).toBe(1);
+    expect(session.getSnapshot().document.transactions).toHaveLength(10_000);
+    expect(session.historyState().undoDepth).toBe(2);
+
+    const beforeDeletePlans = commandPlannerMetrics().internalPlans;
+    expect(session.execute({ id: commandId("cmd_txn_product_delete"), type: "transaction.bulkDelete", transactionIds: transactions.map((transaction) => transaction.id) }).ok).toBe(true);
+    expect(commandPlannerMetrics().internalPlans - beforeDeletePlans).toBe(1);
+    expect(session.getSnapshot().document.transactions.map((transaction) => transaction.id)).toEqual(duplicatedIds);
+    expect(session.historyState().undoDepth).toBe(3);
+
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.transactions).toHaveLength(10_000);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.transactions).toHaveLength(9_000);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.transactions).toEqual(initial.transactions);
+  });
+
+  it("changes selected Transaction visibility in one planner/history action", () => {
+    const initial = canonicalFixture();
+    const items = Array.from({ length: 1_000 }, (_, index) => ({
+      id: `txn_visibility_${index}` as TransactionId,
+      name: `Transaction ${index}`,
+      start: 1,
+      end: 2,
+      laneId: "lane_0",
+    }));
+    const session = new CommandHistorySession({ ...initial, transactions: items });
+    const before = session.getSnapshot().document.transactions;
+    const beforePlans = commandPlannerMetrics().internalPlans;
+
+    expect(session.execute({ id: commandId("cmd_txn_bulk_visibility"), type: "transaction.bulkSetVisibility", transactionIds: [items[2]!.id, items[900]!.id], visible: false }).ok).toBe(true);
+
+    const after = session.getSnapshot().document.transactions;
+    expect(commandPlannerMetrics().internalPlans - beforePlans).toBe(1);
+    expect(after[2]).toMatchObject({ id: items[2]!.id, visible: false });
+    expect(after[900]).toMatchObject({ id: items[900]!.id, visible: false });
+    expect(after[3]).toBe(before[3]);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.transactions).toBe(before);
+  });
+
+  it("moves selected Transactions between Groups with one atomic planner/history action", () => {
+    const initial = canonicalFixture();
+    const transactions = Array.from({ length: 1_000 }, (_, index) => ({
+      id: `txn_group_move_${index}` as TransactionId,
+      name: `Transaction ${index}`,
+      start: 1,
+      end: 2,
+      laneId: "lane_0",
+      groupId: "tg_source" as never,
+    }));
+    const session = new CommandHistorySession({
+      ...initial,
+      transactions,
+      transactionGroups: [
+        { id: "tg_source" as never, name: "Source", order: 0 },
+        { id: "tg_target" as never, name: "Target", order: 1 },
+      ],
+    });
+    const before = session.getSnapshot().document.transactions;
+    const beforePlans = commandPlannerMetrics().internalPlans;
+    const result = session.execute({ id: commandId("cmd_txn_bulk_group_move"), type: "transaction.bulkMoveToGroup", items: [
+      { transactionId: transactions[2]!.id, groupId: "tg_target" as never },
+      { transactionId: transactions[900]!.id },
+    ] });
+
+    expect(result.ok).toBe(true);
+    const after = session.getSnapshot().document.transactions;
+    expect(commandPlannerMetrics().internalPlans - beforePlans).toBe(1);
+    expect(after[2]?.groupId).toBe("tg_target");
+    expect(after[900]?.groupId).toBeUndefined();
+    expect(after[3]).toBe(before[3]);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.transactions).toBe(before);
+
+    const beforeRejected = session.getSnapshot();
+    const rejected = session.execute({ id: commandId("cmd_txn_bulk_group_move_reject"), type: "transaction.bulkMoveToGroup", items: [
+      { transactionId: transactions[2]!.id, groupId: "tg_missing" as never },
+    ] });
+    expect(rejected).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "MISSING_CROSS_REFERENCE" }] });
+    expect(session.getSnapshot()).toBe(beforeRejected);
+  });
+
+  it("sets selected Transaction colors with one planner/history action", () => {
+    const base = canonicalFixture();
+    const transactions = Array.from({ length: 1_000 }, (_, index) => ({
+      id: `txn_color_${index}` as TransactionId,
+      name: `Transaction ${index}`,
+      start: 1,
+      end: 2,
+      laneId: "lane_0",
+      color: "#112233",
+      description: `Description ${index}`,
+    }));
+    const session = new CommandHistorySession({ ...base, transactions });
+    const before = session.getSnapshot().document.transactions;
+    const beforePlans = commandPlannerMetrics().internalPlans;
+
+    expect(session.execute({ id: commandId("cmd_txn_bulk_color"), type: "transaction.bulkSetColor", transactionIds: [transactions[4]!.id, transactions[800]!.id], color: "#aabbcc" }).ok).toBe(true);
+
+    const after = session.getSnapshot().document.transactions;
+    expect(commandPlannerMetrics().internalPlans - beforePlans).toBe(1);
+    expect(after[4]).toMatchObject({ color: "#aabbcc", description: transactions[4]!.description });
+    expect(after[800]).toMatchObject({ color: "#aabbcc", description: transactions[800]!.description });
+    expect(after[5]).toBe(before[5]);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.transactions).toBe(before);
+  });
+
+  it("rejects duplicate stable IDs within a Transaction bulk-create atomically", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const before = session.getSnapshot().document;
+    const duplicateId = "txn_bulk_duplicate_id" as TransactionId;
+    const result = session.execute({ id: commandId("cmd_txn_bulk_duplicate_id"), type: "transaction.bulkCreate", transactions: [
+      { id: duplicateId, name: "First", start: 1, end: 3, laneId: "lane_0" },
+      { id: duplicateId, name: "Second", start: 4, end: 6, laneId: "lane_1" },
+    ] });
+
+    expect(result).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "DUPLICATE_ID", path: "$.transactions[1].id" }] });
+    expect(session.getSnapshot().document).toBe(before);
+    expect(session.historyState().undoDepth).toBe(0);
+  });
+
+  it("restores a large set of Transaction links with one atomic bulk planner", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const initialDocument = session.getSnapshot().document;
+    const signalCount = 1_000;
+    const transactionCount = 100;
+    const signals = Array.from({ length: signalCount }, (_, index) => extraSignal(`sig_link_restore_${index}`));
+    const transactions = Array.from({ length: transactionCount }, (_, index) => ({
+      id: `txn_link_restore_${index}` as TransactionId,
+      name: `Transaction ${index}`,
+      start: 1,
+      end: 2,
+      laneId: "lane_0",
+    }));
+    const links = transactions.flatMap((transaction, transactionIndex) =>
+      signals.slice(transactionIndex * 10, transactionIndex * 10 + 10).map((signal) => ({ transactionId: transaction.id, signalId: signal.id })),
+    );
+    const beforePlans = commandPlannerMetrics().internalPlans;
+    const result = session.executeBatch(commandId("cmd_bulk_link_restore"), [
+      { id: commandId("cmd_bulk_link_signals"), type: "signal.bulkCreate", signals, targetGroupId: "grp_main" as GroupId, index: 2 },
+      { id: commandId("cmd_bulk_link_transactions"), type: "transaction.bulkCreate", transactions },
+      { id: commandId("cmd_bulk_link_relationships"), type: "transaction.bulkLinkSignals", links },
+    ]);
+
+    expect(result.ok).toBe(true);
+    expect(commandPlannerMetrics().internalPlans - beforePlans).toBe(3);
+    expect(session.getSnapshot().document.transactions).toHaveLength(transactionCount);
+    expect(session.getSnapshot().document.transactions.every((transaction) => transaction.linkedSignals?.length === 10)).toBe(true);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document).toBe(initialDocument);
+    expect(session.historyState().undoDepth).toBe(0);
+
+    const beforeRejectedBatch = session.getSnapshot();
+    const rejected = session.executeBatch(commandId("cmd_bulk_link_restore_rejected"), [
+      { id: commandId("cmd_bulk_link_signal_rejected"), type: "signal.bulkCreate", signals: [extraSignal("sig_link_restore_rejected")], targetGroupId: "grp_main" as GroupId, index: 2 },
+      { id: commandId("cmd_bulk_link_transaction_rejected"), type: "transaction.bulkCreate", transactions: [transactions[0]!] },
+      { id: commandId("cmd_bulk_link_invalid_relationships"), type: "transaction.bulkLinkSignals", links: [
+        { transactionId: transactions[0]!.id, signalId: "sig_link_restore_rejected" as SignalId },
+        { transactionId: transactions[0]!.id, signalId: "sig_missing_link_target" as SignalId },
+      ] },
+    ]);
+    expect(rejected).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "SIGNAL_NOT_FOUND" }] });
+    expect(session.getSnapshot()).toBe(beforeRejectedBatch);
+    expect(session.historyState()).toMatchObject({ undoDepth: 0, dirty: false });
+  });
+
+  it("deletes a large Group Spacer set in one planner pass and invalidates following timing rows", () => {
+    const source = canonicalFixture();
+    const initialGroup = source.signalGroups[0]!;
+    const spacers = Array.from({ length: 1_000 }, (_, index) => ({ id: `spacer_bulk_${index}` as SpacerId, height: 24 }));
+    const withSpacers = {
+      ...source,
+      signalGroups: [{ ...initialGroup, rows: [spacers[0]!.id, ...initialGroup.rows, ...spacers.slice(1).map((spacer) => spacer.id)], spacers }, ...source.signalGroups.slice(1)],
+    };
+    const session = new CommandHistorySession(withSpacers);
+    const beforePlans = commandPlannerMetrics().internalPlans;
+    const result = session.execute({ id: commandId("cmd_bulk_spacer_delete"), type: "spacer.bulkDelete", spacerIds: spacers.map((spacer) => spacer.id) });
+
+    expect(result).toMatchObject({ ok: true, changeSet: { rowOrder: spacers.map((spacer) => spacer.id), geometryScreenY: ["sig_clk", "sig_data"] } });
+    expect(commandPlannerMetrics().internalPlans - beforePlans).toBe(1);
+    const afterDelete = session.getSnapshot().document.signalGroups[0]!;
+    expect(afterDelete.rows).toEqual(initialGroup.rows);
+    expect(afterDelete).not.toHaveProperty("spacers");
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document).toEqual(withSpacers);
+
+    const beforeReject = session.getSnapshot();
+    const rejected = session.execute({ id: commandId("cmd_bulk_spacer_delete_reject"), type: "spacer.bulkDelete", spacerIds: [spacers[0]!.id, "spacer_missing" as SpacerId] });
+    expect(rejected).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "SPACER_NOT_FOUND" }] });
+    expect(session.getSnapshot()).toBe(beforeReject);
+    expect(session.historyState()).toMatchObject({ undoDepth: 0, dirty: false });
+  });
+
+  it("creates a copied Group and its Signal/Spacer rows in one atomic planner action", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const signal = extraSignal("sig_group_copy_row");
+    const spacer = { id: "spacer_group_copy_row" as SpacerId, height: 32 };
+    const group = { id: "grp_group_copy" as GroupId, name: "Copied", rows: [signal.id, spacer.id], spacers: [spacer] };
+    const beforePlans = commandPlannerMetrics().internalPlans;
+    const result = session.execute({ id: commandId("cmd_group_create_with_contents"), type: "group.createWithContents", group, signals: [signal], index: 1 });
+    expect(result).toMatchObject({ ok: true });
+    expect(commandPlannerMetrics().internalPlans - beforePlans).toBe(1);
+    expect(session.getSnapshot().document.signalGroups[1]).toMatchObject(group);
+    expect(session.getSnapshot().document.signals.some((item) => item.id === signal.id)).toBe(true);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.signalGroups.some((item) => item.id === group.id)).toBe(false);
+    expect(session.getSnapshot().document.signals.some((item) => item.id === signal.id)).toBe(false);
+  });
+
 
   it("supports Group lifecycle without implicitly moving rows", () => {
     const session = new CommandHistorySession(canonicalFixture());
@@ -1079,6 +1578,42 @@ describe("command execution and atomic history", () => {
     const duplicate = session.execute({ id: commandId("annotation_collection_duplicate"), type: "annotation.replaceCollection", annotations: [added, added] });
     expect(duplicate).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "DUPLICATE_ID" }] });
     expect(session.getSnapshot().document).toEqual(replaced);
+    expect(session.historyState().undoDepth).toBe(1);
+  });
+
+  it("replaces a product-limit Annotation collection in one planner and preserves surviving Group membership", () => {
+    const makeAnnotation = (index: number, labelPrefix: string): Annotation => ({
+      id: `ann_scale_${String(index).padStart(5, "0")}` as AnnotationId,
+      type: "text",
+      label: `${labelPrefix}${index}`,
+      visible: true,
+      anchor: { signalId: "sig_data" as SignalId, cycle: 2, point: "cycle-start" },
+    });
+    const initialAnnotations = Array.from({ length: 20_000 }, (_, index) => makeAnnotation(index, "before-"));
+    const importedAnnotations = Array.from({ length: 20_000 }, (_, index) => makeAnnotation(index + 10_000, "after-"));
+    const initialGroup = {
+      id: "ann_scale_group" as never,
+      name: "Survivors",
+      annotationIds: initialAnnotations.filter((_, index) => index % 2 === 0).map((annotation) => annotation.id),
+    };
+    const initial = { ...canonicalFixture(), annotations: initialAnnotations, annotationGroups: [initialGroup] };
+    const session = new CommandHistorySession(initial);
+    const plannerBefore = commandPlannerMetrics().calls;
+
+    const result = session.execute({ id: commandId("annotation_collection_product_limit"), type: "annotation.replaceCollection", annotations: importedAnnotations });
+
+    expect(result.ok).toBe(true);
+    expect(commandPlannerMetrics().calls - plannerBefore).toBe(1);
+    expect(session.getSnapshot().document.annotations).toEqual(importedAnnotations);
+    const importedIds = new Set(importedAnnotations.map((annotation) => annotation.id));
+    expect(session.getSnapshot().document.annotationGroups?.[0]?.annotationIds).toEqual(
+      initialGroup.annotationIds.filter((id) => importedIds.has(id)),
+    );
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document).toEqual(initial);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.annotations).toEqual(importedAnnotations);
     expect(session.historyState().undoDepth).toBe(1);
   });
 

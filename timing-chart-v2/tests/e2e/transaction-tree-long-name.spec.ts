@@ -1,12 +1,7 @@
 import { expect, test } from "@playwright/test";
 
-// Transaction Mode GUI realignment ("長い名前は ellipsis + tooltip...
-// パネル外にはみ出さないこと"): the Left panel's per-Transaction row
-// (.transaction-lane-label-row) already had CSS ellipsis truncation, but a
-// truncated long name had no way to see the full text -- no title
-// attribute. This verifies both halves of the reference requirement: the
-// row never overflows its own panel, and the full name is available via a
-// native tooltip once truncated.
+// Transaction names are owned by the authoritative left Tree; the center
+// Lane label plane must not duplicate them or let rows escape its band.
 test("a long Transaction name ellipsis-truncates without overflowing the Left panel, and shows the full name via tooltip", async ({ page }) => {
   await page.setViewportSize({ width: 1672, height: 941 });
   await page.goto("/");
@@ -20,8 +15,9 @@ test("a long Transaction name ellipsis-truncates without overflowing the Left pa
   await inspector.getByLabel("Transaction name", { exact: true }).fill(longName);
   await inspector.getByTestId("apply-inspector-transaction").click();
 
-  const row = page.locator(".transaction-lane-label-row").filter({ hasText: longName });
+  const row = page.locator(".transaction-left-tree-row").filter({ hasText: longName });
   await expect(row).toHaveAttribute("title", longName);
   const staysInsidePanel = await row.evaluate((element) => element.scrollWidth <= element.clientWidth);
   expect(staysInsidePanel).toBe(true);
+  await expect(page.locator(".transaction-lane-label-row")).toHaveCount(0);
 });

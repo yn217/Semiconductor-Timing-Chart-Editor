@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { resolve } from "node:path";
 import { startInCycleSample } from "./cycle-startup.js";
 
 startInCycleSample(test);
@@ -53,6 +54,7 @@ test("cancels layout draft without a canonical mutation", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const inspector = page.getByTestId("inspector-layout-editor");
   const revision = await host.getAttribute("data-canonical-revision");
   await inspector.getByLabel("Inspector signal name width").fill("420");
@@ -116,4 +118,171 @@ test("renders persisted label columns independently from the transient pane spli
   await expect(layout.getByLabel("Inspector signal name width")).toHaveValue("168");
   await expect(layout.getByLabel("Inspector signal name alignment")).toHaveValue("left");
   await expect(layout.getByLabel("Inspector signal name overflow")).toHaveValue("ellipsis");
+});
+
+test("keeps right-aligned short frozen labels inside the timing boundary", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/old/pre-reset-2026-10-02/golden-feature-coverage/timing_chart_feature_coverage_pack/samples/20_transaction_cycle_linked_views.tcd.json"));
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+
+  const label = host.locator("[data-role='frozen-row'][data-row-id='tag'] [data-role='frozen-signal-name']");
+  await expect(label).toHaveText("tag");
+  const geometry = await label.evaluate((element) => {
+    const range = element.ownerDocument.createRange();
+    range.selectNodeContents(element);
+    const textRect = range.getBoundingClientRect();
+    const frozenRect = element.closest("[data-role='frozen-label-rows']")!.getBoundingClientRect();
+    return { textRight: textRect.right, frozenRight: frozenRect.right, paddingRight: getComputedStyle(element).paddingRight };
+  });
+  expect(geometry.paddingRight).toBe("8px");
+  expect(geometry.textRight).toBeLessThanOrEqual(geometry.frozenRight - 4);
+});
+
+test("keeps representative APB protocol labels inset in the frozen column", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/old/pre-reset-2026-10-02/golden-protocol/timing_chart_sample_pack/samples/01_apb_register_access.tcd.json"));
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+
+  for (const [rowId, name] of [["psel", "PSEL"], ["penable", "PENABLE"], ["pslverr", "PSLVERR"]] as const) {
+    const label = host.locator(`[data-role='frozen-row'][data-row-id='${rowId}'] [data-role='frozen-signal-name']`);
+    await expect(label).toHaveText(name);
+    const geometry = await label.evaluate((element) => {
+      const range = element.ownerDocument.createRange();
+      range.selectNodeContents(element);
+      const textRect = range.getBoundingClientRect();
+      const frozenRect = element.closest("[data-role='frozen-label-rows']")!.getBoundingClientRect();
+      return { textLeft: textRect.left, textRight: textRect.right, frozenLeft: frozenRect.left, frozenRight: frozenRect.right };
+    });
+    expect(geometry.textLeft).toBeGreaterThanOrEqual(geometry.frozenLeft + 4);
+    expect(geometry.textRight).toBeLessThanOrEqual(geometry.frozenRight - 4);
+  }
+});
+
+test("preserves APB label policy and frozen geometry through Save/Open for every policy", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/old/pre-reset-2026-10-02/golden-protocol/timing_chart_sample_pack/samples/01_apb_register_access.tcd.json"));
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+
+  const layout = page.getByTestId("inspector-layout-editor");
+  const signalNames = [["psel", "PSEL"], ["penable", "PENABLE"], ["pslverr", "PSLVERR"]] as const;
+  for (const alignment of ["left", "center", "right"] as const) {
+    for (const overflow of ["ellipsis", "expand", "wrap"] as const) {
+      await layout.getByLabel("Inspector role column width").fill("74");
+      await layout.getByLabel("Inspector signal name width").fill("180");
+      await layout.getByLabel("Inspector signal name alignment").selectOption(alignment);
+      await layout.getByLabel("Inspector signal name overflow").selectOption(overflow);
+      await layout.getByTestId("apply-inspector-layout").click();
+      await expect(host).toHaveAttribute("data-editor-idle", "true");
+
+      const download = page.waitForEvent("download");
+      await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+      await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+      const savedPath = await (await download).path();
+      expect(savedPath, `${alignment}/${overflow} Save output`).toBeTruthy();
+      await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+      await expect(host).toHaveAttribute("data-editor-idle", "true");
+
+      await expect(layout.getByLabel("Inspector role column width")).toHaveValue("74");
+      await expect(layout.getByLabel("Inspector signal name width")).toHaveValue("180");
+      await expect(layout.getByLabel("Inspector signal name alignment")).toHaveValue(alignment);
+      await expect(layout.getByLabel("Inspector signal name overflow")).toHaveValue(overflow);
+      await expect(page.locator("main.editor-shell")).toHaveAttribute("data-layout-overflow", overflow);
+      for (const [rowId, expectedName] of signalNames) {
+        const label = host.locator(`[data-role='frozen-row'][data-row-id='${rowId}'] [data-role='frozen-signal-name']`);
+        await expect(label).toHaveText(expectedName);
+        const geometry = await label.evaluate((element) => {
+          const range = element.ownerDocument.createRange();
+          range.selectNodeContents(element);
+          const textRect = range.getBoundingClientRect();
+          const frozenRect = element.closest("[data-role='frozen-label-rows']")!.getBoundingClientRect();
+          return { textLeft: textRect.left, textRight: textRect.right, frozenLeft: frozenRect.left, frozenRight: frozenRect.right };
+        });
+        expect(geometry.textLeft, `${alignment}/${overflow}/${expectedName} left boundary`).toBeGreaterThanOrEqual(geometry.frozenLeft + 4);
+        expect(geometry.textRight, `${alignment}/${overflow}/${expectedName} right boundary`).toBeLessThanOrEqual(geometry.frozenRight - 4);
+      }
+      await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+    }
+  }
+});
+
+test("preserves canonical Signal names and safe frozen-column geometry across alignment and overflow policies", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/old/pre-reset-2026-10-02/golden-feature-coverage/timing_chart_feature_coverage_pack/samples/20_transaction_cycle_linked_views.tcd.json"));
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+
+  const shell = page.locator("main.editor-shell");
+  const layout = page.getByTestId("inspector-layout-editor");
+  const signalNames = [
+    ["clk", "CLK"], ["req", "req_valid"], ["tag", "tag"],
+    ["stage", "pipeline_stage"], ["rsp", "rsp_valid"], ["rtag", "rsp_tag"],
+  ] as const;
+
+  for (const alignment of ["left", "center", "right"] as const) {
+    for (const overflow of ["ellipsis", "expand", "wrap"] as const) {
+      await layout.getByLabel("Inspector signal name width").fill("180");
+      await layout.getByLabel("Inspector signal name alignment").selectOption(alignment);
+      await layout.getByLabel("Inspector signal name overflow").selectOption(overflow);
+      await layout.getByTestId("apply-inspector-layout").click();
+      await expect(host).toHaveAttribute("data-editor-idle", "true");
+      await expect(shell).toHaveAttribute("data-layout-overflow", overflow);
+
+      for (const [rowId, expectedName] of signalNames) {
+        const label = host.locator(`[data-role='frozen-row'][data-row-id='${rowId}'] [data-role='frozen-signal-name']`);
+        await expect(label).toHaveText(expectedName);
+      }
+      const shortLabel = host.locator("[data-role='frozen-row'][data-row-id='tag'] [data-role='frozen-signal-name']");
+      const geometry = await shortLabel.evaluate((element) => {
+        const range = element.ownerDocument.createRange();
+        range.selectNodeContents(element);
+        const textRect = range.getBoundingClientRect();
+        const frozenRect = element.closest("[data-role='frozen-label-rows']")!.getBoundingClientRect();
+        return { textLeft: textRect.left, textRight: textRect.right, frozenLeft: frozenRect.left, frozenRight: frozenRect.right };
+      });
+      expect(geometry.textLeft).toBeGreaterThanOrEqual(geometry.frozenLeft + 4);
+      expect(geometry.textRight).toBeLessThanOrEqual(geometry.frozenRight - 4);
+    }
+  }
+
+});
+
+test("keeps right-aligned frozen labels inset during horizontal scroll and zoom", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/old/pre-reset-2026-10-02/showcase/25_long_timeline_stress_showcase.tcd.json"));
+  await expect(page.getByRole("heading", { name: "Long Timeline / Scroll Stress Showcase" })).toBeVisible();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const longLabel = host.locator("[data-role='frozen-row'][data-row-id='long_in_0'] [data-role='frozen-signal-name']");
+  await expect(longLabel).toHaveText("input_req_0");
+  const viewport = host.locator("[data-role='timeline-viewport']");
+  const horizontalScrollbar = page.getByTestId("timeline-hscroll");
+  const scrollRange = await viewport.evaluate((element) => element.scrollWidth - element.clientWidth);
+  expect(scrollRange).toBeGreaterThan(0);
+  await horizontalScrollbar.evaluate((element) => { element.scrollLeft = element.scrollWidth; element.dispatchEvent(new Event("scroll")); });
+  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  await page.getByTestId("ribbon").getByRole("button", { name: "Zoom In", exact: true }).click();
+  const scrolledGeometry = await longLabel.evaluate((element) => {
+    const range = element.ownerDocument.createRange();
+    range.selectNodeContents(element);
+    const textRect = range.getBoundingClientRect();
+    const frozenRect = element.closest("[data-role='frozen-label-rows']")!.getBoundingClientRect();
+    return { textRight: textRect.right, frozenRight: frozenRect.right };
+  });
+  expect(scrolledGeometry.textRight).toBeLessThanOrEqual(scrolledGeometry.frozenRight - 4);
+  await page.getByTestId("ribbon").getByRole("button", { name: "Fit All", exact: true }).click();
+  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBe(0);
 });

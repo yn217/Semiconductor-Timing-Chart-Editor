@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildHardwareHierarchyEntries, buildHardwareHierarchyRowIndex, deriveHardwareHierarchyEntries, filterHardwareHierarchyEntries, hardwareHierarchyScopes, hardwareHierarchyScopeBreadcrumbs, DefaultProjectionService, calculateRowLayout } from "@timing-chart-v2/projection";
+import { buildHardwareHierarchyEntries, buildHardwareHierarchyRowIndex, deriveHardwareHierarchyEntries, filterHardwareHierarchyEntries, hardwareHierarchyScopes, hardwareHierarchyScopeBreadcrumbs, DefaultProjectionService, calculateRowLayout, getRowLayoutSourceIndex, rowsIntersectingVerticalViewport } from "@timing-chart-v2/projection";
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import type { BookmarkId, CanonicalDocument, GroupId, RowId, SignalId, SpacerId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
@@ -29,6 +29,22 @@ function linearMountedRowIds(layout: ReturnType<typeof calculateRowLayout>, view
 }
 
 describe("RowLayout and projection invariants", () => {
+  it("finds viewport-intersecting rows without scanning the full ordered layout", () => {
+    const rows = Array.from({ length: 10_000 }, (_, index) => ({ rowId: `row-${index}`, visible: index !== 5_001, y: index * 20, height: index === 4_999 ? 35 : 18 }));
+    let indexedReads = 0;
+    const observedRows = new Proxy(rows, {
+      get(target, property, receiver) {
+        if (typeof property === "string" && /^\d+$/.test(property)) indexedReads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+
+    const actual = rowsIntersectingVerticalViewport(observedRows, 100_000, 100_040);
+
+    expect(actual.map((row) => row.rowId)).toEqual(["row-4999", "row-5000", "row-5002"]);
+    expect(indexedReads).toBeLessThan(40);
+  });
+
   it("reuses canonical Signal IDs when an unrelated document collection changes", () => {
     const document = canonicalFixture();
     const service = new DefaultProjectionService();
@@ -71,6 +87,23 @@ describe("RowLayout and projection invariants", () => {
     expect(service.diagnostics().rowLayoutSourceIndexBuilds).toBe(1);
   });
 
+  it("resolves a clicked Signal row through the immutable ID index rather than searching Signals", () => {
+    const source = canonicalFixture();
+    const target = source.signals[1]!;
+    const signals = new Proxy(source.signals, {
+      get(targetRows, property, receiver) {
+        if (property === "find") throw new Error("tree row selection must use the stable-ID index");
+        return Reflect.get(targetRows, property, receiver);
+      },
+    });
+    const document = { ...source, signals } as CanonicalDocument;
+
+    const sourceIndex = getRowLayoutSourceIndex(document).index;
+
+    expect(sourceIndex.signalsById.get(target.id)).toBe(target);
+    expect(sourceIndex.signalsById.get("missing-signal")).toBeUndefined();
+  });
+
   it("reuses the immutable row-domain index across projection services sharing canonical collections", () => {
     const source = canonicalFixture();
     let signalMapBuilds = 0;
@@ -104,6 +137,9 @@ describe("RowLayout and projection invariants", () => {
     expect(canonicalRowEnumerations).toBe(1);
     expect(upperProjection.diagnostics().rowLayoutSourceIndexBuilds).toBe(1);
     expect(lowerProjection.diagnostics().rowLayoutSourceIndexBuilds).toBe(0);
+    const sharedIndex = getRowLayoutSourceIndex(document).index;
+    expect(getRowLayoutSourceIndex({ ...document, signals: [...signals] }).index).not.toBe(sharedIndex);
+    expect(getRowLayoutSourceIndex({ ...document, signalGroups: [...signalGroups] }).index).not.toBe(sharedIndex);
   });
 
   it("derives stable hierarchy entries without changing group placement semantics", () => {

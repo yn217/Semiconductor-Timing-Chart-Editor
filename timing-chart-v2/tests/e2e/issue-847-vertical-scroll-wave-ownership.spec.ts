@@ -10,7 +10,7 @@ for (const viewportSize of [{ width: 1280, height: 720 }, { width: 1672, height:
     await page.goto("/");
     const host = page.getByTestId("cycle-surface");
     await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-    await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/showcase/21_large_feature_showcase.tcd.json"));
+    await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/old/pre-reset-2026-10-02/showcase/21_large_feature_showcase.tcd.json"));
     await expect(host).toHaveAttribute("data-editor-idle", "true");
     await page.getByRole("tab", { name: "Annotation", exact: true }).click();
     const selectedAnnotationRow = page.locator("[data-annotation-row='a.text']");
@@ -38,7 +38,7 @@ for (const viewportSize of [{ width: 1280, height: 720 }, { width: 1672, height:
     })).toBe(true);
 
     await page.evaluate(() => {
-      type ScrollSample = { scrollTop: number; renderer: Record<string, number>; missing: Array<{ id: string; ownerPresent: boolean; hasWave: boolean; waveError: boolean; batchId?: string; renderedStart?: string; renderedEnd?: string }>; misaligned: Array<{ id: string; rowY: number; waveY: number }> };
+      type ScrollSample = { scrollTop: number; renderer: Record<string, number>; missing: Array<{ id: string; ownerPresent: boolean; hasWave: boolean; waveError: boolean; waveState?: string; waveRenderer?: string; waveErrorText?: string; batchId?: string; renderedStart?: string; renderedEnd?: string; rowTop?: number; ownerTop?: number }>; misaligned: Array<{ id: string; rowY: number; waveY: number }> };
       const root = document.querySelector<HTMLElement>("[data-testid='cycle-surface']")!;
       const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']")!;
       const target = window as typeof window & { __issue847Samples?: ScrollSample[]; __issue847Stop?: boolean };
@@ -55,7 +55,7 @@ for (const viewportSize of [{ width: 1280, height: 720 }, { width: 1672, height:
         for (const row of rows) {
           const id = row.dataset.rowId ?? "<missing-id>";
           const owner = root.querySelector<HTMLElement>(`[data-role='wave-owner'][data-signal-id='${CSS.escape(id)}']`);
-          if (!owner || (!owner.querySelector("svg, canvas[data-wave-canvas]") && !owner.hasAttribute("data-wave-error"))) missing.push({ id, ownerPresent: owner !== null, hasWave: owner?.querySelector("svg, canvas[data-wave-canvas]") !== null, waveError: owner?.hasAttribute("data-wave-error") ?? false, ...(owner?.dataset.waveBatchId ? { batchId: owner.dataset.waveBatchId } : {}), ...(owner?.dataset.renderedSourceWindowStart ? { renderedStart: owner.dataset.renderedSourceWindowStart } : {}), ...(owner?.dataset.renderedSourceWindowEnd ? { renderedEnd: owner.dataset.renderedSourceWindowEnd } : {}) });
+          if (!owner || (!owner.querySelector("svg, canvas[data-wave-canvas]") && !owner.hasAttribute("data-wave-error"))) missing.push({ id, ownerPresent: owner !== null, hasWave: owner?.querySelector("svg, canvas[data-wave-canvas]") !== null, waveError: owner?.hasAttribute("data-wave-error") ?? false, ...(owner?.dataset.waveState ? { waveState: owner.dataset.waveState } : {}), ...(owner?.dataset.waveRenderer ? { waveRenderer: owner.dataset.waveRenderer } : {}), ...(owner?.dataset.waveError ? { waveErrorText: owner.dataset.waveError } : {}), ...(owner?.dataset.waveBatchId ? { batchId: owner.dataset.waveBatchId } : {}), ...(owner?.dataset.renderedSourceWindowStart ? { renderedStart: owner.dataset.renderedSourceWindowStart } : {}), ...(owner?.dataset.renderedSourceWindowEnd ? { renderedEnd: owner.dataset.renderedSourceWindowEnd } : {}), rowTop: row.getBoundingClientRect().top, ...(owner ? { ownerTop: owner.getBoundingClientRect().top } : {}) });
           if (owner && Math.abs(owner.getBoundingClientRect().top - row.getBoundingClientRect().top) > 1) misaligned.push({ id, rowY: row.getBoundingClientRect().top, waveY: owner.getBoundingClientRect().top });
         }
         target.__issue847Samples!.push({ scrollTop: viewport.scrollTop, renderer, missing, misaligned });
@@ -102,8 +102,9 @@ for (const viewportSize of [{ width: 1280, height: 720 }, { width: 1672, height:
     });
     const sustainedMisalignment = [...misalignedStreak].filter(([, entry]) => entry.max > 1).map(([id, entry]) => ({ id, ...entry }));
     const missingSummary = sustainedMissing.slice(0, 6).map(({ id, max, firstScrollTop, sample }) => ({ id, max, firstScrollTop, renderer: sample?.renderer, owner: sample?.owner }));
-    console.info("#847 vertical-scroll frame evidence", { viewportSize, scrollPositions: [...new Set(samples.map((sample) => sample.scrollTop))], missingFrames: samples.filter((sample) => sample.missing.length > 0).length, sustainedMissingCount: sustainedMissing.length, sustainedMissing: missingSummary, sustainedMisalignment });
-    expect(sustainedMissing, JSON.stringify({ viewportSize, scrollPositions: [...new Set(samples.map((sample) => sample.scrollTop))], sustainedMissingCount: sustainedMissing.length, sustainedMissing: missingSummary })).toEqual([]);
+    const missingTimeline = samples.flatMap((sample, frameIndex) => sample.missing.length === 0 ? [] : [{ frameIndex, scrollTop: sample.scrollTop, renderer: sample.renderer, missing: sample.missing }]);
+    console.info("#847 vertical-scroll frame evidence", { viewportSize, scrollPositions: [...new Set(samples.map((sample) => sample.scrollTop))], missingFrames: samples.filter((sample) => sample.missing.length > 0).length, sustainedMissingCount: sustainedMissing.length, sustainedMissing: missingSummary, missingTimeline, sustainedMisalignment });
+    expect(sustainedMissing, JSON.stringify({ viewportSize, scrollPositions: [...new Set(samples.map((sample) => sample.scrollTop))], sustainedMissingCount: sustainedMissing.length, sustainedMissing: missingSummary, missingTimeline })).toEqual([]);
     expect(sustainedMisalignment, JSON.stringify({ viewportSize, scrollPositions: [...new Set(samples.map((sample) => sample.scrollTop))], sustainedMisalignment })).toEqual([]);
     await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
     await expect(page.getByTestId("history-status")).toHaveText(beforeHistory!);

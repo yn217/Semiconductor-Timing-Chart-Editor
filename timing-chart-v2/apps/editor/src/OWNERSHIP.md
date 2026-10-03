@@ -8,7 +8,7 @@ controllers are extracted incrementally.
 | Review scope, severity, navigation | `review-workflow.tsx` | parent `UiCommandRegistry` callback | extracted |
 | Problems presentation | `problems-panel.tsx` | parent `UiCommandRegistry` callback | extracted |
 | Viewport, timeline, ruler and grid lifecycle | `runtime/timeline-viewport-runtime.ts`, `runtime/timeline-geometry-owner.ts`, `runtime/view-metrics.ts` | parent `UiCommandRegistry` callback | explicit runtime owners; `minimal-cycle-view.tsx` integrates them |
-| Timeline surface input interactions | `runtime/timeline-surface-interactions.ts` | `UiCommandRegistry` / `EditorApplicationOwner` callbacks | explicit pointer, keyboard, context-menu, and tree-drag owner |
+| Timeline surface input interactions | `runtime/timeline-surface-interactions.ts`, `runtime/tree-keyboard-controller.ts` | `UiCommandRegistry` / `EditorApplicationOwner` callbacks | explicit pointer, viewport keyboard, tree roving focus, context-menu, and tree-drag owners |
 | File open/save/export lifecycle | `application/use-document-lifecycle.ts` | `CommandHistorySession` / SemanticCommand | explicit lifecycle owner; `minimal-cycle-view.tsx` integrates effects |
 | Canonical session and renderer bridge | `application/use-editor-application-owner.ts`, `runtime/editor-application-runtime.ts`, `runtime/waveform-surface-provider.ts`, `runtime/render-coordinator.ts` | `CommandHistorySession` | explicit application/renderer boundary |
 | Document replacement and async render generation | `runtime/document-epoch.ts`, `projection`, `renderer` | `DocumentEpoch` / current session | explicit epoch propagation; stale wave results are dropped |
@@ -65,6 +65,7 @@ controllers are extracted incrementally.
 | Runtime helper boundaries | `runtime/render-invalidation.ts`, `runtime/editor-dom-bridge.ts`, `runtime/viewport-projection.ts`, `runtime/waveform-surface-provider.ts`, `runtime/timeline-presentation-refresh.ts`, `runtime/runtime-diagnostics.ts` | existing runtime owners | PR6 helper split; no compatibility barrel |
 | Runtime viewport controller | `runtime/viewport-controller.ts` | view-only viewport/navigation callbacks | second-pass owner boundary |
 | Runtime interaction controller | `runtime/interaction-controller.ts` | pointer/keyboard binding and transaction snap callbacks | second-pass owner boundary |
+| Transition arrow picker | `runtime/transition-arrow-picker.ts` | two-click snapped Arrow/Dependency creation lifecycle | extracted from the timeline surface controller; mutation remains through `EditorApplicationOwner` |
 | Runtime document refresh lifecycle | `runtime/document-lifecycle-controller.ts` | current document epoch/lifecycle guard | second-pass owner boundary |
 | Runtime render coordinator | `runtime/render-coordinator.ts` | renderer overlay and edge-counter refresh | second-pass owner boundary |
 | Timeline surface controller | `runtime/timeline-surface-controller.ts` | renderer/projection/geometry/gesture lifecycle | explicit non-React runtime owner |
@@ -73,6 +74,7 @@ controllers are extracted incrementally.
 | Runtime waveform provider | `runtime/waveform-surface-provider.ts` | WaveDrom adapter and geometry registry | PR6 helper split |
 | Runtime timeline presentation refresh | `runtime/timeline-presentation-refresh.ts` | view-only DOM/geometry presentation | PR6 helper split |
 | Runtime renderer host sizing | `runtime/renderer-host-sizing.ts` | view-only DOM sizing | PR6 helper split |
+| Editor DOM bridge effects | `runtime/use-editor-dom-bridge-effects.ts` | view-only React effect adapter over DOM presentation helpers | extracted from the composition shell; owns tree presentation, range-band, resize, and ruler refresh effects |
 | Runtime diagnostics publication | `runtime/runtime-diagnostics.ts` | runtime diagnostics dataset | PR6 helper split |
 
 ## Cycle / Transaction / Combined workspace ownership (#593)

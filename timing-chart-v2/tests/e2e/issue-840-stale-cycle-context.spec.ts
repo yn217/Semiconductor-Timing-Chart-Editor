@@ -9,7 +9,7 @@ test(`Cycle range and cursor status remain truthful after switching to the Trans
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
 
-  const fixture = await readFile(new URL("../../samples/showcase/21_large_feature_showcase.tcd.json", import.meta.url));
+  const fixture = await readFile(new URL("../../samples/old/pre-reset-2026-10-02/showcase/21_large_feature_showcase.tcd.json", import.meta.url));
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({
     name: "21_large_feature_showcase.tcd.json",
     mimeType: "application/json",

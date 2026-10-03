@@ -286,16 +286,21 @@ test("positions a transaction ending at cycleCount on the actual terminal ruler 
   // must switch explicitly rather than assume Cycle is still the default.
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.getByRole("button", { name: "Transaction", exact: true }).click();
+  // Transaction form fields are TC (1 TC = 10 cycles): 2..2.4 TC = cycles 20..24; Transaction ruler labels are TC, so the terminal tick is addressed by its source cycle.
   await page.getByLabel("New Transaction name").fill("Terminal transfer");
-  await page.getByLabel("New Transaction start").fill("20");
-  await page.getByLabel("New Transaction end").fill("24");
+  await page.getByLabel("New Transaction start").fill("2");
+  await page.getByLabel("New Transaction end").fill("2.4");
   await page.getByTestId("transaction-editor").getByRole("button", { name: "Create Transaction", exact: true }).click();
   const transaction = page.getByTestId("transaction-lanes").locator("[data-transaction-id]");
-  const terminal = await page.getByTestId("cycle-ruler").locator("[data-cycle='24']").boundingBox();
+  const terminal = await page.getByTestId("cycle-ruler").locator("[data-source-cycle='24']").boundingBox();
   const transactionBox = await transaction.boundingBox();
   expect(terminal).not.toBeNull();
   expect(transactionBox).not.toBeNull();
-  expect(Math.abs((transactionBox!.x + transactionBox!.width) - terminal!.x)).toBeLessThanOrEqual(1);
+  // The bar is clamped to a CSS min-width of 18px so tiny Transactions stay clickable. At the default 1 TC = 10 cycles scale this 4-cycle bar is only
+  // ~16px wide, so its right edge is max(terminal tick, start + 18px); its start is exactly on the cycle-20 tick.
+  expect(Math.abs((transactionBox!.x + transactionBox!.width) - Math.max(terminal!.x, transactionBox!.x + 18))).toBeLessThanOrEqual(1);
+  const startTick = await page.getByTestId("cycle-ruler").locator("[data-source-cycle='20']").boundingBox();
+  expect(Math.abs(transactionBox!.x - startTick!.x)).toBeLessThanOrEqual(1);
 });
 
 test("keeps transaction source-cycle edges aligned after a collapsed TimeGroup", async ({ page }) => {
@@ -309,16 +314,17 @@ test("keeps transaction source-cycle edges aligned after a collapsed TimeGroup",
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByRole("button", { name: "Axis Break", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  const tick = page.getByTestId("cycle-ruler").locator("[data-cycle='8']");
+  const tick = page.getByTestId("cycle-ruler").locator("[data-source-cycle='24']");
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Transaction");
   // Cycle and Transaction have different left offsets (frozen columns), so the folded boundary is measured in the mode
   // where the Transaction bar is drawn.
   const before = await tick.boundingBox();
   expect(before).not.toBeNull();
+  // After the Axis Break the Transaction ruler has ticks at source cycles 0, 12, 22 and 24; 0.4..2.4 TC = cycles 4..24 ends on the cycle-24 tick.
   await page.getByLabel("New Transaction name").fill("Folded transfer");
-  await page.getByLabel("New Transaction start").fill("4");
-  await page.getByLabel("New Transaction end").fill("8");
+  await page.getByLabel("New Transaction start").fill("0.4");
+  await page.getByLabel("New Transaction end").fill("2.4");
   await page.getByTestId("transaction-editor").getByRole("button", { name: "Create Transaction", exact: true }).click();
   const transaction = page.getByTestId("transaction-lanes").locator("[data-transaction-id]");
   await expect(host).toHaveAttribute("data-editor-idle", "true");
@@ -888,7 +894,13 @@ test("keeps 100 Bookmarks distinct and navigation view-only in a long document",
     await panel.getByTestId(`bookmark-row-${id}`).dblclick();
     await expect(page.getByTestId("playhead")).toHaveAttribute("data-playhead-cycle", String(index < 2 ? 50 : index));
   }
-  expect(await surface.getAttribute("data-render-counters")).toBe(countersBefore);
+  // Navigation is view-only for the Canonical document, but in a long document each jump replaces the bounded waveform window, so WaveDrom renders
+  // legitimately increase. Row/overlay bookkeeping must stay untouched and the extra renders bounded by the windows visited (6 jumps).
+  const countersAfter = JSON.parse(await surface.getAttribute("data-render-counters") ?? "{}") as Record<string, number>;
+  const countersStart = JSON.parse(countersBefore ?? "{}") as Record<string, number>;
+  expect(countersAfter.rowPositionUpdates).toBe(countersStart.rowPositionUpdates);
+  expect(countersAfter.overlayUpdates).toBe(countersStart.overlayUpdates);
+  expect(countersAfter.waveDromRenders! - countersStart.waveDromRenders!).toBeLessThan(300);
   expect(await host.getAttribute("data-canonical-revision")).toBe(revisionBefore);
   expect(await page.getByTestId("history-status").textContent()).toBe(historyBefore);
 });

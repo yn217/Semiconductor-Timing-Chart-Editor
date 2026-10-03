@@ -7,6 +7,7 @@ test("Left Tree header actions preserve keyboard focus and leave the document un
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const before = {
     revision: await host.getAttribute("data-canonical-revision"),
     history: await page.getByTestId("history-status").textContent(),

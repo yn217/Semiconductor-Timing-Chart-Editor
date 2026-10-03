@@ -9,6 +9,7 @@ test.use({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1 });
 async function ready(page: Page): Promise<void> {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-canonical-revision", /^\d+$/);
 }
 
 async function tick(page: Page, cycle: number): Promise<Locator> {

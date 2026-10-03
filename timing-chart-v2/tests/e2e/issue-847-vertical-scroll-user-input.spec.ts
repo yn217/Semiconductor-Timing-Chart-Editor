@@ -12,7 +12,7 @@ for (const viewportSize of [{ width: 1280, height: 720 }, { width: 1672, height:
       await page.goto("/");
       const surface = page.getByTestId("cycle-surface");
       await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
-      await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/showcase/21_large_feature_showcase.tcd.json"));
+      await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/old/pre-reset-2026-10-02/showcase/21_large_feature_showcase.tcd.json"));
       await expect(page.getByRole("heading", { name: "Large Feature Showcase — 128 cycles / 48 signals" })).toBeVisible();
       await expect(page.locator(".editor-shell")).toHaveAttribute("data-signal-count", "48");
       await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
@@ -39,6 +39,9 @@ for (const viewportSize of [{ width: 1280, height: 720 }, { width: 1672, height:
       await expect(annotation).toBeVisible();
       const annotationLabel = annotation.locator("[data-role='annotation-label']");
       await expect(annotationLabel).toBeVisible();
+      // At 1280x720 the label can sit under the Bottom panel (it overlays the viewport's lower edge); centre it in the VISIBLE part of the scroll viewport before hit-testing.
+      await annotationLabel.evaluate((label) => { const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']")!; const box = label.getBoundingClientRect(); const view = viewport.getBoundingClientRect(); const visibleBottom = document.querySelector<HTMLElement>(".bottom-resize-track")?.getBoundingClientRect().top ?? view.bottom; viewport.scrollTop += box.top - (view.top + (visibleBottom - view.top) / 2); viewport.dispatchEvent(new Event("scroll")); });
+      await page.waitForTimeout(300);
       const labelBox = (await annotationLabel.boundingBox())!;
       const labelHitPoints = await page.evaluate((box) => {
         const points = [

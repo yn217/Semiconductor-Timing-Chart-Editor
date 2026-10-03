@@ -17,6 +17,18 @@ import { pruneExternalSelection } from "./runtime/external-draft-reconciliation.
 // make React reuse the wrong virtualized row/editor state.
 const EVENT_ROW_HEIGHT = 30;
 const EVENT_OVERSCAN = 8;
+const EMPTY_EDITING_KEYS: ReadonlySet<string> = new Set();
+
+function retainVisibleIdentities(current: ReadonlySet<string>, indexByIdentity: ReadonlyMap<string, number>, first: number, last: number): ReadonlySet<string> {
+  let next: Set<string> | undefined;
+  for (const identity of current) {
+    const index = indexByIdentity.get(identity);
+    if (index === undefined || index < first || index >= last) {
+      (next ??= new Set(current)).delete(identity);
+    }
+  }
+  return next ?? current;
+}
 
 // #426: Value Helper's own label/hint were hardcoded to "(Signal)" / the
 // binary 0-1-X-Z blurb regardless of the actually-selected Signal's real
@@ -47,6 +59,9 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
   // bulk actions below.
   const [storedCheckedKeys, setCheckedKeys] = useState<ReadonlySet<string>>(new Set());
   const [eventScrollTop, setEventScrollTop] = useState(0);
+  const [editingEventState, setEditingEventState] = useState(() => ({ signalId: signal.id, keys: new Set<string>() as ReadonlySet<string> }));
+  const editingEventKeys = editingEventState.signalId === signal.id ? editingEventState.keys : EMPTY_EDITING_KEYS;
+  const [eventViewportHeight, setEventViewportHeight] = useState(300);
   const eventViewportRef = useRef<HTMLDivElement>(null);
   const [importStatus, setImportStatus] = useState("Import signal events");
   const fileInput = useRef<HTMLInputElement>(null);
@@ -59,15 +74,27 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
     return () => { importMounted.current = false; importRequestId.current += 1; };
   }, []);
   const indexed = useMemo(() => buildEventTableIndex(signal.values, cycleCount), [signal.values, cycleCount]);
+  useEffect(() => {
+    const viewport = eventViewportRef.current;
+    if (!viewport) return;
+    const updateHeight = () => setEventViewportHeight(viewport.clientHeight);
+    updateHeight();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, []);
   const enumDefinition: EnumDefinition | undefined = signal.type === "state" && signal.enumId !== undefined ? enumDefinitions?.find((definition) => definition.id === signal.enumId) : undefined;
   const validKeys = useMemo(() => new Set(signal.values.map(transitionIdentity)), [signal.values]);
   const checkedKeys = useMemo(() => pruneExternalSelection(storedCheckedKeys, validKeys), [storedCheckedKeys, validKeys]);
   useEffect(() => {
     setCheckedKeys((current) => pruneExternalSelection(current, validKeys));
   }, [validKeys]);
-  const selected = indexed.ordered.find((change) => transitionIdentity(change) === selectedKey);
+  const selectedIndex = selectedKey === undefined ? undefined : indexed.indexByIdentity.get(selectedKey);
+  const selected = selectedIndex === undefined ? undefined : indexed.ordered[selectedIndex];
   const selectTransition = (startValue: number) => {
-    const change = indexed.ordered.find((item) => item.start === startValue);
+    const index = indexed.indexByStart.get(startValue);
+    const change = index === undefined ? undefined : indexed.ordered[index];
     setSelectedKey(change === undefined ? undefined : transitionIdentity(change));
   };
   const nextStart = indexed.firstFree() ?? Math.max(0, cycleCount - 1);
@@ -163,7 +190,6 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
   };
   const moveBy = (delta: -1 | 1) => {
     const ordered = [...indexed.ordered];
-    const selectedIndexes = ordered.map((change, index) => checkedKeys.has(transitionIdentity(change)) ? index : -1).filter((index) => index >= 0);
     if (selectedIndexes.length === 0) return;
     const first = selectedIndexes[0]!;
     const last = selectedIndexes[selectedIndexes.length - 1]!;
@@ -176,7 +202,7 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
     if (commandResult.ok) setCheckedKeys(new Set(result.values.slice(result.firstIndex, result.firstIndex + result.blockSize).map(transitionIdentity)));
   };
   const orderedStarts = indexed.ordered;
-  const selectedIndexes = orderedStarts.map((change, index) => checkedKeys.has(transitionIdentity(change)) ? index : -1).filter((index) => index >= 0);
+  const selectedIndexes = useMemo(() => [...checkedKeys].map((key) => indexed.indexByIdentity.get(key)).filter((index): index is number => index !== undefined).sort((left, right) => left - right), [checkedKeys, indexed.indexByIdentity]);
   const isContiguous = selectedIndexes.length > 0 && selectedIndexes.length === selectedIndexes.at(-1)! - selectedIndexes[0]! + 1;
   const canMoveUp = isContiguous && selectedIndexes[0]! > 0;
   const canMoveDown = isContiguous && selectedIndexes.at(-1)! < orderedStarts.length - 1;
@@ -189,13 +215,14 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
   }, [dragStarts]);
   const reorderDrop = (targetStart: number) => {
     const activeDragStarts = dragStartsRef.current;
-    const target = indexed.ordered.find((change) => change.start === targetStart);
+    const target = indexed.ordered[indexed.indexByStart.get(targetStart) ?? -1];
     if (activeDragStarts === undefined || target === undefined || activeDragStarts.has(transitionIdentity(target))) return;
     const ordered = [...indexed.ordered];
-    const selectedIndexes = ordered.map((change, index) => activeDragStarts.has(transitionIdentity(change)) ? index : -1).filter((index) => index >= 0);
+    // #856: positions come from the dragged keys via the identity index (O(dragged)), not a map/filter over every transition.
+    const selectedIndexes = [...activeDragStarts].map((key) => indexed.indexByIdentity.get(key) ?? -1).filter((index) => index >= 0).sort((left, right) => left - right);
     const from = selectedIndexes[0] ?? -1;
     const last = selectedIndexes.at(-1) ?? -1;
-    const to = ordered.findIndex((change) => change.start === targetStart);
+    const to = indexed.indexByStart.get(targetStart) ?? -1;
     if (from < 0 || to < 0 || selectedIndexes.length !== last - from + 1) { setActiveDragStarts(undefined); return; }
     const result = reorderTransitionBlock(ordered, activeDragStarts, to, cycleCount);
     if (result) { const commandResult = commands.replaceValues(signal.id, result.values); if (commandResult.ok) setCheckedKeys(new Set(result.values.slice(result.firstIndex, result.firstIndex + result.blockSize).map(transitionIdentity))); }
@@ -208,23 +235,43 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
   // "N selected" count next to the section title make that relationship
   // explicit without relying on the reader to infer it from the footer
   // alone.
-  const allChecked = signal.values.length > 0 && signal.values.every((change) => checkedKeys.has(transitionIdentity(change)));
+  const allChecked = useMemo(() => signal.values.length > 0 && signal.values.every((change) => checkedKeys.has(transitionIdentity(change))), [signal.values, checkedKeys]);
   const selectAllRef = useRef<HTMLInputElement>(null);
   useEffect(() => { if (selectAllRef.current) selectAllRef.current.indeterminate = checkedCount > 0 && !allChecked; }, [checkedCount, allChecked]);
   const toggleAll = () => setCheckedKeys(allChecked ? new Set() : new Set(signal.values.map(transitionIdentity)));
   const eventFirst = Math.max(0, Math.floor(eventScrollTop / EVENT_ROW_HEIGHT) - EVENT_OVERSCAN);
-  const eventLast = Math.min(indexed.ordered.length, Math.ceil((eventScrollTop + (eventViewportRef.current?.clientHeight ?? 300)) / EVENT_ROW_HEIGHT) + EVENT_OVERSCAN);
+  const eventLast = Math.min(indexed.ordered.length, Math.ceil((eventScrollTop + eventViewportHeight) / EVENT_ROW_HEIGHT) + EVENT_OVERSCAN);
   const renderedEvents = indexed.ordered.slice(eventFirst, eventLast);
+  const updateEventScroll = (scrollTop: number) => {
+    const first = Math.max(0, Math.floor(scrollTop / EVENT_ROW_HEIGHT) - EVENT_OVERSCAN);
+    const last = Math.min(indexed.ordered.length, Math.ceil((scrollTop + eventViewportHeight) / EVENT_ROW_HEIGHT) + EVENT_OVERSCAN);
+    setEditingEventState((current) => {
+      const keys = current.signalId === signal.id ? current.keys : EMPTY_EDITING_KEYS;
+      const retained = retainVisibleIdentities(keys, indexed.indexByIdentity, first, last);
+      return current.signalId === signal.id && retained === keys ? current : { signalId: signal.id, keys: retained };
+    });
+    setEventScrollTop(scrollTop);
+  };
+  // A viewport resize can evict an edited row just like scrolling it out of
+  // the virtual window. Match the prior row-unmount lifecycle instead of
+  // reopening that local draft if the user later scrolls back.
+  useEffect(() => {
+    setEditingEventState((current) => {
+      const keys = current.signalId === signal.id ? current.keys : EMPTY_EDITING_KEYS;
+      const retained = retainVisibleIdentities(keys, indexed.indexByIdentity, eventFirst, eventLast);
+      return current.signalId === signal.id && retained === keys ? current : { signalId: signal.id, keys: retained };
+    });
+  }, [eventFirst, eventLast, indexed.indexByIdentity, signal.id]);
   useEffect(() => {
     if (selectedKey === undefined || !eventViewportRef.current) return;
-    const index = indexed.ordered.findIndex((change) => transitionIdentity(change) === selectedKey);
-    if (index < 0) return;
+    const index = indexed.indexByIdentity.get(selectedKey);
+    if (index === undefined) return;
     const top = index * EVENT_ROW_HEIGHT;
     const bottom = top + EVENT_ROW_HEIGHT;
     const viewport = eventViewportRef.current;
     if (top < viewport.scrollTop) viewport.scrollTop = top;
     else if (bottom > viewport.scrollTop + viewport.clientHeight) viewport.scrollTop = bottom - viewport.clientHeight;
-  }, [indexed.ordered, selectedKey]);
+  }, [indexed.indexByIdentity, selectedKey]);
   return <div className="event-editor">
     {/* Bottom Panel Visual Reference pass: Add/Edit Transition, Value
         Helper and (for a binary Signal) Generate Waveform render side by
@@ -292,7 +339,7 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
       <button type="button" onClick={addRow} data-testid="event-add-row">Add Row</button>
       <button type="button" className="danger" onClick={() => selected && commands.removeValue(signal.id, selected.start)} disabled={!selected || signal.values.length === 1} data-testid="event-delete-row">Delete</button>
     </div>
-    <div ref={eventViewportRef} className="event-table-scroll" onScroll={(event) => setEventScrollTop(event.currentTarget.scrollTop)}>
+    <div ref={eventViewportRef} className="event-table-scroll" onScroll={(event) => updateEventScroll(event.currentTarget.scrollTop)}>
       <div className="event-table" role="table" aria-label="Signal events">
         {/* Visual Quality Closure pass, Section 4: Select All is a real
             tri-state checkbox (checked/indeterminate/unchecked) driving the
@@ -300,7 +347,7 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
             not a decorative header cell. */}
         <div className="event-row event-columns" role="row"><input ref={selectAllRef} type="checkbox" aria-label="Select all transitions" checked={allChecked} onChange={toggleAll} /><span>#</span><span>Start</span><span className="event-derived-column" data-derived="true" title="Derived: End is the next transition's Start (or the last cycle). Edit Start to change it.">End</span><span className="event-derived-column" data-derived="true" title="Derived: End minus Start. Not directly editable.">Duration</span><span>Value</span><span>Comment</span><span>Actions</span></div>
         <div aria-hidden="true" style={{ height: eventFirst * EVENT_ROW_HEIGHT }} />
-        {renderedEvents.map((change, offset) => { const index = eventFirst + offset; const key = transitionIdentity(change); return <EventRow key={key} index={index + 1} signal={signal} enumDefinition={enumDefinition} change={change} end={indexed.ordered[index + 1]?.start ?? cycleCount} selected={key === selectedKey} checked={checkedKeys.has(key)} canDuplicate={canDuplicate} onToggleChecked={() => toggleChecked(change)} onSelect={selectTransition} onDuplicate={() => duplicateChange(change)} commands={commands} draggable onDragStart={() => setActiveDragStarts(new Set(checkedKeys.has(key) && checkedCount > 1 ? checkedKeys : [key]))} onDragOver={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); }} onDrop={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); reorderDrop(change.start); }} onDragEnd={() => setActiveDragStarts(undefined)} />; })}
+        {renderedEvents.map((change, offset) => { const index = eventFirst + offset; const key = transitionIdentity(change); const editing = editingEventKeys.has(key); return <EventRow key={editing ? `event:${signal.id}:${key}` : `slot:${offset}`} index={index + 1} signal={signal} enumDefinition={enumDefinition} change={change} end={indexed.ordered[index + 1]?.start ?? cycleCount} selected={key === selectedKey} checked={checkedKeys.has(key)} editing={editing} canDuplicate={canDuplicate} onToggleChecked={() => toggleChecked(change)} onSelect={selectTransition} onEditingChange={(next) => setEditingEventState((current) => { const keys = current.signalId === signal.id ? current.keys : EMPTY_EDITING_KEYS; if (keys.has(key) === next && current.signalId === signal.id) return current; const updated = new Set(keys); if (next) updated.add(key); else updated.delete(key); return { signalId: signal.id, keys: updated }; })} onDuplicate={() => duplicateChange(change)} commands={commands} draggable onDragStart={() => setActiveDragStarts(new Set(checkedKeys.has(key) && checkedCount > 1 ? checkedKeys : [key]))} onDragOver={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); }} onDrop={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); reorderDrop(change.start); }} onDragEnd={() => setActiveDragStarts(undefined)} />; })}
         <div aria-hidden="true" style={{ height: Math.max(0, indexed.ordered.length - eventLast) * EVENT_ROW_HEIGHT }} />
       </div>
     </div>

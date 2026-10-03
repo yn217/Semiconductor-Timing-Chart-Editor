@@ -9,6 +9,8 @@ export type TimelineZoomSurfaceContext = {
   readonly viewport: HTMLElement;
   readonly ruler: HTMLElement;
   readonly scalable: readonly HTMLElement[];
+  /** Scaled like `scalable` but resolved at apply time (panes that mount later, e.g. the Signal Split Lower grid). */
+  readonly extraScalable?: () => readonly HTMLElement[];
   readonly leftPaneWidth: number;
   readonly frozenPaneWidth: number;
   readonly inspectorWidth: number;
@@ -31,7 +33,7 @@ export function applyTimelineZoom(next: number, context: TimelineZoomSurfaceCont
   const width = offset + baseWidth * zoom;
   const applyPresentation = () => {
     if (context.rendererHost.isConnected === false) return;
-    for (const element of context.scalable) {
+    for (const element of [...context.scalable, ...(context.extraScalable?.() ?? [])]) {
       if (element.style.transformOrigin !== "0px 0px" && element.style.transformOrigin !== "0 0") element.style.transformOrigin = "0 0";
       element.style.scale = `${zoom} 1`;
     }

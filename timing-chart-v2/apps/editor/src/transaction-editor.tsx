@@ -1,13 +1,15 @@
 import { cyclesToTc, tcFieldLabel, tcToCycles } from "./transaction-tc.js";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import type { HistoryState } from "@timing-chart-v2/history";
 import type { CanonicalDocument, SignalId, Transaction, TransactionGroup, TransactionId, TransactionPhase } from "@timing-chart-v2/schema";
-import { nextEntityId } from "./entity-id.js";
+import { createEntityIdAllocator, nextEntityId } from "./entity-id.js";
 import type { TransactionEditorCommandActions } from "./application/editor-surface-command-controller.js";
 import { EditorIconButton } from "./editor-icon.js";
 import { TransactionLinkedSignals } from "./transaction-linked-signals.js";
 import { DraftStatus } from "./draft-status.js";
+import { transactionInsertion } from "./transaction-insertion.js";
+import { selectedTransactionsInDocumentOrder } from "./runtime/transaction-selection-index.js";
 
 export function TransactionEditor({ transaction, selectedTransactionIds, document, cyclesPerTc: perTc = 10, history, onSelect, onSelectTransactions, commands, onUndo, onRedo, onDelete, onCancel, onToggleTransactionSignal }: { readonly transaction: Transaction | undefined; readonly selectedTransactionIds?: ReadonlySet<TransactionId>; readonly document: CanonicalDocument; readonly cyclesPerTc?: number; readonly history: HistoryState; readonly onSelect: (id: TransactionId, additive?: boolean) => void; readonly onSelectTransactions: (ids: ReadonlySet<TransactionId>, primary?: TransactionId) => void; readonly commands: TransactionEditorCommandActions; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void; readonly onToggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => void }) {
   const [name, setName] = useState("Transaction");
@@ -93,13 +95,13 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
   const [applyError, setApplyError] = useState("");
   useEffect(() => setApplyError(""), [transaction?.id]);
   const [expandedPhaseTransactionIds, setExpandedPhaseTransactionIds] = useState<ReadonlySet<TransactionId>>(new Set());
-  const groupNameById = new Map(document.transactionGroups?.map((group) => [group.id, group.name]) ?? []);
+  const groupNameById = useMemo(() => new Map(document.transactionGroups?.map((group) => [group.id, group.name]) ?? []), [document.transactionGroups]);
   const needle = search.trim().toLocaleLowerCase();
-  const filteredTransactions = needle.length === 0 ? document.transactions : document.transactions.filter((item) => item.name.toLocaleLowerCase().includes(needle) || (item.groupId !== undefined && (groupNameById.get(item.groupId) ?? "").toLocaleLowerCase().includes(needle)));
-  const visibleTransactions = sortKey === "document" ? filteredTransactions : [...filteredTransactions].sort((left, right) => {
+  const filteredTransactions = useMemo(() => needle.length === 0 ? document.transactions : document.transactions.filter((item) => item.name.toLocaleLowerCase().includes(needle) || (item.groupId !== undefined && (groupNameById.get(item.groupId) ?? "").toLocaleLowerCase().includes(needle))), [document.transactions, groupNameById, needle]);
+  const visibleTransactions = useMemo(() => sortKey === "document" ? filteredTransactions : [...filteredTransactions].sort((left, right) => {
     const order = sortKey === "start" ? left.start - right.start || left.end - right.end : sortKey === "end" ? left.end - right.end || left.start - right.start : left.name.localeCompare(right.name);
     return sortDescending ? -order : order;
-  });
+  }), [filteredTransactions, sortKey, sortDescending]);
   // #770 Policy A (visible-scope selection): narrowing the filter must not leave a destructive bulk action operating on rows the user can
   // no longer see. Pruning the shared selection to what the filter currently shows is itself view-only (Canonical/History/Dirty delta 0).
   useEffect(() => {
@@ -110,10 +112,10 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on the filter text only; re-derives current selection/visibility from this render's closures.
   }, [needle]);
   type TransactionListEntry = Readonly<{ kind: "transaction"; item: Transaction } | { kind: "phase"; transaction: Transaction; phase: TransactionPhase; index: number }>;
-  const listEntries: readonly TransactionListEntry[] = visibleTransactions.flatMap((item) => [
+  const listEntries: readonly TransactionListEntry[] = useMemo(() => visibleTransactions.flatMap((item) => [
     { kind: "transaction" as const, item },
     ...(expandedPhaseTransactionIds.has(item.id) ? (item.phases ?? []).map((phase, index) => ({ kind: "phase" as const, transaction: item, phase, index })) : []),
-  ]);
+  ]), [visibleTransactions, expandedPhaseTransactionIds]);
   const transactionRowHeight = 30;
   const shouldVirtualizeTransactions = listEntries.length > 200;
   const transactionListViewportRef = useRef<HTMLDivElement>(null);
@@ -124,6 +126,7 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
   const transactionLastVisibleIndex = shouldVirtualizeTransactions ? Math.min(listEntries.length, Math.ceil((transactionListScrollTop + transactionViewportHeight) / transactionRowHeight) + transactionOverscan) : listEntries.length;
   const renderedEntries = listEntries.slice(transactionFirstVisibleIndex, transactionLastVisibleIndex);
   const selectedIds = selectedTransactionIds ?? new Set<TransactionId>();
+  const selectedTransactions = useMemo(() => selectedTransactionsInDocumentOrder(document.transactions, selectedIds), [document.transactions, selectedIds]);
   const selectionAnchorRef = useRef<TransactionId | undefined>(transaction?.id);
   const selectVisibleRow = (id: TransactionId, event: MouseEvent<HTMLButtonElement>) => {
     const anchor = selectionAnchorRef.current;
@@ -164,8 +167,9 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
   }, [shouldVirtualizeTransactions, transaction?.id, transactionOverscan, transactionRowHeight]);
   const duplicateSelected = () => {
     if (selectedIds.size > 1) {
-      const sources = document.transactions.filter((item) => selectedIds.has(item.id));
-      const items = sources.map((item) => ({ transactionId: item.id, newTransactionId: nextEntityId("transaction", document) as TransactionId, name: `${item.name} Copy` }));
+      const sources = selectedTransactions;
+      const allocateId = createEntityIdAllocator(document);
+      const items = sources.map((item) => ({ transactionId: item.id, newTransactionId: allocateId("transaction") as TransactionId, name: `${item.name} Copy` }));
       const batch = commands.bulkDuplicateTransactions(items);
       const last = items[items.length - 1];
       if (batch.ok && last) onSelect(last.newTransactionId);
@@ -192,19 +196,17 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
     commands.updateTransactionFromBottom({ transactionId: transaction.id, name: transaction.name, start: transaction.start, end: transaction.end, ...(transaction.laneId === undefined ? {} : { laneId: transaction.laneId }), ...(transaction.phases === undefined ? {} : { phases: transaction.phases }), ...(transaction.groupId === undefined ? {} : { groupId: transaction.groupId }), ...(transaction.description === undefined ? {} : { description: transaction.description }), color });
   };
   const bulkMoveToGroup = (groupId: TransactionGroup["id"] | undefined) => {
-    const selected = document.transactions.filter((item) => selectedIds.has(item.id));
+    const selected = selectedTransactions;
     if (selected.length === 0) return;
     commands.bulkMoveTransactionsToGroup(selected.map((item) => ({ transactionId: item.id, ...(groupId === undefined ? {} : { groupId }) })));
   };
   const bulkColor = (color: string) => {
-    const selected = document.transactions.filter((item) => selectedIds.has(item.id));
+    const selected = selectedTransactions;
     if (selected.length === 0) return;
-    // #461: same round-trip requirement as applyTransactionDraft/
-    // colorSelected above -- description was still missing here.
-    commands.bulkUpdateTransactions(selected.map((item) => ({ transactionId: item.id, name: item.name, start: item.start, end: item.end, ...(item.laneId === undefined ? {} : { laneId: item.laneId }), ...(item.phases === undefined ? {} : { phases: item.phases }), ...(item.groupId === undefined ? {} : { groupId: item.groupId }), ...(item.description === undefined ? {} : { description: item.description }), color })));
+    commands.bulkSetTransactionColor(selected.map((item) => item.id), color);
   };
   const bulkDelete = () => {
-    const ids = document.transactions.filter((item) => selectedIds.has(item.id)).map((item) => item.id);
+    const ids = selectedTransactions.map((item) => item.id);
     if (ids.length === 0) return;
     commands.bulkDeleteTransactions(ids);
   };
@@ -225,7 +227,7 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
           "Add" reuses the exact same commands.createTransactionFromBottom
           + default draft values the empty-state create form below already
           uses -- no new command, no second creation path. */}
-      <button type="button" data-testid="bottom-transaction-add" onClick={() => { const id = nextEntityId("transaction", document) as TransactionId; const result = commands.createTransactionFromBottom({ id, name: `Transaction ${document.transactions.length + 1}`, start, end, ...(laneId.trim() ? { laneId: laneId.trim() } : {}) }); if (result.ok) onSelect(id); }}>Add</button>
+      <button type="button" data-testid="bottom-transaction-add" onClick={() => { const id = nextEntityId("transaction", document) as TransactionId; const at = transactionInsertion(document, transaction?.id); const from = at.startCycle ?? start; const result = commands.createTransactionFromBottom({ id, name: `Transaction ${document.transactions.length + 1}`, start: from, end: Math.min(document.timeline.cycleCount, from + Math.max(1, end - start)), ...at.fields, ...(laneId.trim() ? { laneId: laneId.trim() } : {}) }, at.afterTransactionId); if (result.ok) onSelect(id); }}>Add</button>
       <button type="button" data-testid="bottom-transaction-duplicate" disabled={selectedIds.size === 0} title={selectedIds.size === 0 ? "Select a Transaction first" : selectedIds.size === 1 ? "Duplicate selected Transaction" : "Duplicate all selected Transactions"} onClick={duplicateSelected}>Duplicate</button>
       <button type="button" className="danger" data-testid="bottom-transaction-delete" disabled={selectedIds.size === 0} title={selectedIds.size === 0 ? "Select a Transaction first" : "Delete selected Transaction(s)"} onClick={() => selectedIds.size > 1 ? bulkDelete() : onDelete()}>Delete</button>
       <button type="button" data-testid="bottom-transaction-add-group" onClick={addTransactionGroup}>Add Group</button>
@@ -251,7 +253,7 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
           lines up exactly with each row's button (same grid-template-columns
           CSS rule, reused rather than duplicated). */}
       <div className="transaction-list-header" data-transaction-table-header="true"><span className="transaction-list-header-spacer" aria-hidden="true" /><span className="transaction-list-header-cells"><span title="Name">Name</span><span title="Group">Group</span><span title="Lane">Lane</span><span title={perTc === 1 ? "Start Cycle" : "Start (TC)"}>{perTc === 1 ? "Start Cycle" : "Start (TC)"}</span><span title={perTc === 1 ? "End Cycle" : "End (TC)"}>{perTc === 1 ? "End Cycle" : "End (TC)"}</span><span title={perTc === 1 ? "Duration (cycles)" : "Duration (TC)"}>{perTc === 1 ? "Duration (cycles)" : "Duration (TC)"}</span><span title="# Phases"># Phases</span><span title="Linked Signals">Linked Signals</span><span title="Color">Color</span><span title="Description">Description</span></span></div>
-    </>}{shouldVirtualizeTransactions && <div aria-hidden="true" style={{ height: transactionFirstVisibleIndex * transactionRowHeight }} />}{renderedEntries.map((entry) => entry.kind === "phase" ? <div className="transaction-table-phase-row" data-transaction-phase-row-id={`${entry.transaction.id}::phase-${entry.index}`} data-transaction-id={entry.transaction.id} data-phase-index={entry.index} key={`${entry.transaction.id}::phase-${entry.index}`}><span className="transaction-phase-indent" aria-hidden="true" /><div className="transaction-phase-cells"><span>{entry.phase.name}</span><span>{entry.transaction.groupId === undefined ? "Ungrouped" : groupNameById.get(entry.transaction.groupId) ?? "Group"}</span><span>{entry.transaction.laneId ?? "lane_0"}</span><span>{cyclesToTc(entry.phase.start, perTc)}</span><span>{cyclesToTc(entry.phase.end, perTc)}</span><span>{cyclesToTc(entry.phase.end - entry.phase.start, perTc)}</span><span className="transaction-phase-kind">Phase</span><span /><span /><span /></div></div> : <div className={`transaction-list-row${entry.item.id === transaction?.id ? " transaction-list-row-editing" : ""}`} data-transaction-row-id={entry.item.id} key={entry.item.id}>
+    </>}{shouldVirtualizeTransactions && <div aria-hidden="true" style={{ height: transactionFirstVisibleIndex * transactionRowHeight, flexShrink: 0 }} />}{renderedEntries.map((entry) => entry.kind === "phase" ? <div className="transaction-table-phase-row" data-transaction-phase-row-id={`${entry.transaction.id}::phase-${entry.index}`} data-transaction-id={entry.transaction.id} data-phase-index={entry.index} data-phase-last={String(entry.index === (entry.transaction.phases?.length ?? 0) - 1)} key={`${entry.transaction.id}::phase-${entry.index}`}><span className="transaction-phase-indent" aria-hidden="true" /><div className="transaction-phase-cells"><span>{entry.phase.name}</span><span>{entry.transaction.groupId === undefined ? "Ungrouped" : groupNameById.get(entry.transaction.groupId) ?? "Group"}</span><span>{entry.transaction.laneId ?? "lane_0"}</span><span>{cyclesToTc(entry.phase.start, perTc)}</span><span>{cyclesToTc(entry.phase.end, perTc)}</span><span>{cyclesToTc(entry.phase.end - entry.phase.start, perTc)}</span><span className="transaction-phase-kind">Phase</span><span /><span /><span /></div></div> : <div className={`transaction-list-row${entry.item.id === transaction?.id ? " transaction-list-row-editing" : ""}`} data-transaction-row-id={entry.item.id} key={entry.item.id}>
       {entry.item.phases && entry.item.phases.length > 0 ? <button type="button" className="transaction-disclosure-slot" aria-label={`${expandedPhaseTransactionIds.has(entry.item.id) ? "Collapse" : "Expand"} phases for ${entry.item.name}`} title={`${expandedPhaseTransactionIds.has(entry.item.id) ? "Collapse" : "Expand"} phases for ${entry.item.name}`} aria-expanded={expandedPhaseTransactionIds.has(entry.item.id)} onClick={() => setExpandedPhaseTransactionIds((current) => { const next = new Set(current); if (next.has(entry.item.id)) next.delete(entry.item.id); else next.add(entry.item.id); return next; })}>{expandedPhaseTransactionIds.has(entry.item.id) ? "▾" : "▸"}</button> : <span className="transaction-disclosure-slot" aria-hidden="true" />}
       {entry.item.id === transaction?.id ? <div className="transaction-list-row-editor" data-selected="true" role="group" aria-label={`Edit ${entry.item.name}`}>
         <input aria-label="Bottom Transaction name" data-draft-dirty={String(editName !== entry.item.name)} value={editName} onChange={(event) => setEditName(event.target.value)} />
@@ -283,7 +285,7 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
             accessible-name-order assertion breaks. */}
         <span title={entry.item.description}>{entry.item.description ?? "—"}</span>
       </button>}
-    </div>)}{shouldVirtualizeTransactions && <div aria-hidden="true" style={{ height: (listEntries.length - transactionLastVisibleIndex) * transactionRowHeight }} />}
+    </div>)}{shouldVirtualizeTransactions && <div aria-hidden="true" style={{ height: (listEntries.length - transactionLastVisibleIndex) * transactionRowHeight, flexShrink: 0 }} />}
   {visibleTransactions.length === 0 && document.transactions.length > 0 && search.trim() !== "" && <p className="inspector-note">No Transactions match this search.</p>}</div>
   </>;
   // Transaction details belong to the Inspector. The Bottom panel remains

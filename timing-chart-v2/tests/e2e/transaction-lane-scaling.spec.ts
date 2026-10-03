@@ -42,75 +42,143 @@ test("10k Transaction fixture keeps mounted lane DOM viewport-bounded", async ({
   const metrics = await page.getByTestId("transaction-lanes").evaluate((element) => ({
     totalHeight: Number.parseFloat((element as HTMLElement).style.height),
     mountedBars: element.querySelectorAll("[data-transaction-id]").length,
-    mountedTreeRows: element.querySelectorAll("[data-testid^='transaction-tree-row-']").length,
+    mountedCenterTransactionLabels: element.querySelectorAll(".transaction-lane-label-row").length,
+    filterBuilds: Number((element as HTMLElement).dataset.transactionFilterBuilds),
   }));
   // Transactions are packed into a bounded number of lanes; height is not a
   // proxy for transaction count. The layout must simply be present.
   expect(metrics.totalHeight).toBeGreaterThan(0);
   expect(metrics.mountedBars).toBeLessThan(1_000);
-  expect(metrics.mountedTreeRows).toBeLessThan(1_000);
+  expect(metrics.mountedCenterTransactionLabels).toBe(0);
+  const firstVisibleBar = page.getByTestId("transaction-lanes").locator("[data-transaction-id]:visible").first();
+  await firstVisibleBar.click();
+  await expect(firstVisibleBar).toHaveAttribute("data-selected", "true");
+  await expect(page.getByTestId("transaction-lanes")).toHaveAttribute("data-transaction-filter-builds", String(metrics.filterBuilds));
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
-test("Transaction bars, guides, and Bookmarks follow the shared horizontal source window", async ({ page }) => {
+test("10k Transactions, 10k Bookmarks, and 2k collapsed folds stay bounded during viewport scrolling", async ({ page }) => {
+  test.setTimeout(120_000);
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
-  const base = generatePerformanceDocument({ signalCount: 4, cycleCount: 5_000, profile: "transaction-heavy" });
+  const base = generatePerformanceDocument({ signalCount: 1, cycleCount: 500, profile: "transaction-heavy" });
+  const cycleCount = 10_000;
   const document = {
     ...base,
-    transactions: Array.from({ length: 1_000 }, (_, index) => ({
-      id: `txn_horizontal_${index}`,
-      name: `Transaction ${index}`,
-      start: index * 4,
-      end: index * 4 + 2,
-      laneId: "lane_0",
-    })),
-    bookmarks: Array.from({ length: 1_000 }, (_, index) => ({
-      id: `bookmark_horizontal_${index}`,
-      name: `Bookmark ${index}`,
-      start: index * 4,
-    })),
+    timeline: { ...base.timeline, end: cycleCount, cycleCount },
+    transactions: Array.from({ length: 10_000 }, (_, index) => {
+      const start = (index * 97) % (cycleCount - 200);
+      return { id: `txn_composite_${index}`, name: `Transaction ${index}`, start, end: start + 120, laneId: `lane_${index % 16}`, linkedSignals: [base.signals[index % base.signals.length]!.id] };
+    }),
+    bookmarks: Array.from({ length: 10_000 }, (_, index) => ({ id: `bookmark_composite_${index}`, name: `Bookmark ${index}`, start: index })),
+    timeGroups: Array.from({ length: 2_000 }, (_, index) => {
+      const start = 2 + index * 5;
+      return { id: `fold_composite_${index}`, name: `Fold ${index}`, start, end: start + 1, presentation: { collapsed: true, foldStyle: "axis-break" as const } };
+    }),
   };
-  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "transaction-horizontal-window.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
-  await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", "1000", { timeout: 60_000 });
-  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
-  const viewport = page.getByTestId("cycle-viewport");
+  expect(document.transactions).toHaveLength(10_000);
+  expect(document.bookmarks).toHaveLength(10_000);
+  expect(document.timeGroups).toHaveLength(2_000);
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "transaction-bookmark-fold-composite.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", "10000", { timeout: 30_000 });
+  await page.getByRole("button", { name: "Transaction", exact: true }).click();
   const lanes = page.getByTestId("transaction-lanes");
-  await expect(lanes).toBeVisible();
-  const initialStart = Number(await lanes.getAttribute("data-visible-source-start"));
-  const initialCounts = await lanes.evaluate((element) => ({
-    candidates: Number(element.getAttribute("data-horizontal-candidate-transactions")),
-    bars: element.querySelectorAll("[data-transaction-id]").length,
-    guides: element.querySelectorAll(".transaction-geometry-line").length,
-    bookmarks: element.querySelectorAll("[data-bookmark-id]").length,
-  }));
-  expect(initialCounts.candidates).toBeLessThan(250);
-  expect(initialCounts.bars).toBeLessThan(250);
-  expect(initialCounts.guides).toBeLessThan(600);
-  expect(initialCounts.bookmarks).toBeLessThan(250);
-
+  const viewport = page.getByTestId("cycle-viewport");
+  const markers = page.locator(".transaction-bookmark-markers [data-bookmark-id]");
+  await expect(lanes).toBeVisible({ timeout: 60_000 });
+  await expect.poll(() => markers.count()).toBeGreaterThan(0);
   const before = {
     revision: await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision"),
     history: await page.getByTestId("history-status").textContent(),
     dirty: await page.getByTestId("dirty-status").textContent(),
   };
-  await viewport.evaluate((element) => { element.scrollLeft = element.scrollWidth; element.dispatchEvent(new Event("scroll")); });
-  await expect.poll(() => lanes.getAttribute("data-visible-source-start")).not.toBe(String(initialStart));
-  expect(Number(await lanes.getAttribute("data-visible-source-start"))).toBeGreaterThan(initialStart);
-  const farCounts = await lanes.evaluate((element) => ({
-    candidates: Number(element.getAttribute("data-horizontal-candidate-transactions")),
-    bars: element.querySelectorAll("[data-transaction-id]").length,
-    guides: element.querySelectorAll(".transaction-geometry-line").length,
-    bookmarks: element.querySelectorAll("[data-bookmark-id]").length,
+  const initial = await page.evaluate(() => {
+    const lane = document.querySelector<HTMLElement>("[data-testid='transaction-lanes']");
+    const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']");
+    const markers = document.querySelectorAll(".transaction-bookmark-markers [data-bookmark-id]");
+    return {
+      mountedBars: lane?.querySelectorAll("[data-transaction-id]").length ?? 0,
+      mountedMarkers: markers.length,
+      barIds: [...(lane?.querySelectorAll<HTMLElement>("[data-transaction-id]") ?? [])].map((bar) => bar.dataset.transactionId).sort(),
+      bookmarkIds: [...markers].map((marker) => marker.getAttribute("data-bookmark-id")).sort(),
+      scrollWidth: viewport?.scrollWidth ?? 0,
+      clientWidth: viewport?.clientWidth ?? 0,
+      scrollLeft: viewport?.scrollLeft ?? 0,
+    };
+  });
+  console.log(`[transaction-bookmark-fold-composite] ${JSON.stringify({ mountedBars: initial.mountedBars, mountedMarkers: initial.mountedMarkers, scrollWidth: initial.scrollWidth, clientWidth: initial.clientWidth })}`);
+  expect(initial.mountedBars).toBeGreaterThan(0);
+  expect(initial.mountedBars).toBeLessThan(1_000);
+  expect(initial.mountedMarkers).toBeLessThan(1_000);
+  expect(initial.scrollWidth).toBeGreaterThan(initial.clientWidth);
+
+  await viewport.evaluate((element) => {
+    const node = element as HTMLElement;
+    node.scrollLeft = Math.min(node.scrollWidth - node.clientWidth, Math.max(1, node.scrollWidth * 0.6));
+    node.dispatchEvent(new Event("scroll"));
+  });
+  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(initial.scrollLeft);
+  await expect.poll(() => markers.count()).toBeGreaterThan(0);
+  const after = await page.evaluate(() => ({
+    mountedBars: document.querySelector("[data-testid='transaction-lanes']")?.querySelectorAll("[data-transaction-id]").length ?? 0,
+    mountedMarkers: document.querySelectorAll(".transaction-bookmark-markers [data-bookmark-id]").length,
+    barIds: [...(document.querySelector("[data-testid='transaction-lanes']")?.querySelectorAll<HTMLElement>("[data-transaction-id]") ?? [])].map((bar) => bar.dataset.transactionId).sort(),
+    bookmarkIds: [...document.querySelectorAll(".transaction-bookmark-markers [data-bookmark-id]")].map((marker) => marker.getAttribute("data-bookmark-id")).sort(),
   }));
-  expect(farCounts.candidates).toBeLessThan(250);
-  expect(farCounts.bars).toBeLessThan(250);
-  expect(farCounts.guides).toBeLessThan(600);
-  expect(farCounts.bookmarks).toBeLessThan(250);
+  expect(after.mountedBars).toBeLessThan(1_000);
+  expect(after.mountedMarkers).toBeLessThan(1_000);
+  expect(after.mountedBars + after.mountedMarkers).toBeLessThan(2_000);
+  expect(after.barIds).not.toEqual(initial.barIds);
+  expect(after.bookmarkIds).not.toEqual(initial.bookmarkIds);
   expect(await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision")).toBe(before.revision);
   expect(await page.getByTestId("history-status").textContent()).toBe(before.history);
   expect(await page.getByTestId("dirty-status").textContent()).toBe(before.dirty);
+});
+
+test("10k entities hidden by one collapsed fold use bounded rescue DOM and preserve explicit Transaction selection", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const base = generatePerformanceDocument({ signalCount: 1, cycleCount: 500, profile: "transaction-heavy" });
+  const cycleCount = 10_000;
+  const document = {
+    ...base,
+    timeline: { ...base.timeline, end: cycleCount, cycleCount },
+    transactions: Array.from({ length: 10_000 }, (_, index) => ({ id: `txn_hidden_${index}`, name: `Hidden transaction ${index}`, start: index % 8, end: (index % 8) + 1, laneId: "lane_0" })),
+    bookmarks: Array.from({ length: 10_000 }, (_, index) => ({ id: `bookmark_hidden_${index}`, name: `Hidden bookmark ${index}`, start: index % 8 })),
+    timeGroups: [{ id: "fold_hidden_all", name: "Collapsed long range", start: 0, end: 9_000, presentation: { collapsed: true, foldStyle: "axis-break" as const } }],
+  };
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "transaction-hidden-rescue.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", "10000", { timeout: 60_000 });
+  await page.getByRole("button", { name: "Transaction", exact: true }).click();
+  const lanes = page.getByTestId("transaction-lanes");
+  await expect(lanes).toBeVisible({ timeout: 60_000 });
+  await expect(lanes).toHaveAttribute("data-hidden-bookmark-fold-summaries", "1");
+  const initial = await lanes.evaluate((element) => ({
+    candidates: Number(element.getAttribute("data-horizontal-candidate-transactions")),
+    bars: element.querySelectorAll("[data-transaction-id]").length,
+    bookmarkMarkers: element.querySelectorAll("[data-bookmark-id]").length,
+    foldSummaries: element.querySelectorAll("[data-hidden-bookmark-count]").length,
+    hiddenBookmarkCount: Number(element.querySelector("[data-hidden-bookmark-count]")?.getAttribute("data-hidden-bookmark-count")),
+  }));
+  expect(initial.candidates).toBe(0);
+  expect(initial.bars).toBe(0);
+  expect(initial.bookmarkMarkers).toBe(0);
+  expect(initial.foldSummaries).toBe(1);
+  expect(initial.hiddenBookmarkCount).toBe(10_000);
+
+  const revision = await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision");
+  const history = await page.getByTestId("history-status").textContent();
+  const dirty = await page.getByTestId("dirty-status").textContent();
+  await page.getByTestId("transaction-left-tree-row-txn_hidden_0").click();
+  await expect(lanes.locator('[data-transaction-id="txn_hidden_0"]')).toHaveAttribute("data-hidden-in-fold", "true");
+  await expect(lanes.locator('[data-transaction-id="txn_hidden_0"]')).toHaveAttribute("data-selected", "true");
+  expect(await lanes.locator("[data-transaction-id]").count()).toBe(1);
+  expect(await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision")).toBe(revision);
+  expect(await page.getByTestId("history-status").textContent()).toBe(history);
+  expect(await page.getByTestId("dirty-status").textContent()).toBe(dirty);
 });
 
 test("standalone Transaction cycle viewport scroll advances the virtualized lane window", async ({ page }) => {
@@ -129,6 +197,45 @@ test("standalone Transaction cycle viewport scroll advances the virtualized lane
   await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
   await expect.poll(async () => lanes.locator("[data-transaction-id]").evaluateAll((bars) => bars.map((bar) => bar.getAttribute("data-transaction-id")).filter((id): id is string => id !== null).sort())).not.toEqual(visibleIdsBefore);
   await expect(lanes.locator("[data-transaction-id]")).not.toHaveCount(0);
+});
+
+test("selected Transaction drag survives a horizontal virtualization window change", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const base = generatePerformanceDocument({ signalCount: 50, cycleCount: 1_000, profile: "transaction-heavy" });
+  const transaction = { id: "txn_drag_window", name: "Window crossing", start: 20, end: 40, laneId: "lane_0", linkedSignals: [base.signals[0]!.id] };
+  const document = { ...base, transactions: [transaction] };
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "transaction-drag-window.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", "1", { timeout: 60_000 });
+  await page.getByRole("button", { name: "Transaction", exact: true }).click();
+  const viewport = page.getByTestId("cycle-viewport");
+  const bar = page.locator("[data-transaction-id='txn_drag_window']");
+  await expect(bar).toBeVisible();
+  const before = await bar.boundingBox();
+  expect(before).not.toBeNull();
+  const startX = before!.x + before!.width - 2;
+  const y = before!.y + before!.height / 2;
+  await page.mouse.move(startX, y);
+  await page.mouse.down();
+  await page.mouse.move(startX + 12, y, { steps: 2 });
+  await viewport.evaluate((element) => {
+    const node = element as HTMLElement;
+    node.scrollLeft = Math.max(0, node.scrollWidth - node.clientWidth);
+    node.dispatchEvent(new Event("scroll"));
+  });
+  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  await expect(bar).toHaveAttribute("data-selected", "true");
+  const targetTick = page.locator(".cycle-ruler .cycle-tick[data-source-cycle='900']");
+  await expect(targetTick).toBeAttached();
+  const target = await targetTick.boundingBox();
+  expect(target).not.toBeNull();
+  await page.mouse.move(target!.x + 1, y, { steps: 4 });
+  await expect(bar).toHaveAttribute("data-drag-preview", "true");
+  await page.mouse.up();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  // Transaction Inspector displays TC units (10 system cycles per TC).
+  await expect(page.getByTestId("inspector").getByLabel("Transaction end")).toHaveValue("90");
 });
 
 test("Transaction Fit All and Fit Selection remain view-only", async ({ page }) => {
@@ -213,20 +320,19 @@ test("central Transaction surface remains viewport-bounded across 1k/5k/10k with
     const metrics = await page.getByTestId("transaction-lanes").evaluate((element) => ({
       totalHeight: Number.parseFloat((element as HTMLElement).style.height),
       mountedBars: element.querySelectorAll("[data-transaction-id]").length,
-      mountedTreeRows: element.querySelectorAll("[data-testid^='transaction-tree-row-']").length,
+      mountedCenterTransactionLabels: element.querySelectorAll(".transaction-lane-label-row").length,
     }));
     const selected = page.getByTestId("transaction-lanes").locator("[data-transaction-id]:visible").first();
     const lanes = page.getByTestId("transaction-lanes");
     const mountSerial = await lanes.getAttribute("data-mount-serial");
     const laneIndexBuildsBeforeSelection = Number(await lanes.getAttribute("data-lane-index-builds"));
     const stackRowBuildsBeforeSelection = Number(await lanes.getAttribute("data-stack-row-builds"));
-    const treeRowBuildsBeforeSelection = Number(await lanes.getAttribute("data-tree-row-builds"));
     const selectionStarted = await page.evaluate(() => performance.now());
     await selected.evaluate((element) => (element as HTMLButtonElement).click());
     await expect(selected).toHaveAttribute("data-selected", "true");
     await expect(lanes).toHaveAttribute("data-lane-index-builds", String(laneIndexBuildsBeforeSelection));
     await expect(lanes).toHaveAttribute("data-stack-row-builds", String(stackRowBuildsBeforeSelection));
-    await expect(lanes).toHaveAttribute("data-tree-row-builds", String(treeRowBuildsBeforeSelection));
+    expect(metrics.mountedCenterTransactionLabels).toBe(0);
     const selectionMs = await page.evaluate((startedAt) => performance.now() - startedAt, selectionStarted);
     const scrollStarted = await page.evaluate(() => performance.now());
     const mountedIdsBeforeScroll = await lanes.locator("[data-transaction-id]").evaluateAll((bars) => bars.map((bar) => bar.getAttribute("data-transaction-id")).filter((id): id is string => id !== null).sort());
@@ -259,8 +365,8 @@ test("central Transaction surface remains viewport-bounded across 1k/5k/10k with
     // Lane height reflects packed lane layout, not transaction count.
     expect(metrics.totalHeight).toBeGreaterThan(0);
     expect(metrics.mountedBars).toBeLessThan(1_000);
-    expect(metrics.mountedTreeRows).toBeLessThan(1_000);
-    measurements.push({ transactionCount, modeReadyMs: Math.round(modeReady), scrollMs: Math.round(scrollMs), selectionMs: Math.round(selectionMs), repeatedMoveP50Ms: Math.round(orderedMoveDurations[4] ?? 0), repeatedMoveP95Ms: Math.round(orderedMoveDurations[8] ?? 0), mountedBars: metrics.mountedBars, mountedTreeRows: metrics.mountedTreeRows });
+    expect(metrics.mountedCenterTransactionLabels).toBe(0);
+    measurements.push({ transactionCount, modeReadyMs: Math.round(modeReady), scrollMs: Math.round(scrollMs), selectionMs: Math.round(selectionMs), repeatedMoveP50Ms: Math.round(orderedMoveDurations[4] ?? 0), repeatedMoveP95Ms: Math.round(orderedMoveDurations[8] ?? 0), mountedBars: metrics.mountedBars, mountedCenterTransactionLabels: metrics.mountedCenterTransactionLabels });
   }
   await testInfo.attach("transaction-central-scale-latency.json", { body: Buffer.from(JSON.stringify(measurements, null, 2)), contentType: "application/json" });
   console.log(`[transaction-central-scale] ${JSON.stringify(measurements)}`);
@@ -291,14 +397,12 @@ test("single-lane Transaction edits remain bounded on a large sequential fixture
   const selected = lanes.locator("[data-transaction-id]:visible").first();
   await selected.evaluate((element) => (element as HTMLButtonElement).click());
   const stackBuilds = await lanes.getAttribute("data-stack-row-builds");
-  const treeBuilds = await lanes.getAttribute("data-tree-row-builds");
   const stackBuildCount = Number(stackBuilds);
-  const treeBuildCount = Number(treeBuilds);
   const startInput = page.getByTestId("inspector").getByLabel("Transaction start");
   await page.getByTestId("inspector").getByLabel("Transaction end").fill("16");
   await startInput.fill("12");
   await page.getByTestId("inspector").getByTestId("apply-inspector-transaction").click();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
   await expect.poll(() => lanes.getAttribute("data-stack-row-builds")).toBe(String(stackBuildCount + 2));
-  await expect.poll(() => lanes.getAttribute("data-tree-row-builds")).toBe(String(treeBuildCount + 2));
+  await expect(lanes.locator(".transaction-lane-label-row")).toHaveCount(0);
 });

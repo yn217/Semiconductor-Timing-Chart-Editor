@@ -9,6 +9,7 @@ import {
   canShareValueLabelGeometry,
   renderWaveJsonMarkup,
   renderWaveJsonMarkupWithMetrics,
+  toWaveJsonMappedClock,
   toWaveJson,
   toWaveJsonWindow,
   VALUE_LABEL_LAYOUT_POLICY,
@@ -231,6 +232,78 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     expect(() => toWaveJson({ signal: badEnableAlign, cycleCount: 8 })).toThrowError(expect.objectContaining({ code: "UNALIGNED_CLOCK_ENABLE" }));
   });
 
+  it("projects Clock start, phase, gating and suppressed pulse identity through visible source cycles", () => {
+    const base = canonicalFixture().signals[0] as ClockSignal;
+    const delayed: ClockSignal = { ...base, generator: { ...base.generator, start: 4, period: 4, phase: 0.5 } };
+    const sourceWindow = { signal: delayed, cycleCount: 12 };
+    const mappedCycles = [0, 1, 4, 5, 6, 7]; // fold [2,4), whose length is not a period multiple
+    const projected = toWaveJsonMappedClock(sourceWindow, mappedCycles);
+    expect(projected).toMatchObject({ wave: "..1.0.", phase: 0.5, clock: { expanded: true, initial: 0 } });
+
+    const suppressed: ClockSignal = { ...base, generator: { ...base.generator, period: 4, suppressedPeriods: [1] } };
+    const cyclesAroundFold = [0, 1, 2, 3, 8, 9, 10, 11]; // source pulse 1 is hidden; source pulse 2 remains active
+    expect(toWaveJsonMappedClock({ signal: suppressed, cycleCount: 12 }, cyclesAroundFold).wave).toBe("1.0.1.0.");
+
+    const gated: ClockSignal = { ...base, generator: { ...base.generator, period: 4 }, enable: [{ start: 0, value: 1 }, { start: 8, value: 0 }] };
+    expect(toWaveJsonMappedClock({ signal: gated, cycleCount: 12 }, cyclesAroundFold).wave).toBe("1.0.....");
+  });
+
+  it("uses WaveDrom continuation for held levels in expanded-duty clock windows", () => {
+    const base = canonicalFixture().signals[0] as ClockSignal;
+    const cases = [
+      {
+        name: "25% positive",
+        signal: { ...base, generator: { ...base.generator, period: 2, duty: 0.25 } } as ClockSignal,
+        full: "p0p0p0p0",
+        window: "p0p0",
+        windowStart: 2,
+      },
+      {
+        name: "75% positive",
+        signal: { ...base, generator: { ...base.generator, period: 2, duty: 0.75 } } as ClockSignal,
+        full: "1p1p1p1p",
+        window: "1p1p",
+        windowStart: 2,
+      },
+      {
+        name: "25% negative",
+        signal: { ...base, generator: { ...base.generator, period: 2, duty: 0.25, initial: 1 as const, polarity: "negative" as const } } as ClockSignal,
+        full: "n1n1n1n1",
+        window: "n1n1",
+        windowStart: 2,
+      },
+      {
+        name: "consecutive disabled periods",
+        signal: { ...base, enable: [{ start: 0, value: 1 }, { start: 2, value: 0 }, { start: 8, value: 1 }], generator: { ...base.generator, period: 2, duty: 0.25 } } as ClockSignal,
+        full: "p0......p0p0",
+        window: "0...p0",
+        windowStart: 4,
+      },
+      {
+        name: "consecutive suppressed periods",
+        signal: { ...base, generator: { ...base.generator, period: 2, duty: 0.25, suppressedPeriods: [1, 2, 3] } } as ClockSignal,
+        full: "p0......p0p0",
+        window: "0.p0p0",
+        windowStart: 6,
+      },
+    ];
+
+    for (const testCase of cases) {
+      const fullWave = toWaveJson({ signal: testCase.signal, cycleCount: testCase.full.length });
+      const boundedWave = toWaveJsonWindow(
+        { signal: testCase.signal, cycleCount: testCase.full.length },
+        testCase.windowStart,
+        testCase.windowStart + testCase.window.length,
+      );
+      const expandedClock = { expanded: true, polarity: testCase.signal.generator.polarity, initial: testCase.signal.generator.initial };
+
+      expect(fullWave.wave, `${testCase.name} full conversion`).toBe(testCase.full);
+      expect(boundedWave.wave, `${testCase.name} bounded conversion`).toBe(testCase.window);
+      expect(renderWaveJsonMarkup(fullWave), `${testCase.name} pinned full render`).toBe(referenceMarkup({ wave: testCase.full, clock: expandedClock }));
+      expect(renderWaveJsonMarkup(boundedWave), `${testCase.name} pinned bounded render`).toBe(referenceMarkup({ wave: testCase.window, clock: expandedClock }));
+    }
+  });
+
   it("pins the production and test renderer to one WaveDrom version", () => {
     expect(WaveDrom.version).toBe(WAVEDROM_VERSION);
     expect(new ProductionWaveDromAdapter().metrics()).toMatchObject({ renderCalls: 0, waveJsonDurationMs: 0, renderDurationMs: 0, renderStages: { last: undefined, totals: { sourcePreparationMs: 0, metricCollectionOverheadMs: 0, cacheKeySerializeMs: 0, waveDromRenderAnyMs: 0, onmlStringifyMs: 0, valueLabelLayoutMs: 0, markupSafetyMs: 0, templateParseMs: 0, svgSafetyDomWalkMs: 0, domInstallMs: 0, totalSignalWallMs: 0, waveJsonBytes: 0, semanticValuesBytes: 0, svgMarkupBytes: 0 } }, renderCallsBySignal: {}, cacheHits: 0, cacheMisses: 0, mounts: 0, disposals: 0, geometryBuilds: 0, geometryMatrixReads: 0, activeOwners: 0, allocatedRenderIndices: 0 });
@@ -365,6 +438,192 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     expect(adapter.metrics()).toMatchObject({ mounts: 1, activeOwners: 1 });
     expect(installed.renderStages?.domInstallMs).toEqual(expect.any(Number));
     expect(installed.renderStages?.svgSafetyDomWalkMs).toBe(0);
+  });
+
+  it("avoids parsing a second full SVG tree for image-backed waves without shared labels", async () => {
+    const adapter = new ProductionWaveDromAdapter();
+    const expectedRootAttributes = renderWaveJsonMarkupWithMetrics({ wave: "01.." }).rootAttributes;
+    const nodes: Array<{ localName: string; attrs: Map<string, string>; children: unknown[] }> = [];
+    let ownerDocument: Document;
+    const geometryRoot = {
+      localName: "svg",
+      namespaceURI: "http://www.w3.org/2000/svg",
+      ownerDocument: undefined as Document | undefined,
+      querySelectorAll: () => [],
+    };
+    const template = { content: { firstElementChild: geometryRoot }, set innerHTML(_markup: string) {} };
+    ownerDocument = {
+      createElement: vi.fn(() => template),
+      createElementNS: vi.fn((_namespace: string, localName: string) => {
+        const attrs = new Map<string, string>();
+        const children: unknown[] = [];
+        const node = {
+          localName,
+          namespaceURI: "http://www.w3.org/2000/svg",
+          ownerDocument,
+          attrs,
+          children,
+          getAttribute: (name: string) => attrs.get(name) ?? null,
+          setAttribute: (name: string, value: string) => { attrs.set(name, value); },
+          append: (child: unknown) => { children.push(child); },
+          querySelector: (selector: string) => selector === "image[data-wave-svg-image]" ? children[0] : null,
+          querySelectorAll: () => [],
+          cloneNode: () => node,
+          get childNodes() { return children; },
+        };
+        nodes.push(node);
+        return node;
+      }),
+      defaultView: {
+        Image: class {
+          set src(_value: string) {}
+          decode() { return Promise.resolve(); }
+        },
+      },
+    } as unknown as Document;
+    geometryRoot.ownerDocument = ownerDocument;
+    const createObjectUrl = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test-wave-svg");
+    try {
+      const prepared = await adapter.prepareWave(signalId("sig_image_fast_path"), { wave: "01.." }, ownerDocument);
+
+      expect(ownerDocument.createElement).not.toHaveBeenCalled();
+      expect(prepared.renderStages?.templateParseMs).toBe(0);
+      expect(prepared.geometrySvg).toBeUndefined();
+      expect(prepared.svg.localName).toBe("svg");
+      expect(prepared.svg.querySelector("image[data-wave-svg-image]")).not.toBeNull();
+      for (const [name, value] of Object.entries(expectedRootAttributes)) {
+        if (name === "id" || name === "xmlns" || name === "xmlns:xlink") continue;
+        expect(prepared.svg.getAttribute(name)).toBe(value);
+      }
+      await prepared.svgImageReady;
+      expect(() => adapter.extractLocalGeometry(prepared)).toThrow("Rendered SVG is missing 'lanes_0'.");
+      expect(ownerDocument.createElement).toHaveBeenCalledTimes(1);
+    } finally {
+      createObjectUrl.mockRestore();
+    }
+  });
+
+  it("releases Blob URLs only after cache, retained, active, and document owners release them", async () => {
+    const adapter = new ProductionWaveDromAdapter();
+    let nextUrl = 0;
+    const createUrl = vi.spyOn(URL, "createObjectURL").mockImplementation(() => `blob:wave-${++nextUrl}`);
+    const revokeUrl = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const createSvgNode = (localName: string) => {
+      const attributes = new Map<string, string>();
+      const children: ReturnType<typeof createSvgNode>[] = [];
+      const node = {
+        localName,
+        namespaceURI: "http://www.w3.org/2000/svg",
+        ownerDocument: undefined as Document | undefined,
+        parentElement: null as Element | null,
+        setAttribute: (name: string, value: string) => { attributes.set(name, value); },
+        getAttribute: (name: string) => attributes.get(name) ?? null,
+        append: (child: ReturnType<typeof createSvgNode>) => { children.push(child); child.parentElement = node as unknown as Element; },
+        querySelector: (selector: string) => selector === "image[data-wave-svg-image]" ? children.find((child) => child.localName === "image" && child.getAttribute("data-wave-svg-image") !== null) ?? null : null,
+        querySelectorAll: () => [],
+        replaceChildren: (...next: ReturnType<typeof createSvgNode>[]) => { children.splice(0, children.length, ...next); },
+        cloneNode: () => node,
+        remove: () => { node.parentElement = null; },
+        get childNodes() { return children; },
+      };
+      return node;
+    };
+    const ownerDocument = {
+      ...createMarkupDocument(),
+      createElementNS: (_namespace: string, localName: string) => {
+        const node = createSvgNode(localName);
+        node.ownerDocument = ownerDocument as unknown as Document;
+        return node;
+      },
+      defaultView: { Image: class { set src(_url: string) {} decode() { return Promise.resolve(); } } },
+    } as unknown as Document;
+    const firstId = signalId("sig_blob_lifetime_first");
+    try {
+      await adapter.renderWave(firstId, { wave: "0" }, createMarkupMount(ownerDocument));
+      for (let index = 1; index < 65; index += 1) {
+        await adapter.renderWave(signalId(`sig_blob_lifetime_${index}`), { wave: "0".repeat(index + 1) }, createMarkupMount(ownerDocument));
+      }
+      // The shared LRU has evicted the first entry, but its active owner still
+      // uses the URL. Retaining the artifact transfers protection to reopen.
+      expect(adapter.metrics()).toMatchObject({ imageObjectUrlsCreated: 65, imageObjectUrlsRevoked: 0, imageObjectUrlsRetained: 65 });
+      // A Signal-binding cache hit can reinsert this artifact after its shared
+      // LRU entry was evicted. That reinsertion must reacquire shared-cache
+      // ownership before the Signal and active-owner references are released.
+      const reinserted = await adapter.prepareWave(firstId, { wave: "0" }, ownerDocument);
+      expect(reinserted.markupCacheHit).toBe(true);
+      expect((await adapter.prepareWave(firstId, { wave: "0" }, ownerDocument)).markupCacheHit).toBe(true);
+      adapter.retainArtifact(firstId);
+      expect(adapter.metrics().imageObjectUrlsRevoked).toBe(0);
+      adapter.dispose(firstId);
+      expect(adapter.metrics()).toMatchObject({ imageObjectUrlsRevoked: 0, imageObjectUrlsRetained: 65 });
+
+      adapter.disposeAll();
+      expect(adapter.metrics()).toMatchObject({ imageObjectUrlsCreated: 65, imageObjectUrlsRevoked: 65, imageObjectUrlsRetained: 0 });
+      expect(revokeUrl).toHaveBeenCalledTimes(65);
+
+      // A detached prepared result must own its artifact even after its
+      // per-Signal binding changes and the shared LRU evicts that artifact.
+      const detachedId = signalId("sig_blob_detached_prepare");
+      const detached = await adapter.prepareWave(detachedId, { wave: "0" }, ownerDocument);
+      for (let index = 0; index < 64; index += 1) {
+        await adapter.renderWave(signalId(`sig_blob_detached_churn_${index}`), { wave: "0".repeat(index + 2) }, createMarkupMount(ownerDocument));
+      }
+      const replacement = await adapter.prepareWave(detachedId, { wave: "1" }, ownerDocument);
+      await Promise.all([detached.svgImageReady, replacement.svgImageReady]);
+      expect(detached.markupCacheHit).toBe(false);
+      expect(replacement.markupCacheHit).toBe(false);
+      expect(adapter.metrics().imageObjectUrlsRevoked).toBe(65);
+      adapter.installWave(detached, createMarkupMount(ownerDocument));
+      expect(adapter.metrics().imageObjectUrlsRevoked).toBe(65);
+      adapter.releasePrepared(replacement);
+      expect(() => adapter.installWave(replacement, createMarkupMount(ownerDocument))).toThrow("must be prepared by this adapter");
+      adapter.dispose(detachedId);
+      adapter.disposeAll();
+      expect(adapter.metrics().imageObjectUrlsCreated).toBe(adapter.metrics().imageObjectUrlsRevoked);
+      expect(adapter.metrics().imageObjectUrlsRetained).toBe(0);
+    } finally {
+      adapter.disposeAll();
+      createUrl.mockRestore();
+      revokeUrl.mockRestore();
+    }
+  });
+
+  it("defers Blob URL revocation until an in-flight image decode settles", async () => {
+    const adapter = new ProductionWaveDromAdapter();
+    const createUrl = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:pending-wave");
+    const revokeUrl = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    let finishDecode!: () => void;
+    const createSvgNode = (localName: string) => {
+      const attrs = new Map<string, string>();
+      const children: ReturnType<typeof createSvgNode>[] = [];
+      const node = {
+        localName, namespaceURI: "http://www.w3.org/2000/svg", parentElement: null as Element | null,
+        setAttribute: (name: string, value: string) => { attrs.set(name, value); }, getAttribute: (name: string) => attrs.get(name) ?? null,
+        append: (child: ReturnType<typeof createSvgNode>) => { children.push(child); child.parentElement = node as unknown as Element; },
+        querySelector: (selector: string) => selector === "image[data-wave-svg-image]" ? children.find((child) => child.localName === "image") ?? null : null,
+        querySelectorAll: () => [], replaceChildren: (...next: ReturnType<typeof createSvgNode>[]) => { children.splice(0, children.length, ...next); },
+        cloneNode: () => node, remove: () => { node.parentElement = null; }, get childNodes() { return children; },
+      };
+      return node;
+    };
+    const ownerDocument = {
+      ...createMarkupDocument(),
+      createElementNS: (_namespace: string, localName: string) => createSvgNode(localName),
+      defaultView: { Image: class { set src(_url: string) {} decode() { return new Promise<void>((resolve) => { finishDecode = resolve; }); } } },
+    } as unknown as Document;
+    try {
+      const prepared = await adapter.prepareWave(signalId("sig_blob_decode_pending"), { wave: "0" }, ownerDocument);
+      expect(adapter.metrics().imageObjectUrlsRetained).toBe(1);
+      adapter.disposeAll();
+      expect(revokeUrl).not.toHaveBeenCalled();
+      finishDecode();
+      await prepared.svgImageReady;
+      expect(adapter.metrics()).toMatchObject({ imageObjectUrlsRevoked: 1, imageObjectUrlsRetained: 0 });
+    } finally {
+      adapter.disposeAll();
+      createUrl.mockRestore();
+      revokeUrl.mockRestore();
+    }
   });
 
   it("reuses identical validated markup across document release without changing WaveDrom IDs", async () => {
@@ -503,6 +762,24 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     expect(toWaveJsonWindow({ signal, cycleCount: 100 }, 60, 80)).toEqual({ wave: "1..............0....", sourceWindow: { start: 60, end: 80 }, displayWindow: { start: 60, end: 80 } });
   });
 
+  it("bounds source transition visits to a logarithmic prefix lookup plus the requested window", () => {
+    const sourceChanges = Array.from({ length: 100_000 }, (_, start) => ({ start, value: start % 2 }));
+    let indexedReads = 0;
+    const values = new Proxy(sourceChanges, {
+      get(target, property, receiver) {
+        if (typeof property === "string" && /^\d+$/.test(property)) indexedReads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const signal = logicSignal(values as ValueSignal["values"]);
+
+    const bounded = toWaveJsonWindow({ signal, cycleCount: sourceChanges.length }, 90_000, 90_010);
+
+    expect(bounded.wave).toBe("0101010101");
+    expect(bounded.sourceWindow).toEqual({ start: 90_000, end: 90_010 });
+    expect(indexedReads).toBeLessThan(50);
+  });
+
   it("reconstructs a bounded clock window from canonical phase", () => {
     const clock = canonicalFixture().signals[0] as ClockSignal;
     const bounded = toWaveJsonWindow({ signal: clock, cycleCount: 100 }, 20, 40);
@@ -518,6 +795,16 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     const full = toWaveJson({ signal: clock, cycleCount: 8 });
     const bounded = toWaveJsonWindow({ signal: clock, cycleCount: 8 }, 0, 8);
     expect(bounded.wave).toBe(full.wave);
+  });
+
+  it("allows a partial final period in a bounded non-50% duty clock window", () => {
+    const base = canonicalFixture().signals[0] as ClockSignal;
+    const clock = { ...base, generator: { ...base.generator, start: 0, period: 6, duty: 0.25, initial: 0, polarity: "positive" } } as ClockSignal;
+    const full = toWaveJson({ signal: clock, cycleCount: 160 });
+    const bounded = toWaveJsonWindow({ signal: clock, cycleCount: 160 }, 0, 160);
+
+    expect(bounded.wave).toBe(full.wave);
+    expect(bounded.wave).toHaveLength(160);
   });
 
   it("keeps renderer-aligned geometry origin separate from the requested source window", () => {

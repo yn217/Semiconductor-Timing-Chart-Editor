@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { readFileSync } from "node:fs";
 import { startInCycleSample } from "./cycle-startup.js";
 import { snapshotAnnotationIds, waitForCreatedAnnotationId } from "./annotation-identity.js";
 
@@ -13,6 +14,31 @@ async function openTransactionEditor(page: Page) {
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   await page.getByLabel("Workspace preset").selectOption("transaction");
   return page.getByTestId("transaction-editor");
+}
+
+const cutLinkedSignal = {
+  id: "sig_shared",
+  name: "SHARED",
+  type: "binary",
+  role: "internal",
+  source: { instancePath: [], signalName: "shared" },
+  display: { name: "SHARED" },
+  values: [{ start: 0, value: 0 }, { start: 4, value: 1 }],
+};
+
+function cutDocument(id: string, entities: Record<string, unknown> = {}) {
+  return {
+    formatVersion: 2,
+    document: { id, title: id, header: { subtitle: "", description: "", notes: "", preconditions: [], constraints: [], exceptions: [] }, footer: { figureNumber: "", revision: "V2", text: "" } },
+    timeline: { start: 0, end: 8, cycleCount: 8, timeBase: "cycle", edge: "rising", labelAnchors: [] },
+    signalGroups: [{ id: "grp_main", name: "Main", rows: [cutLinkedSignal.id] }],
+    signals: [cutLinkedSignal],
+    bookmarks: [], timeGroups: [], annotations: [], transactions: [], constraints: [],
+    legend: { show: false, orientation: "horizontal", usedRolesOnly: true, position: { x: 0, y: 0 } },
+    layout: { roleColumnWidth: 62, signalNameWidth: 178, signalNameAlign: "left", rowHeight: 30, signalSpacing: 4, overflow: "ellipsis" },
+    checkSettings: {},
+    ...entities,
+  };
 }
 
 test("Signal Cut/Paste restores the same stable ID and name in the target Group", async ({ page }) => {
@@ -31,6 +57,85 @@ test("Signal Cut/Paste restores the same stable ID and name in the target Group"
   await expect(restored).toBeVisible();
   await expect(restored).toHaveAttribute("data-name", originalName!);
   await expect(restored).toHaveAttribute("data-group-id", "grp_cycle_payload");
+});
+
+test("same-document multi-Signal Cut/Paste restores Transaction links atomically and through Save/Open", async ({ page }) => {
+  await ready(page);
+  const second = { ...cutLinkedSignal, id: "sig_second", name: "SECOND", display: { name: "SECOND" }, source: { instancePath: [], signalName: "second" } };
+  const target = { ...cutLinkedSignal, id: "sig_target", name: "TARGET", display: { name: "TARGET" }, source: { instancePath: [], signalName: "target" } };
+  const document = cutDocument("doc_cut_links", {
+    signalGroups: [
+      { id: "grp_source", name: "Source", rows: [cutLinkedSignal.id, second.id] },
+      { id: "grp_target", name: "Target", rows: [target.id] },
+    ],
+    signals: [cutLinkedSignal, second, target],
+    transactions: [{ id: "txn_linked", name: "Linked", start: 1, end: 4, laneId: "lane_0", linkedSignals: [cutLinkedSignal.id, second.id] }],
+  });
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "cut-links.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  const host = page.getByTestId("cycle-surface");
+  await expect(host.locator(`[data-role='frozen-row'][data-row-id='${cutLinkedSignal.id}']`)).toBeVisible();
+  await expect(host.locator(`[data-role='frozen-row'][data-row-id='${target.id}']`)).toBeVisible();
+  await host.locator(`[data-role='frozen-row'][data-row-id='${cutLinkedSignal.id}']`).click();
+  await host.locator(`[data-role='frozen-row'][data-row-id='${second.id}']`).click({ modifiers: ["Control"] });
+  await page.getByRole("button", { name: "Home", exact: true }).click();
+  const ribbon = page.getByTestId("ribbon");
+  await ribbon.getByRole("button", { name: "Cut", exact: true }).click();
+  await expect(ribbon.getByTestId("clipboard-status")).toHaveText("Cut 2 signals");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await host.locator(`[data-role='frozen-row'][data-row-id='${target.id}']`).click();
+  await ribbon.getByRole("button", { name: "Paste", exact: true }).click();
+  await expect(ribbon.getByTestId("clipboard-status")).toHaveText("Moved 2 signals");
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  for (const id of [cutLinkedSignal.id, second.id]) {
+    await expect(host.locator(`[data-role='frozen-row'][data-row-id='${id}']`)).toHaveAttribute("data-group-id", "grp_target");
+  }
+
+  const saveAndRead = async () => {
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+    const downloadPromise = page.waitForEvent("download");
+    await ribbon.getByRole("button", { name: "Save", exact: true }).click();
+    const path = await (await downloadPromise).path();
+    expect(path).toBeTruthy();
+    const saved = JSON.parse(readFileSync(path!, "utf8")) as { signals: readonly { id: string }[]; transactions: readonly { id: string; linkedSignals?: readonly string[] }[] };
+    await page.getByRole("button", { name: "Home", exact: true }).click();
+    return saved;
+  };
+  const moved = await saveAndRead();
+  expect(moved.transactions.find((item) => item.id === "txn_linked")?.linkedSignals).toEqual([cutLinkedSignal.id, second.id]);
+
+  await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 1");
+  const undone = await saveAndRead();
+  expect(undone.signals.some((signal) => signal.id === cutLinkedSignal.id || signal.id === second.id)).toBe(false);
+  expect(undone.transactions.find((item) => item.id === "txn_linked")?.linkedSignals).toEqual([]);
+
+  await ribbon.getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  const redone = await saveAndRead();
+  expect(redone.transactions.find((item) => item.id === "txn_linked")?.linkedSignals).toEqual([cutLinkedSignal.id, second.id]);
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "cut-links-saved.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(redone)) });
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+});
+
+test("Cut rejects the current Reference Clock instead of silently removing its identity", async ({ page }) => {
+  await ready(page);
+  const clock = { id: "sig_clock", name: "CLOCK", type: "clock", role: "input", source: { instancePath: [], signalName: "clock" }, display: { name: "CLOCK" }, generator: { start: 0, period: 1, duty: 0.5, phase: 0, initial: 0, polarity: "positive" }, edgeCounter: { show: false, mode: "rising", startNumber: 1, countFrom: "signal-start", labelEvery: 1, position: "above", offset: { x: 0, y: -6 } } };
+  const document = cutDocument("doc_reference_cut", {
+    timeline: { start: 0, end: 8, cycleCount: 8, timeBase: "cycle", referenceClock: clock.id, edge: "rising", labelAnchors: [] },
+    signalGroups: [{ id: "grp_main", name: "Main", rows: [clock.id, cutLinkedSignal.id] }],
+    signals: [clock, cutLinkedSignal],
+  });
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "reference-clock.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  const host = page.getByTestId("cycle-surface");
+  await expect(host.locator(`[data-role='frozen-row'][data-row-id='${clock.id}']`)).toBeVisible();
+  await host.locator(`[data-role='frozen-row'][data-row-id='${clock.id}']`).click();
+  await page.getByRole("button", { name: "Home", exact: true }).click();
+  const ribbon = page.getByTestId("ribbon");
+  await ribbon.getByRole("button", { name: "Cut", exact: true }).click();
+  await expect(ribbon.getByTestId("clipboard-status")).toHaveText("Reference Clock cannot be cut; change the reference clock first");
+  await expect(host.locator(`[data-role='frozen-row'][data-row-id='${clock.id}']`)).toHaveCount(1);
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
 test("Comment Row clipboard preserves content, uses fresh IDs, and supports Cut Undo Redo", async ({ page }) => {
@@ -181,8 +286,9 @@ test("Transaction clipboard is view-only on Copy, creates a fresh entity on Past
 
   const editor = await openTransactionEditor(page);
   await editor.getByLabel("New Transaction name").fill("Clip Test");
-  await editor.getByLabel("New Transaction start").fill("2");
-  await editor.getByLabel("New Transaction end").fill("6");
+  // The form fields are in TC (1 TC = 10 cycles by default): 0.2 .. 0.6 TC = cycles 2 .. 6 (2..6 TC would exceed the 24-cycle sample and be rejected).
+  await editor.getByLabel("New Transaction start").fill("0.2");
+  await editor.getByLabel("New Transaction end").fill("0.6");
   await editor.getByRole("button", { name: "Create Transaction", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");

@@ -5,6 +5,7 @@ import { memo, startTransition, useEffect, useLayoutEffect, useMemo, useRef, use
 import type { RefObject } from "react";
 import { createPortal } from "react-dom";
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
+import type { ChangeSet } from "@timing-chart-v2/commands";
 import { DefaultScreenGeometryProjector, resolveTimeAxisGeometry, SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryMap, type Point, type SnapKind, type TimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { CommandHistorySession, type HistoryState } from "@timing-chart-v2/history";
 import { buildHardwareHierarchyEntries, hardwareHierarchyScopes, type DisplayTimeMapping, type HardwareHierarchyView, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
@@ -67,7 +68,6 @@ import { ClockGeneratorEditor } from "../editors/clock-generator-editor.js";
 import { DocumentProperties } from "../document-properties.js";
 import { TimelineToolbar, type SignalEditorProps } from "../timeline-toolbar.js";
 import { LayoutInspector } from "../layout-inspector.js";
-import { AnnotationEditor } from "../annotation-editor.js";
 import { AdvancedJsonPanel } from "../advanced-json-panel.js";
 import { SignalEditor } from "../editors/signal-editor.js";
 import { InspectorAnnotationEditor } from "../inspector-annotation-editor.js";
@@ -112,7 +112,7 @@ function InspectorSpacerDraft({ spacer, onApply, onDelete }: { readonly spacer: 
   </form>;
 }
 
-export function InspectorPanel({ signal, selectedSignalIds, group, annotation, transaction, bookmark, legendSelected = false, collapsedGroup, onToggleGroupCollapse, registry, document, cyclesPerTc: tcPer = 10, viewport, commands, onReveal, onCancel, onClose, onDeleteBookmark, onToggleTransactionSignal, onGroupPreview, onAnnotationPreview, minimapMode = "signal" }: { readonly signal: Signal | undefined; readonly selectedSignalIds?: ReadonlySet<SignalId>; readonly group: SignalGroup | undefined; readonly annotation: Annotation | undefined; readonly transaction: Transaction | undefined; readonly bookmark: Bookmark | undefined; readonly legendSelected?: boolean; readonly collapsedGroup: boolean; readonly onToggleGroupCollapse: (() => void) | undefined; readonly registry: UiCommandRegistry; readonly document: Readonly<CanonicalDocument>; readonly cyclesPerTc?: number; readonly viewport: RefObject<HTMLDivElement | null>; readonly commands: EditorSurfaceCommandController; readonly onReveal: () => void; readonly onCancel: () => void; readonly onClose: () => void; readonly onDeleteBookmark: () => void; readonly onToggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => void; readonly onGroupPreview?: (groupId: GroupId, style: SignalGroupStyle | undefined) => void; readonly onAnnotationPreview?: (annotationId: AnnotationId, draft: { readonly label?: string; readonly color?: string; readonly opacity?: number } | undefined) => void; readonly minimapMode?: "signal" | "transaction" }) {
+export function InspectorPanel({ signal, selectedSignalIds, group, annotation, transaction, bookmark, legendSelected = false, collapsedGroup, onToggleGroupCollapse, registry, document, changeSet, cyclesPerTc: tcPer = 10, viewport, commands, onReveal, onCancel, onClose, onDeleteBookmark, onToggleTransactionSignal, onGroupPreview, onAnnotationPreview, minimapMode = "signal" }: { readonly signal: Signal | undefined; readonly selectedSignalIds?: ReadonlySet<SignalId>; readonly group: SignalGroup | undefined; readonly annotation: Annotation | undefined; readonly transaction: Transaction | undefined; readonly bookmark: Bookmark | undefined; readonly legendSelected?: boolean; readonly collapsedGroup: boolean; readonly onToggleGroupCollapse: (() => void) | undefined; readonly registry: UiCommandRegistry; readonly document: Readonly<CanonicalDocument>; readonly changeSet: ChangeSet; readonly cyclesPerTc?: number; readonly viewport: RefObject<HTMLDivElement | null>; readonly commands: EditorSurfaceCommandController; readonly onReveal: () => void; readonly onCancel: () => void; readonly onClose: () => void; readonly onDeleteBookmark: () => void; readonly onToggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => void; readonly onGroupPreview?: (groupId: GroupId, style: SignalGroupStyle | undefined) => void; readonly onAnnotationPreview?: (annotationId: AnnotationId, draft: { readonly label?: string; readonly color?: string; readonly opacity?: number } | undefined) => void; readonly minimapMode?: "signal" | "transaction" }) {
   if ((selectedSignalIds?.size ?? 0) > 1) return <InspectorMultiSelection count={selectedSignalIds!.size} registry={registry} document={document} viewport={viewport} onCancel={onCancel} onClose={onClose} />;
   const [name, setName] = useState(signal?.name ?? "");
   const [groupName, setGroupName] = useState(group?.name ?? "");
@@ -202,7 +202,7 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
   return <aside className="inspector" data-testid="inspector" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}>
     <InspectorHeaderBar onClose={onClose} />
     {group && <InspectorSelectionHeader kind="Group" title={group.name} detail={`${group.rows.length} row${group.rows.length === 1 ? "" : "s"}`} />}
-    {transaction && <InspectorSelectionHeader kind="Transaction" title="Transaction" detail={`Cycle ${transaction.start}–${transaction.end} · ${transaction.laneId}`} />}
+    {transaction && <InspectorSelectionHeader kind="Transaction" title={transactionName || transaction.name} detail={`${transaction.id} · Cycle ${transaction.start}–${transaction.end} · ${transaction.laneId}`} />}
     {!signal && !group && !annotation && !transaction && <section className="inspector-empty">No selection</section>}
     {spacerEditor}
     {spacerMoveEditor}
@@ -284,7 +284,7 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
         // error-reporting mechanism.
         if (!result.ok && result.reason !== "no-op") setTransactionStatus(result.problems[0]?.message ?? "Could not apply Transaction changes."); }} applyDisabled={transactionName === transaction.name && transactionStart === transaction.start && transactionEnd === transaction.end && transactionLane === (transaction.laneId ?? "lane_0") && transactionGroupId === (transaction.groupId ?? "") && transactionColor === (transaction.color ?? "") && transactionDescription === (transaction.description ?? "") && phaseDraft === undefined} applyTestId="apply-inspector-transaction" />
     </>}
-    <MiniMap document={document} viewport={viewport} mode={minimapMode} />
+    <MiniMap document={document} changeSet={changeSet} viewport={viewport} mode={minimapMode} />
   </aside>;
 }
 

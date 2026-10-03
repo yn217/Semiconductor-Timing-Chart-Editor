@@ -3,11 +3,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test, type Page } from "@playwright/test";
 
-// #777: real-browser production-path acceptance for the current-v2 sample pack (Open -> settle -> no errors ->
+// #777: real-browser production-path acceptance for the current sample pack (Open -> settle -> no errors ->
 // edit -> Save As -> New -> Open saved -> round trip -> selection sync -> no stale mode surface), at both
 // required viewports, using the production File > Open input (no injected Canonical state).
 const dirname = path.dirname(fileURLToPath(import.meta.url));
-const samplesDir = path.resolve(dirname, "../../samples/current-v2");
+const samplesDir = path.resolve(dirname, "../../samples/current");
 
 function trackErrors(page: Page): string[] {
   const errors: string[] = [];
@@ -24,10 +24,12 @@ async function openFixture(page: Page, filename: string): Promise<void> {
 }
 
 const FIXTURES = [
-  { file: "01_cycle_reference.tcd.json", mode: "Cycle" as const },
-  { file: "02_transaction_reference.tcd.json", mode: "Transaction" as const },
-  { file: "03_combined_reference.tcd.json", mode: "Combined" as const },
-  { file: "04_long_timeline_stress_reference.tcd.json", mode: "Cycle" as const },
+  { file: "01_cycle_signals.tcd.json", mode: "Cycle" as const },
+  { file: "02_annotations.tcd.json", mode: "Cycle" as const },
+  { file: "03_transactions.tcd.json", mode: "Transaction" as const },
+  { file: "04_timegroups_bookmarks.tcd.json", mode: "Cycle" as const },
+  { file: "05_combined_protocol.tcd.json", mode: "Combined" as const },
+  { file: "06_layout_export.tcd.json", mode: "Cycle" as const },
 ];
 
 for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
@@ -98,9 +100,9 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
   }
 }
 
-test("02_transaction_reference: TC scale 1/10/50 keep ruler, bars and Bottom table on one shared presentation scale", async ({ page }) => {
+test("03_transactions: TC scale 1/10/50 keep ruler, bars and Bottom table on one shared presentation scale", async ({ page }) => {
   const errors = trackErrors(page);
-  await openFixture(page, "02_transaction_reference.tcd.json");
+  await openFixture(page, "03_transactions.tcd.json");
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   const select = page.getByTestId("transaction-tc-scale");
   for (const scale of ["1", "10", "50"]) {
@@ -113,9 +115,9 @@ test("02_transaction_reference: TC scale 1/10/50 keep ruler, bars and Bottom tab
   expect(errors, `unexpected console/page errors: ${errors.join(" | ")}`).toEqual([]);
 });
 
-test("Cycle -> Transaction -> Combined -> Cycle through 03_combined_reference stays view-only with no stale mode surface", async ({ page }) => {
+test("Cycle -> Transaction -> Combined -> Cycle through 05_combined_protocol stays view-only with no stale mode surface", async ({ page }) => {
   const errors = trackErrors(page);
-  await openFixture(page, "03_combined_reference.tcd.json");
+  await openFixture(page, "05_combined_protocol.tcd.json");
   const history = await page.getByTestId("history-status").textContent();
   const modes = page.locator(".view-mode");
   for (const target of ["Transaction", "Combined", "Cycle"] as const) {

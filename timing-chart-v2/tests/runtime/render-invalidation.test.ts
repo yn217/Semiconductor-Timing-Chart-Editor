@@ -23,9 +23,19 @@ describe("render invalidation owner", () => {
     });
   });
 
-  it("reprojects Annotation/Dependency overlays for any rowPresentation change (Signal Show/Hide, #898)", () => {
+  it("does not reproject overlays for label-only row presentation such as Signal rename", () => {
     expect(deriveRenderInvalidation({ rowPresentation: ["sig_a"] } as ChangeSet, "signal_clk" as never)).toEqual({
       snapDependenciesChanged: false,
+      referenceWaveChanged: false,
+      refreshRuler: false,
+      refreshGrid: false,
+      refreshOverlays: false,
+    });
+  });
+
+  it("still reprojects overlays when a Signal visibility change moves annotation rows", () => {
+    expect(deriveRenderInvalidation({ rowPresentation: ["sig_a"], geometryScreenY: ["sig_b"], annotationPosition: ["ann_a"] } as ChangeSet, "signal_clk" as never)).toEqual({
+      snapDependenciesChanged: true,
       referenceWaveChanged: false,
       refreshRuler: false,
       refreshGrid: false,

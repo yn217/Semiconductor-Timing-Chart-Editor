@@ -8,9 +8,9 @@ type GoldenManifestEntry = {
 };
 
 const workspace = resolve(import.meta.dirname, "../..");
-const protocolManifestPath = resolve(workspace, "samples/golden-protocol/timing_chart_sample_pack/manifest.json");
-const featureManifestPath = resolve(workspace, "samples/golden-feature-coverage/timing_chart_feature_coverage_pack/manifest.json");
-const featureMatrixPath = resolve(workspace, "samples/golden-feature-coverage/timing_chart_feature_coverage_pack/coverage_matrix.csv");
+const protocolManifestPath = resolve(workspace, "samples/old/pre-reset-2026-10-02/golden-protocol/timing_chart_sample_pack/manifest.json");
+const featureManifestPath = resolve(workspace, "samples/old/pre-reset-2026-10-02/golden-feature-coverage/timing_chart_feature_coverage_pack/manifest.json");
+const featureMatrixPath = resolve(workspace, "samples/old/pre-reset-2026-10-02/golden-feature-coverage/timing_chart_feature_coverage_pack/coverage_matrix.csv");
 
 function readManifest(path: string): readonly GoldenManifestEntry[] {
   return JSON.parse(readFileSync(path, "utf8")) as GoldenManifestEntry[];

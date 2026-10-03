@@ -11,7 +11,7 @@ import { expect, test, type Page } from "@playwright/test";
 // retired per-Signal Upper/Lower/Both assignment model.
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
-const samplePath = path.resolve(dirname, "../../samples/acceptance-397/sample-d-signal-split-dual-viewport.tcd.json");
+const samplePath = path.resolve(dirname, "../../samples/old/pre-reset-2026-10-02/acceptance-397/sample-d-signal-split-dual-viewport.tcd.json");
 
 async function openSampleD(page: Page) {
   await page.goto("/");

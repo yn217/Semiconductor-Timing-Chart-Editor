@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DefaultScreenGeometryProjector, ImmutableLocalGeometryMap, ImmutableSnapIndex, resolveTimeAxisGeometry, SemanticSnapCandidateService, createTransactionTimeTransform } from "@timing-chart-v2/geometry";
+import { DefaultScreenGeometryProjector, ImmutableLocalGeometryMap, ImmutableSnapIndex, resolveTimeAxisGeometry, SemanticSnapCandidateService, UniformCycleLocalGeometryMap, createTransactionTimeTransform } from "@timing-chart-v2/geometry";
 import type { AnnotationId, SignalId, TimeGroupId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
@@ -131,6 +131,54 @@ describe("Screen Geometry and snapping", () => {
     expect(index.entries().some((candidate) => candidate.anchor.cycle === 2 || candidate.anchor.cycle === 3)).toBe(false);
   });
 
+  it("keeps folded non-contiguous source boundaries in the lazy snap index", () => {
+    const source = canonicalFixture();
+    const document = {
+      ...source,
+      timeGroups: [{ id: "time_fold" as TimeGroupId, name: "Fold", start: 2, end: 4, presentation: { collapsed: true, foldStyle: "axis-break" as const, foldLabel: "GAP" } }],
+      signals: [source.signals[0]!],
+      bookmarks: [],
+      annotations: [],
+      timeline: { ...source.timeline, referenceClock: source.signals[0]!.id, cycleCount: 8 },
+    };
+    const signal = document.signals[0]!;
+    const entries = [0, 1, 4, 5, 6, 7, 8].map((cycle, index) => ({
+      cycle,
+      point: "cycle-start" as const,
+      position: { x: index * 10, y: 0 },
+    }));
+    let findCalls = 0;
+    const map = {
+      signalId: signal.id,
+      cycleBoundaryEntries: () => entries,
+      find: (anchor: Parameters<ImmutableLocalGeometryMap["find"]>[0]) => {
+        findCalls += 1;
+        const entry = entries.find((item) => item.cycle === anchor.cycle);
+        return anchor.point === "cycle-start" && entry
+          ? { signalId: signal.id, anchor, point: entry.position }
+          : undefined;
+      },
+    };
+    const sourceByRendered = [0, 1, 4, 5, 6, 7, 8];
+    const renderedBySource = new Map(sourceByRendered.map((sourceCycle, renderedCycle) => [sourceCycle, renderedCycle]));
+    const service = new SemanticSnapCandidateService();
+    const index = service.build({
+      document,
+      geometryMaps: new Map([[signal.id, map]]),
+      rowY: new Map([[signal.id, 0]]),
+      renderedCycleCount: 6,
+      sourceCycleForRenderedCycle: (cycle) => sourceByRendered[cycle],
+      renderedCycleForSourceCycle: (cycle) => renderedBySource.get(cycle),
+    });
+
+    expect(index.entries().filter((candidate) => candidate.kind === "cycle-boundary")).toHaveLength(0);
+    expect(service.metrics().candidateCount).toBeLessThan(10);
+    expect(findCalls).toBe(0);
+    expect(index.nearest({ x: 20, y: 0 }, 1, ["cycle-boundary"]))
+      .toMatchObject({ kind: "cycle-boundary", anchor: { cycle: 4, point: "cycle-start" }, point: { x: 20 } });
+    expect(index.metrics().candidatesVisited).toBeLessThan(10);
+  });
+
   it("builds only against the currently projected viewport rows", () => {
     const source = canonicalFixture();
     const stale = source.signals[0]!;
@@ -149,6 +197,134 @@ describe("Screen Geometry and snapping", () => {
     expect(new Set(index.entries().map((candidate) => candidate.ownerId))).toEqual(new Set([current.id]));
     expect(index.entries().every((candidate) => candidate.point.y >= 240)).toBe(true);
     expect(service.metrics().candidateCount).toBe(index.entries().length);
+  });
+
+  it("indexes canonical Signal identity once and visits only retained geometry owners", () => {
+    const source = canonicalFixture();
+    const current = source.signals.find((item) => item.type !== "commentRow")!;
+    let signalIterations = 0;
+    const signals = new Proxy(source.signals, {
+      get(target, property, receiver) {
+        if (property === Symbol.iterator) signalIterations += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const document = { ...source, signals };
+    const map = new ImmutableLocalGeometryMap(current.id, [
+      { cycle: 0, point: "cycle-start", position: { x: 20, y: 0 } },
+    ]);
+    const service = new SemanticSnapCandidateService();
+    const geometryMaps = new Map([[current.id, map]]);
+
+    const first = service.build({ document, geometryMaps, rowY: new Map([[current.id, 30]]) });
+    const iterationsAfterFirstBuild = signalIterations;
+    const second = service.build({ document, geometryMaps, rowY: new Map([[current.id, 30]]) });
+
+    expect(iterationsAfterFirstBuild).toBe(1);
+    expect(signalIterations).toBe(iterationsAfterFirstBuild);
+    expect(first.entries().length).toBeGreaterThan(0);
+    expect(second.entries().map((candidate) => candidate.ownerId).every((ownerId) => ownerId === current.id)).toBe(true);
+  });
+
+  it("visits retained geometry boundaries instead of probing every document cycle", () => {
+    const source = canonicalFixture();
+    const signal = source.signals.find((item) => item.type !== "commentRow")!;
+    const document = {
+      ...source,
+      signals: [signal],
+      bookmarks: [],
+      annotations: [],
+      timeline: { ...source.timeline, referenceClock: signal.id, cycleCount: 10_000 },
+    };
+    const retained = new ImmutableLocalGeometryMap(signal.id, [
+      { cycle: 0, point: "cycle-start", position: { x: 20, y: 0 } },
+      { cycle: 5_000, point: "cycle-start", position: { x: 60, y: 0 } },
+      { cycle: 10_000, point: "cycle-start", position: { x: 100, y: 0 } },
+    ]);
+    let findCalls = 0;
+    const boundedMap = {
+      signalId: signal.id,
+      cycleBoundaryEntries: () => retained.cycleBoundaryEntries(),
+      find: (anchor: Parameters<typeof retained.find>[0]) => {
+        findCalls += 1;
+        return retained.find(anchor);
+      },
+    };
+    const index = new SemanticSnapCandidateService().build({
+      document,
+      geometryMaps: new Map([[signal.id, boundedMap]]),
+      rowY: new Map([[signal.id, 0]]),
+      renderedCycleCount: 10_000,
+    });
+
+    expect(index.entries().filter((candidate) => candidate.kind === "cycle-boundary").map((candidate) => candidate.anchor.cycle)).toEqual([0, 5_000, 10_000]);
+    expect(findCalls).toBeLessThan(32);
+  });
+
+  it("resolves regular cycle snap candidates on demand instead of materializing a full grid", () => {
+    const source = canonicalFixture();
+    const signal = source.signals.find((item) => item.type !== "commentRow")!;
+    const document = {
+      ...source,
+      signals: [signal],
+      bookmarks: [],
+      annotations: [],
+      timeline: { ...source.timeline, referenceClock: signal.id, cycleCount: 10_000 },
+    };
+    const map = new UniformCycleLocalGeometryMap(signal.id, {
+      sourceCycles: Array.from({ length: 10_001 }, (_, cycle) => cycle),
+      originX: 20,
+      cycleWidth: 40,
+      rowY: 0,
+    });
+    const service = new SemanticSnapCandidateService();
+    const index = service.build({ document, geometryMaps: new Map([[signal.id, map]]), rowY: new Map([[signal.id, 0]]) });
+
+    expect(index.entries().filter((candidate) => candidate.kind === "cycle-boundary")).toHaveLength(0);
+    expect(service.metrics().candidateCount).toBeLessThan(10);
+    expect(index.nearest({ x: 20 + 5_000 * 40, y: 0 }, 1, ["cycle-boundary"]))
+      .toMatchObject({ kind: "cycle-boundary", anchor: { cycle: 5_000, point: "cycle-start" } });
+    expect(index.nearest({ x: 20 + 5_000.5 * 40, y: 0 }, 1, ["cycle-center"]))
+      .toMatchObject({ kind: "cycle-center", anchor: { cycle: 5_000, point: "cycle-center" } });
+  });
+
+  it("resolves non-uniform retained boundaries on demand instead of materializing the window", () => {
+    const source = canonicalFixture();
+    const signal = source.signals.find((item) => item.type !== "commentRow")!;
+    const cycleCount = 10_000;
+    const document = {
+      ...source,
+      signals: [signal],
+      bookmarks: [],
+      annotations: [],
+      timeline: { ...source.timeline, referenceClock: signal.id, cycleCount },
+    };
+    const entries = Array.from({ length: cycleCount + 1 }, (_, cycle) => ({
+      cycle,
+      point: "cycle-start" as const,
+      position: { x: 20 + cycle * 40 + (cycle % 2) * 4, y: 0 },
+    }));
+    let findCalls = 0;
+    const map = {
+      signalId: signal.id,
+      cycleBoundaryEntries: () => entries,
+      find: (anchor: { cycle: number; point: string }) => {
+        findCalls += 1;
+        const entry = entries[anchor.cycle];
+        return anchor.point === "cycle-start" && entry
+          ? { signalId: signal.id, anchor: anchor as never, point: entry.position }
+          : undefined;
+      },
+    };
+    const service = new SemanticSnapCandidateService();
+    const index = service.build({ document, geometryMaps: new Map([[signal.id, map]]), rowY: new Map([[signal.id, 0]]) });
+
+    expect(index.entries().filter((candidate) => candidate.kind === "cycle-boundary")).toHaveLength(0);
+    expect(service.metrics().candidateCount).toBeLessThan(10);
+    expect(index.nearest({ x: entries[5_000]!.position.x, y: 0 }, 1, ["cycle-boundary"]))
+      .toMatchObject({ kind: "cycle-boundary", anchor: { cycle: 5_000, point: "cycle-start" } });
+    expect(findCalls).toBeLessThan(32);
+    expect(index.metrics().candidatesVisited).toBeLessThan(10);
   });
 
   it("does not reintroduce hidden annotation targets as snap candidates", () => {

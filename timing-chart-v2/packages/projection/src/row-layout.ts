@@ -1,4 +1,4 @@
-import { buildTimeGroupHierarchy, type CanonicalDocument, type GroupId, type RowId, type Signal, type SpacerRow } from "@timing-chart-v2/schema";
+import { cachedTimeGroupHierarchy, type CanonicalDocument, type GroupId, type RowId, type Signal, type SpacerRow } from "@timing-chart-v2/schema";
 import type { GroupHeaderLayoutEntry, RowLayoutEntry } from "./types.js";
 
 export interface RowLayoutResult {
@@ -53,11 +53,31 @@ export function buildRowLayoutSourceIndex(document: CanonicalDocument): RowLayou
   return getRowLayoutSourceIndex(document).index;
 }
 
+/** Returns the visible rows intersecting a vertical viewport in O(log N + K).
+ * Row layouts are emitted in Y order without vertical overlap; zero-height
+ * bookkeeping rows may share a boundary but preserve that ordering. */
+export function rowsIntersectingVerticalViewport<T extends Pick<RowLayoutEntry, "visible" | "y" | "height">>(rows: readonly T[], viewportStartY: number, viewportEndY: number): readonly T[] {
+  let low = 0;
+  let high = rows.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (rows[middle]!.y + rows[middle]!.height < viewportStartY) low = middle + 1;
+    else high = middle;
+  }
+  const result: T[] = [];
+  for (let index = low; index < rows.length; index += 1) {
+    const row = rows[index]!;
+    if (row.y > viewportEndY) break;
+    if (row.visible && row.y + row.height >= viewportStartY) result.push(row);
+  }
+  return result;
+}
+
 /** Height the time ruler adds above its 34px tick band for Time Group outline levels (20px per level). Single owner: the ruler
  * frame (build-ruler) and the row-Y origin below both use it, so rows never start under the taller ruler (#901). */
 export function timeGroupOutlineHeight(document: Pick<CanonicalDocument, "timeGroups">): number {
   if (document.timeGroups.length === 0) return 0;
-  return (buildTimeGroupHierarchy(document.timeGroups).maxDepth + 1) * 20;
+  return (cachedTimeGroupHierarchy(document.timeGroups).maxDepth + 1) * 20;
 }
 
 export function calculateRowLayout(document: CanonicalDocument, collapsedGroupIds: ReadonlySet<GroupId> = new Set(), options: { readonly includeHidden?: boolean; readonly reserveHiddenSpace?: boolean; readonly pane?: "upper" | "lower"; readonly sourceIndex?: RowLayoutSourceIndex } = {}): RowLayoutResult {

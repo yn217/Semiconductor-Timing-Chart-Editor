@@ -419,6 +419,7 @@ test("future format opens a source-preserving read-only Compatibility Mode", asy
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   const originalTitle = await page.locator(".app-titlebar h1").textContent();
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const originalRevision = await host.getAttribute("data-canonical-revision");
   const futureSource = JSON.stringify({ formatVersion: 99, document: { id: "future", title: "Future Document" }, futureField: { mustRemain: true } }, null, 2);
 

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { expectSharedSourceBoundaryX } from "./helpers/time-axis-alignment.js";
 
 test("Combined keeps Transaction and Cycle source boundaries aligned after column resize", async ({ page }) => {
   await page.setViewportSize({ width: 1672, height: 941 });
@@ -10,15 +11,24 @@ test("Combined keeps Transaction and Cycle source boundaries aligned after colum
   await expect(bar).toBeVisible();
   const ruler = page.getByTestId("cycle-ruler");
   const points = [10, 20, 60];
-  const readX = async () => Object.fromEntries(await Promise.all(points.map(async (cycle) => {
-    const cycleBox = await ruler.locator(`[data-cycle='${cycle}']`).boundingBox();
-    const transactionBox = await bar.boundingBox();
-    const phase = cycle === 10 || cycle === 60 ? undefined : bar.locator("[data-phase-segment][title^='Read Data']");
-    const phaseBox = phase === undefined ? undefined : await phase.boundingBox();
-    return [cycle, { cycle: cycleBox?.x, transaction: cycle === 10 ? transactionBox?.x : cycle === 60 ? transactionBox?.x! + transactionBox.width : phaseBox?.x }];
-  })));
+  const readX = async () => {
+    const positions: Record<number, Readonly<Record<string, number>>> = {};
+    for (const cycle of points) {
+      const address = bar.locator("[data-phase-segment][title^='Address']");
+      const readData = bar.locator("[data-phase-segment][title^='Read Data']");
+      const response = bar.locator("[data-phase-segment][title^='Response']");
+      const consumers = cycle === 10
+        ? [{ name: "transaction bar", locator: bar }, { name: "Address phase start", locator: address }]
+        : cycle === 20
+          ? [{ name: "Address phase end", locator: address, edge: "right" as const }, { name: "Read Data phase start", locator: readData }]
+          : [{ name: "transaction bar", locator: bar, edge: "right" as const }, { name: "Response phase end", locator: response, edge: "right" as const }];
+      positions[cycle] = await expectSharedSourceBoundaryX(cycle, ruler.locator(`[data-cycle='${cycle}']`), [
+        ...consumers,
+      ]);
+    }
+    return positions;
+  };
   const before = await readX();
-  for (const cycle of points) expect(Math.abs(before[cycle].cycle - before[cycle].transaction)).toBeLessThan(1);
   const layout = page.getByTestId("inspector-layout-editor");
   await layout.getByLabel("Inspector role column width").fill("82");
   await layout.getByLabel("Inspector signal name width").fill("196");
@@ -26,7 +36,9 @@ test("Combined keeps Transaction and Cycle source boundaries aligned after colum
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const after = await readX();
   for (const cycle of points) {
-    expect(Math.abs(after[cycle].cycle - after[cycle].transaction)).toBeLessThan(1);
-    expect((after[cycle].transaction - before[cycle].transaction)).toBeCloseTo(after[cycle].cycle - before[cycle].cycle, 0);
+    // Every consumer measured at this source boundary (bar / phase edges differ per cycle) must move exactly as the shared ruler does.
+    const consumers = Object.keys(after[cycle]!).filter((name) => name !== "ruler");
+    expect(consumers.length, `consumers measured at cycle ${cycle}`).toBeGreaterThan(0);
+    for (const name of consumers) expect(after[cycle]![name]! - before[cycle]![name]!, `${name} at cycle ${cycle}`).toBeCloseTo(after[cycle]!.ruler! - before[cycle]!.ruler!, 0);
   }
 });

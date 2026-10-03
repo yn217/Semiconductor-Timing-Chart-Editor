@@ -20,6 +20,10 @@ test("view-only GUI operations do not validate or semantically rerender the docu
   const host = page.getByTestId("cycle-surface");
   const surface = host.locator("[data-role='timing-chart-surface']");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  // Counters are published with the first settled validation/layout; read the baseline only after that.
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
+  await expect(host).toHaveAttribute("data-session-counters", /validationRuns/);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
 
   const readCounters = async (): Promise<Counters> => {
     const session = JSON.parse(await host.getAttribute("data-session-counters") ?? "{}") as Record<string, number>;

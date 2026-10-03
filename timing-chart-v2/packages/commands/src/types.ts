@@ -53,10 +53,13 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "enum.delete"; enumId: string }>
   | Readonly<{ id: CommandId; type: "signal.create"; signal: Signal; targetGroupId: GroupId; index: number }>
   | Readonly<{ id: CommandId; type: "signal.bulkCreate"; signals: readonly Signal[]; targetGroupId: GroupId; index: number }>
+  | Readonly<{ id: CommandId; type: "signal.bulkCreateAcrossGroups"; signals: readonly Signal[]; placements: readonly Readonly<{ targetGroupId: GroupId; index: number; signalIds: readonly SignalId[] }>[] }>
+  | Readonly<{ id: CommandId; type: "signal.bulkDelete"; signalIds: readonly SignalId[] }>
   | Readonly<{ id: CommandId; type: "signal.delete"; signalId: SignalId }>
   | Readonly<{ id: CommandId; type: "signal.rename"; signalId: SignalId; name: string }>
   | Readonly<{ id: CommandId; type: "signal.move"; signalId: SignalId; targetGroupId: GroupId; index: number }>
   | Readonly<{ id: CommandId; type: "signal.setVisibility"; signalId: SignalId; visible: boolean }>
+  | Readonly<{ id: CommandId; type: "signal.bulkSetVisibility"; updates: readonly Readonly<{ signalId: SignalId; visible: boolean }>[] }>
   | Readonly<{ id: CommandId; type: "signal.updateValue"; signalId: SignalId; start: number; value: SignalValue; comment?: string }>
   | Readonly<{ id: CommandId; type: "signal.replaceValues"; signalId: SignalId; values: readonly ValueSignal["values"][number][] }>
   | Readonly<{ id: CommandId; type: "signal.replaceValue"; signalId: SignalId; fromStart: number; start: number; value: SignalValue; comment?: string }>
@@ -71,10 +74,12 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "signal.updateEdgeCounter"; signalId: SignalId; edgeCounter: EdgeCounterSettings }>
   | Readonly<{ id: CommandId; type: "signal.updateResetSemantics"; signalId: SignalId; resetSemantics?: ResetSemantics }>
   | Readonly<{ id: CommandId; type: "spacer.create"; spacer: SpacerRow; targetGroupId: GroupId; index: number }>
+  | Readonly<{ id: CommandId; type: "spacer.bulkDelete"; spacerIds: readonly SpacerId[] }>
   | Readonly<{ id: CommandId; type: "spacer.move"; spacerId: SpacerId; targetGroupId: GroupId; index: number }>
   | Readonly<{ id: CommandId; type: "spacer.update"; spacerId: SpacerId; height: number }>
   | Readonly<{ id: CommandId; type: "spacer.delete"; spacerId: SpacerId }>
   | Readonly<{ id: CommandId; type: "group.create"; group: SignalGroup; index: number }>
+  | Readonly<{ id: CommandId; type: "group.createWithContents"; group: SignalGroup; signals: readonly Signal[]; index: number }>
   | Readonly<{ id: CommandId; type: "group.delete"; groupId: GroupId }>
   | Readonly<{ id: CommandId; type: "group.rename"; groupId: GroupId; name: string }>
   | Readonly<{ id: CommandId; type: "group.move"; groupId: GroupId; index: number }>
@@ -103,7 +108,13 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "timeGroup.update"; timeGroupId: TimeGroupId; name: string; start: number; end: number; category?: string; comment?: string; presentation?: TimeGroup["presentation"] }>
   | Readonly<{ id: CommandId; type: "timeGroup.updatePresentation"; timeGroupId: TimeGroupId; presentation: TimeGroup["presentation"] }>
   | Readonly<{ id: CommandId; type: "timeGroup.delete"; timeGroupId: TimeGroupId }>
-  | Readonly<{ id: CommandId; type: "transaction.create"; transaction: Transaction }>
+  | Readonly<{ id: CommandId; type: "transaction.create"; transaction: Transaction; afterTransactionId?: TransactionId }>
+  | Readonly<{ id: CommandId; type: "transaction.bulkCreate"; transactions: readonly Transaction[] }>
+  | Readonly<{ id: CommandId; type: "transaction.bulkDuplicate"; items: readonly Readonly<{ transactionId: TransactionId; newTransactionId: TransactionId; name?: string }>[] }>
+  | Readonly<{ id: CommandId; type: "transaction.bulkDelete"; transactionIds: readonly TransactionId[] }>
+  | Readonly<{ id: CommandId; type: "transaction.bulkSetVisibility"; transactionIds: readonly TransactionId[]; visible: boolean }>
+  | Readonly<{ id: CommandId; type: "transaction.bulkMoveToGroup"; items: readonly Readonly<{ transactionId: TransactionId; groupId?: TransactionGroup["id"] }>[] }>
+  | Readonly<{ id: CommandId; type: "transaction.bulkSetColor"; transactionIds: readonly TransactionId[]; color: string }>
   | Readonly<{ id: CommandId; type: "transaction.duplicate"; transactionId: TransactionId; newTransactionId: TransactionId; name?: string }>
   | Readonly<{ id: CommandId; type: "transaction.delete"; transactionId: TransactionId }>
   | Readonly<{ id: CommandId; type: "transaction.rename"; transactionId: TransactionId; name: string }>
@@ -114,6 +125,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "transaction.move"; transactionId: TransactionId; start: number }>
   | Readonly<{ id: CommandId; type: "transaction.resize"; transactionId: TransactionId; edge: "start" | "end"; value: number }>
   | Readonly<{ id: CommandId; type: "transaction.moveLane"; transactionId: TransactionId; laneId: string }>
+  | Readonly<{ id: CommandId; type: "transaction.bulkLinkSignals"; links: readonly Readonly<{ transactionId: TransactionId; signalId: SignalId }>[] }>
   | Readonly<{ id: CommandId; type: "transaction.linkSignal"; transactionId: TransactionId; signalId: SignalId }>
   | Readonly<{ id: CommandId; type: "transaction.unlinkSignal"; transactionId: TransactionId; signalId: SignalId }>
   | Readonly<{ id: CommandId; type: "transactionGroup.create"; group: TransactionGroup }>

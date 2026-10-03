@@ -50,6 +50,7 @@ test.describe("status context", () => {
     await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
     const host = page.getByTestId("cycle-surface");
     await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+    await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
     const revision = await host.getAttribute("data-canonical-revision");
     const history = await page.getByTestId("history-status").textContent();
     const dirty = await page.getByTestId("dirty-status").textContent();
@@ -70,6 +71,7 @@ test.describe("status context", () => {
     await page.goto("/");
     const host = page.getByTestId("cycle-surface");
     await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+    await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
     const revision = await host.getAttribute("data-canonical-revision");
     const history = await page.getByTestId("history-status").textContent();
     const dirty = await page.getByTestId("dirty-status").textContent();

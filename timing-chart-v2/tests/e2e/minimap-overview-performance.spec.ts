@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 import { startInCycleMode } from "./cycle-startup.js";
+import { setTimelineScrollLeft } from "./timeline-scroll.js";
 
 startInCycleMode(test);
 
@@ -13,6 +15,8 @@ async function readState(page: import("@playwright/test").Page) {
       signalLookups: minimap.dataset.overviewSignalLookups,
       overviewReuseSignalComparisons: minimap.dataset.overviewReuseSignalComparisons,
       overviewRows: minimap.querySelectorAll(".minimap-rows > span").length,
+      viewportLeft: minimap.dataset.viewportLeft,
+      viewportTop: minimap.dataset.viewportTop,
       session: JSON.parse(host.dataset.sessionCounters ?? "null") as Record<string, number>,
       render: JSON.parse(surface.dataset.renderCounters ?? "null") as Record<string, number>,
       revision: host.dataset.canonicalRevision,
@@ -26,6 +30,9 @@ test("Bookmark-only document commits do not compare the unchanged MiniMap Signal
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
+  // The static overview is built in an idle callback after ready; read baselines only once it exists.
+  await expect(page.getByTestId("minimap")).toHaveAttribute("aria-busy", "false");
   const before = await readState(page);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByLabel("Timeline range start").fill("0");
@@ -44,6 +51,14 @@ test("MiniMap viewport updates do not rebuild the static overview", async ({ pag
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
+  // The static overview is built in an idle callback after ready; read baselines only once it exists.
+  // The startup document fits horizontally; open a wide one so the MiniMap viewport really moves in both axes.
+  const wide = generatePerformanceDocument({ signalCount: 40, cycleCount: 400, profile: "standard" });
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "wide.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(wide)) });
+  await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await expect(page.getByTestId("minimap")).toHaveAttribute("aria-busy", "false");
   const minimap = page.getByTestId("minimap");
   const before = await readState(page);
   expect(Number(before.overviewBuilds)).toBeGreaterThan(0);
@@ -53,10 +68,11 @@ test("MiniMap viewport updates do not rebuild the static overview", async ({ pag
 
   await page.getByTestId("cycle-viewport").evaluate((element) => {
     element.scrollTop = Math.max(1, element.scrollHeight - element.clientHeight);
-    element.scrollLeft = Math.max(1, element.scrollWidth - element.clientWidth);
     element.dispatchEvent(new Event("scroll"));
   });
-  await page.waitForTimeout(100);
+  await setTimelineScrollLeft(page, 10_000_000);
+  await expect.poll(() => minimap.getAttribute("data-viewport-left")).not.toBe(before.viewportLeft);
+  await expect.poll(() => minimap.getAttribute("data-viewport-top")).not.toBe(before.viewportTop);
   const afterScroll = await readState(page);
   expect(afterScroll.overviewBuilds).toBe(before.overviewBuilds);
   expect(afterScroll.signalLookups).toBe(before.signalLookups);
@@ -65,7 +81,8 @@ test("MiniMap viewport updates do not rebuild the static overview", async ({ pag
   const box = await minimap.boundingBox();
   expect(box).not.toBeNull();
   await page.mouse.click(box!.x + box!.width * 0.5, box!.y + box!.height * 0.5);
-  await page.waitForTimeout(50);
+  await expect.poll(() => minimap.getAttribute("data-viewport-left")).not.toBe(afterScroll.viewportLeft);
+  await expect.poll(() => minimap.getAttribute("data-viewport-top")).not.toBe(afterScroll.viewportTop);
   const afterPan = await readState(page);
   expect(afterPan.overviewBuilds).toBe(before.overviewBuilds);
   expect(afterPan.signalLookups).toBe(before.signalLookups);
@@ -74,8 +91,11 @@ test("MiniMap viewport updates do not rebuild the static overview", async ({ pag
   for (const key of ["validationRuns", "commits", "commandAttempts", "committedActions", "undoOperations", "redoOperations"]) {
     expect(afterPan.session[key]).toBe(before.session[key]);
   }
-  expect(afterPan.render.waveDromRenders).toBe(before.render.waveDromRenders);
-  expect(afterPan.render.localGeometryBuilds).toBe(before.render.localGeometryBuilds);
+  // Direct scrolling above can legitimately window/remount waveform content.
+  // A MiniMap pan moves the viewport, so newly exposed rows legitimately render (virtualization); it must stay bounded by the visible
+  // window (well under the 40-Signal document) rather than re-rendering the whole document, and must not rebuild the overview.
+  expect(afterPan.render.waveDromRenders - afterScroll.render.waveDromRenders).toBeLessThan(40);
+  expect(afterPan.render.localGeometryBuilds - afterScroll.render.localGeometryBuilds).toBeLessThan(40);
   expect(afterPan.history).toBe(before.history);
   expect(afterPan.dirty).toBe(before.dirty);
 });
@@ -84,6 +104,9 @@ test("non-overview Signal property commits reuse the static MiniMap overview", a
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
+  // The static overview is built in an idle callback after ready; read baselines only once it exists.
+  await expect(page.getByTestId("minimap")).toHaveAttribute("aria-busy", "false");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const minimap = page.getByTestId("minimap");
   const before = await readState(page);
@@ -92,7 +115,8 @@ test("non-overview Signal property commits reuse the static MiniMap overview", a
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const after = await readState(page);
   expect(after.overviewBuilds).toBe(before.overviewBuilds);
-  expect(after.signalLookups).toBe(before.signalLookups);
+  // data-overview-signal-lookups reports the LAST derivation's work (not a cumulative total): a reused overview does zero lookups.
+  expect(Number(after.signalLookups)).toBe(0);
   expect(after.overviewRows).toBe(before.overviewRows);
   expect(after.revision).not.toBe(before.revision);
   expect(after.history).not.toBe(before.history);

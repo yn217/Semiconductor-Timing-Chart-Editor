@@ -1,11 +1,19 @@
-import type { GroupHeaderLayoutEntry, RenderProjection, RowLayoutEntry } from "@timing-chart-v2/projection";
-import { ANNOTATION_LABEL_LINE_HEIGHT, ANNOTATION_LABEL_MAX_WIDTH, wrapAnnotationLabel } from "@timing-chart-v2/geometry";
-import { LEFT_TREE_ICON_DOTS, LEFT_TREE_ICON_PATHS, LEFT_TREE_ICON_PUPIL, type LeftTreeIconPathName } from "./left-tree-icon-spec.js";
-import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnosticSummary, RendererDiagnostics, RendererRowIdentitySnapshot, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveMountBatchItem, WaveMountRequest, WaveSignalId } from "./types.js";
+import type { RenderProjection, RowLayoutEntry } from "@timing-chart-v2/projection";
+import { createLeftTreeIcon, createRoleBadge } from "./tree-row-dom.js";
+import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnosticSummary, RendererDiagnostics, RendererRowIdentitySnapshot, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveMountBatchItem, WaveMountRequest, WavePrefetchRequest, WaveSignalId } from "./types.js";
+import { isWavePrefetchModeEligible, WavePrefetchLifecycle } from "./wave-prefetch-lifecycle.js";
+import { applyTextStyle, parseTextStyle, renderOverlay } from "./annotation-overlay-dom.js";
 import { groupBackgroundColor } from "./group-background.js";
+import { syncGroupHeaderLayer } from "./group-header-dom.js";
 
 export function isWaveMountRequestFresh(request: Pick<WaveMountRequest, "documentEpoch" | "isFresh">, currentDocumentEpoch: number): boolean {
   return (request.documentEpoch === undefined || request.documentEpoch === currentDocumentEpoch) && (request.isFresh?.() ?? true);
+}
+
+/** Release a viewport-evicted owner while keeping its bounded reusable render artifact when supported. */
+export function releaseWaveOwnerForCacheEviction(provider: WaveformSurfaceProvider, signalId: WaveSignalId): void {
+  if (provider.retainWaveArtifact) provider.retainWaveArtifact(signalId);
+  else provider.disposeWave(signalId);
 }
 
 const diagnosticEncoder = new TextEncoder();
@@ -33,66 +41,6 @@ function nextBrowserFrame(): Promise<void> {
     if (typeof globalThis.requestAnimationFrame === "function") globalThis.requestAnimationFrame(() => resolve());
     else globalThis.setTimeout(resolve, 0);
   });
-}
-
-function createLeftTreeIcon(document: Document, name: LeftTreeIconPathName | "more" | "comment", className: string): SVGSVGElement {
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("viewBox", "0 0 24 24");
-  svg.setAttribute("class", className);
-  svg.setAttribute("data-icon", name);
-  svg.setAttribute("aria-hidden", "true");
-  const append = (tag: "path" | "circle") => {
-    const element = document.createElementNS("http://www.w3.org/2000/svg", tag);
-    svg.append(element);
-    return element;
-  };
-  if (name in LEFT_TREE_ICON_PATHS) {
-    const path = append("path");
-    const pathName = name as LeftTreeIconPathName;
-    path.setAttribute("d", LEFT_TREE_ICON_PATHS[pathName]);
-    path.setAttribute("fill", "none");
-    path.setAttribute("stroke", "currentColor");
-    path.setAttribute("stroke-width", pathName.startsWith("chevron") ? "2" : "1.6");
-    path.setAttribute("stroke-linecap", "round");
-    path.setAttribute("stroke-linejoin", "round");
-    if (pathName === "eye") {
-      const pupil = append("circle");
-      pupil.setAttribute("cx", String(LEFT_TREE_ICON_PUPIL.cx));
-      pupil.setAttribute("cy", String(LEFT_TREE_ICON_PUPIL.cy));
-      pupil.setAttribute("r", String(LEFT_TREE_ICON_PUPIL.r));
-      pupil.setAttribute("fill", "none");
-      pupil.setAttribute("stroke", "currentColor");
-      pupil.setAttribute("stroke-width", "1.6");
-    }
-  } else if (name === "more") {
-    for (const { cx, cy, r } of LEFT_TREE_ICON_DOTS) {
-      const dot = append("circle");
-      dot.setAttribute("cx", String(cx));
-      dot.setAttribute("cy", String(cy));
-      dot.setAttribute("r", String(r));
-      dot.setAttribute("fill", "currentColor");
-    }
-  } else if (name === "comment") {
-    const path = append("path");
-    path.setAttribute("d", "M4 4h16v12H9l-5 4z");
-    path.setAttribute("fill", "#f1dcff");
-    path.setAttribute("stroke", "currentColor");
-    path.setAttribute("stroke-width", "1.6");
-  }
-  return svg;
-}
-
-function createRoleBadge(document: Document, kind: RowLayoutEntry["kind"], role: RowLayoutEntry["role"], className: string): HTMLSpanElement {
-  const badge = document.createElement("span");
-  badge.dataset.role = className === "tree-signal-role" ? "tree-signal-role" : "signal-role";
-  badge.dataset.presentation = kind === "comment" ? "comment" : role ?? "internal";
-  badge.className = className;
-  if (kind === "comment") {
-    badge.append(createLeftTreeIcon(document, "comment", "surface-icon comment-icon"));
-  } else {
-    badge.textContent = role === "input" ? "i" : role === "output" ? "o" : "wire";
-  }
-  return badge;
 }
 
 interface Layers {
@@ -133,6 +81,14 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   readonly #localGeometryBuildsBySignal = new Map<WaveSignalId, number>();
   #waveBatchScheduled = false;
   #waveBatchSequence = 0;
+  #prefetchRowLayoutSource: readonly RowLayoutEntry[] | undefined;
+  #prefetchSignalIds: readonly WaveSignalId[] = [];
+  #prefetchIndexBySignal = new Map<WaveSignalId, number>();
+  #prefetchPlan: readonly WavePrefetchRequest[] = [];
+  readonly #prefetchLifecycle = new WavePrefetchLifecycle();
+  #prefetchTask: Promise<void> | undefined;
+  #prefetchAttempted = new Set<string>();
+  #lastPrefetchScrollTop: number | undefined;
   readonly #rowY = new Map<string, number>();
   #canonicalSignalIdsSource: readonly WaveSignalId[] | undefined;
   #canonicalSignalIdSet = new Set<WaveSignalId>();
@@ -149,7 +105,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   readonly #pending = new Set<Promise<void>>();
   #layers: Layers | undefined;
   #counters: RenderCounters = { waveDromRenders: 0, localGeometryBuilds: 0, rowPositionUpdates: 0, overlayUpdates: 0 };
-  #diagnostics: RendererDiagnostics = { projectionUpdates: 0, mountedRows: 0, mountedWaveOwners: 0, cachedWaveOwners: 0, waveOwnerCacheLimit: 32, domNodeCreates: 0, domNodeDestroys: 0, domNodeMoves: 0, waveArtifactCacheHits: 0, waveArtifactCacheMisses: 0, waveArtifactDisposals: 0, waveRendersBySignal: {}, localGeometryBuildsBySignal: {}, annotationResolvePasses: 0, resolvedAnnotations: 0, waveBatchCount: 0, waveBatchFrameYields: 0, waveBatchMaxSize: 0, waveBatchPending: 0, rowsVisited: 0, fullRowScans: 0, waveRendersBySignalCount: 0, localGeometryBuildsBySignalCount: 0, documentEpoch: 0, rowYSize: 0, rowYStaleCount: 0, rowYPrunePasses: 0, dirtyWaveSize: 0, waveVersionSize: 0, fullReplaceEpochResets: 0, staleWaveResultsDropped: 0, diagnosticMapPrunePasses: 0, diagnosticSerializationCount: 0, diagnosticSerializationBytes: 0, diagnosticSerializationDurationMs: 0, diagnosticStringifyCount: 0, diagnosticStringifyDurationMs: 0, diagnosticEncodingCount: 0, diagnosticEncodingDurationMs: 0, diagnosticPublishCount: 0, diagnosticPublishDurationMs: 0 };
+  #diagnostics: RendererDiagnostics = { projectionUpdates: 0, mountedRows: 0, mountedWaveOwners: 0, cachedWaveOwners: 0, waveOwnerCacheLimit: 32, domNodeCreates: 0, domNodeDestroys: 0, domNodeMoves: 0, waveArtifactCacheHits: 0, waveArtifactCacheMisses: 0, waveArtifactDisposals: 0, waveArtifactMarkupCacheHits: 0, waveArtifactMarkupCacheMisses: 0, waveRendersBySignal: {}, localGeometryBuildsBySignal: {}, annotationResolvePasses: 0, resolvedAnnotations: 0, waveBatchCount: 0, waveBatchFrameYields: 0, waveBatchMaxSize: 0, waveBatchPending: 0, wavePrefetchOwnerCount: 0, wavePrefetchRequestedCount: 0, wavePrefetchPreparedCount: 0, wavePrefetchReusedCount: 0, wavePrefetchStaleCount: 0, wavePrefetchFailedCount: 0, rowsVisited: 0, fullRowScans: 0, waveRendersBySignalCount: 0, localGeometryBuildsBySignalCount: 0, documentEpoch: 0, rowYSize: 0, rowYStaleCount: 0, rowYPrunePasses: 0, dirtyWaveSize: 0, waveVersionSize: 0, fullReplaceEpochResets: 0, staleWaveResultsDropped: 0, diagnosticMapPrunePasses: 0, diagnosticSerializationCount: 0, diagnosticSerializationBytes: 0, diagnosticSerializationDurationMs: 0, diagnosticStringifyCount: 0, diagnosticStringifyDurationMs: 0, diagnosticEncodingCount: 0, diagnosticEncodingDurationMs: 0, diagnosticPublishCount: 0, diagnosticPublishDurationMs: 0 };
 
   constructor(provider: WaveformSurfaceProvider) {
     this.#provider = provider;
@@ -241,6 +197,9 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       this.#wavePending.clear();
       this.#waveWindowRetryKeys.clear();
       this.#waveStaleRetryKeys.clear();
+      this.#prefetchLifecycle.invalidatePlan();
+      this.#prefetchPlan = [];
+      this.#prefetchAttempted.clear();
       this.#diagnostics = { ...this.#diagnostics, waveRendersBySignalCount: 0, localGeometryBuildsBySignalCount: 0, diagnosticMapPrunePasses: this.#diagnosticMapPrunePasses };
       for (const [signalId, owner] of this.#waveOwners) {
         owner.remove();
@@ -306,6 +265,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         place(owner, row);
         const waveformStyle = parseWaveformStyle(row.displayStyle);
         applyWaveformStyle(owner, waveformStyle);
+        setCanvasWaveformColor(owner, waveformStyle.color);
         // #472: `mountWave`/`mountWaveBatch` replace `owner`'s children with
         // a freshly-generated SVG, wiping the override applied above --
         // stash the resolved color so it can be reapplied once that mount
@@ -321,11 +281,12 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
           owner.dataset.renderedSourceWindowEnd !== String(sourceWindow.end));
       if (isNew || this.#dirtyWaves.has(signalId) || sourceWindowChanged) this.#queueWave(signalId, owner);
     }
+    this.#updateWavePrefetchPlan(projection, mounted);
     const waveOwnerCacheLimit = Math.max(32, mounted.size * 4);
     for (const [signalId, owner] of this.#waveOwners) {
       if (this.#waveOwners.size <= waveOwnerCacheLimit) break;
       if (mounted.has(signalId)) continue;
-      owner.remove(); this.#provider.disposeWave(signalId); this.#waveOwners.delete(signalId); this.#dirtyWaves.delete(signalId); this.#waveVersions.delete(signalId); this.#wavePending.delete(signalId);
+      owner.remove(); releaseWaveOwnerForCacheEviction(this.#provider, signalId); this.#waveOwners.delete(signalId); this.#dirtyWaves.delete(signalId); this.#waveVersions.delete(signalId); this.#wavePending.delete(signalId);
       this.#diagnostics = { ...this.#diagnostics, domNodeDestroys: this.#diagnostics.domNodeDestroys + 1, waveArtifactDisposals: this.#diagnostics.waveArtifactDisposals + 1 };
     }
     this.#diagnostics = { ...this.#diagnostics, mountedWaveOwners: [...this.#waveOwners.values()].filter((owner) => owner.isConnected).length, cachedWaveOwners: this.#waveOwners.size, waveOwnerCacheLimit, dirtyWaveSize: this.#dirtyWaves.size, waveVersionSize: this.#waveVersions.size, fullReplaceEpochResets: this.#fullReplaceEpochResets, diagnosticMapPrunePasses: this.#diagnosticMapPrunePasses };
@@ -346,12 +307,13 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       const row = rows.get(signalId);
       if (!owner || !row) continue;
       owner.dataset.pinnedRow = String(row.pinned === true);
-      applyWaveformStyle(owner, parseWaveformStyle(row.displayStyle));
+      const waveformStyle = parseWaveformStyle(row.displayStyle);
+      applyWaveformStyle(owner, waveformStyle);
+      setCanvasWaveformColor(owner, waveformStyle.color);
     }
-    this.#rowLayoutSource = projection.rowLayout;
-    this.#rowIndex = new Map(rows);
-    this.#navigationRowLayoutSource = projection.navigationRowLayout;
-    this.#navigationRowIndex = new Map(navigationRows);
+    // #indexedRows() above owns these identity-cached indexes. Copying each
+    // complete map here after every presentation-only edit duplicated O(rows)
+    // work without changing the row lookup contents.
   }
 
   counters(): Readonly<RenderCounters> {
@@ -389,6 +351,10 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     }
     for (const primitive of primitives) {
       const signature = JSON.stringify(primitive);
+      // The signature covers the full semantic overlay projection, including
+      // the stable ID, type, label, accessibility text, and kind metadata.
+      // Unchanged owners need no identity/style resynchronization on scroll.
+      if (this.#overlaySignatures.get(primitive.id) === signature) continue;
       let owner = this.#overlayOwners.get(primitive.id);
       if (!owner) {
         owner = element(layers.root.ownerDocument, "div", "annotation-owner");
@@ -398,19 +364,6 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         this.#overlayOwners.set(primitive.id, owner);
         layers.overlays.append(owner);
       }
-      // The Canonical Annotation ID is the sole identity authority. Keep
-      // semantic identity and the accessible root contract synchronized on
-      // every projection pass, before the signature fast-path: an overlay
-      // owner may be recycled by the renderer/DOM without being recreated.
-      owner.dataset.annotationId = primitive.id;
-      owner.setAttribute("role", "button");
-      owner.tabIndex = 0;
-      // Keep all identity-bearing metadata current even when the visual body
-      // is unchanged. Virtualized callers may recycle an owner between
-      // projections, so accessibility and kind metadata must not depend on
-      // the visual signature fast path below.
-      syncOverlayIdentity(owner, primitive);
-      if (this.#overlaySignatures.get(primitive.id) === signature) continue;
       this.#overlaySignatures.set(primitive.id, signature);
       renderOverlay(owner, primitive);
       changes += 1;
@@ -514,6 +467,135 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#navigationRowIndex.clear();
     this.#layers?.root.remove();
     this.#layers = undefined;
+    this.#prefetchLifecycle.invalidatePlan();
+    this.#prefetchPlan = [];
+    this.#prefetchAttempted.clear();
+  }
+
+  #updateWavePrefetchPlan(projection: RenderProjection, mounted: ReadonlySet<WaveSignalId>): void {
+    const layers = this.#layers;
+    if (!layers || !this.#provider.prefetchWaveBatch) return;
+    const viewMode = layers.root.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode;
+    const prefetchEligible = isWavePrefetchModeEligible(viewMode);
+    const eligibilityChanged = this.#prefetchLifecycle.setEligible(prefetchEligible);
+    if (!prefetchEligible) {
+      if (eligibilityChanged) this.#prefetchAttempted.clear();
+      this.#prefetchPlan = [];
+      this.#diagnostics = { ...this.#diagnostics, wavePrefetchOwnerCount: 0 };
+      return;
+    }
+    if (eligibilityChanged) this.#prefetchAttempted.clear();
+    const sourceRows = projection.rowLayout;
+    if (this.#prefetchRowLayoutSource !== sourceRows) {
+      this.#prefetchRowLayoutSource = sourceRows;
+      const ids: WaveSignalId[] = [];
+      const indexBySignal = new Map<WaveSignalId, number>();
+      // Pinned rows are presentation-reordered; avoid prefetching from a layout
+      // whose visual neighbors are not a stable contiguous row interval.
+      if (!sourceRows.some((row) => row.pinned === true)) {
+        for (const row of sourceRows) {
+          if (row.kind !== "timing" || !row.visible || row.signalType === undefined
+            || row.signalType === "clock" || row.signalType === "commentRow") continue;
+          const id = row.rowId as WaveSignalId;
+          indexBySignal.set(id, ids.length);
+          ids.push(id);
+        }
+      }
+      this.#prefetchSignalIds = ids;
+      this.#prefetchIndexBySignal = indexBySignal;
+    }
+    const viewport = layers.root.closest<HTMLElement>(".cycle-viewport");
+    const scrollTop = viewport?.scrollTop ?? 0;
+    const direction = this.#lastPrefetchScrollTop === undefined || scrollTop >= this.#lastPrefetchScrollTop ? 1 : -1;
+    this.#lastPrefetchScrollTop = scrollTop;
+    const mountedIndexes = [...mounted].map((id) => this.#prefetchIndexBySignal.get(id)).filter((index): index is number => index !== undefined);
+    if (mountedIndexes.length === 0 || this.#prefetchSignalIds.length === 0) {
+      this.#prefetchPlan = [];
+      this.#diagnostics = { ...this.#diagnostics, wavePrefetchOwnerCount: 0 };
+      return;
+    }
+    const first = Math.min(...mountedIndexes);
+    const last = Math.max(...mountedIndexes);
+    // Keep the detached preparation window proportional to the current visible
+    // cohort and hard bounded. This covers a typical viewport-sized jump
+    // without increasing connected DOM owners or the row virtualization span.
+    const count = Math.min(24, Math.max(8, mounted.size));
+    let candidates = direction > 0
+      ? this.#prefetchSignalIds.slice(last + 1, last + 1 + count)
+      : this.#prefetchSignalIds.slice(Math.max(0, first - count), first);
+    if (candidates.length === 0) candidates = direction > 0
+      ? this.#prefetchSignalIds.slice(Math.max(0, first - count), first)
+      : this.#prefetchSignalIds.slice(last + 1, last + 1 + count);
+    const sourceOwner = projection.mountedSignalIds.map((id) => this.#waveOwners.get(id)).find((owner) => owner?.isConnected);
+    const sourceWindow = sourceOwner ? this.#provider.getSourceWindow?.(sourceOwner) : undefined;
+    if (!sourceWindow || sourceWindow.end <= sourceWindow.start) {
+      this.#prefetchPlan = [];
+      this.#diagnostics = { ...this.#diagnostics, wavePrefetchOwnerCount: 0 };
+      return;
+    }
+    const generation = this.#prefetchLifecycle.nextGeneration();
+    const requests = candidates.map((signalId): WavePrefetchRequest => {
+      const version = this.#waveVersions.get(signalId) ?? 0;
+      if (!this.#waveVersions.has(signalId)) this.#waveVersions.set(signalId, version);
+      return {
+        signalId,
+        documentEpoch: this.#documentEpoch,
+        ownerDocument: layers.root.ownerDocument,
+        sourceWindow,
+        isFresh: () => this.#prefetchLifecycle.isCurrent(generation)
+          && this.#documentEpoch === projection.documentEpoch
+          && this.#waveVersions.get(signalId) === version
+          && this.#canonicalSignalIdSet.has(signalId),
+      };
+    });
+    const key = requests.map((request) => `${request.signalId}@${this.#waveVersions.get(request.signalId)}`).join(",")
+      + `:${sourceWindow.start}-${sourceWindow.end}:${projection.documentEpoch}`;
+    if (this.#prefetchLifecycle.setPlanKey(key)) {
+      this.#prefetchPlan = requests;
+    }
+    this.#diagnostics = { ...this.#diagnostics, wavePrefetchOwnerCount: this.#prefetchPlan.length };
+    // Normally prefetch starts after the visible wave batch so it cannot
+    // compete with newly-mounted owners. A mode roundtrip can restore an
+    // unchanged visible cohort with no wave batch queued; start the rebuilt
+    // plan directly in that case instead of leaving it dormant until scroll.
+    if (eligibilityChanged && this.#waveQueue.size === 0 && this.#wavePending.size === 0) this.#startWavePrefetch();
+  }
+
+  #startWavePrefetch(): void {
+    if (this.#prefetchTask || !this.#layers || !this.#provider.prefetchWaveBatch || this.#prefetchPlan.length === 0) return;
+    const generation = this.#prefetchLifecycle.generation;
+    const plan = this.#prefetchPlan.filter((request) => {
+      const key = `${request.signalId}@${this.#waveVersions.get(request.signalId)}:${request.sourceWindow?.start}-${request.sourceWindow?.end}:${request.documentEpoch}`;
+      if (this.#prefetchAttempted.has(key)) return false;
+      this.#prefetchAttempted.add(key);
+      return true;
+    });
+    if (plan.length === 0) return;
+    while (this.#prefetchAttempted.size > 256) {
+      const oldest = this.#prefetchAttempted.values().next().value as string | undefined;
+      if (oldest === undefined) break;
+      this.#prefetchAttempted.delete(oldest);
+    }
+    const task = this.#provider.prefetchWaveBatch(plan).then((result) => {
+      if (!this.#prefetchLifecycle.isCurrent(generation) || !this.#layers) return;
+      this.#diagnostics = {
+        ...this.#diagnostics,
+        wavePrefetchRequestedCount: this.#diagnostics.wavePrefetchRequestedCount + result.requested,
+        wavePrefetchPreparedCount: this.#diagnostics.wavePrefetchPreparedCount + result.prepared,
+        wavePrefetchReusedCount: this.#diagnostics.wavePrefetchReusedCount + result.reused,
+        wavePrefetchStaleCount: this.#diagnostics.wavePrefetchStaleCount + result.stale,
+        wavePrefetchFailedCount: this.#diagnostics.wavePrefetchFailedCount + result.failed,
+      };
+      this.#publishCounters();
+    }).catch(() => {
+      if (!this.#prefetchLifecycle.isCurrent(generation) || !this.#layers) return;
+      this.#diagnostics = { ...this.#diagnostics, wavePrefetchFailedCount: this.#diagnostics.wavePrefetchFailedCount + plan.length };
+      this.#publishCounters();
+    }).finally(() => {
+      if (this.#prefetchTask === task) this.#prefetchTask = undefined;
+      if (!this.#prefetchLifecycle.isCurrent(generation)) this.#startWavePrefetch();
+    });
+    this.#prefetchTask = task;
   }
 
   #queueWave(signalId: WaveSignalId, owner: HTMLElement): void {
@@ -528,6 +610,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     const pending = this.#wavePending.get(signalId);
     if (pending?.owner === owner && pending.version === version && pending.documentEpoch === documentEpoch) return;
     const request = { owner, version, documentEpoch };
+    owner.dataset.waveState = "pending";
     this.#wavePending.set(signalId, request);
     this.#waveQueue.set(signalId, request);
     this.#scheduleWaveBatch();
@@ -641,6 +724,13 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       }
       if (item?.result) {
         const delta = item.result;
+        if (item.artifactMarkupCacheHit !== undefined) {
+          this.#diagnostics = {
+            ...this.#diagnostics,
+            waveArtifactMarkupCacheHits: this.#diagnostics.waveArtifactMarkupCacheHits + (item.artifactMarkupCacheHit ? 1 : 0),
+            waveArtifactMarkupCacheMisses: this.#diagnostics.waveArtifactMarkupCacheMisses + (item.artifactMarkupCacheHit ? 0 : 1),
+          };
+        }
         this.#counters = {
           ...this.#counters,
           waveDromRenders: this.#counters.waveDromRenders + delta.waveDromRenders,
@@ -669,6 +759,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         if ((this.#waveVersions.get(request.signalId) ?? 0) === request.version) this.#dirtyWaves.delete(request.signalId);
       } else {
         request.owner.replaceChildren();
+        delete request.owner.dataset.waveRenderer;
         request.owner.dataset.waveState = "error";
         request.owner.dataset.waveError = item?.error instanceof Error ? item.error.message : "Unknown waveform render failure";
       }
@@ -692,6 +783,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     }
     this.#diagnostics = { ...this.#diagnostics, waveBatchPending: this.#waveQueue.size };
     this.#publishCounters();
+    this.#startWavePrefetch();
   }
 
   #publishCounters(): void {
@@ -721,333 +813,6 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       diagnosticPublishDurationMs: this.#diagnostics.diagnosticPublishDurationMs + publishDuration,
     };
   }
-}
-
-function syncOverlayIdentity(owner: HTMLElement, primitive: AnnotationOverlayPrimitive): void {
-  owner.dataset.annotationType = primitive.type;
-  owner.dataset.annotationShape = primitive.shape;
-  owner.dataset.visible = String(primitive.visible);
-  owner.dataset.lineType = primitive.lineType ?? "straight";
-  owner.dataset.arrowhead = primitive.arrowhead ?? "none";
-  if (primitive.measurementLane !== undefined) owner.dataset.measurementLane = String(primitive.measurementLane);
-  else delete owner.dataset.measurementLane;
-  if (primitive.measurementLayout) owner.dataset.measurementArrowLayout = primitive.measurementLayout.arrowLayout;
-  else delete owner.dataset.measurementArrowLayout;
-  if (primitive.sourceSignalId) owner.dataset.sourceSignalId = primitive.sourceSignalId;
-  else delete owner.dataset.sourceSignalId;
-  if (primitive.traceOffsetCycles !== undefined) owner.dataset.traceOffsetCycles = String(primitive.traceOffsetCycles);
-  else delete owner.dataset.traceOffsetCycles;
-  owner.dataset.locked = String(primitive.locked ?? false);
-  owner.setAttribute("aria-label", `${primitive.type}: ${primitive.label}${primitive.locked ? " (locked)" : ""}`);
-}
-
-function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive): void {
-  syncOverlayIdentity(owner, primitive);
-  owner.hidden = !primitive.visible;
-  owner.style.setProperty("--annotation-color", primitive.color ?? "#d04a36");
-  owner.style.height = `${primitive.surfaceHeight}px`;
-  const document = owner.ownerDocument;
-  const body = document.createElement("span");
-  body.dataset.role = "annotation-body";
-  const first = primitive.anchors[0] ?? { field: "anchor" as const, x: 0, y: 0 };
-  const second = primitive.anchors[1] ?? first;
-  const dx = second.x - first.x;
-  const dy = second.y - first.y;
-
-  // #418: a Measurement's dimension line/label is placed 18px-per-lane
-  // *above* its anchors by default -- but when the topmost anchor is on
-  // (or near) the first row, that pushes the line/label above local
-  // y=RULER_SAFE_AREA_HEIGHT, into the surface-host's own reserved top
-  // padding (center-columns.css's `.surface-host { padding-top: 34px }`,
-  // matching `.cycle-ruler`'s own 34px height) -- the sticky Cycle Ruler
-  // occupies exactly that band at the top of the scrollable content, at
-  // any scroll position, so anything placed above it there is hidden
-  // behind/under the Ruler. Flip to placing the dimension line *below*
-  // the anchors instead whenever the "above" placement would intrude on
-  // that reserved band, so a Measurement starting on the top-row Signal
-  // stays fully inside the visible canvas. `measurementPlacedBelow` also
-  // drives the label's default offset direction below.
-  const RULER_SAFE_AREA_HEIGHT = 34;
-  const measurementLaneOffset = primitive.type === "measurement" && primitive.measurementLane !== undefined ? 18 * (primitive.measurementLane + 1) : undefined;
-  const measurementPlacedBelow = measurementLaneOffset !== undefined && Math.min(first.y, second.y) - measurementLaneOffset < RULER_SAFE_AREA_HEIGHT;
-  const dimensionY = measurementLaneOffset === undefined
-    ? undefined
-    : measurementPlacedBelow ? Math.max(first.y, second.y) + measurementLaneOffset : Math.min(first.y, second.y) - measurementLaneOffset;
-  if (measurementLaneOffset !== undefined) owner.dataset.measurementSide = measurementPlacedBelow ? "below" : "above";
-  else delete owner.dataset.measurementSide;
-  const lineFirst = dimensionY === undefined ? first : { x: first.x, y: dimensionY };
-  const lineSecond = dimensionY === undefined ? second : { x: second.x, y: dimensionY };
-  // Additive on top of any anchor-derived angle below -- never replaces it,
-  // so line-shaped overlays keep auto-orienting from their two anchors and
-  // this only rotates further on top of that.
-  const rotationDeg = primitive.rotation ?? 0;
-  const rotateSuffix = rotationDeg === 0 ? "" : ` rotate(${rotationDeg}deg)`;
-  if (primitive.shape === "point") {
-    body.style.transform = `translate(${first.x}px, ${first.y}px)${rotateSuffix}`;
-    body.dataset.annotationField = first.field;
-  } else if (primitive.shape === "vertical") {
-    body.style.transform = `translateX(${first.x}px)${rotateSuffix}`;
-    body.style.height = `${primitive.surfaceHeight}px`;
-    body.dataset.annotationField = first.field;
-  } else if (primitive.shape === "range") {
-    body.style.transform = `translate(${Math.min(first.x, second.x)}px, 0px)${rotateSuffix}`;
-    body.style.width = `${Math.max(2, Math.abs(dx))}px`;
-    body.style.height = `${primitive.surfaceHeight}px`;
-    body.dataset.annotationField = first.field;
-  } else if (primitive.shape === "trace") {
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.dataset.role = "ghost-trace";
-    svg.setAttribute("width", "100%");
-    svg.setAttribute("height", String(primitive.surfaceHeight));
-    svg.setAttribute("aria-hidden", "true");
-    const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
-    polyline.dataset.role = "ghost-trace-path";
-    polyline.setAttribute("points", (primitive.tracePoints ?? []).map((point) => `${point.x},${point.y}`).join(" "));
-    polyline.setAttribute("fill", "none");
-    polyline.setAttribute("stroke", primitive.color ?? "#64748b");
-    polyline.setAttribute("stroke-width", "2");
-    polyline.setAttribute("stroke-dasharray", "6 4");
-    polyline.setAttribute("opacity", String(primitive.opacity ?? 0.55));
-    svg.append(polyline);
-    body.append(svg);
-    if (rotationDeg !== 0) body.style.transform = `rotate(${rotationDeg}deg)`;
-    body.dataset.annotationField = first.field;
-  } else {
-    renderLineBody(body, primitive, lineFirst, lineSecond, rotationDeg);
-    body.dataset.annotationField = first.field;
-  }
-  if (primitive.type === "marker" && primitive.verticalExtent) {
-    body.style.height = `${Math.max(2, primitive.verticalExtent.bottom - primitive.verticalExtent.top)}px`;
-    body.style.transform = `translate(${first.x}px, ${primitive.verticalExtent.top}px)${rotateSuffix}`;
-  }
-  // #378: independent Stroke width/style and Fill color/opacity, applied as
-  // inline style overrides on top of the shape's existing CSS defaults (see
-  // center-columns.css's [data-annotation-type=...] [data-role="annotation-
-  // body"] rules) -- an absent value here leaves that CSS default in place,
-  // so a document with no Stroke/Fill authored looks exactly as before.
-  const presentation = parsePresentationStyle(primitive.style);
-  if (presentation.strokeWidth !== undefined) body.style.borderWidth = `${presentation.strokeWidth}px`; else body.style.removeProperty("border-width");
-  if (presentation.strokeStyle !== undefined) body.style.borderStyle = presentation.strokeStyle; else body.style.removeProperty("border-style");
-  if (presentation.fillColor !== undefined || presentation.fillOpacity !== undefined) {
-    const base = presentation.fillColor === "none" ? undefined : presentation.fillColor ?? primitive.color ?? "#d04a36";
-    body.style.backgroundColor = base === undefined ? "transparent" : `color-mix(in srgb, ${base} ${Math.round((presentation.fillOpacity ?? 0.12) * 100)}%, transparent)`;
-  } else body.style.removeProperty("background-color");
-  const label = document.createElement("span");
-  label.dataset.role = "annotation-label";
-  label.dataset.annotationLabel = "true";
-  const labelPresentation = parsePresentationStyle(primitive.style);
-  const textStyle = parseTextStyle(primitive.style);
-  label.textContent = labelPresentation.labelWrap === false ? primitive.label : wrapAnnotationLabel(primitive.label, labelPresentation.labelMaxWidth ?? ANNOTATION_LABEL_MAX_WIDTH.default, textStyle.fontSize);
-  // Authored label layout remains presentation-only but follows the same
-  // persisted style consumed by ExportScene. Missing fields retain the
-  // historical 180px wrap behavior.
-  label.style.whiteSpace = "pre";
-  label.style.maxWidth = "none";
-  applyTextStyle(label, textStyle);
-  if (primitive.align) label.style.textAlign = primitive.align; else label.style.removeProperty("text-align");
-  const labelMidpoint = { x: (lineFirst.x + lineSecond.x) / 2, y: (lineFirst.y + lineSecond.y) / 2 };
-  const labelAnchor = primitive.labelPlacement === "start" ? first
-    : primitive.labelPlacement === "end" ? second
-    : labelMidpoint;
-  const labelBaseY = primitive.labelPlacement === "above" ? labelMidpoint.y - 14
-    : primitive.labelPlacement === "below" ? labelMidpoint.y + 14
-    : labelAnchor.y;
-  label.style.transform = `translate(${labelAnchor.x + (primitive.labelOffset?.x ?? 0)}px, ${labelBaseY + (primitive.labelOffset?.y ?? (measurementPlacedBelow ? 14 : -14))}px)`;
-  // #378: a real (SVG, not Unicode) lock glyph -- `label` is already
-  // `position: absolute` (center-columns.css), which makes it a containing
-  // block for this glyph's own `position: absolute`, so it rides along with
-  // the label's translate() with no extra positioning math needed here.
-  if (primitive.locked) {
-    const svgNs = "http://www.w3.org/2000/svg";
-    const lock = document.createElementNS(svgNs, "svg");
-    lock.dataset.role = "annotation-lock-glyph";
-    lock.setAttribute("viewBox", "0 0 10 10");
-    lock.setAttribute("aria-hidden", "true");
-    lock.style.position = "absolute";
-    lock.style.left = "-14px";
-    lock.style.top = "2px";
-    lock.style.width = "10px";
-    lock.style.height = "10px";
-    lock.style.color = "#334155";
-    const shackle = document.createElementNS(svgNs, "path");
-    shackle.setAttribute("d", "M 2.5 4 V 2.5 A 2.5 2.5 0 0 1 7.5 2.5 V 4");
-    shackle.setAttribute("fill", "none");
-    shackle.setAttribute("stroke", "currentColor");
-    shackle.setAttribute("stroke-width", "1.2");
-    const body2 = document.createElementNS(svgNs, "rect");
-    body2.setAttribute("x", "1.5"); body2.setAttribute("y", "4"); body2.setAttribute("width", "7"); body2.setAttribute("height", "5.5"); body2.setAttribute("rx", "1");
-    body2.setAttribute("fill", "currentColor");
-    lock.append(shackle, body2);
-    label.append(lock);
-  }
-  const dimensionParts: HTMLElement[] = [];
-  if (primitive.type === "measurement" && primitive.measurementLayout && dimensionY !== undefined) {
-    const layout = primitive.measurementLayout;
-    const addMarker = (anchor: typeof first, side: "start" | "end", kind: "none" | "bar" | "arrow") => {
-      if (kind === "none") return;
-      const marker = document.createElement("span");
-      marker.dataset.role = "measurement-marker";
-      marker.dataset.markerSide = side;
-      marker.dataset.markerKind = kind;
-      marker.dataset.arrowLayout = layout.arrowLayout;
-      marker.style.transform = `translate(${anchor.x}px, ${dimensionY}px)`;
-      dimensionParts.push(marker);
-    };
-    const addExtension = (anchor: typeof first, side: "start" | "end") => {
-      if (!(layout.extensionLines === "both" || layout.extensionLines === side)) return;
-      const extension = document.createElement("span");
-      extension.dataset.role = "measurement-extension";
-      extension.dataset.extensionSide = side;
-      extension.style.height = `${Math.abs(dimensionY - anchor.y)}px`;
-      extension.style.transform = `translate(${anchor.x}px, ${Math.min(anchor.y, dimensionY)}px)`;
-      dimensionParts.push(extension);
-    };
-    addMarker(first, "start", layout.startMarker);
-    addMarker(second, "end", layout.endMarker);
-    addExtension(first, "start");
-    addExtension(second, "end");
-  }
-  const handles = primitive.anchors.map((anchor) => {
-    const handle = document.createElement("span");
-    handle.dataset.role = "annotation-handle";
-    handle.dataset.annotationField = anchor.field;
-    if (anchor.threshold !== undefined) handle.dataset.anchorThreshold = String(anchor.threshold);
-    if (anchor.transitionKind !== undefined) handle.dataset.anchorTransitionKind = anchor.transitionKind;
-    handle.style.transform = `translate(${anchor.x}px, ${anchor.y}px)`;
-    return handle;
-  });
-  owner.replaceChildren(body, label, ...dimensionParts, ...handles);
-}
-
-type LinePoint = Readonly<{ x: number; y: number }>;
-
-function svgFragmentId(id: string): string {
-  // Stable IDs are opaque. Encode every code point rather than assuming an
-  // identifier grammar or allowing two different IDs to sanitize alike.
-  return Array.from(id, (character) => (character.codePointAt(0) ?? 0).toString(16).padStart(4, "0")).join("_");
-}
-
-function linePath(lineType: NonNullable<AnnotationOverlayPrimitive["lineType"]>, first: LinePoint, second: LinePoint): { readonly d: string; readonly points: readonly LinePoint[]; readonly dash?: string } {
-  if (lineType === "orthogonal") {
-    const bendX = (first.x + second.x) / 2;
-    const bends = [{ x: bendX, y: first.y }, { x: bendX, y: second.y }];
-    const firstBend = bends[0]!;
-    const secondBend = bends[1]!;
-    return { d: `M ${first.x} ${first.y} L ${firstBend.x} ${firstBend.y} L ${secondBend.x} ${secondBend.y} L ${second.x} ${second.y}`, points: [first, firstBend, secondBend, second] };
-  }
-  if (lineType === "curve") {
-    const dx = second.x - first.x;
-    const dy = second.y - first.y;
-    const length = Math.max(1, Math.hypot(dx, dy));
-    const offset = Math.max(14, length * 0.24);
-    const normal = { x: -dy / length * offset, y: dx / length * offset };
-    const midpoint = { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
-    const control = { x: midpoint.x + normal.x, y: midpoint.y + normal.y };
-    return { d: `M ${first.x} ${first.y} Q ${control.x} ${control.y} ${second.x} ${second.y}`, points: [first, control, second] };
-  }
-  if (lineType === "diagonal") {
-    // #375: Diagonal must have genuinely distinct path geometry from
-    // Straight, not merely a different stroke pattern on an identical
-    // path -- a route bent through a single 45-degree elbow (unlike
-    // Orthogonal's axis-aligned 90-degree bend, and unlike Straight's
-    // single direct segment at whatever angle the two anchors happen to
-    // form). Runs diagonally for min(|dx|, |dy|), then finishes straight
-    // along whichever axis has the remaining distance.
-    const dx = second.x - first.x;
-    const dy = second.y - first.y;
-    const run = Math.min(Math.abs(dx), Math.abs(dy));
-    const bend = { x: first.x + Math.sign(dx || 1) * run, y: first.y + Math.sign(dy || 1) * run };
-    return { d: `M ${first.x} ${first.y} L ${bend.x} ${bend.y} L ${second.x} ${second.y}`, points: [first, bend, second], dash: "7 4" };
-  }
-  // Straight is a direct single segment between the two anchors.
-  return { d: `M ${first.x} ${first.y} L ${second.x} ${second.y}`, points: [first, second] };
-}
-
-function renderLineBody(body: HTMLElement, primitive: AnnotationOverlayPrimitive, first: LinePoint, second: LinePoint, rotationDeg: number): void {
-  const lineType = primitive.lineType ?? "straight";
-  const path = linePath(lineType, first, second);
-  const padding = 10;
-  const minX = Math.min(...path.points.map((point) => point.x)) - padding;
-  const minY = Math.min(...path.points.map((point) => point.y)) - padding;
-  const width = Math.max(20, Math.max(...path.points.map((point) => point.x)) - minX + padding);
-  const height = Math.max(20, Math.max(...path.points.map((point) => point.y)) - minY + padding);
-  const toLocal = (point: LinePoint): LinePoint => ({ x: point.x - minX, y: point.y - minY });
-  const localFirst = toLocal(first);
-  const localSecond = toLocal(second);
-  const localPoints = path.points.map(toLocal);
-  const localPath = lineType === "orthogonal"
-    ? `M ${localPoints[0]!.x} ${localPoints[0]!.y} L ${localPoints[1]!.x} ${localPoints[1]!.y} L ${localPoints[2]!.x} ${localPoints[2]!.y} L ${localPoints[3]!.x} ${localPoints[3]!.y}`
-    : lineType === "curve"
-      ? `M ${localFirst.x} ${localFirst.y} Q ${localPoints[1]!.x} ${localPoints[1]!.y} ${localSecond.x} ${localSecond.y}`
-      // #375: Diagonal's 45-degree elbow (see linePath above) is a 3-point,
-      // 2-segment path -- localPoints[1] is the bend point.
-      : lineType === "diagonal"
-        ? `M ${localFirst.x} ${localFirst.y} L ${localPoints[1]!.x} ${localPoints[1]!.y} L ${localSecond.x} ${localSecond.y}`
-        : `M ${localFirst.x} ${localFirst.y} L ${localSecond.x} ${localSecond.y}`;
-  const svgDocument = body.ownerDocument;
-  const svg = svgDocument.createElementNS("http://www.w3.org/2000/svg", "svg");
-  const pathElement = svgDocument.createElementNS("http://www.w3.org/2000/svg", "path");
-  const defs = svgDocument.createElementNS("http://www.w3.org/2000/svg", "defs");
-  const markerId = `annotation-arrow-${svgFragmentId(primitive.id)}`;
-  const marker = (suffix: string, reverse: boolean) => {
-    const result = svgDocument.createElementNS("http://www.w3.org/2000/svg", "marker");
-    result.setAttribute("id", `${markerId}-${suffix}`);
-    result.setAttribute("markerWidth", "8");
-    result.setAttribute("markerHeight", "8");
-    result.setAttribute("refX", reverse ? "1" : "7");
-    result.setAttribute("refY", "4");
-    result.setAttribute("orient", "auto-start-reverse");
-    result.setAttribute("markerUnits", "strokeWidth");
-    const head = svgDocument.createElementNS("http://www.w3.org/2000/svg", "path");
-    head.setAttribute("d", reverse ? "M 8 0 L 0 4 L 8 8 Z" : "M 0 0 L 8 4 L 0 8 Z");
-    head.setAttribute("fill", primitive.color ?? "#d04a36");
-    result.append(head);
-    return result;
-  };
-  const arrowhead = primitive.arrowhead ?? "none";
-  if (arrowhead === "start" || arrowhead === "bidirectional") defs.append(marker("start", true));
-  if (arrowhead === "end" || arrowhead === "bidirectional") defs.append(marker("end", false));
-  svg.append(defs);
-  svg.dataset.role = "annotation-line";
-  svg.setAttribute("width", String(width));
-  svg.setAttribute("height", String(height));
-  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-  svg.setAttribute("aria-hidden", "true");
-  pathElement.dataset.role = "annotation-path";
-  pathElement.dataset.lineType = lineType;
-  pathElement.setAttribute("d", localPath);
-  pathElement.setAttribute("fill", "none");
-  pathElement.setAttribute("stroke", primitive.color ?? "#d04a36");
-  pathElement.setAttribute("stroke-width", "2");
-  pathElement.setAttribute("stroke-linecap", "round");
-  pathElement.setAttribute("stroke-linejoin", "round");
-  if (path.dash) pathElement.setAttribute("stroke-dasharray", path.dash);
-  if (arrowhead === "start" || arrowhead === "bidirectional") pathElement.setAttribute("marker-start", `url(#${markerId}-start)`);
-  if (arrowhead === "end" || arrowhead === "bidirectional") pathElement.setAttribute("marker-end", `url(#${markerId}-end)`);
-  if (rotationDeg !== 0) pathElement.setAttribute("transform", `rotate(${rotationDeg} ${(localFirst.x + localSecond.x) / 2} ${(localFirst.y + localSecond.y) / 2})`);
-  svg.append(pathElement);
-  if (primitive.type === "bracket") {
-    const dx = second.x - first.x;
-    const dy = second.y - first.y;
-    const length = Math.max(1, Math.hypot(dx, dy));
-    const capX = -dy / length * 6;
-    const capY = dx / length * 6;
-    const caps = svgDocument.createElementNS("http://www.w3.org/2000/svg", "path");
-    caps.dataset.role = "annotation-bracket-caps";
-    caps.setAttribute("d", `M ${localFirst.x - capX} ${localFirst.y - capY} L ${localFirst.x + capX} ${localFirst.y + capY} M ${localSecond.x - capX} ${localSecond.y - capY} L ${localSecond.x + capX} ${localSecond.y + capY}`);
-    caps.setAttribute("fill", "none");
-    caps.setAttribute("stroke", primitive.color ?? "#d04a36");
-    caps.setAttribute("stroke-width", "2");
-    caps.setAttribute("stroke-linecap", "round");
-    if (rotationDeg !== 0) caps.setAttribute("transform", `rotate(${rotationDeg} ${(localFirst.x + localSecond.x) / 2} ${(localFirst.y + localSecond.y) / 2})`);
-    svg.append(caps);
-  }
-  body.dataset.lineRenderer = "svg";
-  body.dataset.orthogonalDirection = `${second.x - first.x < 0 ? "left" : "right"}-${second.y - first.y < 0 ? "up" : "down"}`;
-  body.style.transform = `translate(${minX}px, ${minY}px)`;
-  body.style.width = `${width}px`;
-  body.style.height = `${height}px`;
-  body.replaceChildren(svg);
 }
 
 function element(owner: Document | HTMLElement, tag: "div", role: string): HTMLElement {
@@ -1219,135 +984,10 @@ function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string,
   shell.replaceChildren(role, name);
 }
 
-function syncGroupHeaderLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, headerIds: readonly GroupHeaderLayoutEntry["rowId"][], headers: readonly GroupHeaderLayoutEntry[], surface: string): { creates: number; destroys: number; moves: number } {
-  const active = new Set<string>(headerIds);
-  let creates = 0, destroys = 0, moves = 0;
-  for (const [id, shell] of cache) if (!active.has(id)) { shell.remove(); cache.delete(id); destroys += 1; }
-  const byId = new Map(headers.map((header) => [header.rowId, header]));
-  const ordered: HTMLElement[] = [];
-  for (const id of headerIds) {
-    const header = byId.get(id);
-    if (!header) continue;
-    let shell = cache.get(id);
-    if (!shell) {
-      shell = element(layer.ownerDocument, "div", `${surface}-group-header`);
-      shell.dataset.rowId = id;
-      cache.set(id, shell);
-      creates += 1;
-    }
-    shell.dataset.groupId = header.groupId;
-    shell.dataset.groupName = header.groupName;
-    shell.dataset.groupHeader = "true";
-    if (surface === "left") {
-      shell.setAttribute("role", "treeitem");
-      shell.tabIndex = -1;
-      shell.setAttribute("aria-level", "1");
-      shell.setAttribute("aria-expanded", String(!header.collapsed));
-      shell.setAttribute("aria-selected", "false");
-    }
-    const groupStyleApplies = groupStyleAppliesToSurface(header.groupStyle?.extend, surface);
-    const headerBackground = groupStyleApplies && header.groupStyle?.showBackground
-      ? groupBackgroundColor(header.groupStyle.background, header.groupStyle.opacity)
-      : undefined;
-    if (headerBackground) shell.style.setProperty("--group-background", headerBackground);
-    else shell.style.removeProperty("--group-background");
-    if (groupStyleApplies && header.groupStyle?.border) shell.style.setProperty("--group-border", header.groupStyle.border);
-    else shell.style.removeProperty("--group-border");
-    if (surface === "left") populateGroupHeader(shell, header);
-    else if (surface === "frozen") shell.textContent = header.groupName;
-    else shell.replaceChildren();
-    place(shell, header);
-    ordered.push(shell);
-  }
-  const currentRows = Array.from(layer.children).filter((child) => !(child as HTMLElement).dataset.groupHeader) as HTMLElement[];
-  const combined = [...currentRows, ...ordered];
-  combined.sort((left, right) => {
-    const y = (item: HTMLElement) => Number.parseFloat(item.style.transform.match(/translateY\((-?[0-9.]+)px\)/)?.[1] ?? "0");
-    return y(left) - y(right);
-  });
-  const current = Array.from(layer.children);
-  if (combined.length !== current.length || combined.some((shell, index) => current[index] !== shell)) {
-    layer.replaceChildren(...combined);
-    moves += combined.length;
-  }
-  return { creates, destroys, moves };
-}
-
-function populateGroupHeader(shell: HTMLElement, header: GroupHeaderLayoutEntry): void {
-  const document = shell.ownerDocument;
-  const branch = document.createElement("span");
-  branch.dataset.role = "tree-branch";
-  branch.dataset.groupId = header.groupId;
-  branch.draggable = true;
-  branch.setAttribute("aria-label", `Select ${header.groupName} group`);
-  const collapse = document.createElement("button");
-  collapse.type = "button";
-  collapse.dataset.role = "tree-collapse";
-  collapse.dataset.groupId = header.groupId;
-  collapse.setAttribute("aria-label", `${header.collapsed ? "Expand" : "Collapse"} ${header.groupName} group`);
-  collapse.setAttribute("aria-expanded", String(!header.collapsed));
-  collapse.dataset.collapsed = String(header.collapsed);
-  collapse.append(createLeftTreeIcon(document, header.collapsed ? "chevron-right" : "chevron-down", "surface-icon chevron-icon"));
-  branch.append(collapse, document.createTextNode(` ${header.groupName}`));
-  const more = document.createElement("button");
-  more.type = "button";
-  more.dataset.role = "tree-group-more";
-  more.dataset.groupId = header.groupId;
-  more.setAttribute("aria-label", `More actions for ${header.groupName}`);
-  more.append(createLeftTreeIcon(document, "more", "surface-icon more-icon"));
-  shell.replaceChildren(branch, more);
-}
-
 /** Parses and validates the shared text-style JsonObject shape (used by
  * Signal/CommentRow display.style and Annotation.style alike) into typed,
  * safe-to-apply CSS values. One validation pass, reused by every entity
  * kind that can carry this style -- no second copy of these regexes. */
-/** #378: Stroke (independent width/style) and Fill (independent color/
- * opacity) for the CSS-border/background-driven Annotation shapes (see
- * apps/editor/src/annotation-capability-matrix.ts's STROKE_CAPABLE/
- * FILL_CAPABLE for exactly which types). Same permissive-parse-from-a-
- * free-form-JsonObject convention as parseTextStyle below -- an absent or
- * malformed value here means "use the shape's existing CSS default",
- * never a thrown error or a garbage inline style. */
-function parsePresentationStyle(style: Record<string, unknown> | undefined): { readonly strokeWidth?: number | undefined; readonly strokeStyle?: "solid" | "dashed" | "dotted" | undefined; readonly fillColor?: string | undefined; readonly fillOpacity?: number | undefined; readonly labelWrap?: boolean | undefined; readonly labelMaxWidth?: number | undefined } {
-  const source = style ?? {};
-  return {
-    strokeWidth: typeof source.strokeWidth === "number" && source.strokeWidth >= 1 && source.strokeWidth <= 8 ? source.strokeWidth : undefined,
-    strokeStyle: source.strokeStyle === "solid" || source.strokeStyle === "dashed" || source.strokeStyle === "dotted" ? source.strokeStyle : undefined,
-    fillColor: typeof source.fillColor === "string" && (source.fillColor === "none" || /^#[0-9a-f]{3,8}$/i.test(source.fillColor)) ? source.fillColor : undefined,
-    fillOpacity: typeof source.fillOpacity === "number" && source.fillOpacity >= 0 && source.fillOpacity <= 1 ? source.fillOpacity : undefined,
-    labelWrap: typeof source.labelWrap === "boolean" ? source.labelWrap : undefined,
-    labelMaxWidth: typeof source.labelMaxWidth === "number" && source.labelMaxWidth >= ANNOTATION_LABEL_MAX_WIDTH.min && source.labelMaxWidth <= ANNOTATION_LABEL_MAX_WIDTH.max ? source.labelMaxWidth : undefined,
-  };
-}
-
-function parseTextStyle(style: Record<string, unknown> | undefined): { readonly color?: string | undefined; readonly background?: string | undefined; readonly fontWeight?: string | undefined; readonly fontStyle?: string | undefined; readonly fontFamily?: string | undefined; readonly fontSize?: number | undefined; readonly textDecoration?: string | undefined; readonly lineHeight?: number | undefined } {
-  const source = style ?? {};
-  return {
-    color: typeof source.color === "string" && /^#[0-9a-f]{3,8}$/i.test(source.color) ? source.color : undefined,
-    background: typeof source.background === "string" && /^#[0-9a-f]{3,8}$/i.test(source.background) ? source.background : undefined,
-    fontWeight: typeof source.fontWeight === "string" && /^(normal|bold|[1-9]00)$/.test(source.fontWeight) ? source.fontWeight : undefined,
-    fontStyle: source.fontStyle === "italic" || source.fontStyle === "normal" ? source.fontStyle : undefined,
-    fontFamily: typeof source.fontFamily === "string" && source.fontFamily.length <= 120 ? source.fontFamily : undefined,
-    fontSize: typeof source.fontSize === "number" && source.fontSize >= 6 && source.fontSize <= 48 ? source.fontSize : undefined,
-    textDecoration: typeof source.textDecoration === "string" && /^(|underline|line-through|underline line-through)$/.test(source.textDecoration) ? source.textDecoration : undefined,
-    lineHeight: typeof source.lineHeight === "number" && source.lineHeight >= ANNOTATION_LABEL_LINE_HEIGHT.min && source.lineHeight <= ANNOTATION_LABEL_LINE_HEIGHT.max ? source.lineHeight : undefined,
-  };
-}
-
-/** Applies a parsed text style to an element's inline style + the
- * color-tracking dataset attribute already used by signal-row shells. */
-function applyTextStyle(element: HTMLElement, parsed: ReturnType<typeof parseTextStyle>): void {
-  if (parsed.color) { element.style.color = parsed.color; element.dataset.signalStyleColor = parsed.color; } else { element.style.removeProperty("color"); delete element.dataset.signalStyleColor; }
-  if (parsed.background) element.style.backgroundColor = parsed.background; else element.style.removeProperty("background-color");
-  if (parsed.fontWeight) element.style.fontWeight = parsed.fontWeight; else element.style.removeProperty("font-weight");
-  if (parsed.fontStyle) element.style.fontStyle = parsed.fontStyle; else element.style.removeProperty("font-style");
-  if (parsed.fontFamily) element.style.fontFamily = parsed.fontFamily; else element.style.removeProperty("font-family");
-  if (parsed.fontSize) element.style.fontSize = `${parsed.fontSize}px`; else element.style.removeProperty("font-size");
-  if (parsed.textDecoration !== undefined) element.style.textDecoration = parsed.textDecoration; else element.style.removeProperty("text-decoration");
-  if (parsed.lineHeight) element.style.lineHeight = String(parsed.lineHeight); else element.style.removeProperty("line-height");
-}
-
 /** #472: `Signal.display.style.waveformColor` was stored in Canonical and
  * survived Save/Open, but nothing in the render pipeline ever read it --
  * the WaveDrom-generated SVG's own embedded `<style>` hardcodes its wave
@@ -1366,6 +1006,14 @@ function parseWaveformStyle(style: Record<string, unknown> | undefined): { reado
   const source = style ?? {};
   return { color: typeof source.waveformColor === "string" && /^#[0-9a-f]{3,8}$/i.test(source.waveformColor) ? source.waveformColor : undefined };
 }
+
+function setCanvasWaveformColor(owner: HTMLElement, color: string | undefined): void {
+  const previous = owner.dataset.waveformStyleColor;
+  if (color) owner.dataset.waveformStyleColor = color;
+  else delete owner.dataset.waveformStyleColor;
+  if (previous !== color) owner.dispatchEvent(new Event("waveform-style-change"));
+}
+
 const WAVEFORM_DEFAULT_STROKE = "#000";
 const waveformImageStyleStates = new WeakMap<SVGImageElement, { color: string | undefined; revision: number }>();
 const waveformUseStyleStates = new WeakMap<SVGSVGElement, { color: string; defs: SVGDefsElement; originalHrefByUse: Map<SVGUseElement, string> }>();

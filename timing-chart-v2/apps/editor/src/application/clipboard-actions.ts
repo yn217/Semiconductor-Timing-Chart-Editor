@@ -1,14 +1,17 @@
 import { useRef, useState } from "react";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
+import { referencesToAny } from "@timing-chart-v2/schema";
 import type { Annotation, AnnotationId, GroupId, Signal, SignalGroup, SignalId, SpacerId, SpacerRow, Transaction, TransactionId } from "@timing-chart-v2/schema";
 import { nextCommandId } from "../command-id.js";
-import { nextEntityId } from "../entity-id.js";
+import { createEntityIdAllocator, nextEntityId } from "../entity-id.js";
 import { groupId, signalId } from "../minimal-cycle-view-fixture-helpers.js";
+import { captureGroupTransactionLinks, remapGroupTransactionLinks, type GroupTransactionSignalLink } from "./group-clipboard-links.js";
+import { createClipboardIndexes, resolveClipboardSignalGroupTarget, resolveGroupSignalsInRowOrder } from "./group-clipboard-selection.js";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
 import type { SelectionOwner } from "./use-selection-owner.js";
 
 type SignalClipboardItem = Readonly<{ signal: Signal; groupId: GroupId; index: number }>;
-type GroupClipboardItem = Readonly<{ group: SignalGroup; rows: readonly Signal[]; sourceIndex: number }>;
+type GroupClipboardItem = Readonly<{ group: SignalGroup; rows: readonly Signal[]; sourceIndex: number; cutLinks?: readonly GroupTransactionSignalLink[] }>;
 type SpacerClipboardItem = Readonly<{ spacer: SpacerRow; groupId: GroupId; index: number }>;
 const spacerId = (value: string) => value as SpacerId;
 
@@ -21,34 +24,37 @@ export function useClipboardActions({ application, selection }: { application: E
   const transactionsRef = useRef<readonly Transaction[]>([]);
   const spacerRef = useRef<SpacerClipboardItem | undefined>(undefined);
   const cutSignalsRef = useRef(false);
+  const cutSignalLinksRef = useRef<readonly GroupTransactionSignalLink[]>([]);
   const sourceDocumentEpochRef = useRef<number | undefined>(undefined);
+  const [indexResolver] = useState(createClipboardIndexes);
   const document = () => application.runtime.session.current().getSnapshot().document;
 
   const selected = () => {
     const current = document();
     const state = selection.refs.state.current;
-    const group = state.groupId === undefined ? undefined : current.signalGroups.find((item) => item.id === state.groupId);
+    const signalsIndex = state.signalIds.size > 0 || state.groupId !== undefined ? indexResolver.signals(current) : undefined;
+    const transactionsIndex = state.transactionIds.size > 0 || state.transactionId !== undefined ? indexResolver.transactions(current) : undefined;
+    const group = state.groupId === undefined ? undefined : signalsIndex?.groupsById.get(state.groupId);
     return {
       document: current,
       state,
       group,
+      signalById: signalsIndex?.byId,
       spacer: state.spacerId === undefined ? undefined : group?.spacers?.find((item) => item.id === state.spacerId),
       annotation: state.annotationId === undefined ? undefined : current.annotations.find((item) => item.id === state.annotationId),
-      transaction: state.transactionId === undefined ? undefined : current.transactions.find((item) => item.id === state.transactionId),
-      transactions: current.transactions.filter((item) => state.transactionIds.has(item.id)),
-      signals: current.signals.filter((signal) => state.signalIds.has(signal.id)).flatMap((signal) => {
-        const owner = current.signalGroups.find((candidate) => candidate.rows.includes(signal.id));
-        return owner ? [{ signal, groupId: owner.id, index: owner.rows.indexOf(signal.id) }] : [];
-      }),
+      transaction: state.transactionId === undefined ? undefined : transactionsIndex?.byId.get(state.transactionId) ?? current.transactions.find((item) => item.id === state.transactionId),
+      transactions: transactionsIndex === undefined ? [] : [...state.transactionIds].flatMap((id) => { const transaction = transactionsIndex.byId.get(id); return transaction ? [transaction] : []; }).sort((left, right) => transactionsIndex.order.get(left.id)! - transactionsIndex.order.get(right.id)!),
+      signals: signalsIndex === undefined ? [] : [...state.signalIds].flatMap((id) => { const signal = signalsIndex.byId.get(id); const owner = signalsIndex.owner.get(id); return signal && owner ? [{ signal, ...owner }] : []; }).sort((left, right) => signalsIndex.order.get(left.signal.id)! - signalsIndex.order.get(right.signal.id)!),
     };
   };
-  const setClipboard = ({ signals = [], group, annotation, transactions = [], spacer, cutSignals = false }: { signals?: readonly SignalClipboardItem[]; group?: GroupClipboardItem; annotation?: Annotation; transactions?: readonly Transaction[]; spacer?: SpacerClipboardItem; cutSignals?: boolean }) => {
+  const setClipboard = ({ signals = [], group, annotation, transactions = [], spacer, cutSignals = false, signalLinks = [] }: { signals?: readonly SignalClipboardItem[]; group?: GroupClipboardItem; annotation?: Annotation; transactions?: readonly Transaction[]; spacer?: SpacerClipboardItem; cutSignals?: boolean; signalLinks?: readonly Readonly<{ transactionId: TransactionId; signalId: SignalId }>[] }) => {
     signalsRef.current = signals;
     groupRef.current = group;
     annotationRef.current = annotation;
     transactionsRef.current = transactions;
     spacerRef.current = spacer;
     cutSignalsRef.current = cutSignals;
+    cutSignalLinksRef.current = signalLinks;
     sourceDocumentEpochRef.current = application.runtime.documentEpoch.current();
     setAvailable(true);
   };
@@ -77,7 +83,7 @@ export function useClipboardActions({ application, selection }: { application: E
       setClipboard({ spacer: { spacer: value.spacer, groupId: value.group.id, index: value.group.rows.indexOf(value.spacer.id) } });
       setStatus(`Copied spacer ${value.spacer.id}`);
     } else if (value.group && !value.spacer) {
-      const rows = value.group.rows.flatMap((rowId) => value.document.signals.find((signal) => signal.id === rowId) ?? []);
+      const rows = value.group.rows.flatMap((rowId) => { const signal = value.signalById?.get(rowId as SignalId); return signal ? [signal] : []; });
       setClipboard({ group: { group: value.group, rows, sourceIndex: value.document.signalGroups.indexOf(value.group) } });
       setStatus(`Copied ${value.group.name} group`);
     } else if (value.transactions.length > 0 && value.signals.length === 0 && !value.annotation) {
@@ -94,6 +100,13 @@ export function useClipboardActions({ application, selection }: { application: E
 
   const cut = () => {
     const value = selected();
+    const cutSignalIds = !value.spacer && value.group
+      ? value.group.rows.filter((rowId) => value.signalById?.has(rowId as SignalId)) as SignalId[]
+      : value.signals.map(({ signal }) => signal.id);
+    if (value.document.timeline.referenceClock && cutSignalIds.includes(value.document.timeline.referenceClock)) {
+      setStatus("Reference Clock cannot be cut; change the reference clock first");
+      return;
+    }
     if (value.spacer && value.group) {
       setClipboard({ spacer: { spacer: value.spacer, groupId: value.group.id, index: value.group.rows.indexOf(value.spacer.id) } });
       const result = application.execute({ id: nextCommandId("cut_spacer"), type: "spacer.delete", spacerId: value.spacer.id });
@@ -101,19 +114,27 @@ export function useClipboardActions({ application, selection }: { application: E
       return;
     }
     if (value.group) {
-      const rows = value.group.rows.flatMap((rowId) => value.document.signals.find((signal) => signal.id === rowId) ?? []);
-      setClipboard({ group: { group: value.group, rows, sourceIndex: value.document.signalGroups.indexOf(value.group) } });
-      const commands: SemanticCommand[] = value.group.rows.map((rowId) => value.document.signals.some((signal) => signal.id === rowId)
-        ? { id: nextCommandId("cut_group_signal"), type: "signal.delete", signalId: rowId as SignalId }
-        : { id: nextCommandId("cut_group_spacer"), type: "spacer.delete", spacerId: rowId as SpacerId });
+      const signalsById = value.signalById;
+      if (!signalsById) { setStatus("Cannot cut Group: Signal index is unavailable."); return; }
+      const rows = resolveGroupSignalsInRowOrder(value.group.rows, signalsById);
+      const groupSignalIds = rows.map((signal) => signal.id);
+      const groupSignalIdSet = new Set(groupSignalIds);
+      const cutLinks = captureGroupTransactionLinks(value.document.transactions, groupSignalIdSet);
+      const commands: SemanticCommand[] = groupSignalIds.length === 0 ? [] : [{ id: nextCommandId("cut_group_signals"), type: "signal.bulkDelete", signalIds: groupSignalIds }];
+      const groupSpacerIds = value.group.rows.filter((rowId) => !groupSignalIdSet.has(rowId as SignalId)) as SpacerId[];
+      if (groupSpacerIds.length > 0) commands.push({ id: nextCommandId("cut_group_spacers"), type: "spacer.bulkDelete", spacerIds: groupSpacerIds });
       commands.push({ id: nextCommandId("cut_group_delete"), type: "group.delete", groupId: value.group.id });
       const result = application.executeBatch(nextCommandId("cut_group"), commands);
-      if (result.ok) { selection.clear(); setStatus(`Cut ${value.group.name} group`); }
+      if (result.ok) {
+        setClipboard({ group: { group: value.group, rows, sourceIndex: value.document.signalGroups.indexOf(value.group), cutLinks } });
+        selection.clear();
+        setStatus(`Cut ${value.group.name} group`);
+      } else setStatus("Cannot cut Group: one or more rows have dependent Annotations or protected references.");
       return;
     }
     if (value.transactions.length > 0 && value.signals.length === 0 && !value.annotation) {
       setClipboard({ transactions: value.transactions });
-      const result = application.executeBatch(nextCommandId("cut_transactions"), value.transactions.map((transaction) => ({ id: nextCommandId("cut_transaction"), type: "transaction.delete" as const, transactionId: transaction.id })));
+      const result = application.execute({ id: nextCommandId("cut_transactions"), type: "transaction.bulkDelete", transactionIds: value.transactions.map((transaction) => transaction.id) });
       if (result.ok) { selection.clear(); setStatus(`Cut ${value.transactions.length} transaction${value.transactions.length === 1 ? "" : "s"}`); }
       return;
     }
@@ -124,8 +145,12 @@ export function useClipboardActions({ application, selection }: { application: E
       return;
     }
     if (value.signals.length === 0) { setStatus("Select a signal, Comment Row, Annotation, or Transaction to cut"); return; }
-    setClipboard({ signals: value.signals, cutSignals: true });
-    const result = application.executeBatch(nextCommandId("cut"), value.signals.map(({ signal }) => ({ id: nextCommandId("cut_item"), type: "signal.delete" as const, signalId: signal.id })));
+    const selectedIds = new Set(cutSignalIds);
+    const signalLinks = referencesToAny(value.document, "signal", selectedIds)
+      .filter((reference) => reference.kind === "transaction.linkedSignal")
+      .map((reference) => ({ transactionId: reference.ownerId as TransactionId, signalId: reference.targetId as SignalId }));
+    setClipboard({ signals: value.signals, cutSignals: true, signalLinks });
+    const result = application.execute({ id: nextCommandId("cut"), type: "signal.bulkDelete", signalIds: value.signals.map(({ signal }) => signal.id) });
     if (result.ok) { selection.clear(); setStatus(value.signals.length === 1 ? `Cut ${value.signals[0]!.signal.display.name}` : `Cut ${value.signals.length} signals`); }
   };
 
@@ -134,37 +159,61 @@ export function useClipboardActions({ application, selection }: { application: E
     const current = document();
     const selectedSignalId = selection.refs.signalId.current;
     const selectedGroupId = selection.refs.state.current.groupId;
-    const target = current.signalGroups.find((group) => group.id === selectedGroupId) ?? current.signalGroups.find((group) => selectedSignalId !== undefined && group.rows.includes(selectedSignalId)) ?? current.signalGroups.find((group) => group.id === input[0]?.groupId) ?? current.signalGroups.at(-1);
+    const indexes = indexResolver.signals(current);
+    const target = resolveClipboardSignalGroupTarget({
+      groups: current.signalGroups,
+      groupsById: indexes.groupsById,
+      ownerBySignalId: indexes.owner,
+      ...(selectedGroupId === undefined ? {} : { selectedGroupId }),
+      ...(selectedSignalId === undefined ? {} : { selectedSignalId }),
+      ...(input[0] === undefined ? {} : { sourceGroupId: input[0].groupId }),
+    });
     if (!target || input.length === 0) return;
-    const commands: SemanticCommand[] = input.map(({ signal }, offset) => (signal.type === "commentRow"
-      ? { id: nextCommandId("paste_cut_signal"), type: "commentRow.create" as const, commentRow: signal, targetGroupId: target.id, index: target.rows.length + offset }
-      : { id: nextCommandId("paste_cut_signal"), type: "signal.create" as const, signal, targetGroupId: target.id, index: target.rows.length + offset }));
+    const commands: SemanticCommand[] = [
+      { id: nextCommandId("cut_paste_move_signals"), type: "signal.bulkCreate", signals: input.map(({ signal }) => signal), targetGroupId: target.id, index: target.rows.length },
+    ];
+    if (cutSignalLinksRef.current.length > 0) commands.push({ id: nextCommandId("cut_paste_restore_links"), type: "transaction.bulkLinkSignals", links: cutSignalLinksRef.current });
     const result = application.executeBatch(nextCommandId("cut_paste_move"), commands);
-    if (result.ok) { cutSignalsRef.current = false; selection.selectSignals(new Set(input.map(({ signal }) => signal.id)), input[0]!.signal.id); setStatus(`Moved ${input.length} signal${input.length === 1 ? "" : "s"}`); }
+    if (result.ok) { cutSignalsRef.current = false; cutSignalLinksRef.current = []; selection.selectSignals(new Set(input.map(({ signal }) => signal.id)), input[0]!.signal.id); setStatus(`Moved ${input.length} signal${input.length === 1 ? "" : "s"}`); }
   };
 
   const createSignals = (input: readonly SignalClipboardItem[], operation: "paste" | "duplicate", placement: "current-selection" | "source-group" = "current-selection") => {
     if (input.length === 0) { setStatus("No signal clipboard available"); return; }
     const current = document();
+    const allocateId = createEntityIdAllocator(current);
     const selectedSignalId = selection.refs.signalId.current;
-    const selectedGroup = placement === "current-selection" ? current.signalGroups.find((item) => selectedSignalId !== undefined && item.rows.includes(selectedSignalId)) : undefined;
-    const commands: SemanticCommand[] = [];
+    const indexes = indexResolver.signals(current);
+    const selectedGroup = placement === "current-selection"
+      ? resolveClipboardSignalGroupTarget({ groups: current.signalGroups, groupsById: indexes.groupsById, ownerBySignalId: indexes.owner, ...(selectedSignalId === undefined ? {} : { selectedSignalId }), fallbackToLast: false })
+      : undefined;
+    const groupsById = indexes.groupsById;
+    const createdByGroup = new Map<GroupId, { target: SignalGroup; signals: Signal[] }>();
     const created: Signal[] = [];
-    const insertedByGroup = new Map<GroupId, number>();
     for (const source of input) {
-      const target = selectedGroup ?? current.signalGroups.find((item) => item.id === source.groupId) ?? current.signalGroups.at(-1);
+      const target = selectedGroup ?? groupsById.get(source.groupId) ?? current.signalGroups.at(-1);
       if (!target) continue;
-      const id = signalId(nextEntityId(source.signal.type === "commentRow" ? "commentRow" : "signal", { ...current, signals: [...current.signals, ...created] }));
+      const id = signalId(allocateId(source.signal.type === "commentRow" ? "commentRow" : "signal"));
       const copyOrdinal = created.length + 1;
       const name = `${source.signal.display.name}_${operation === "duplicate" ? "duplicate" : "copy"}${input.length > 1 ? `_${copyOrdinal}` : ""}`;
       const signal: Signal = { ...source.signal, id, name, display: { ...source.signal.display, name } };
       created.push(signal);
-      const index = target.rows.length + (insertedByGroup.get(target.id) ?? 0);
-      insertedByGroup.set(target.id, (insertedByGroup.get(target.id) ?? 0) + 1);
-      commands.push({ id: nextCommandId(`${operation}_item`), type: signal.type === "commentRow" ? "commentRow.create" : "signal.create", ...(signal.type === "commentRow" ? { commentRow: signal } : { signal }), targetGroupId: target.id, index } as SemanticCommand);
+      const bucket = createdByGroup.get(target.id) ?? { target, signals: [] };
+      bucket.signals.push(signal);
+      createdByGroup.set(target.id, bucket);
     }
-    if (commands.length === 0) return;
-    const result = application.executeBatch(nextCommandId(operation), commands);
+    if (created.length === 0) return;
+    const placements = [...createdByGroup.values()].map(({ target, signals }) => ({
+      targetGroupId: target.id,
+      index: target.rows.length,
+      signalIds: signals.map((signal) => signal.id),
+    }));
+    const command: SemanticCommand = {
+      id: nextCommandId(`${operation}_signals`),
+      type: "signal.bulkCreateAcrossGroups",
+      signals: created,
+      placements,
+    };
+    const result = application.execute(command);
     if (result.ok) {
       const ids = created.map((signal) => signal.id);
       selection.selectSignals(new Set(ids), ids[0]);
@@ -173,27 +222,58 @@ export function useClipboardActions({ application, selection }: { application: E
   };
   const createGroup = (input: GroupClipboardItem, operation: "paste" | "duplicate") => {
     const current = document();
-    const newGroupId = groupId(nextEntityId("group", current));
-    const group: SignalGroup = { ...input.group, id: newGroupId, rows: [], ...(input.group.spacers === undefined ? {} : { spacers: [] }) };
-    const commands: SemanticCommand[] = [{ id: nextCommandId(`${operation}_group`), type: "group.create", group, index: Math.min(current.signalGroups.length, input.sourceIndex + 1) }];
-    const createdSignals: Signal[] = [];
+    const allocateId = createEntityIdAllocator(current);
+    const newGroupId = groupId(allocateId("group"));
+    const sourceSignalsById = new Map(input.rows.map((signal) => [signal.id, signal]));
     const sourceSpacers = new Map<string, SpacerRow>((input.group.spacers ?? []).map((item) => [item.id, item]));
+    const newIdByOldId = new Map<string, string>();
+    const newSignalIdByOldId = new Map<SignalId, SignalId>();
+    const createdSignals: Signal[] = [];
+    const createdSpacers: SpacerRow[] = [];
     for (const rowId of input.group.rows) {
-      const source = input.rows.find((signal) => signal.id === rowId);
+      const source = sourceSignalsById.get(rowId as SignalId);
       if (source) {
-        const id = signalId(nextEntityId(source.type === "commentRow" ? "commentRow" : "signal", { ...current, signals: [...current.signals, ...createdSignals] }));
+        const id = signalId(allocateId(source.type === "commentRow" ? "commentRow" : "signal"));
         const signal: Signal = { ...source, id };
         createdSignals.push(signal);
-        commands.push({ id: nextCommandId(`${operation}_group_item`), type: signal.type === "commentRow" ? "commentRow.create" : "signal.create", ...(signal.type === "commentRow" ? { commentRow: signal } : { signal }), targetGroupId: newGroupId, index: commands.length - 1 } as SemanticCommand);
+        newIdByOldId.set(rowId, id);
+        newSignalIdByOldId.set(rowId as SignalId, id);
       } else {
         const sourceSpacer = sourceSpacers.get(rowId);
-        if (!sourceSpacer) continue;
-        const id = spacerId(nextEntityId("spacer", { ...current, signals: [...current.signals, ...createdSignals] }));
-        commands.push({ id: nextCommandId(`${operation}_group_spacer`), type: "spacer.create", spacer: { ...sourceSpacer, id }, targetGroupId: newGroupId, index: commands.length - 1 });
+        if (!sourceSpacer) { setStatus(`Cannot ${operation} Group: a source row is missing.`); return; }
+        const id = spacerId(allocateId("spacer"));
+        createdSpacers.push({ ...sourceSpacer, id });
+        newIdByOldId.set(rowId, id);
       }
     }
+    const group: SignalGroup = {
+      ...input.group,
+      id: newGroupId,
+      rows: input.group.rows.map((rowId) => newIdByOldId.get(rowId) as SignalGroup["rows"][number]),
+      ...(input.group.spacers === undefined ? {} : { spacers: createdSpacers }),
+    };
+    const groupCommand: SemanticCommand = {
+      id: nextCommandId(`${operation}_group`),
+      type: "group.createWithContents",
+      group,
+      signals: createdSignals,
+      index: Math.min(current.signalGroups.length, input.sourceIndex + 1),
+    };
+    const commands: SemanticCommand[] = [groupCommand];
+    if (operation === "paste" && input.cutLinks && input.cutLinks.length > 0) {
+      const mapped = remapGroupTransactionLinks(input.cutLinks, newSignalIdByOldId);
+      if (!mapped.ok) {
+        setStatus(`Cannot paste Group: a linked source row is missing (${mapped.missingSignalIds.join(", ")}).`);
+        return;
+      }
+      commands.push({ id: nextCommandId("paste_group_restore_links"), type: "transaction.bulkLinkSignals", links: mapped.links });
+    }
     const result = application.executeBatch(nextCommandId(`${operation}_group_batch`), commands);
-    if (result.ok) { selection.selectGroup(newGroupId); setStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${input.group.name} group`); }
+    if (result.ok) {
+      if (operation === "paste" && input.cutLinks?.length) groupRef.current = { ...input, cutLinks: [] };
+      selection.selectGroup(newGroupId);
+      setStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${input.group.name} group`);
+    } else setStatus(`Cannot ${operation} Group: its linked references could not be preserved.`);
   };
   const createAnnotation = (source: Annotation, operation: "paste" | "duplicate") => {
     const annotation = { ...source, id: nextEntityId("annotation", document()) as AnnotationId };
@@ -202,12 +282,13 @@ export function useClipboardActions({ application, selection }: { application: E
   };
   const createTransactions = (sources: readonly Transaction[], operation: "paste" | "duplicate") => {
     const current = document();
+    const allocateId = createEntityIdAllocator(current);
     const created: Transaction[] = [];
     for (const source of sources) {
-      const transaction: Transaction = { ...source, id: nextEntityId("transaction", { ...current, transactions: [...current.transactions, ...created] }) as TransactionId, name: `${source.name} ${operation === "paste" ? "Paste" : "Copy"}` };
+      const transaction: Transaction = { ...source, id: allocateId("transaction") as TransactionId, name: `${source.name} ${operation === "paste" ? "Paste" : "Copy"}` };
       created.push(transaction);
     }
-    const result = application.executeBatch(nextCommandId(`${operation}_transactions`), created.map((transaction) => ({ id: nextCommandId(`${operation}_transaction`), type: "transaction.create" as const, transaction })));
+    const result = application.execute({ id: nextCommandId(`${operation}_transactions`), type: "transaction.bulkCreate", transactions: created });
     if (result.ok) { const ids = created.map((transaction) => transaction.id); selection.selectTransactions(new Set(ids), ids[0]); setStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${created.length} transaction${created.length === 1 ? "" : "s"}`); }
   };
   const createSpacer = (input: SpacerClipboardItem, operation: "paste" | "duplicate") => {
@@ -234,17 +315,17 @@ export function useClipboardActions({ application, selection }: { application: E
   const duplicate = () => {
     const value = selected();
     if (value.spacer && value.group) createSpacer({ spacer: value.spacer, groupId: value.group.id, index: value.group.rows.indexOf(value.spacer.id) }, "duplicate");
-    else if (value.group) createGroup({ group: value.group, rows: value.group.rows.flatMap((rowId) => value.document.signals.find((signal) => signal.id === rowId) ?? []), sourceIndex: value.document.signalGroups.indexOf(value.group) }, "duplicate");
+    else if (value.group) createGroup({ group: value.group, rows: value.group.rows.flatMap((rowId) => { const signal = value.signalById?.get(rowId as SignalId); return signal ? [signal] : []; }), sourceIndex: value.document.signalGroups.indexOf(value.group) }, "duplicate");
     else if (value.annotation) createAnnotation(value.annotation, "duplicate");
     else if (value.transactions.length > 0) createTransactions(value.transactions, "duplicate");
     else createSignals(value.signals, "duplicate");
   };
   const deleteSelection = () => {
     const value = selected();
-    const result = value.transactions.length > 1 ? application.executeBatch(nextCommandId("route_delete_transactions"), value.transactions.map((transaction) => ({ id: nextCommandId("route_delete_transaction"), type: "transaction.delete" as const, transactionId: transaction.id })))
+    const result = value.transactions.length > 1 ? application.execute({ id: nextCommandId("route_delete_transactions"), type: "transaction.bulkDelete", transactionIds: value.transactions.map((transaction) => transaction.id) })
       : value.transaction ? application.execute({ id: nextCommandId("route_delete_transaction"), type: "transaction.delete", transactionId: value.transaction.id })
       : value.annotation ? application.execute({ id: nextCommandId("route_delete_annotation"), type: "annotation.delete", annotationId: value.annotation.id })
-      : value.signals.length > 1 ? application.executeBatch(nextCommandId("route_delete_selection"), value.signals.map(({ signal }) => ({ id: nextCommandId("route_delete_signal"), type: "signal.delete", signalId: signal.id })))
+      : value.signals.length > 1 ? application.execute({ id: nextCommandId("route_delete_selection"), type: "signal.bulkDelete", signalIds: value.signals.map(({ signal }) => signal.id) })
       : value.signals[0] ? application.execute({ id: nextCommandId("route_delete_signal"), type: "signal.delete", signalId: value.signals[0].signal.id })
       : value.spacer ? application.execute({ id: nextCommandId("route_delete_spacer"), type: "spacer.delete", spacerId: value.spacer.id })
       : value.group ? application.execute({ id: nextCommandId("route_delete_group"), type: "group.delete", groupId: value.group.id }) : undefined;
@@ -260,16 +341,12 @@ export function useClipboardActions({ application, selection }: { application: E
   const setVisibility = (visible: boolean) => {
     const value = selected();
     if (value.transactions.length > 0) {
-      const commands = value.transactions.filter((transaction) => (transaction.visible ?? true) !== visible).map((transaction) => ({ id: nextCommandId("route_transaction_visibility"), type: "transaction.update" as const, transactionId: transaction.id, name: transaction.name, start: transaction.start, end: transaction.end, ...(transaction.laneId === undefined ? {} : { laneId: transaction.laneId }), ...(transaction.phases === undefined ? {} : { phases: transaction.phases }), ...(transaction.groupId === undefined ? {} : { groupId: transaction.groupId }), ...(transaction.color === undefined ? {} : { color: transaction.color }), ...(transaction.description === undefined ? {} : { description: transaction.description }), visible }));
-      if (commands.length > 1) return application.executeBatch(nextCommandId("route_transaction_visibility_selection"), commands);
-      if (commands.length === 1) return application.execute(commands[0]!);
-      return undefined;
+      return application.execute({ id: nextCommandId("route_transaction_visibility_selection"), type: "transaction.bulkSetVisibility", transactionIds: value.transactions.map((transaction) => transaction.id), visible });
     }
-    const commands = value.signals
+    const updates = value.signals
       .filter(({ signal }) => (signal.display.visible !== false) !== visible)
-      .map(({ signal }) => ({ id: nextCommandId("route_visibility"), type: "signal.setVisibility" as const, signalId: signal.id, visible }));
-    if (commands.length > 1) return application.executeBatch(nextCommandId("route_visibility_selection"), commands);
-    if (commands.length === 1) return application.execute(commands[0]!);
+      .map(({ signal }) => ({ signalId: signal.id, visible }));
+    if (updates.length > 0) return application.execute({ id: nextCommandId("route_visibility_selection"), type: "signal.bulkSetVisibility", updates });
     return undefined;
   };
   // #431 item 9 ("Signal Tree productivity" -- "show only selected"): a
@@ -282,11 +359,10 @@ export function useClipboardActions({ application, selection }: { application: E
     const value = selected();
     const selectedIds = new Set(value.signals.map(({ signal }) => signal.id));
     if (selectedIds.size === 0) return undefined;
-    const commands = value.document.signals
+    const updates = value.document.signals
       .filter((signal) => (signal.display.visible !== false) !== selectedIds.has(signal.id))
-      .map((signal) => ({ id: nextCommandId("route_isolate"), type: "signal.setVisibility" as const, signalId: signal.id, visible: selectedIds.has(signal.id) }));
-    if (commands.length > 1) return application.executeBatch(nextCommandId("route_isolate_selection"), commands);
-    if (commands.length === 1) return application.execute(commands[0]!);
+      .map((signal) => ({ signalId: signal.id, visible: selectedIds.has(signal.id) }));
+    if (updates.length > 0) return application.execute({ id: nextCommandId("route_isolate_selection"), type: "signal.bulkSetVisibility", updates });
     return undefined;
   };
   const move = (direction: -1 | 1) => {
@@ -310,12 +386,9 @@ export function useClipboardActions({ application, selection }: { application: E
   // Selection -- the selection Transport-mechanism pattern silently replaced the user's real selection with the bulk target, so a
   // following Delete/Duplicate/Group/Color would act on the wrong scope. This never reads or writes Selection at all.
   const setTransactionsVisibility = (transactionIds: readonly TransactionId[], visible: boolean) => {
-    const current = document();
-    const targets = current.transactions.filter((transaction) => transactionIds.includes(transaction.id) && (transaction.visible ?? true) !== visible);
-    const commands = targets.map((transaction) => ({ id: nextCommandId("route_transaction_visibility"), type: "transaction.update" as const, transactionId: transaction.id, name: transaction.name, start: transaction.start, end: transaction.end, ...(transaction.laneId === undefined ? {} : { laneId: transaction.laneId }), ...(transaction.phases === undefined ? {} : { phases: transaction.phases }), ...(transaction.groupId === undefined ? {} : { groupId: transaction.groupId }), ...(transaction.color === undefined ? {} : { color: transaction.color }), ...(transaction.description === undefined ? {} : { description: transaction.description }), visible }));
-    if (commands.length > 1) return application.executeBatch(nextCommandId("route_transaction_visibility_bulk"), commands);
-    if (commands.length === 1) return application.execute(commands[0]!);
-    return undefined;
+    const ids = [...new Set(transactionIds)];
+    if (ids.length === 0) return undefined;
+    return application.execute({ id: nextCommandId("route_transaction_visibility_bulk"), type: "transaction.bulkSetVisibility", transactionIds: ids, visible });
   };
 
   return { status, available, copy, cut, paste, duplicate, deleteSelection, deleteSignal, deleteAnnotation, deleteTransaction, rename, setVisibility, setSignalVisibility, setTransactionsVisibility, isolateSelection, move, createSignals } as const;

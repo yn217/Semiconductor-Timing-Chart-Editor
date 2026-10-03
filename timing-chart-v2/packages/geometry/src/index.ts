@@ -127,15 +127,30 @@ export interface LocalAnchorGeometry {
 
 export interface LocalGeometryMap {
   readonly signalId: SignalId;
+  /** Cycle keys used by `find`: canonical source cycles or rendered display cycles. */
+  readonly cycleKeyDomain?: "source" | "display" | undefined;
   find(anchor: SemanticAnchor): LocalAnchorGeometry | undefined;
   /** Semantic cycle boundaries owned by this geometry map. */
   cycleBoundaryEntries?(): readonly LocalGeometryEntry[];
+  /** True when `cycleBoundaryEntries()` is already filtered by the active display-time mapping. */
+  readonly cycleBoundaryEntriesDisplayFiltered?: boolean;
   /**
    * Directly exposes the immutable geometry entries that represent actual
    * clock edges.  Consumers that need an edge index can use this optional
    * capability without probing every source cycle through `find()`.
    */
   edgeEntries?(): readonly LocalGeometryEntry[];
+}
+
+/** Resolve a canonical source anchor against a geometry map's declared cycle-key domain. */
+export function findSourceAnchorGeometry(map: LocalGeometryMap, anchor: SemanticAnchor, displayCycle: number): LocalAnchorGeometry | undefined {
+  const sourceCycle = anchor.cycle;
+  const findAt = (cycle: number) => map.find({ ...anchor, signalId: map.signalId, cycle });
+  if (map.cycleKeyDomain === "display") return findAt(displayCycle);
+  if (map.cycleKeyDomain === "source") return findAt(sourceCycle);
+  // Compatibility for older/custom maps without an explicit domain. New
+  // production owners always declare the key contract and never guess here.
+  return findAt(sourceCycle) ?? findAt(displayCycle);
 }
 
 /**
@@ -151,19 +166,49 @@ export interface TimeAxisGeometry {
   readonly geometry?: LocalGeometryMap;
 }
 
+type CanonicalSignal = CanonicalDocument["signals"][number];
+interface CanonicalSignalIndex {
+  readonly byId: ReadonlyMap<SignalId, CanonicalSignal>;
+  readonly orderById: ReadonlyMap<SignalId, number>;
+  readonly timingSignals: readonly CanonicalSignal[];
+  readonly visibleTimingSignals: readonly CanonicalSignal[];
+}
+const canonicalSignalIndexes = new WeakMap<CanonicalDocument["signals"], CanonicalSignalIndex>();
+
+function canonicalSignalIndex(signals: CanonicalDocument["signals"]): CanonicalSignalIndex {
+  const cached = canonicalSignalIndexes.get(signals);
+  if (cached) return cached;
+  const byId = new Map<SignalId, CanonicalSignal>();
+  const orderById = new Map<SignalId, number>();
+  const timingSignals: CanonicalSignal[] = [];
+  const visibleTimingSignals: CanonicalSignal[] = [];
+  let order = 0;
+  for (const signal of signals) {
+    byId.set(signal.id, signal);
+    orderById.set(signal.id, order);
+    order += 1;
+    if (signal.type === "commentRow") continue;
+    timingSignals.push(signal);
+    if (signal.display.visible !== false) visibleTimingSignals.push(signal);
+  }
+  const index = Object.freeze({ byId, orderById, timingSignals, visibleTimingSignals });
+  canonicalSignalIndexes.set(signals, index);
+  return index;
+}
+
 export function resolveTimeAxisGeometry(document: Pick<CanonicalDocument, "signals" | "timeline">, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>): TimeAxisGeometry {
+  const signals = canonicalSignalIndex(document.signals);
   const referenceClock = document.timeline.referenceClock;
   if (referenceClock !== undefined) {
     // The canonical signal identity is authoritative.  A renderer may still
     // have a stale extracted map for one frame after delete/restore, but that
     // map must never keep a deleted or converted signal as the time-axis owner.
-    const referenceSignal = document.signals.find((signal) => signal.id === referenceClock);
+    const referenceSignal = signals.byId.get(referenceClock);
     const referenceGeometry = referenceSignal?.type === "clock" ? geometryMaps.get(referenceClock) : undefined;
     if (referenceGeometry) return Object.freeze({ mode: "reference-clock", ownerSignalId: referenceClock, geometry: referenceGeometry });
   }
-  const timingSignals = document.signals.filter((signal) => signal.type !== "commentRow");
-  const owner = timingSignals.find((signal) => signal.display.visible !== false && geometryMaps.has(signal.id))
-    ?? timingSignals.find((signal) => geometryMaps.has(signal.id));
+  const owner = signals.visibleTimingSignals.find((signal) => geometryMaps.has(signal.id))
+    ?? signals.timingSignals.find((signal) => geometryMaps.has(signal.id));
   const geometry = owner === undefined ? undefined : geometryMaps.get(owner.id);
   return geometry === undefined || owner === undefined
     ? Object.freeze({ mode: "clockless" })
@@ -187,13 +232,15 @@ const keyOf = (cycle: number, point: AnchorPoint, threshold?: number): string =>
 
 export class ImmutableLocalGeometryMap implements LocalGeometryMap {
   readonly signalId: SignalId;
+  readonly cycleKeyDomain: "source" | "display";
   readonly #entries: ReadonlyMap<string, Point>;
   readonly #edgeEntries: readonly LocalGeometryEntry[];
   readonly #cycleBoundaryEntries: readonly LocalGeometryEntry[];
   readonly #transitionResolvers: ReadonlyMap<string, (fraction: number) => Point>;
 
-  constructor(signalId: SignalId, entries: readonly LocalGeometryEntry[], transitionResolvers: readonly TransitionGeometryResolver[] = []) {
+  constructor(signalId: SignalId, entries: readonly LocalGeometryEntry[], transitionResolvers: readonly TransitionGeometryResolver[] = [], cycleKeyDomain: "source" | "display" = "source") {
     this.signalId = signalId;
+    this.cycleKeyDomain = cycleKeyDomain;
     const frozenEntries = entries.map((entry) => Object.freeze({ ...entry, position: Object.freeze({ ...entry.position }) }));
     this.#entries = new Map(frozenEntries.map((entry) => [keyOf(entry.cycle, entry.point, entry.threshold), entry.position]));
     this.#edgeEntries = Object.freeze(frozenEntries.filter((entry) => entry.point === "rising-edge" || entry.point === "falling-edge"));
@@ -227,6 +274,7 @@ export class ImmutableLocalGeometryMap implements LocalGeometryMap {
  */
 export class OffsetLocalGeometryMap implements LocalGeometryMap {
   readonly signalId: SignalId;
+  readonly cycleKeyDomain: "source" | "display" | undefined;
   readonly #inner: LocalGeometryMap;
   readonly #dx: number;
   #boundaries: readonly LocalGeometryEntry[] | undefined;
@@ -234,6 +282,7 @@ export class OffsetLocalGeometryMap implements LocalGeometryMap {
 
   constructor(inner: LocalGeometryMap, dx: number) {
     this.signalId = inner.signalId;
+    this.cycleKeyDomain = inner.cycleKeyDomain;
     this.#inner = inner;
     this.#dx = dx;
   }
@@ -292,15 +341,25 @@ export interface SnapCandidate {
 
 export interface SnapResult extends SnapCandidate { readonly distance: number }
 
+/** Lazily supplies regular-grid candidates near a query without materializing the full retained grid. */
+export interface SnapCandidateSource {
+  candidatesNear(point: Point, tolerance: number): readonly SnapCandidate[];
+  neighborsByX?(x: number, kind: SnapKind): Readonly<{ before?: SnapCandidate; after?: SnapCandidate }>;
+}
+
 export class ImmutableSnapIndex {
   static readonly #cellSize = 32;
   readonly #candidates: readonly SnapCandidate[];
   readonly #buckets: ReadonlyMap<string, readonly number[]>;
+  readonly #cycleBoundariesByX: readonly SnapCandidate[];
   #queries = 0;
   #candidatesVisited = 0;
+  readonly #sources: readonly SnapCandidateSource[];
 
-  constructor(candidates: readonly SnapCandidate[]) {
+  constructor(candidates: readonly SnapCandidate[], sources: readonly SnapCandidateSource[] = []) {
+    this.#sources = sources;
     this.#candidates = Object.freeze(candidates.map((candidate) => Object.freeze({ ...candidate, anchor: Object.freeze({ ...candidate.anchor }), point: Object.freeze({ ...candidate.point }) })));
+    this.#cycleBoundariesByX = Object.freeze(this.#candidates.filter((candidate) => candidate.kind === "cycle-boundary").slice().sort((left, right) => left.point.x - right.point.x));
     const buckets = new Map<string, number[]>();
     this.#candidates.forEach((candidate, index) => {
       if (!Number.isFinite(candidate.point.x) || !Number.isFinite(candidate.point.y)) return;
@@ -317,8 +376,9 @@ export class ImmutableSnapIndex {
     this.#queries += 1;
     const allowed = kinds ? new Set(kinds) : undefined;
     let result: SnapResult | undefined;
-    for (const index of this.#candidateIndexesNear(point, tolerance)) {
-      const candidate = this.#candidates[index]!;
+    const nearby = this.#candidateIndexesNear(point, tolerance).map((index) => this.#candidates[index]!);
+    for (const source of this.#sources) nearby.push(...source.candidatesNear(point, tolerance));
+    for (const candidate of nearby) {
       this.#candidatesVisited += 1;
       if (allowed && !allowed.has(candidate.kind)) continue;
       const distance = Math.hypot(candidate.point.x - point.x, candidate.point.y - point.y);
@@ -329,7 +389,34 @@ export class ImmutableSnapIndex {
   }
 
   entries(): readonly SnapCandidate[] {
+    // Lazy sources are queryable and intentionally omitted here. This API is
+    // the bounded, already-materialized owner set, not a grid expansion hook.
     return this.#candidates;
+  }
+
+  neighborsByX(x: number, kind: SnapKind): Readonly<{ before?: SnapCandidate; after?: SnapCandidate }> {
+    let before: SnapCandidate | undefined;
+    let after: SnapCandidate | undefined;
+    const update = (candidates: readonly SnapCandidate[]) => {
+      let low = 0;
+      let high = candidates.length;
+      while (low < high) {
+        const middle = low + Math.floor((high - low) / 2);
+        if (candidates[middle]!.point.x <= x) low = middle + 1;
+        else high = middle;
+      }
+      const prior = candidates[low - 1];
+      const next = candidates[low];
+      if (prior && (!before || prior.point.x >= before.point.x)) before = prior;
+      if (next && (!after || next.point.x <= after.point.x)) after = next;
+    };
+    if (kind === "cycle-boundary") update(this.#cycleBoundariesByX);
+    for (const source of this.#sources) {
+      const neighbors = source.neighborsByX?.(x, kind);
+      if (neighbors?.before && (!before || neighbors.before.point.x >= before.point.x)) before = neighbors.before;
+      if (neighbors?.after && (!after || neighbors.after.point.x <= after.point.x)) after = neighbors.after;
+    }
+    return Object.freeze({ ...(before ? { before } : {}), ...(after ? { after } : {}) });
   }
 
   metrics(): Readonly<{ queries: number; candidatesVisited: number }> {
@@ -373,6 +460,8 @@ export interface SemanticSnapGeometryInput {
   readonly document: Pick<CanonicalDocument, "signals" | "timeline" | "bookmarks" | "annotations">;
   readonly geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>;
   readonly rowY: ReadonlyMap<SignalId, number>;
+  /** Optional inclusive vertical search bounds for each row's waveform geometry. */
+  readonly rowBounds?: ReadonlyMap<SignalId, Readonly<{ top: number; bottom: number }>>;
   /** Derived TimeAxis owner used for anchors without an explicit signal. */
   readonly axisOwnerSignalId?: SignalId;
   /** Number of cycles in the rendered geometry (may be smaller than source time after a fold). */
@@ -383,6 +472,73 @@ export interface SemanticSnapGeometryInput {
   readonly renderedCycleForSourceCycle?: (sourceCycle: number) => number | undefined;
 }
 
+interface IndexedCycleSnapSourceCacheEntry {
+  readonly entries: readonly LocalGeometryEntry[];
+  readonly terminalCycle: number;
+  readonly signalType: string;
+  readonly source: SnapCandidateSource;
+}
+
+const indexedCycleSnapSources = new WeakMap<LocalGeometryMap, IndexedCycleSnapSourceCacheEntry>();
+const indexedBoundarySequenceValidity = new WeakMap<readonly LocalGeometryEntry[], WeakMap<(sourceCycle: number) => number | undefined, Map<number, boolean>>>();
+
+function hasContiguousIndexedBoundaries(entries: readonly LocalGeometryEntry[], terminalCycle: number, renderedCycleForSourceCycle: (sourceCycle: number) => number | undefined): boolean {
+  let byMapper = indexedBoundarySequenceValidity.get(entries);
+  if (!byMapper) {
+    byMapper = new WeakMap();
+    indexedBoundarySequenceValidity.set(entries, byMapper);
+  }
+  let byTerminal = byMapper.get(renderedCycleForSourceCycle);
+  if (!byTerminal) {
+    byTerminal = new Map();
+    byMapper.set(renderedCycleForSourceCycle, byTerminal);
+  }
+  const cached = byTerminal.get(terminalCycle);
+  if (cached !== undefined) return cached;
+  let valid = entries.length >= 2;
+  for (let index = 0; valid && index < entries.length; index += 1) {
+    if (!Number.isFinite(entries[index]!.position.x)) { valid = false; break; }
+    if (index === 0) continue;
+    if (entries[index]!.position.x < entries[index - 1]!.position.x) { valid = false; break; }
+    const priorRendered = renderedCycleForSourceCycle(entries[index - 1]!.cycle);
+    const currentRendered = renderedCycleForSourceCycle(entries[index]!.cycle);
+    if (priorRendered === undefined || currentRendered === undefined || currentRendered !== priorRendered + 1) valid = false;
+  }
+  byTerminal.set(terminalCycle, valid);
+  return valid;
+}
+
+function getIndexedCycleSnapSource(signalId: SignalId, signalType: string, rowY: number, rowBounds: Readonly<{ top: number; bottom: number }> | undefined, map: LocalGeometryMap, entries: readonly LocalGeometryEntry[], terminalCycle: number, renderedCycleForSourceCycle: (sourceCycle: number) => number | undefined): SnapCandidateSource | undefined {
+  let source: SnapCandidateSource | undefined;
+  if (map.cycleBoundaryEntriesDisplayFiltered) {
+    const cached = indexedCycleSnapSources.get(map);
+    if (cached?.entries === entries && cached.terminalCycle === terminalCycle && cached.signalType === signalType) source = cached.source;
+  }
+  if (!source) {
+    if (!hasContiguousIndexedBoundaries(entries, terminalCycle, renderedCycleForSourceCycle)) return undefined;
+    source = createIndexedCycleSnapSource(signalId, signalType, 0, map, entries, terminalCycle, renderedCycleForSourceCycle);
+    if (source && map.cycleBoundaryEntriesDisplayFiltered) indexedCycleSnapSources.set(map, { entries, terminalCycle, signalType, source });
+  }
+  if (!source || rowY === 0 && rowBounds === undefined) return source;
+  const shift = (candidate: SnapCandidate | undefined) => candidate === undefined ? undefined : { ...candidate, point: { ...candidate.point, y: candidate.point.y + rowY } };
+  return {
+    candidatesNear: (point, tolerance) => {
+      // Geometry for one waveform is contained by its projected row. Avoid
+      // resolving detailed anchors for unrelated rows before distance checks;
+      // in large documents each such lookup would materialize that owner's
+      // lazy analytic geometry despite the pointer being hundreds of pixels away.
+      if (rowBounds && (point.y + tolerance < rowBounds.top || point.y - tolerance > rowBounds.bottom)) return [];
+      return source!.candidatesNear(point, tolerance).map((candidate) => shift(candidate)!);
+    },
+    ...(source.neighborsByX === undefined ? {} : {
+      neighborsByX: (x: number, kind: SnapKind) => {
+        const neighbors = source!.neighborsByX!(x, kind);
+        return { ...(neighbors.before ? { before: shift(neighbors.before)! } : {}), ...(neighbors.after ? { after: shift(neighbors.after)! } : {}) };
+      },
+    }),
+  };
+}
+
 /** Geometry-owned construction of immutable, screen-local semantic snap candidates. */
 export class SemanticSnapCandidateService {
   #builds = 0;
@@ -390,14 +546,17 @@ export class SemanticSnapCandidateService {
 
   build(input: SemanticSnapGeometryInput): ImmutableSnapIndex {
     const candidates: SnapCandidate[] = [];
+    const sources: SnapCandidateSource[] = [];
     const renderedCycleCount = input.renderedCycleCount ?? input.document.timeline.cycleCount;
     const sourceCycleForRenderedCycle = input.sourceCycleForRenderedCycle ?? ((cycle: number) => cycle);
     const renderedCycleForSourceCycle = input.renderedCycleForSourceCycle ?? ((cycle: number) => cycle);
-    const visibleSignalIds = new Set(input.document.signals.filter((signal) => signal.type !== "commentRow" && signal.display.visible !== false).map((signal) => signal.id));
+    const signalsByIdIndex = canonicalSignalIndex(input.document.signals);
+    const signalsById = signalsByIdIndex.byId;
     const resolve = (anchor: SemanticAnchor): Point | undefined => {
       const signalId = anchor.signalId ?? input.axisOwnerSignalId ?? input.document.timeline.referenceClock;
       if (!signalId) return undefined;
-      if (anchor.signalId !== undefined && !visibleSignalIds.has(anchor.signalId)) return undefined;
+      const signal = signalsById.get(signalId);
+      if (!signal || anchor.signalId !== undefined && (signal.type === "commentRow" || signal.display.visible === false)) return undefined;
       if (!input.rowY.has(signalId)) return undefined;
       const renderedCycle = anchor.cycle === input.document.timeline.cycleCount ? renderedCycleCount : renderedCycleForSourceCycle(anchor.cycle);
       if (renderedCycle === undefined) return undefined;
@@ -408,14 +567,42 @@ export class SemanticSnapCandidateService {
       const local = input.geometryMaps.get(signalId)?.find({ ...anchor, signalId, cycle: anchor.cycle });
       return local ? { x: local.point.x, y: (input.rowY.get(signalId) ?? 0) + local.point.y } : undefined;
     };
-    for (const signal of input.document.signals) {
+    // Only mounted/retained owners can contribute waveform snap geometry.
+    // Iterating all canonical Signals here made each viewport-triggered index
+    // rebuild O(total document Signals), even when only a few owners were
+    // mounted. The stable-ID lookup above is retained per immutable canonical
+    // Signals array; this loop is now bounded by the geometry owners.
+    const orderedGeometryMaps = [...input.geometryMaps].sort(([left], [right]) =>
+      (signalsByIdIndex.orderById.get(left) ?? Number.MAX_SAFE_INTEGER) - (signalsByIdIndex.orderById.get(right) ?? Number.MAX_SAFE_INTEGER));
+    for (const [signalId, map] of orderedGeometryMaps) {
+      const signal = signalsById.get(signalId);
+      if (!signal) continue;
       if (signal.type === "commentRow" || signal.display.visible === false || !input.rowY.has(signal.id)) continue;
-      const map = input.geometryMaps.get(signal.id);
-      if (!map) continue;
       const y = input.rowY.get(signal.id) ?? 0;
-      for (let renderedCycle = 0; renderedCycle <= renderedCycleCount; renderedCycle += 1) {
-        const cycle = sourceCycleForRenderedCycle(renderedCycle);
-        if (cycle === undefined) continue;
+      // Geometry maps may retain only the currently rendered source interval.
+      // Enumerate those semantic boundaries directly instead of scanning the
+      // entire document display range and probing `find()` for absent cycles.
+      // Keep the display-range fallback for third-party maps that do not yet
+      // expose their bounded boundary index.
+      const boundaryEntries = map.cycleBoundaryEntries?.();
+      const eligibleBoundaryEntries = boundaryEntries === undefined
+        ? undefined
+        : map.cycleBoundaryEntriesDisplayFiltered
+          ? boundaryEntries
+          : boundaryEntries.filter((entry) => renderedCycleForSourceCycle(entry.cycle) !== undefined || entry.cycle === input.document.timeline.cycleCount);
+      // The geometry-owned boundary index is also useful when pitch is
+      // non-uniform. Restrict candidate creation to the queried X interval
+      // instead of materializing every transition/value candidate in the
+      // retained contiguous source interval. Sparse/folded or unordered maps
+      // keep the conservative semantic path below.
+      const indexedSource = eligibleBoundaryEntries && getIndexedCycleSnapSource(signal.id, signal.type, y, input.rowBounds?.get(signal.id), map, eligibleBoundaryEntries, input.document.timeline.cycleCount, renderedCycleForSourceCycle);
+      if (indexedSource) sources.push(indexedSource);
+      if (indexedSource) continue;
+      const sourceCycles = boundaryEntries === undefined || boundaryEntries.length === 0
+        ? Array.from({ length: renderedCycleCount + 1 }, (_, renderedCycle) => sourceCycleForRenderedCycle(renderedCycle))
+        : boundaryEntries.map((entry) => entry.cycle);
+      for (const cycle of sourceCycles) {
+        if (cycle === undefined || renderedCycleForSourceCycle(cycle) === undefined && cycle !== input.document.timeline.cycleCount) continue;
         const points: readonly { readonly point: AnchorPoint; readonly kind: SnapKind }[] = [
           { point: "cycle-start", kind: "cycle-boundary" },
           ...(cycle === input.document.timeline.cycleCount ? [] : [{ point: "cycle-center" as const, kind: "cycle-center" as const }]),
@@ -432,7 +619,7 @@ export class SemanticSnapCandidateService {
     this.#appendOwners(candidates, input.document.bookmarks, input.document.annotations, resolve);
     this.#builds += 1;
     this.#candidateCount = candidates.length;
-    return new ImmutableSnapIndex(candidates);
+    return new ImmutableSnapIndex(candidates, sources);
   }
 
   metrics(): Readonly<{ builds: number; candidateCount: number }> {
@@ -451,6 +638,70 @@ export class SemanticSnapCandidateService {
       if (anchor && point) candidates.push({ kind: "annotation", anchor, point, ownerId: annotation.id });
     }
   }
+}
+
+function createIndexedCycleSnapSource(signalId: SignalId, signalType: string, rowY: number, map: LocalGeometryMap, entries: readonly LocalGeometryEntry[], terminalCycle: number, renderedCycleForSourceCycle: (sourceCycle: number) => number | undefined): SnapCandidateSource | undefined {
+  const lowerBound = (x: number): number => {
+    let low = 0;
+    let high = entries.length;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (entries[middle]!.position.x < x) low = middle + 1;
+      else high = middle;
+    }
+    return low;
+  };
+  return {
+    candidatesNear(point, tolerance) {
+      const first = Math.max(0, lowerBound(point.x - tolerance) - 1);
+      const last = Math.min(entries.length - 1, lowerBound(point.x + tolerance));
+      const result: SnapCandidate[] = [];
+      for (let index = first; index <= last; index += 1) {
+        const boundary = entries[index]!;
+        const terminal = boundary.cycle === terminalCycle;
+        const points: readonly { readonly point: AnchorPoint; readonly kind: SnapKind }[] = [
+          { point: "cycle-start", kind: "cycle-boundary" },
+          ...(terminal ? [] : [{ point: "cycle-center" as const, kind: "cycle-center" as const }]),
+          ...(terminal ? [] : [{ point: "transition-center" as const, kind: signalType === "bus" || signalType === "state" ? "bus-transition" as const : "signal-transition" as const }]),
+          ...(terminal ? [] : [{ point: "value-start" as const, kind: "value-boundary" as const }, { point: "value-center" as const, kind: "value-boundary" as const }, { point: "row-center" as const, kind: "signal-row" as const }, ...(signalType === "clock" ? [{ point: "rising-edge" as const, kind: "clock-edge" as const }, { point: "falling-edge" as const, kind: "clock-edge" as const }] : [])]),
+        ];
+        for (const item of points) {
+          const anchor: SemanticAnchor = { signalId, cycle: boundary.cycle, point: item.point };
+          const local = map.find(anchor);
+          if (local && Math.abs(local.point.x - point.x) <= tolerance) result.push({ kind: item.kind, anchor, point: { x: local.point.x, y: rowY + local.point.y }, ownerId: signalId });
+        }
+      }
+      return result;
+    },
+    neighborsByX(x, kind) {
+      if (kind !== "cycle-boundary") return Object.freeze({});
+      const atOrBefore = (value: number): number => {
+        let low = 0;
+        let high = entries.length;
+        while (low < high) {
+          const middle = (low + high) >>> 1;
+          if (entries[middle]!.position.x <= value) low = middle + 1;
+          else high = middle;
+        }
+        return low - 1;
+      };
+      const candidateAt = (index: number): SnapCandidate | undefined => {
+        const boundary = entries[index];
+        if (!boundary) return undefined;
+        const anchor: SemanticAnchor = { signalId, cycle: boundary.cycle, point: "cycle-start" };
+        const local = map.find(anchor);
+        return local ? { kind: "cycle-boundary", anchor, point: { x: local.point.x, y: rowY + local.point.y }, ownerId: signalId } : undefined;
+      };
+      const beforeIndex = atOrBefore(x);
+      const atOrAfterIndex = beforeIndex >= 0 && entries[beforeIndex]!.position.x === x ? beforeIndex : beforeIndex + 1;
+      const before = candidateAt(beforeIndex);
+      const after = candidateAt(atOrAfterIndex);
+      return Object.freeze({
+        ...(before ? { before } : {}),
+        ...(after ? { after } : {}),
+      });
+    },
+  };
 }
 export * from "./uniform-cycle-geometry.js";
 

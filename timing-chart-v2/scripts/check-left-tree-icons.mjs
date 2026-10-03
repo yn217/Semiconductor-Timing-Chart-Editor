@@ -2,13 +2,15 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const root = resolve(process.cwd());
-const renderer = await readFile(resolve(root, "packages/renderer/src/stable-surface.ts"), "utf8");
+// The icon/badge builders live in tree-row-dom.ts (split out of stable-surface.ts); scan the whole left-tree DOM surface.
+const treeRowDom = await readFile(resolve(root, "packages/renderer/src/tree-row-dom.ts"), "utf8");
+const renderer = (await readFile(resolve(root, "packages/renderer/src/stable-surface.ts"), "utf8")) + "\n" + treeRowDom;
 const sharedIcons = await readFile(resolve(root, "packages/renderer/src/left-tree-icon-spec.ts"), "utf8");
 const editorIcons = await readFile(resolve(root, "apps/editor/src/editor-icon.tsx"), "utf8");
 const styles = await readFile(resolve(root, "apps/editor/src/styles.css"), "utf8");
 const sprite = await readFile(resolve(root, "../timing-chart-v1/gui-mockup/icons.svg"), "utf8");
 const iconStart = renderer.indexOf("function createLeftTreeIcon");
-const iconEnd = renderer.indexOf("interface Layers", iconStart);
+const iconEnd = renderer.indexOf("export function createRoleBadge", iconStart);
 const iconSource = iconStart >= 0 && iconEnd >= 0 ? renderer.slice(iconStart, iconEnd) : "";
 const ids = [...sprite.matchAll(/<symbol\b[^>]*\bid=["']([^"']+)["']/g)].map((match) => match[1]);
 const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);

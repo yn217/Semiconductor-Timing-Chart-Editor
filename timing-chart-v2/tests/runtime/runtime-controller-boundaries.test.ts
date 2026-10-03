@@ -25,9 +25,8 @@ describe("runtime controller boundaries", () => {
       clientX: 100,
       host: { querySelector: () => null, dataset: {} } as unknown as HTMLElement,
       projection: { rowLayout: [] } as never,
-      timeAxis: { ownerSignalId: undefined } as never,
+      timeAxisMetrics: { timeAxis: { ownerSignalId: undefined }, zoom: 1 } as never,
       screenGeometry: {} as never,
-      zoom: 1,
       snapEnabled: true,
       document: canonicalFixture(),
       currentSnapIndex: snapIndex,
@@ -51,28 +50,30 @@ describe("runtime controller boundaries", () => {
       surfaceLeft: 58,
       host: {} as HTMLElement,
       projection: { rowLayout: [] } as never,
-      timeAxis: { ownerSignalId: undefined } as never,
+      timeAxisMetrics: { timeAxis: { ownerSignalId: undefined }, zoom: 2 } as never,
       screenGeometry,
-      zoom: 2,
       snapEnabled: true,
       document: canonicalFixture(),
       currentSnapIndex: vi.fn(),
       cycleBoundaryAtPointerX: pointerFallback,
       cycleBoundaryAtX: cycleDomFallback,
-      cycleBoundaryAtLocalX: local,
+      cycleBoundaryAtLocalX: (localX, _snapEnabled) => local(localX),
       publishState: vi.fn(),
     });
 
     expect(cycle).toBe(11);
-    expect(local).toHaveBeenCalledWith(42, 2, true);
+    expect(local).toHaveBeenCalledWith(42);
     expect(cycleDomFallback).not.toHaveBeenCalled();
     expect(pointerFallback).not.toHaveBeenCalled();
   });
 
   it("publishes the initial refresh only for the current document lifecycle", async () => {
     const host = { isConnected: true, dataset: {} } as unknown as HTMLElement;
+    const order: string[] = [];
     const refresh = {
-      ruler: vi.fn(), range: vi.fn(), playhead: vi.fn(), grid: vi.fn(), zoom: vi.fn(), overlays: vi.fn(), collectErrors: vi.fn(), publish: vi.fn(),
+      ruler: vi.fn(() => { order.push("ruler"); }), range: vi.fn(), playhead: vi.fn(), grid: vi.fn(), zoom: vi.fn(), overlays: vi.fn(),
+      collectErrors: vi.fn(() => { order.push("collect-errors"); }), publish: vi.fn(() => { order.push("publish"); }),
+      onPresentationReady: vi.fn(() => { order.push("presentation-ready"); }),
     };
 
     scheduleInitialTimelineRefresh({ whenIdle: async () => undefined }, host, refresh, { isCurrent: () => true });
@@ -83,6 +84,8 @@ describe("runtime controller boundaries", () => {
     expect(refresh.publish).toHaveBeenCalledOnce();
     // editorIdle is owned by the staged readiness model; the initial refresh publishes the view-ready flag.
     expect(host.dataset.cycleViewReady).toBe("true");
+    expect(order.indexOf("presentation-ready")).toBeLessThan(order.indexOf("collect-errors"));
+    expect(order.indexOf("presentation-ready")).toBeLessThan(order.indexOf("publish"));
   });
 
   it("drops an initial refresh for an obsolete document epoch", async () => {

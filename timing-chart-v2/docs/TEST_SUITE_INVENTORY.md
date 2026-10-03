@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 340 spec files and 993 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 344 spec files and 1001 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 958/993 cases reviewed.
+Semantic review progress: 958/1001 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 487 |
 | `nightly` | 194 |
 | `performance` | 54 |
-| `pr` | 269 |
+| `pr` | 270 |
 | `visual` | 174 |
 
 ## Top recorded per-case runtimes
@@ -145,6 +145,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `inspector-selection-context.contract.spec.ts` | 3 | 3/3 reviewed |
 | `inspector-waveform-style.spec.ts` | 2 | 2/2 reviewed |
 | `interaction-visual-scenarios.spec.ts` | 11 | 11/11 reviewed |
+| `issue-426-event-selection-scope.spec.ts` | 1 | 0/1 reviewed |
 | `issue-426-external-bottom-draft-update.spec.ts` | 3 | 3/3 reviewed |
 | `issue-441-ribbon-label-integrity.spec.ts` | 3 | 3/3 reviewed |
 | `issue-456-sized-bus-literal.spec.ts` | 1 | 0/1 reviewed |
@@ -196,6 +197,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-728-group-double-click.spec.ts` | 1 | 1/1 reviewed |
 | `issue-729-dirty-title.spec.ts` | 1 | 1/1 reviewed |
 | `issue-738-hit-mapping-after-scale-scroll.spec.ts` | 2 | 0/2 reviewed |
+| `issue-738-native-thumb-ruler-hit.spec.ts` | 2 | 0/2 reviewed |
 | `issue-738-ruler-hit-area.spec.ts` | 3 | 2/3 reviewed |
 | `issue-738-ruler-origin-after-scroll-return.spec.ts` | 5 | 5/5 reviewed |
 | `issue-738-stress-real-input.spec.ts` | 2 | 2/2 reviewed |
@@ -242,12 +244,14 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-775-annotation-draft-isolation.spec.ts` | 1 | 1/1 reviewed |
 | `issue-776-signal-inspector-draft-sync.spec.ts` | 2 | 2/2 reviewed |
 | `issue-777-current-v2-samples-acceptance.spec.ts` | 10 | 10/10 reviewed |
+| `issue-798-menu-exclusivity.spec.ts` | 2 | 0/2 reviewed |
 | `issue-799-orphan-divider.spec.ts` | 7 | 0/7 reviewed |
 | `issue-835-async-annotation-import.spec.ts` | 6 | 6/6 reviewed |
 | `issue-836-hardware-hierarchy-performance.spec.ts` | 1 | 0/1 reviewed |
 | `issue-837-legend-cancel-draft.spec.ts` | 4 | 4/4 reviewed |
 | `issue-838-visible-hierarchy-copy-selection.spec.ts` | 1 | 0/1 reviewed |
 | `issue-839-large-showcase-clock-phase.spec.ts` | 2 | 0/2 reviewed |
+| `issue-840-stale-cycle-context.spec.ts` | 2 | 0/2 reviewed |
 | `issue-841-legend-bounds.spec.ts` | 7 | 0/7 reviewed |
 | `issue-842-clean-event-row-rebase.spec.ts` | 1 | 0/1 reviewed |
 | `issue-847-vertical-scroll-user-input.spec.ts` | 2 | 0/2 reviewed |
@@ -274,7 +278,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `measurement-top-row-clip.spec.ts` | 2 | 2/2 reviewed |
 | `mechanical-visual-diagnostics.spec.ts` | 1 | 1/1 reviewed |
 | `minimal-cycle-view.spec.ts` | 3 | 3/3 reviewed |
-| `minimap-overview-performance.spec.ts` | 2 | 2/2 reviewed |
+| `minimap-overview-performance.spec.ts` | 3 | 2/3 reviewed |
 | `minimap-viewport-closure.spec.ts` | 1 | 1/1 reviewed |
 | `mode-isolation-journey.spec.ts` | 2 | 2/2 reviewed |
 | `name-draft-identity.spec.ts` | 1 | 1/1 reviewed |
@@ -448,6 +452,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `issue-726-lane-hover.spec.ts` | getComputedStyle |
 | `issue-726-marker-hierarchy.spec.ts` | getComputedStyle |
 | `issue-738-hit-mapping-after-scale-scroll.spec.ts` | dataset, geometryRead |
+| `issue-738-native-thumb-ruler-hit.spec.ts` | dataset, geometryRead |
 | `issue-738-ruler-hit-area.spec.ts` | dataset, geometryRead |
 | `issue-738-ruler-origin-after-scroll-return.spec.ts` | dataset, geometryRead |
 | `issue-738-stress-real-input.spec.ts` | dataset, geometryRead |
@@ -496,7 +501,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `measurement-lane-stacking.spec.ts` | dataset |
 | `mechanical-visual-diagnostics.spec.ts` | geometryRead |
 | `minimal-cycle-view.spec.ts` | dataset, geometryRead |
-| `minimap-overview-performance.spec.ts` | querySelector, dataset, explicitWait |
+| `minimap-overview-performance.spec.ts` | querySelector, dataset |
 | `minimap-viewport-closure.spec.ts` | dataset, geometryRead |
 | `mode-isolation-journey.spec.ts` | getComputedStyle |
 | `open-progressive-wave-yield.spec.ts` | querySelector, dataset, explicitWait |

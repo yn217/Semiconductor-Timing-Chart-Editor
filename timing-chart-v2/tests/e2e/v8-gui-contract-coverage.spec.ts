@@ -6,8 +6,9 @@ startInCycleSample(test);
 test.use({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1 });
 
 async function stableY(locator: import("@playwright/test").Locator) {
-  await expect.poll(async () => (await locator.boundingBox())?.y ?? null).not.toBeNull();
-  return Math.round((await locator.boundingBox())!.y);
+  let y: number | null = null;
+  await expect.poll(async () => { y = (await locator.boundingBox())?.y ?? null; return y; }).not.toBeNull();
+  return Math.round(y!);
 }
 
 test("locks v8 badge, display, MiniMap, and bottom-toolbar geometry", async ({ page }) => {

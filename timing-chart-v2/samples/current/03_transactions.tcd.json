@@ -1,0 +1,307 @@
+{
+  "formatVersion": 2,
+  "document": {
+    "id": "current.transactions",
+    "title": "Transaction groups, lanes, and phases",
+    "header": {
+      "subtitle": "Current product contract",
+      "description": "Transaction groups, lanes, and phases",
+      "notes": "Authored from the current canonical schema; not migrated from a historical fixture.",
+      "preconditions": [],
+      "constraints": [],
+      "exceptions": []
+    },
+    "footer": {
+      "figureNumber": "CURRENT.TRANSACTIONS",
+      "revision": "Current",
+      "text": "Current-spec reference"
+    }
+  },
+  "timeline": {
+    "start": 0,
+    "end": 80,
+    "timeBase": "cycle",
+    "cycleCount": 80,
+    "edge": "rising",
+    "labelAnchors": [],
+    "referenceClock": "sig.clk"
+  },
+  "signalGroups": [
+    {
+      "id": "group.transaction",
+      "name": "Transaction context",
+      "rows": [
+        "sig.clk",
+        "sig.reset",
+        "sig.req",
+        "sig.addr"
+      ]
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig.clk",
+      "name": "core_clk",
+      "type": "clock",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "soc",
+          "timing"
+        ],
+        "signalName": "core_clk"
+      },
+      "display": {
+        "name": "core_clk",
+        "visible": true
+      },
+      "generator": {
+        "start": 0,
+        "period": 4,
+        "duty": 0.5,
+        "phase": 0,
+        "initial": 0,
+        "polarity": "positive"
+      },
+      "edgeCounter": {
+        "show": true,
+        "mode": "rising",
+        "startNumber": 0,
+        "countFrom": "signal-start",
+        "labelEvery": 4,
+        "position": "above",
+        "offset": {
+          "x": 0,
+          "y": -6
+        }
+      }
+    },
+    {
+      "id": "sig.reset",
+      "name": "reset_n",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "soc",
+          "timing"
+        ],
+        "signalName": "reset_n"
+      },
+      "display": {
+        "name": "reset_n",
+        "visible": true
+      },
+      "values": [
+        {
+          "id": "change.reset.0",
+          "start": 0,
+          "value": 0
+        },
+        {
+          "id": "change.reset.1",
+          "start": 4,
+          "value": 1
+        }
+      ],
+      "resetSemantics": {
+        "polarity": "active-low",
+        "synchronization": "asynchronous",
+        "assertCycle": 0,
+        "deassertCycle": 4
+      }
+    },
+    {
+      "id": "sig.req",
+      "name": "request_valid",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "soc",
+          "timing"
+        ],
+        "signalName": "request_valid"
+      },
+      "display": {
+        "name": "request_valid",
+        "visible": true
+      },
+      "values": [
+        {
+          "id": "change.req.0",
+          "start": 0,
+          "value": 0
+        },
+        {
+          "id": "change.req.1",
+          "start": 8,
+          "value": 1
+        },
+        {
+          "id": "change.req.2",
+          "start": 12,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig.addr",
+      "name": "request_address[15:0]",
+      "type": "bus",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "soc",
+          "bus"
+        ],
+        "signalName": "request_address",
+        "msb": 15,
+        "lsb": 0
+      },
+      "display": {
+        "name": "request_address[15:0]",
+        "align": "right",
+        "overflow": "ellipsis"
+      },
+      "values": [
+        {
+          "id": "change.addr.0",
+          "start": 0,
+          "value": "0x0000"
+        },
+        {
+          "id": "change.addr.1",
+          "start": 8,
+          "value": "0x1200"
+        }
+      ],
+      "width": 16,
+      "displayFormat": "hex"
+    }
+  ],
+  "bookmarks": [],
+  "timeGroups": [],
+  "annotations": [],
+  "annotationGroups": [],
+  "legend": {
+    "show": true,
+    "orientation": "horizontal",
+    "usedRolesOnly": true,
+    "position": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  "layout": {
+    "roleColumnWidth": 32,
+    "signalNameWidth": 168,
+    "signalNameAlign": "left",
+    "rowHeight": 28,
+    "signalSpacing": 6,
+    "overflow": "ellipsis"
+  },
+  "transactions": [
+    {
+      "id": "txn.read",
+      "name": "Read request",
+      "start": 8,
+      "end": 30,
+      "groupId": "group:memory",
+      "laneId": "lane:request",
+      "phases": [
+        {
+          "name": "Address",
+          "start": 8,
+          "end": 12
+        },
+        {
+          "name": "Wait",
+          "start": 12,
+          "end": 24
+        },
+        {
+          "name": "Response",
+          "start": 24,
+          "end": 30
+        }
+      ],
+      "linkedSignals": [
+        "sig.req",
+        "sig.addr"
+      ],
+      "color": "#2563eb",
+      "description": "A grouped memory read.",
+      "category": "memory-read",
+      "style": {
+        "emphasis": "primary",
+        "cornerRadius": 4
+      },
+      "metadata": {
+        "protocol": "example-bus",
+        "burstLength": 1
+      },
+      "links": {
+        "documentation": "https://example.invalid/spec/read"
+      }
+    },
+    {
+      "id": "txn.write",
+      "name": "Un-grouped write",
+      "start": 36,
+      "end": 60,
+      "laneId": "lane:response",
+      "phases": [
+        {
+          "name": "Command",
+          "start": 36,
+          "end": 42
+        },
+        {
+          "name": "Data",
+          "start": 42,
+          "end": 54
+        },
+        {
+          "name": "Complete",
+          "start": 54,
+          "end": 60
+        }
+      ],
+      "linkedSignals": [
+        "sig.req"
+      ],
+      "color": "#16a34a",
+      "description": "An intentionally ungrouped write."
+    },
+    {
+      "id": "txn.real-ungrouped",
+      "name": "Group whose ID is ungrouped",
+      "start": 60,
+      "end": 72,
+      "groupId": "ungrouped",
+      "laneId": "lane:request"
+    }
+  ],
+  "constraints": [],
+  "checkSettings": {},
+  "transactionTimeScale": {
+    "clockCyclesPerTransactionCycle": 10,
+    "majorInterval": 5,
+    "minorInterval": 1
+  },
+  "transactionGroups": [
+    {
+      "id": "ungrouped",
+      "name": "Legacy-named group",
+      "order": 0,
+      "color": "#2563eb"
+    },
+    {
+      "id": "group:memory",
+      "name": "Memory",
+      "order": 1,
+      "color": "#7c3aed"
+    }
+  ]
+}

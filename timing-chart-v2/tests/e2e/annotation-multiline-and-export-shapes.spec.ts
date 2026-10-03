@@ -86,7 +86,8 @@ test("authored label wrap width is shared by live overlay and SVG export", async
   await editor.getByTestId("apply-annotation-properties").click();
 
   const label = callout.locator("[data-role='annotation-label']");
-  await expect(label).toHaveCSS("line-height", "1.8");
+  // The authored unitless 1.8 resolves to px in computed style (1.8 x the 10px label font = 18px).
+  await expect(label).toHaveCSS("line-height", "18px");
   const liveText = await label.textContent();
   expect(liveText?.split("\n").length).toBeGreaterThan(2);
   const annotationId = await callout.getAttribute("data-annotation-id");
@@ -97,7 +98,11 @@ test("authored label wrap width is shared by live overlay and SVG export", async
   expect(groupMatch![0]).toContain('dy="18"');
   const livePosition = await label.evaluate((element) => (element as HTMLElement).style.transform.match(/translate\(([-\d.]+)px, ([-\d.]+)px\)/)?.slice(1));
   expect(livePosition).not.toBeNull();
-  expect(groupMatch![0]).toContain(`<text x="${livePosition![0]}" y="${livePosition![1]}"`);
+  const exported = groupMatch![0].match(/<text x="([-\d.]+)" y="([-\d.]+)"/);
+  expect(exported).not.toBeNull();
+  // The live label is positioned inside the waveform viewport; the export adds the frozen name column (200px) and the ruler header (184px).
+  expect(Number(exported![1]) - Number(livePosition![0])).toBeCloseTo(200, 0);
+  expect(Number(exported![2]) - Number(livePosition![1])).toBeCloseTo(183.5, 0);
 });
 
 test("annotation label placement presets move the live label between its semantic endpoints and above/below", async ({ page }) => {
@@ -109,6 +114,7 @@ test("annotation label placement presets move the live label between its semanti
 
   const range = await addAnnotation(page, "range");
   const editor = page.getByTestId("annotation-editor");
+  await editor.getByRole("button", { name: "Style", exact: true }).click(); // Label placement lives in the Inspector Style section
   const placement = editor.getByLabel("Annotation label placement", { exact: true });
   const position = async () => range.locator("[data-role='annotation-label']").evaluate((element) => {
     const match = (element as HTMLElement).style.transform.match(/translate\(([-\d.]+)px, ([-\d.]+)px\)/);

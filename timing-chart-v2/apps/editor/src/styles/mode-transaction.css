@@ -30,7 +30,6 @@
   left: var(--gui-left-width);
   width: var(--gui-frozen-width, 210px);
 }
-.cycle-panel.mode-transaction .transaction-lane-label-row { display: none; }
 .cycle-panel.mode-transaction .transaction-lanes { min-height: calc(100% - 34px); }
 /* Transaction Mode owns its tree in the outer left rail.  The center
    timeline must therefore not reserve the legacy left/frozen columns a
@@ -82,3 +81,5 @@
    extent; at 1x this is identical to --wave-width. */
 .editor-shell .cycle-panel.mode-transaction .transaction-lanes,
 .editor-shell .cycle-panel.mode-transaction .transaction-lane-labels { width: calc(var(--wave-width, 640px) * var(--transaction-zoom, 1)); }
+/* #726: the Lane identity label is a sticky context chip pinned to the scroll owner's left edge (like the Group header context, #764), so a Lane can be followed horizontally without returning to the left rail. */
+.editor-shell .cycle-panel.mode-transaction .transaction-lane-labels .transaction-lane-label > .transaction-lane-label-name { position: sticky; inset: auto; top: 0; left: 0; display: flex; box-sizing: border-box; width: fit-content; min-width: 43px; max-width: 160px; height: 20px; padding: 0 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; background: rgba(238, 242, 247, .94); border-radius: 0 0 4px 0; opacity: 1; }

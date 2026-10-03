@@ -201,11 +201,11 @@
 .editor-shell .surface-host [data-role="frozen-group-header"],
 .editor-shell .surface-host [data-role="timing-group-header"] { display: none; }
 
-.editor-shell .surface-host [data-role="frozen-row"] { width: var(--gui-frozen-width, 209px); grid-template-columns: var(--gui-role-width, 61px) var(--gui-signal-width, 148px); padding: 0; text-align: var(--gui-signal-align, left); }
+.editor-shell .surface-host [data-role="frozen-row"] { width: var(--gui-frozen-width, 209px); grid-template-columns: var(--gui-role-width, 61px) var(--gui-signal-width, 148px); column-gap: 0; padding: 0; }
 
 .editor-shell .surface-host [data-role="signal-role"] { justify-self: center; }
 
-.editor-shell .surface-host [data-role="frozen-signal-name"] { min-width: 0; padding-left: 8px; overflow: hidden; white-space: inherit; text-overflow: inherit; }
+.editor-shell .surface-host [data-role="frozen-signal-name"] { min-width: 0; box-sizing: border-box; padding-inline: 8px; text-align: var(--gui-signal-align, left); overflow: hidden; white-space: inherit; text-overflow: inherit; }
 
 .editor-shell[data-layout-overflow="expand"] .surface-host [data-role="frozen-row"] { overflow: visible; }
 
@@ -230,14 +230,6 @@
 .transaction-lane-labels .transaction-lane-label { position: absolute; left: 0; right: 0; border-bottom: 1px solid #d9e1ea; color: #53677c; font-size: 10px; }
 .transaction-lane-labels .transaction-lane-label > em { position: absolute; inset: 0; display: flex; align-items: center; padding-left: 12px; font-style: normal; opacity: .7; }
 .transaction-lane-labels .transaction-lane-label > .transaction-lane-label-name { right: auto; bottom: auto; width: 43px; height: 20px; padding-left: 4px; opacity: .8; }
-/* #451: one row per Transaction, positioned to line up with that same
-   Transaction's stacked bar in the track column (`top` is the identical
-   `4 + row * 40` the bar itself uses) -- clicking either one drives the
-   same `onSelect`/`selectedId`. */
-.transaction-lane-label-row { position: absolute; left: 48px; right: 4px; height: 20px; display: flex; align-items: center; gap: 5px; padding: 0 6px; border: 1px solid transparent; border-radius: 3px; background: transparent; color: #23364a; font-size: 10px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
-.transaction-lane-label-row:hover { background: #e8eef5; }
-.transaction-lane-label-row[data-selected="true"] { border-color: var(--ds-selection-border, #287ac0); background: var(--ds-selection-bg, #e5f2ff); font-weight: 650; }
-.transaction-lane-label-swatch { flex: none; width: 7px; height: 7px; border-radius: 2px; }
 .transaction-group-header, .transaction-group-header-band { position: absolute; left: 0; right: 0; }
 .transaction-group-header { display: flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 1px solid #c7d2de; background: #eef2f7; color: #2c4257; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
 /* #764: sticky context layer -- pinned to the scroll owner's left edge; the header band itself still scrolls with the lanes. */
@@ -263,7 +255,7 @@
 .transaction-lane { position: absolute; left: 0; width: 100%; border-bottom: 1px solid #c9d6e3; }
 .transaction-lane:hover { background: rgb(214 229 245 / 45%); }
 .transaction-lane > button:has(.transaction-phases) { height: 32px; align-items: start; }
-.transaction-phases { position: absolute; inset: 15px 0 0; pointer-events: none; }
+.transaction-phases { position: absolute; inset: 15px -1px 0; pointer-events: none; }
 /* #429/#397 Transaction Mode Product Closure P0-4: derive both the bar's
    header strip and its phase segments from the one `--transaction-color`
    custom property set per-bar in transaction-lanes.tsx (Transaction color,
@@ -347,12 +339,15 @@
 .transaction-left-tree-group-header[data-drop-target="true"] { outline: 2px solid #3478f6; outline-offset: -2px; background: #e6f1ff; }
 .transaction-left-tree-swatch, .transaction-left-tree-row i { flex: 0 0 14px; width: 14px; height: 14px; border-radius: 3px; }
 .transaction-left-tree-row { display: flex; align-items: center; width: 100%; min-height: var(--transaction-tree-row-height, 29px); height: var(--transaction-tree-row-height, 29px); gap: 7px; padding: 0 10px 0 31px; overflow: hidden; border: 0; background: transparent; color: #304b6a; font-size: 11px; text-align: left; white-space: nowrap; }
+.transaction-left-tree-row > .transaction-left-tree-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .transaction-left-tree-row-wrap { position: relative; display: block; width: 100%; height: var(--transaction-tree-row-height, 29px); }
 /* Bookmark markers are interactive time anchors and must sit above bars at
    the same source time; only each narrow marker button opts into hit testing. */
 .transaction-bookmark-markers { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
 .transaction-bookmark-markers button { position: absolute; top: 0; bottom: 0; width: 6px; margin-left: -2px; padding: 0; border: 0; border-inline: 2px solid #d97706; background: transparent; box-shadow: 0 0 0 1px #fff8; pointer-events: auto; cursor: pointer; }
 .transaction-bookmark-markers button { border-inline: 1px solid rgb(217 119 6 / 45%); box-shadow: none; }
+.transaction-bookmark-markers button.transaction-fold-bookmark-summary { width: 10px; border-inline: 2px solid #7c3aed; }
+.transaction-bookmark-markers button.transaction-fold-bookmark-summary::after { content: attr(data-hidden-bookmark-count); position: absolute; top: 2px; left: 4px; padding: 1px 3px; border-radius: 8px; color: #fff; background: #7c3aed; font: 10px/1.2 system-ui, sans-serif; white-space: nowrap; }
 .transaction-bookmark-markers button:hover, .transaction-bookmark-markers button:focus-visible, .transaction-bookmark-markers button[data-selected="true"], .transaction-bookmark-markers button[aria-pressed="true"] { border-inline: 2px solid #d97706; box-shadow: 0 0 0 1px #fff8; }
 .transaction-left-tree-row-wrap .transaction-left-tree-row { box-sizing: border-box; height: 100%; padding-right: 57px; }
 .transaction-left-tree-row-actions { position: absolute; z-index: 4; top: 50%; right: 7px; display: grid; grid-template-columns: 22px 22px; align-items: center; width: 44px; height: 24px; transform: translateY(-50%); }
@@ -463,7 +458,12 @@
 .transaction-disclosure-slot:hover { background: #e7f1fb; color: #163756; }
 .transaction-disclosure-slot:focus-visible { outline: 2px solid var(--ds-focus-color, #1675d1); outline-offset: -2px; z-index: 1; }
 .transaction-table-phase-row { display: flex; align-items: stretch; min-height: 26px; background: #f8fbfe; color: #5c687c; }
-.transaction-phase-indent { flex: 0 0 28px; width: 28px; min-width: 28px; border-right: 1px solid #dfe7ef; background: #f1f6fa; }
+.transaction-phase-indent { position: relative; flex: 0 0 28px; width: 28px; min-width: 28px; border-right: 1px solid #dfe7ef; background: #f7fafd; }
+/* Hierarchy guide: a soft spine down the toggle column with a rounded elbow into each Phase; the last Phase ends the spine. */
+.transaction-phase-indent::before { content: ""; position: absolute; left: 13px; top: 0; bottom: 0; width: 2px; border-radius: 1px; background: #c3d4e6; }
+.transaction-table-phase-row[data-phase-last="true"] .transaction-phase-indent::before { bottom: 50%; }
+.transaction-phase-indent::after { content: ""; position: absolute; left: 13px; top: calc(50% - 1px); width: 11px; height: 2px; border-radius: 1px; background: #c3d4e6; }
+.transaction-phase-cells > span:first-child::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 6px; border-radius: 50%; background: #8fb0cf; vertical-align: middle; }
 .transaction-phase-cells { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); align-items: center; gap: 0; border-bottom: 1px solid #e4ebf2; }
 .transaction-phase-cells > span { min-width: 0; padding-inline: 4px; border-right: 1px solid #e7edf3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
 .transaction-phase-cells > span:first-child { padding-left: 12px; color: #355673; }
@@ -475,7 +475,7 @@
    with every other row (and with the header) the moment two rows' text
    lengths differ. Fixed widths make every row (and the header, which
    repeats this exact template) share identical column boundaries. */
-.transaction-list-row > button { flex: 1 1 auto; min-width: 0; height: 30px; display: grid; grid-template-columns: minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); align-items: center; gap: 0; border: 1px solid #c2cfdd; border-radius: 0; text-align: left; padding-inline: 0; overflow: hidden; }.transaction-list-row > button > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; color: #5c687c; }
+.transaction-list-row > button:not(.transaction-disclosure-slot) { flex: 1 1 auto; min-width: 0; height: 30px; display: grid; grid-template-columns: minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); align-items: center; gap: 0; border: 1px solid #c2cfdd; border-radius: 0; text-align: left; padding-inline: 0; overflow: hidden; }.transaction-list-row > button > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; color: #5c687c; }
 .transaction-list-row-editor { flex: 1 1 auto; min-width: 0; min-height: 30px; display: grid; grid-template-columns: minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); align-items: center; gap: 0; border: 1px solid #287ac0; background: #e5f2ff; color: #163756; }.transaction-list-row-editor > * { min-width: 0; width: 100%; height: 24px; box-sizing: border-box; padding: 2px 4px; border: 0; border-right: 1px solid #c7d8e8; border-radius: 0; background: transparent; color: #163756; font: inherit; font-size: 10px; }
 .transaction-list-row-editor > input[type="color"] { padding: 2px 4px; }
 .transaction-list-row-editor > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -507,12 +507,12 @@
    of a Bookmark-only patch: every state (base/hover/selected/selected+hover/
    focus-visible/disabled) sets its own color, background and border,
    keeping border-width constant across states to avoid layout shift. */
-.transaction-list-row > button, .bookmark-list > button { color: #233a59; background: #fff; }
-.transaction-list-row > button:hover:not([data-selected="true"]):not(:disabled), .bookmark-list > button:hover:not([data-selected="true"]):not(:disabled) { border-color: var(--ds-hover-border, #9fc4e5); background: var(--ds-hover-bg, #f3f8fd); color: #163756; }
-.transaction-list-row > button[data-selected="true"], .bookmark-list > button[data-selected="true"] { border-color: var(--ds-selection-border, #287ac0); background: var(--ds-selection-bg, #e5f2ff); color: #163756; }
-.transaction-list-row > button[data-selected="true"]:hover, .bookmark-list > button[data-selected="true"]:hover { background: #d8ecfd; }
-.transaction-list-row > button:focus-visible, .bookmark-list > button:focus-visible { outline: 2px solid var(--ds-focus-color, #1675d1); outline-offset: -2px; z-index: 1; }
-.transaction-list-row > button:disabled, .bookmark-list > button:disabled { color: #8b97a8; background: #f3f5f8; border-color: #d7dee7; cursor: not-allowed; }
+.transaction-list-row > button:not(.transaction-disclosure-slot), .bookmark-list > button { color: #233a59; background: #fff; }
+.transaction-list-row > button:not(.transaction-disclosure-slot):hover:not([data-selected="true"]):not(:disabled), .bookmark-list > button:hover:not([data-selected="true"]):not(:disabled) { border-color: var(--ds-hover-border, #9fc4e5); background: var(--ds-hover-bg, #f3f8fd); color: #163756; }
+.transaction-list-row > button:not(.transaction-disclosure-slot)[data-selected="true"], .bookmark-list > button[data-selected="true"] { border-color: var(--ds-selection-border, #287ac0); background: var(--ds-selection-bg, #e5f2ff); color: #163756; }
+.transaction-list-row > button:not(.transaction-disclosure-slot)[data-selected="true"]:hover, .bookmark-list > button[data-selected="true"]:hover { background: #d8ecfd; }
+.transaction-list-row > button:not(.transaction-disclosure-slot):focus-visible, .bookmark-list > button:focus-visible { outline: 2px solid var(--ds-focus-color, #1675d1); outline-offset: -2px; z-index: 1; }
+.transaction-list-row > button:not(.transaction-disclosure-slot):disabled, .bookmark-list > button:disabled { color: #8b97a8; background: #f3f5f8; border-color: #d7dee7; cursor: not-allowed; }
 
 /* #746: visible Group creation next to the Tree Add control (same createTransactionGroup path as Bottom/Ribbon). */
 .tree-add-group-button { height: var(--ds-control-height, 22px); padding: 0 6px; border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; font-size: 10px; font-weight: 650; white-space: nowrap; }

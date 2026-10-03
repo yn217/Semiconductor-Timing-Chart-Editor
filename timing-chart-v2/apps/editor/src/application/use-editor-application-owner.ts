@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
+import type { ChangeSet, CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import { deriveTimingDiagnostics, deriveTimingDiagnosticsIfInputsChanged, type CanonicalSnapshot, type TimingDiagnostic } from "@timing-chart-v2/core";
 import type { HistoryState } from "@timing-chart-v2/history";
 import { validateCanonicalDocument, type CanonicalDocument, type CommandId, type DocumentProblem, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
@@ -40,6 +40,7 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
   if (runtimeRef.current === null) runtimeRef.current = new EditorApplicationRuntime(initialDocument);
   const runtime = runtimeRef.current;
   const [snapshot, setSnapshot] = useState<CanonicalSnapshot>(() => runtime.session.snapshot());
+  const [lastChangeSet, setLastChangeSet] = useState<ChangeSet>({ fullDocumentReplace: true });
   const [history, setHistory] = useState<HistoryState>(() => runtime.session.current().historyState());
   const [problem, setProblem] = useState("");
   const [validationPending, setValidationPending] = useState(false);
@@ -81,6 +82,7 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
       return result;
     }
     setSnapshot(result.snapshot);
+    setLastChangeSet(result.changeSet);
     setHistory(runtime.session.current().historyState());
     const interruptedOpenDiagnostics = pendingOpenDiagnosticsRef.current !== undefined;
     openDiagnosticsGenerationRef.current += 1;
@@ -126,6 +128,7 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
   const replaceSession = useCallback((document: CanonicalDocument | ParsedCanonicalDocument, diagnostics: readonly DocumentProblem[] = []) => {
     const session = runtime.session.replace(document);
     setSnapshot(session.getSnapshot());
+    setLastChangeSet({ fullDocumentReplace: true });
     setHistory(session.historyState());
     const canonical = session.getSnapshot().document;
     const generation = ++openDiagnosticsGenerationRef.current;
@@ -182,6 +185,7 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
   return {
     runtime,
     snapshot,
+    lastChangeSet,
     history,
     problem,
     validationDiagnostics,

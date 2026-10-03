@@ -40,7 +40,7 @@ test("Open replacement never paints old-document chrome next to new-document row
     requestAnimationFrame(sample);
   });
 
-  const fixture = await readFile(new URL("../../samples/showcase/21_large_feature_showcase.tcd.json", import.meta.url));
+  const fixture = await readFile(new URL("../../samples/old/pre-reset-2026-10-02/showcase/21_large_feature_showcase.tcd.json", import.meta.url));
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "21_large_feature_showcase.tcd.json", mimeType: "application/json", buffer: fixture });
   await expect(page.getByRole("heading", { name: "Large Feature Showcase — 128 cycles / 48 signals" })).toBeVisible();
   await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 30_000 });

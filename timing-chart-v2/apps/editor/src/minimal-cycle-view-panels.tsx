@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import type { RefObject } from "react";
 import { getGestureHint, subscribeGestureHint } from "./runtime/active-gesture-cancellation.js";
 import { cycleUnitWord } from "./transaction-tc.js";
@@ -6,6 +7,7 @@ import type { GroupId, SignalGroup, SpacerId } from "@timing-chart-v2/schema";
 import { ContextMenuSurface } from "./context-menu-surface.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
 import { EditorIcon } from "./editor-icon.js";
+import { RibbonIcon } from "./ribbon-icon.js";
 import { signalTypeLabel } from "./runtime/signal-type-registry.js";
 import { usePeerMenuSurface } from "./runtime/peer-menu-surface.js";
 import type { TransactionTreeFilterMode } from "./workspace/use-workspace-ui-state.js";
@@ -162,6 +164,21 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
   }, [addMenuOpen, moreMenuOpen]);
   const [transactionMoreOpen, setTransactionMoreOpen] = useState(false);
   const transactionMoreButton = useRef<HTMLButtonElement>(null);
+  const [transactionMenuPosition, setTransactionMenuPosition] = useState<{ readonly left: number; readonly top: number }>();
+  // The Transaction tree header clips its children (overflow:hidden grid), so the menu is portaled to <body> and anchored to the button;
+  // rendered inline it was cut to the first item and sat behind the timeline.
+  useLayoutEffect(() => {
+    if (!transactionMoreOpen) { setTransactionMenuPosition(undefined); return; }
+    const place = () => {
+      const trigger = transactionMoreButton.current;
+      if (!trigger) return;
+      const rect = trigger.getBoundingClientRect();
+      setTransactionMenuPosition({ left: Math.max(8, rect.right - 180), top: rect.bottom + 4 });
+    };
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
+  }, [transactionMoreOpen]);
   usePeerMenuSurface(addMenuOpen, onCloseAddMenu);
   usePeerMenuSurface(moreMenuOpen, onCloseMoreMenu);
   usePeerMenuSurface(transactionMoreOpen, () => setTransactionMoreOpen(false));
@@ -194,7 +211,7 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
       >
         <button type="button" className="tree-add-group-button" aria-label="New Transaction Group" title="New Transaction Group" data-testid="add-transaction-group-tree-visible" onClick={transactionMode.onAddGroup}>+ Group</button>
       </LeftPaneHeaderActions>
-      {transactionMoreOpen && <div className="tree-header-menu" role="menu" aria-label="Transaction tree actions" data-testid="transaction-tree-more-menu">
+      {transactionMoreOpen && transactionMenuPosition && createPortal(<div className="tree-header-menu tree-header-menu--floating" role="menu" aria-label="Transaction tree actions" data-testid="transaction-tree-more-menu" style={transactionMenuPosition}>
         <button type="button" role="menuitem" data-testid="transaction-tree-expand-all" onClick={() => { transactionMode.onExpandAll(); setTransactionMoreOpen(false); }}>Expand All</button>
         <button type="button" role="menuitem" data-testid="transaction-tree-collapse-all" onClick={() => { transactionMode.onCollapseAll(); setTransactionMoreOpen(false); }}>Collapse All</button>
         <hr role="separator" />
@@ -204,7 +221,7 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
         <button type="button" role="menuitem" data-testid="add-transaction-group-tree" onClick={() => { transactionMode.onAddGroup(); setTransactionMoreOpen(false); }}>Add Group…</button>
         <hr role="separator" />
         <button type="button" role="menuitem" disabled={transactionMode.filter === ""} onClick={() => { transactionMode.onFilterChange(""); setTransactionMoreOpen(false); }}>Clear Filter</button>
-      </div>}
+      </div>, document.body)}
     </span>
     <span className="role-column-heading" aria-label="Group">Group</span><span className="signal-column-heading" aria-label="Transaction">Transaction</span>
     <span className="frozen-pane-heading-gutter" aria-hidden="true" />
@@ -264,6 +281,7 @@ export type BottomEditorPanelProps<Tab extends string> = {
   readonly onFollowSelectionChange: (value: boolean) => void;
   readonly pinned: boolean;
   readonly onTogglePinned: () => void;
+  readonly targetLabel?: string | undefined;
   readonly summary?: ReactNode;
   readonly content: ReactNode;
   readonly contentClassName?: string;
@@ -274,7 +292,7 @@ export type BottomEditorPanelProps<Tab extends string> = {
  * the single active-tab content pane. Which editor renders for the active
  * tab is decided by the caller (it depends on the current selection across
  * several owners) and passed in as `content`. */
-export function BottomEditorPanel<Tab extends string>({ tabs, activeTab, onSelectTab, onTabKeyDown, followSelection, onFollowSelectionChange, pinned, onTogglePinned, summary, content, contentClassName }: BottomEditorPanelProps<Tab>) {
+export function BottomEditorPanel<Tab extends string>({ tabs, activeTab, onSelectTab, onTabKeyDown, followSelection, onFollowSelectionChange, pinned, onTogglePinned, targetLabel, summary, content, contentClassName }: BottomEditorPanelProps<Tab>) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsRef = useRef<HTMLSpanElement>(null);
   usePeerMenuSurface(settingsOpen, () => setSettingsOpen(false));
@@ -294,10 +312,11 @@ export function BottomEditorPanel<Tab extends string>({ tabs, activeTab, onSelec
         const tabId = `bottom-tab-${tab.toLowerCase()}`;
         return <button type="button" role="tab" key={tab} id={tabId} data-bottom-tab={tab} tabIndex={active ? 0 : -1} aria-label={tab} aria-selected={active} aria-controls="bottom-context-content" className={active ? "active" : ""} onClick={() => onSelectTab(tab)} onKeyDown={(event) => onTabKeyDown(event, tab)}>{tab}</button>;
       })}
-      {/* #440: Bottom target mode is always visible: an explicit Pin overrides Follow Selection. */}
-      <span className="bottom-target-mode" data-testid="bottom-target-mode" data-mode={pinned ? "pinned" : followSelection ? "following" : "manual"} title={pinned ? "Bottom keeps its pinned target; selection changes do not retarget it" : followSelection ? "Bottom follows the current selection" : "Bottom is not following the selection"}>{pinned ? "Pinned" : followSelection ? "Following selection" : "Not following"}</span>
+      {(pinned || !followSelection) && <output className="bottom-target-mode" data-testid="bottom-target-mode" aria-live="polite">
+        {pinned ? `Pinned${targetLabel ? `: ${targetLabel}` : " content"}` : `Fixed target${targetLabel ? `: ${targetLabel}` : ""}`}
+      </output>}
       <span className="bottom-settings-anchor" ref={settingsRef}>
-        <button type="button" className="bottom-settings-button" data-testid="bottom-settings" aria-label="Bottom Panel settings" aria-haspopup="true" aria-expanded={settingsOpen} title="Bottom panel behavior: Follow Selection, Pin" onClick={() => setSettingsOpen((open) => !open)}>{"⚙"}</button>
+        <button type="button" className="bottom-settings-button" data-testid="bottom-settings" aria-label="Bottom Panel settings" aria-haspopup="true" aria-expanded={settingsOpen} title="Bottom panel behavior: Follow Selection, Pin" onClick={() => setSettingsOpen((open) => !open)}><RibbonIcon name="i-settings" /></button>
         <div className="bottom-settings-popover" data-testid="bottom-settings-popover" role="dialog" aria-label="Bottom Panel Settings" hidden={!settingsOpen} onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); setSettingsOpen(false); settingsRef.current?.querySelector<HTMLElement>(".bottom-settings-button")?.focus(); } }}>
           <strong>Bottom Panel Settings</strong>
           <p>Choose how the Bottom Panel reacts when the editor selection changes.</p>
@@ -350,15 +369,18 @@ export type EditorStatusBarProps = {
   // textual indicator, not the CSS border alone. `undefined` outside
   // Split mode.
   readonly activePaneStatus: string | undefined;
+  /** Existing Open phase/renderer metrics, read only when developer diagnostics are expanded. */
+  readonly openPerformanceData?: () => string;
 };
 
 /** The editor's bottom status bar. Purely a display of values already
  * computed by their owners (Application/History, Selection, Timeline
  * Geometry/Navigation, Workspace UI State) -- no state or logic of its own. */
-export function EditorStatusBar({ toolStatus, selectionStatus, signalCount, annotationCount, rangeStatus, selectedCycle, zoom, snapEnabled, viewMode, statusContext, hideRevisionDetail, revision, undoDepth, redoDepth, timeAxisStatus, dirty, problemsCount, problemsPending, waveDromHasError, cursorStatus, activePaneStatus }: EditorStatusBarProps) {
+export function EditorStatusBar({ toolStatus, selectionStatus, signalCount, annotationCount, rangeStatus, selectedCycle, zoom, snapEnabled, viewMode, statusContext, hideRevisionDetail, revision, undoDepth, redoDepth, timeAxisStatus, dirty, problemsCount, problemsPending, waveDromHasError, cursorStatus, activePaneStatus, openPerformanceData }: EditorStatusBarProps) {
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const gestureHint = useSyncExternalStore(subscribeGestureHint, getGestureHint);
   const diagnosticClass = hideRevisionDetail ? "status-detail-hidden" : diagnosticsOpen ? undefined : "visually-hidden";
+  const openPerformanceDetails = diagnosticsOpen ? openPerformanceData?.() : undefined;
   return <footer className="status-bar" aria-label="Editor status">
     <span data-testid="tool-status">{gestureHint ?? toolStatus}</span>
     <button type="button" className="status-diagnostics-toggle" data-testid="status-diagnostics-toggle" aria-pressed={diagnosticsOpen} title="Show developer diagnostics (Canonical revision, History counters, renderer state)" onClick={() => setDiagnosticsOpen((open) => !open)}>Diagnostics</button>
@@ -369,6 +391,7 @@ export function EditorStatusBar({ toolStatus, selectionStatus, signalCount, anno
     <span className="status-context" data-testid="status-context">{statusContext}</span>
     <span className={diagnosticClass} data-testid="revision-status">Canonical revision {revision}</span>
     <span className={diagnosticClass} data-testid="history-status">History {undoDepth} / Redo {redoDepth}</span>
+    {openPerformanceDetails !== undefined && <span className="visually-hidden" data-testid="open-performance-diagnostics" role="note">Open performance diagnostics: {openPerformanceDetails}</span>}
     <span data-testid="time-axis-status">{timeAxisStatus}</span><span data-testid="dirty-status">{dirty ? "Modified" : "Clean"}</span><span data-testid="problems-status">{problemsPending ? "Problems: Checking…" : `Problems: ${problemsCount}`}</span><span className={waveDromHasError ? undefined : diagnosticClass} data-testid="wavedrom-status">WaveDrom: {waveDromHasError ? "Error" : "Ready"}</span>
   </footer>;
 }

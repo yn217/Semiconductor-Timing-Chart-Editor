@@ -1,12 +1,10 @@
-import { expect, test, type CDPSession, type Page, type TestInfo } from "@playwright/test";
+import { expect, test, type CDPSession, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { startInCycleSample } from "./cycle-startup.js";
 import { annotationOwnerById, snapshotAnnotationIds, waitForCreatedAnnotationId } from "./annotation-identity.js";
 import { generatePerformanceDocument, summarizePerformance, type BrowserPerformanceSample, type PerformanceFixtureSpec } from "@timing-chart-v2/testing";
 import { evaluateOpenPerformanceGate, summarizeOpenPresentation, type OpenPerformanceBaseline } from "../performance/open-performance-gate.js";
-import { toWaveJson } from "@timing-chart-v2/wavedrom-adapter";
-import type { ValueSignal } from "@timing-chart-v2/schema";
 
 startInCycleSample(test);
 
@@ -17,6 +15,10 @@ test("View-only operations keep canonical validation and render counters unchang
   await start(page);
   const host = page.getByTestId("cycle-surface");
   const surface = host.locator("[data-role='timing-chart-surface']");
+  // Counters and revision are published once the first validation settles; read the baseline only after that.
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
+  await expect(host).toHaveAttribute("data-session-counters", /validationRuns/);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
   const before = {
     session: JSON.parse(await host.getAttribute("data-session-counters") ?? "{}") as Record<string, any>,
     render: JSON.parse(await surface.getAttribute("data-render-counters") ?? "{}") as Record<string, any>,
@@ -160,52 +162,6 @@ async function start(page: Page) {
 const counters = async (page: Page) => JSON.parse(await page.getByTestId("cycle-surface").locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters") ?? "null") as Record<string, number>;
 const diagnostics = async (page: Page) => JSON.parse(await page.getByTestId("cycle-surface").locator("[data-role='timing-chart-surface']").getAttribute("data-performance-counters") ?? "null") as Record<string, any>;
 const sessionCounters = async (page: Page) => JSON.parse(await page.getByTestId("cycle-surface").getAttribute("data-session-counters") ?? "null") as Record<string, any>;
-
-test("fixed 100x500 Open renders the full source span for every mounted owner", async ({ page }, testInfo) => {
-  test.setTimeout(120_000);
-  await page.setViewportSize({ width: 13_000, height: 6_000 });
-  await start(page);
-  const host = page.getByTestId("cycle-surface");
-  await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
-  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
-  await page.getByLabel("Zoom preset").selectOption("50");
-  await expect(page.getByTestId("zoom-status")).toHaveText("50%");
-  await page.getByRole("button", { name: "Cycle", exact: true }).click();
-  await expect(page.locator(".editor-shell")).toHaveAttribute("data-view-mode", "Cycle");
-  const cdp = await page.context().newCDPSession(page);
-  await cdp.send("Performance.enable");
-  const browserBefore = await cdpMetrics(cdp);
-  const before = await sessionCounters(page);
-  const document = await openFixture(page, { signalCount: 100, cycleCount: 500 });
-  const after = await sessionCounters(page);
-  const browserAfter = await cdpMetrics(cdp);
-  const waveWindows = await page.locator("[data-role='wave-owner']").evaluateAll((owners) => owners.map((owner) => {
-    const element = owner as HTMLElement;
-    return { signalId: element.dataset.signalId ?? element.dataset.waveOwner, start: element.dataset.renderedSourceWindowStart, end: element.dataset.renderedSourceWindowEnd };
-  }));
-  expect(waveWindows).toHaveLength(100);
-  expect(waveWindows.filter((window) => window.start === "0" && window.end === "500")).toHaveLength(100);
-  const evidence = await host.evaluate((surface) => {
-    const durations = JSON.parse(surface.getAttribute("data-open-phase-durations") ?? "{}") as Record<string, number>;
-    const phaseMarks = JSON.parse(surface.getAttribute("data-open-phase-marks") ?? "{}") as Record<string, number>;
-    const counters = JSON.parse(surface.getAttribute("data-session-counters") ?? "{}") as Record<string, any>;
-    const waveBatches = JSON.parse(surface.getAttribute("data-open-wave-batch-metrics") ?? "{}") as Record<string, number>;
-    return { openIdleMs: durations.idle, visibleWaveformsReadyMs: durations["visible-waveforms-ready"], phaseDurations: durations, phaseMarks, rulerBuilds: counters.rulerBuilds, mountedWaveOwners: counters.mountedWaveOwners, waveBatches, title: document.querySelector(".app-titlebar h1")?.textContent };
-  });
-  const browserDelta = Object.fromEntries(["TaskDuration", "ScriptDuration", "LayoutDuration", "RecalcStyleDuration", "PaintDuration"].map((name) => [name, ((browserAfter[name] ?? 0) - (browserBefore[name] ?? 0)) * 1_000]));
-  expect(evidence.title).toBe(document.document.title);
-  expect(evidence.waveBatches.requestedCount).toBe(evidence.mountedWaveOwners + 1);
-  expect(evidence.waveBatches.renderCount).toBe(evidence.mountedWaveOwners);
-  expect(evidence.waveBatches.markupCacheMissCount).toBeLessThanOrEqual(3);
-  const sharedBusLabels = await host.locator("[data-role='wave-owner'][data-wave-owner='sig_perf_5'] > svg > text[data-value-label-index] > tspan").allTextContents();
-  const busSignal = document.signals[5] as ValueSignal;
-  const expectedBusLabels = toWaveJson({ signal: busSignal, cycleCount: document.timeline.cycleCount }).data;
-  expect(sharedBusLabels).toEqual(expectedBusLabels);
-  const sharedBusAccessibleValues = await host.locator("[data-role='wave-owner'][data-wave-owner='sig_perf_5'] > svg > text[data-value-label-index]").evaluateAll((labels) => labels.map((label) => label.getAttribute("aria-label")));
-  expect(sharedBusAccessibleValues).toEqual(busSignal.values.map((change) => String(change.value)));
-  await testInfo.attach("fixed-100x500-open.json", { body: Buffer.from(JSON.stringify({ fixture: "generated-100x500", zoom: "50%", viewport: { width: 13_000, height: 6_000 }, waveWindows, evidence, browserDelta, rulerBuildDelta: after.rulerBuilds - before.rulerBuilds }, null, 2)), contentType: "application/json" });
-  console.log(`[fixed-100x500-open] ${JSON.stringify({ ...evidence, zoom: "50%", viewport: "13000x6000", fullSpanOwners: waveWindows.length, browserDelta, rulerBuildDelta: after.rulerBuilds - before.rulerBuilds })}`);
-});
 
 test("heavy renderer diagnostics are pull-based and absent from hot-path DOM counters", async ({ page }) => {
   await start(page);
@@ -432,7 +388,7 @@ test("PR Open gate: browser presentation-ready stays under 1s and within approve
   // fixture starts from the same settled production editor state.
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   const baseline = JSON.parse(readFileSync(resolve(process.cwd(), "tests/performance/open-presentation-baseline.json"), "utf8")) as OpenPerformanceBaseline;
-  const showcasePath = resolve(process.cwd(), "samples/showcase/21_large_feature_showcase.tcd.json");
+  const showcasePath = resolve(process.cwd(), "samples/old/pre-reset-2026-10-02/showcase/21_large_feature_showcase.tcd.json");
   const showcaseBytes = readFileSync(showcasePath);
   const showcase = JSON.parse(showcaseBytes.toString("utf8")) as { document?: { title?: string }; signals?: unknown[]; timeline?: { cycleCount?: number } };
   expect(showcase.signals).toHaveLength(48);

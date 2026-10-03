@@ -1,0 +1,256 @@
+{
+  "formatVersion": 2,
+  "document": {
+    "id": "current.timegroups",
+    "title": "Bookmarks and nested folded time groups",
+    "header": {
+      "subtitle": "Current product contract",
+      "description": "Bookmarks and nested folded time groups",
+      "notes": "Authored from the current canonical schema; not migrated from a historical fixture.",
+      "preconditions": [],
+      "constraints": [],
+      "exceptions": []
+    },
+    "footer": {
+      "figureNumber": "CURRENT.TIMEGROUPS",
+      "revision": "Current",
+      "text": "Current-spec reference"
+    }
+  },
+  "timeline": {
+    "start": 0,
+    "end": 128,
+    "timeBase": "cycle",
+    "cycleCount": 128,
+    "edge": "rising",
+    "labelAnchors": [
+      {
+        "id": "label.resume",
+        "source": 80,
+        "display": 48,
+        "ownerTimeGroupId": "timegroup.fold"
+      }
+    ],
+    "referenceClock": "sig.clk"
+  },
+  "signalGroups": [
+    {
+      "id": "group.time",
+      "name": "Time mapping",
+      "rows": [
+        "sig.clk",
+        "sig.reset",
+        "sig.req"
+      ]
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig.clk",
+      "name": "core_clk",
+      "type": "clock",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "soc",
+          "timing"
+        ],
+        "signalName": "core_clk"
+      },
+      "display": {
+        "name": "core_clk",
+        "visible": true
+      },
+      "generator": {
+        "start": 0,
+        "period": 4,
+        "duty": 0.5,
+        "phase": 0,
+        "initial": 0,
+        "polarity": "positive",
+        "suppressedPeriods": [
+          12,
+          13
+        ]
+      },
+      "edgeCounter": {
+        "show": true,
+        "mode": "rising",
+        "startNumber": 0,
+        "countFrom": "signal-start",
+        "labelEvery": 4,
+        "position": "above",
+        "offset": {
+          "x": 0,
+          "y": -6
+        }
+      },
+      "enable": [
+        {
+          "id": "change.main-clock.enable.0",
+          "start": 0,
+          "value": 1
+        },
+        {
+          "id": "change.main-clock.enable.1",
+          "start": 52,
+          "value": 0
+        },
+        {
+          "id": "change.main-clock.enable.2",
+          "start": 84,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig.reset",
+      "name": "reset_n",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "soc",
+          "timing"
+        ],
+        "signalName": "reset_n"
+      },
+      "display": {
+        "name": "reset_n",
+        "visible": true
+      },
+      "values": [
+        {
+          "id": "change.reset.0",
+          "start": 0,
+          "value": 0
+        },
+        {
+          "id": "change.reset.1",
+          "start": 4,
+          "value": 1
+        }
+      ],
+      "resetSemantics": {
+        "polarity": "active-low",
+        "synchronization": "asynchronous",
+        "assertCycle": 0,
+        "deassertCycle": 4
+      }
+    },
+    {
+      "id": "sig.req",
+      "name": "request_valid",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "soc",
+          "timing"
+        ],
+        "signalName": "request_valid"
+      },
+      "display": {
+        "name": "request_valid",
+        "visible": true
+      },
+      "values": [
+        {
+          "id": "change.req.0",
+          "start": 0,
+          "value": 0
+        },
+        {
+          "id": "change.req.1",
+          "start": 8,
+          "value": 1
+        },
+        {
+          "id": "change.req.2",
+          "start": 12,
+          "value": 0
+        }
+      ]
+    }
+  ],
+  "bookmarks": [
+    {
+      "id": "bookmark.before",
+      "name": "Before idle",
+      "start": 32
+    },
+    {
+      "id": "bookmark.after",
+      "name": "Resume",
+      "start": 80
+    },
+    {
+      "id": "bookmark.terminal",
+      "name": "Last cycle",
+      "start": 127
+    }
+  ],
+  "timeGroups": [
+    {
+      "id": "timegroup.parent",
+      "name": "Boot and service",
+      "start": 16,
+      "end": 96
+    },
+    {
+      "id": "timegroup.fold",
+      "parentId": "timegroup.parent",
+      "name": "Idle interval",
+      "start": 48,
+      "end": 80,
+      "presentation": {
+        "collapsed": true,
+        "foldStyle": "axis-break",
+        "foldLabel": "Idle",
+        "resumeLabelAnchorId": "label.resume"
+      }
+    },
+    {
+      "id": "timegroup.compact",
+      "parentId": "timegroup.parent",
+      "name": "Short maintenance gap",
+      "start": 84,
+      "end": 92,
+      "presentation": {
+        "collapsed": true,
+        "foldStyle": "compact",
+        "foldLabel": "Maintenance"
+      }
+    }
+  ],
+  "annotations": [],
+  "annotationGroups": [],
+  "legend": {
+    "show": true,
+    "orientation": "horizontal",
+    "usedRolesOnly": true,
+    "position": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  "layout": {
+    "roleColumnWidth": 32,
+    "signalNameWidth": 168,
+    "signalNameAlign": "left",
+    "rowHeight": 28,
+    "signalSpacing": 6,
+    "overflow": "ellipsis"
+  },
+  "transactions": [
+    {
+      "id": "txn.fold-cross",
+      "name": "Request crosses idle",
+      "start": 40,
+      "end": 88,
+      "laneId": "lane:main"
+    }
+  ],
+  "constraints": [],
+  "checkSettings": {}
+}

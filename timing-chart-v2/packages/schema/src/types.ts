@@ -199,7 +199,12 @@ export interface SignalGroup {
   readonly style?: SignalGroupStyle;
 }
 
-export type AnnotationType = "text" | "callout" | "verticalLine" | "range" | "bracket" | "highlight" | "marker" | "measurement" | "arrow" | "dependency" | "timingRegion" | "ghostTrace" | "rectangle" | "ellipse" | "connector" | "textbox";
+/** Runtime source of truth for supported Annotation kinds and their TypeScript union. */
+export const ANNOTATION_TYPES = [
+  "text", "callout", "verticalLine", "range", "bracket", "highlight", "marker", "measurement",
+  "arrow", "dependency", "timingRegion", "ghostTrace", "rectangle", "ellipse", "connector", "textbox",
+] as const;
+export type AnnotationType = (typeof ANNOTATION_TYPES)[number];
 export type HighlightPositionMode = "cycle-snap" | "free";
 
 export interface Annotation {

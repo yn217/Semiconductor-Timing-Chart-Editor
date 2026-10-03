@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { refreshRulerAndGridIfNeeded } from "../../apps/editor/src/runtime/timeline-presentation-refresh.js";
+import { renderGeometryGrid } from "../../apps/editor/src/render-geometry-grid.js";
+import { DisplayTimeMappingCache } from "@timing-chart-v2/projection";
+import { canonicalFixture } from "../fixtures/canonical.js";
+import { applyPublishedTimeAxisMetrics, refreshGridPresentation, refreshRangeBandPresentation, refreshRulerAndGridIfNeeded } from "../../apps/editor/src/runtime/timeline-presentation-refresh.js";
+
+vi.mock("../../apps/editor/src/render-geometry-grid.js", () => ({ renderGeometryGrid: vi.fn() }));
 
 describe("Open ruler/grid readiness", () => {
   it("does not rebuild ruler and grid a second time after reference geometry initialized them", () => {
@@ -20,5 +25,93 @@ describe("Open ruler/grid readiness", () => {
 
     expect(refreshRuler).toHaveBeenCalledTimes(1);
     expect(refreshGrid).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders Grid from the published immutable TimeAxisMetrics generation", () => {
+    const document = canonicalFixture();
+    const clock = document.signals.find((signal) => signal.type === "clock")!;
+    const mapping = new DisplayTimeMappingCache().get(document.timeline, document.timeGroups);
+    const geometry = { signalId: clock.id, find: vi.fn() } as never;
+    const timeAxis = { mode: "reference-clock" as const, ownerSignalId: clock.id, geometry };
+    const metrics = Object.freeze({ generation: 7, timeAxis, mapping, presentationScale: 1.5, displayCycleCount: mapping.displayCycleCount });
+    const grid = { closest: () => ({ dataset: { viewMode: "Cycle" } }) } as unknown as HTMLElement;
+
+    refreshGridPresentation(grid, document, new Map([[clock.id, geometry]]), new DisplayTimeMappingCache(), true, 100, 800, 1, 10, metrics);
+
+    expect(renderGeometryGrid).toHaveBeenCalledWith(grid, geometry, clock.id, true, 100, mapping, 800, 1.5, "reference-clock", 1, metrics);
+  });
+
+  it("repositions ruler boundaries and mounted Wave owners from the published generation", () => {
+    const document = canonicalFixture();
+    const mapping = new DisplayTimeMappingCache().get(document.timeline, [
+      { id: "fold" as never, name: "Fold", start: 2, end: 4, presentation: { collapsed: true, foldStyle: "axis-break" as const, foldLabel: "2 cycles" } },
+    ]);
+    const tick = { dataset: { geometrySourceCycle: "4" }, style: { left: "stale" } };
+    const marker = { dataset: { geometrySourceCycle: "6" }, style: { left: "stale" } };
+    const owner = {
+      tagName: "DIV",
+      dataset: { renderedSourceWindowStart: "4", renderedSourceWindowEnd: "6" },
+      style: { left: "stale", width: "stale" },
+      querySelector: () => ({ viewBox: { baseVal: { width: 120 } } }),
+    };
+    const ruler = { querySelectorAll: (selector: string) => selector === "[data-geometry-source-cycle]" ? [tick, marker] : [], closest: () => undefined } as unknown as HTMLElement;
+    const viewport = { querySelectorAll: (selector: string) => selector === "[data-wave-owner]" ? [owner] : [] } as unknown as HTMLElement;
+    const metrics = Object.freeze({
+      generation: 9,
+      mapping,
+      presentationScale: 1.5,
+      pxPerDisplayCycle: 10,
+      screenOriginX: 100,
+      sourceBoundaryToContentX: (cycle: number) => 100 + (mapping.sourceToDisplay(cycle) ?? 0) * 10,
+      displayBoundaryToContentX: (cycle: number) => 100 + cycle * 10,
+    }) as never;
+
+    applyPublishedTimeAxisMetrics(ruler, viewport, metrics);
+
+    expect(tick.style.left).toBe("120px");
+    expect(marker.style.left).toBe("140px");
+    expect(owner.style.left).toBe("89.25px");
+    expect(owner.style.width).toBe("180px");
+  });
+
+  it("reapplies TimeGroup outline start and end from the same published generation", () => {
+    const outline = {
+      dataset: { geometrySourceCycle: "2", geometryEndSourceCycle: "6" },
+      style: { left: "stale", width: "stale" },
+    };
+    const ruler = { querySelectorAll: () => [outline], closest: () => undefined } as unknown as HTMLElement;
+    const mapping = {
+      sourceToDisplay: (cycle: number) => cycle,
+      sourceCycleCount: 10,
+    } as never;
+    const metrics = Object.freeze({
+      generation: 14,
+      mapping,
+      sourceBoundaryToContentX: (cycle: number) => 30 + cycle * 12,
+    }) as never;
+
+    applyPublishedTimeAxisMetrics(ruler, undefined, metrics);
+
+    expect(outline.style.left).toBe("54px");
+    expect(outline.style.width).toBe("48px");
+  });
+
+  it("projects both range boundaries and zoom from one captured metrics generation", () => {
+    const element = () => ({ hidden: true, dataset: {} as Record<string, string>, style: {} as Record<string, string>, setAttribute: vi.fn() });
+    const band = element();
+    const rulerBand = element();
+    const viewport = { querySelector: () => band, clientHeight: 0 } as unknown as HTMLElement;
+    const ruler = { querySelector: () => rulerBand, querySelectorAll: () => [] } as unknown as HTMLElement;
+    const metrics = Object.freeze({ generation: 12, zoom: 2 }) as never;
+    const resolveBoundary = vi.fn((cycle: number, snapshot: { generation: number }) => cycle * (snapshot.generation === 12 ? 10 : 100));
+
+    refreshRangeBandPresentation(viewport, ruler, {} as HTMLElement, true, undefined, { start: 2, end: 6 }, resolveBoundary, metrics, 5, 40);
+
+    expect(resolveBoundary).toHaveBeenCalledWith(2, metrics);
+    expect(resolveBoundary).toHaveBeenCalledWith(6, metrics);
+    expect(band.style.left).toBe("45px");
+    expect(band.style.width).toBe("80px");
+    expect(rulerBand.style.left).toBe("20px");
+    expect(rulerBand.style.width).toBe("40px");
   });
 });

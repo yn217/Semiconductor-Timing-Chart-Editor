@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { startInCycleSample } from "./cycle-startup.js";
+import { waveTransitionXs, waveUseHrefs } from "./wave-probe.js";
 
 startInCycleSample(test);
 
@@ -211,7 +212,7 @@ test("Bottom Clock editor applies exact non-50% Duty through WaveDrom and preser
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
   const editor = page.getByTestId("signal-editor");
   const clockOwner = surface.locator("[data-signal-id='sig_cycle_clock']");
-  const beforeUses = await clockOwner.locator("svg use").evaluateAll((uses) => uses.map((use) => use.getAttribute("xlink:href") ?? use.getAttribute("href")));
+  const beforeUses = await waveUseHrefs(page, "sig_cycle_clock");
   const beforeCounters = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   const duty = editor.getByLabel("Clock duty");
   await expect(duty).toBeEnabled();
@@ -222,7 +223,7 @@ test("Bottom Clock editor applies exact non-50% Duty through WaveDrom and preser
   await expect(clockOwner).not.toHaveAttribute("data-wave-error");
   await expect(clockOwner.locator("svg")).toHaveCount(1);
   await expect(duty).toHaveValue("0.25");
-  const afterUses = await clockOwner.locator("svg use").evaluateAll((uses) => uses.map((use) => use.getAttribute("xlink:href") ?? use.getAttribute("href")));
+  const afterUses = await waveUseHrefs(page, "sig_cycle_clock");
   expect(afterUses).not.toEqual(beforeUses);
   const afterCounters = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   expect(afterCounters.waveDromRenders).toBe(beforeCounters.waveDromRenders + 1);
@@ -252,7 +253,7 @@ test("Bottom Clock editor applies suppressed periods and preserves them through 
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
   const editor = page.getByTestId("signal-editor");
   const clockOwner = surface.locator("[data-signal-id='sig_cycle_clock']");
-  const beforeUses = await clockOwner.locator("svg use").evaluateAll((uses) => uses.map((use) => use.getAttribute("xlink:href") ?? use.getAttribute("href")));
+  const beforeUses = await waveUseHrefs(page, "sig_cycle_clock");
   await editor.getByLabel("Clock suppressed periods").fill("1, 1");
   await editor.getByTestId("apply-clock-generator").click();
   await expect(page.getByTestId("clock-generator-error")).toContainText("must not contain duplicates");
@@ -262,7 +263,7 @@ test("Bottom Clock editor applies suppressed periods and preserves them through 
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(clockOwner).not.toHaveAttribute("data-wave-error");
-  const afterUses = await clockOwner.locator("svg use").evaluateAll((uses) => uses.map((use) => use.getAttribute("xlink:href") ?? use.getAttribute("href")));
+  const afterUses = await waveUseHrefs(page, "sig_cycle_clock");
   expect(afterUses).not.toEqual(beforeUses);
   await editor.getByTestId("editor-undo").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
@@ -327,19 +328,11 @@ test("moves the rendered waveform transition to the edited Start cycle, not just
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   const surface = host.locator("[data-role='timing-chart-surface']");
-  const wave = surface.locator("[data-signal-id='sig_cycle_request'] > svg");
   const ruler = page.getByTestId("cycle-ruler");
 
   const transitionXs = async () => {
-    // WaveDrom keeps a large hidden symbol pool in each SVG. Restrict the
-    // geometry probe to visible uses so the acceptance check does not spend
-    // a timeout asking Chromium for boxes of hidden template nodes.
-    return wave.locator("use").evaluateAll((nodes) => nodes.flatMap((node) => {
-      const element = node as SVGGraphicsElement;
-      const box = element.getBoundingClientRect();
-      const shape = node.getAttribute("xlink:href") ?? node.getAttribute("href");
-      return box.width > 0 && box.height > 0 && shape?.includes("m") ? [box.x] : [];
-    }));
+    // Transition shapes live in the blob wave artifact: read them (screen X) through the semantic wave probe.
+    return waveTransitionXs(page, "sig_cycle_request");
   };
 
   const beforeXs = await transitionXs();

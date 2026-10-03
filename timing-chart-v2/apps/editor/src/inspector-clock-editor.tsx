@@ -161,7 +161,7 @@ function InspectorClockEditor({ signal, document, viewport, commands, onReveal, 
     {problem && <div className="editor-problem" role="alert" data-testid="clock-conversion-problem">{problem}</div>}</div>
     <div className="inspector-sticky-footer">
       {edgeCounterChanged && <DraftStatus testId="inspector-edge-counter-unapplied" />}
-      <span className="inspector-footer-buttons"><button type="button" data-testid="cancel-inspector-draft" onClick={onCancel}>Revert</button></span>
+      <span className="inspector-footer-buttons"><button type="button" data-testid="cancel-inspector-draft" aria-label="Discard unapplied Inspector draft" title="Discard unapplied changes and restore the last applied values" onClick={onCancel}>Revert draft</button></span>
     </div>
     <MiniMap document={document} viewport={viewport} />
   </aside>;

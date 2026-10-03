@@ -15,7 +15,7 @@ test("Signal context menu opens enabled for the invoking row on its first visibl
   await page.goto("/");
   const surface = page.getByTestId("cycle-surface");
   await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
-  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/showcase/21_large_feature_showcase.tcd.json"));
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/old/pre-reset-2026-10-02/showcase/21_large_feature_showcase.tcd.json"));
   await expect(page.locator(".editor-shell")).toHaveAttribute("data-signal-count", "48");
   await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 30_000 });
   await expect(page.getByTestId("selection-status")).toContainText("None");
@@ -50,7 +50,7 @@ test("Signal context menu is dismissed when the virtualized tree scrolls under i
   await page.goto("/");
   const surface = page.getByTestId("cycle-surface");
   await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
-  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/showcase/21_large_feature_showcase.tcd.json"));
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/old/pre-reset-2026-10-02/showcase/21_large_feature_showcase.tcd.json"));
   await expect(page.locator(".editor-shell")).toHaveAttribute("data-signal-count", "48");
   await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 30_000 });
   const row = surface.locator("[data-role='frozen-row'][data-row-id='s.reqv']");

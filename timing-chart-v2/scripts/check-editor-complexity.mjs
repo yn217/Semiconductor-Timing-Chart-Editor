@@ -141,7 +141,6 @@ const presentationCommandSources = await Promise.all([
   ["document properties constructs semantic commands", "apps/editor/src/document-properties.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
   ["legend view constructs semantic commands", "apps/editor/src/legend-view.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
   ["bookmark editor constructs semantic commands", "apps/editor/src/bookmark-editor.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
-  ["annotation editor constructs semantic commands", "apps/editor/src/annotation-editor.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
   ["annotation list constructs semantic commands", "apps/editor/src/annotation-list.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
 ].map(async ([name, owner, pattern]) => [name, pattern, await readFile(resolve(root, owner), "utf8")]));
 const requiredShellContracts = [

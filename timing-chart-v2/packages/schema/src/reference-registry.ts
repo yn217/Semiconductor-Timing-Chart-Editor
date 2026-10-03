@@ -1,4 +1,4 @@
-import type { CanonicalDocument } from "./types.js";
+import type { Annotation, CanonicalDocument } from "./types.js";
 
 export type CanonicalReferenceTarget = "signal" | "time-group" | "group" | "spacer" | "bookmark" | "enum";
 
@@ -24,10 +24,11 @@ export interface CanonicalReference {
   readonly path: string;
 }
 
-type CanonicalReferenceIndex = ReadonlyMap<
-  CanonicalReferenceTarget,
-  ReadonlyMap<string, readonly CanonicalReference[]>
->;
+type CanonicalReferenceIndex = Readonly<{
+  byTarget: ReadonlyMap<CanonicalReferenceTarget, ReadonlyMap<string, readonly CanonicalReference[]>>;
+  annotationById: ReadonlyMap<string, Annotation>;
+  annotationOrderById: ReadonlyMap<string, number>;
+}>;
 
 // Reference results are owned by these immutable collections, not by the root
 // document wrapper. The document ID is stored at the leaf because it supplies
@@ -36,6 +37,11 @@ type CanonicalReferenceIndex = ReadonlyMap<
 type ReferenceIndexCacheEntry = Readonly<{ documentId: string; index: CanonicalReferenceIndex }>;
 type ReferenceIndexCacheNode = WeakMap<object, ReferenceIndexCacheNode | ReferenceIndexCacheEntry>;
 const referenceIndexes: ReferenceIndexCacheNode = new WeakMap();
+const referenceMetrics = { indexBuilds: 0, referencesEnumerated: 0, targetQueries: 0, referencesVisited: 0 };
+
+export function canonicalReferenceMetrics(): Readonly<typeof referenceMetrics> {
+  return Object.freeze({ ...referenceMetrics });
+}
 
 /**
  * Enumerates the currently supported canonical stable-ID relationships.
@@ -166,7 +172,10 @@ function canonicalReferenceIndex(document: CanonicalDocument): CanonicalReferenc
   if (cached !== undefined && !(cached instanceof WeakMap) && cached.documentId === document.document.id) return cached.index;
 
   const mutable = new Map<CanonicalReferenceTarget, Map<string, CanonicalReference[]>>();
-  for (const reference of canonicalReferences(document)) {
+  const references = canonicalReferences(document);
+  referenceMetrics.indexBuilds += 1;
+  referenceMetrics.referencesEnumerated += references.length;
+  for (const reference of references) {
     let byId = mutable.get(reference.targetType);
     if (byId === undefined) {
       byId = new Map();
@@ -180,13 +189,56 @@ function canonicalReferenceIndex(document: CanonicalDocument): CanonicalReferenc
   for (const byId of mutable.values()) {
     for (const bucket of byId.values()) Object.freeze(bucket);
   }
-  const index: CanonicalReferenceIndex = mutable;
+  const annotationById = new Map(document.annotations.map((annotation) => [annotation.id, annotation]));
+  const annotationOrderById = new Map(document.annotations.map((annotation, index) => [annotation.id, index]));
+  const index: CanonicalReferenceIndex = { byTarget: mutable, annotationById, annotationOrderById };
   node.set(leafOwner, { documentId: document.document.id, index });
   return index;
 }
 
 export function referencesTo(document: CanonicalDocument, targetType: CanonicalReferenceTarget, targetId: string): readonly CanonicalReference[] {
-  return canonicalReferenceIndex(document).get(targetType)?.get(targetId) ?? EMPTY_REFERENCES;
+  referenceMetrics.targetQueries += 1;
+  const references = canonicalReferenceIndex(document).byTarget.get(targetType)?.get(targetId) ?? EMPTY_REFERENCES;
+  referenceMetrics.referencesVisited += references.length;
+  return references;
+}
+
+/** Returns references for a set of targets without enumerating unrelated owners. */
+export function referencesToAny(
+  document: CanonicalDocument,
+  targetType: CanonicalReferenceTarget,
+  targetIds: Iterable<string>,
+): readonly CanonicalReference[] {
+  const index = canonicalReferenceIndex(document);
+  referenceMetrics.targetQueries += 1;
+  const byId = index.byTarget.get(targetType);
+  if (byId === undefined) return EMPTY_REFERENCES;
+  const references: CanonicalReference[] = [];
+  const seenTargets = new Set<string>();
+  for (const targetId of targetIds) {
+    if (seenTargets.has(targetId)) continue;
+    seenTargets.add(targetId);
+    const bucket = byId.get(targetId);
+    if (bucket === undefined) continue;
+    referenceMetrics.referencesVisited += bucket.length;
+    references.push(...bucket);
+  }
+  return references.length === 0 ? EMPTY_REFERENCES : references;
+}
+
+/** Resolves annotation-owned references through the same immutable snapshot index. */
+export function annotationsForReferences(
+  document: CanonicalDocument,
+  references: Iterable<CanonicalReference>,
+): readonly Annotation[] {
+  const index = canonicalReferenceIndex(document);
+  const annotationIds = new Set<string>();
+  for (const reference of references) {
+    if (index.annotationById.has(reference.ownerId)) annotationIds.add(reference.ownerId);
+  }
+  return [...annotationIds]
+    .sort((left, right) => index.annotationOrderById.get(left)! - index.annotationOrderById.get(right)!)
+    .map((annotationId) => index.annotationById.get(annotationId)!);
 }
 
 const EMPTY_REFERENCES: readonly CanonicalReference[] = Object.freeze([]);

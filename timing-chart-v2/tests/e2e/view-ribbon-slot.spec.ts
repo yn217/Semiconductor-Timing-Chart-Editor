@@ -121,6 +121,8 @@ test("View groups compress without horizontal overflow at 1280px", async ({ page
 });
 
 test("View group controls stay inside their owned regions", async ({ page }) => {
+  // Fit All / Fit Selection are both visible only at the wide supported viewport; at 1280px the Zoom group compresses them.
+  await page.setViewportSize({ width: 1672, height: 941 });
   await page.goto("/");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   const metrics = await page.getByTestId("ribbon").evaluate((ribbon) => [...ribbon.querySelectorAll<HTMLElement>("[data-major-group]")].map((group) => {
@@ -170,7 +172,7 @@ test("Layout Focus Waveform restores the previous panel state without document h
 // state must now read as "selected" (border + text color, matching
 // Home's own persistent-active idiom on .ribbon-tabs > button.active)
 // rather than a stuck hover fill.
-test("View Panels toggle buttons show a selected border/color accent, not a persistent blue-tile fill (#389)", async ({ page }) => {
+test("View Panels toggle buttons look like other ribbon buttons: accent icon only, no tile border/fill/bar (#389)", async ({ page }) => {
   await page.goto("/");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   const ribbon = page.getByTestId("ribbon");
@@ -179,18 +181,21 @@ test("View Panels toggle buttons show a selected border/color accent, not a pers
   for (const label of checked) {
     const button = ribbon.getByRole("button", { name: label });
     await expect(button).toHaveAttribute("aria-pressed", "true");
-    const style = await button.evaluate((el) => { const cs = getComputedStyle(el); return { background: cs.backgroundColor, border: cs.borderTopColor }; });
+    const style = await button.evaluate((el) => { const cs = getComputedStyle(el); return { background: cs.backgroundColor, border: cs.borderTopColor, bar: cs.boxShadow, icon: getComputedStyle(el.querySelector(".ds-icon-box")!).color, weight: cs.fontWeight }; });
     // Transparent/no-fill background -- not the old solid #dceeff tile.
     expect(style.background, `${label}: ${JSON.stringify(style)}`).toMatch(/^rgba\(0,\s*0,\s*0,\s*0\)$/);
-    // Still visually distinct from an unchecked button via a real border accent.
-    expect(style.border, label).not.toBe("rgba(0, 0, 0, 0)");
+    // Same border/weight as any other ribbon button (no stuck "tile"); the pressed state is the accent bar + accent icon instead.
+    expect(style.border, label).toBe("rgba(0, 0, 0, 0)");
+    expect(style.weight, label).toBe(await ribbon.getByRole("button", { name: "Zoom Out" }).evaluate((el) => getComputedStyle(el).fontWeight));
+    expect(style.bar, label).toBe("none");
+    expect(style.icon, label).toBe("rgb(22, 117, 209)");
   }
 
   const inspector = ribbon.getByRole("button", { name: "Inspector" });
-  const checkedStyle = await inspector.evaluate((el) => getComputedStyle(el).borderTopColor);
+  const checkedStyle = await inspector.evaluate((el) => getComputedStyle(el.querySelector(".ds-icon-box")!).color);
   await inspector.click();
   await expect(inspector).toHaveAttribute("aria-pressed", "false");
-  const uncheckedStyle = await inspector.evaluate((el) => getComputedStyle(el).borderTopColor);
+  const uncheckedStyle = await inspector.evaluate((el) => getComputedStyle(el.querySelector(".ds-icon-box")!).color);
   expect(uncheckedStyle).not.toBe(checkedStyle);
 });
 

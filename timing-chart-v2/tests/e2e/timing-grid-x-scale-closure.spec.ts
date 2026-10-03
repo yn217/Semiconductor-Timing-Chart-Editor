@@ -39,15 +39,24 @@ async function waitForPresentation(page: Page): Promise<void> {
 }
 
 async function boundaries(page: Page, cycles: readonly number[]) {
-  return page.evaluate((requestedCycles) => {
-    const svg = [...document.querySelectorAll<SVGSVGElement>("[data-role='stable-waveform-surface'] svg")]
-      .find((item) => item.dataset.waveOwner === "sig_cycle_clock");
-    const marks = [...(svg?.querySelectorAll<SVGLineElement>("[id^='gmark_']") ?? [])];
+  // The wave SVG is installed as a blob <image>; read the gmark_N_0 lines from the blob source and map them onto the owner box.
+  return page.evaluate(async (requestedCycles) => {
+    const svg = document.querySelector<SVGSVGElement>("svg[data-wave-owner='sig_cycle_clock']");
+    const href = svg?.querySelector("image[data-wave-svg-image]")?.getAttribute("href");
+    const marks: number[] = [];
+    if (svg && href) {
+      const source = new DOMParser().parseFromString(await (await fetch(href)).text(), "image/svg+xml").documentElement;
+      const box = svg.getBoundingClientRect();
+      const viewBox = source.getAttribute("viewBox")?.split(/[\s,]+/).map(Number);
+      const width = viewBox && viewBox.length === 4 ? viewBox[2]! : Number(source.getAttribute("width"));
+      const originX = Number(/translate\(([-\d.]+)/.exec(source.querySelector("#lanes_0")?.getAttribute("transform") ?? "")?.[1] ?? 0);
+      for (const line of source.querySelectorAll("[id^='gmark_'][id$='_0']")) marks[Number(line.id.split("_")[1])] = box.left + (originX + Number(line.getAttribute("x1"))) * box.width / width;
+    }
     const ticks = [...document.querySelectorAll<HTMLElement>(".cycle-ruler .cycle-tick")];
     const grid = [...document.querySelectorAll<HTMLElement>("[data-role='geometry-grid-line']")];
     const left = (element: Element | undefined): number | undefined => element?.getBoundingClientRect().left;
     return requestedCycles.map((cycle) => {
-      const wave = left(marks[cycle]);
+      const wave = marks[cycle];
       const ruler = left(ticks.find((item) => item.dataset.cycle === String(cycle)));
       const line = left(grid.find((item) => item.dataset.cycle === String(cycle)));
       return {

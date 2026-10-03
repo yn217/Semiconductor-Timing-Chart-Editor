@@ -16,7 +16,7 @@ import { expect, test } from "@playwright/test";
 // subtle even for the pre-existing, already-shipped Signal overview.
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
-const samplePath = path.resolve(dirname, "../../samples/acceptance-429/sample-transaction-mode-closure.tcd.json");
+const samplePath = path.resolve(dirname, "../../samples/old/pre-reset-2026-10-02/acceptance-429/sample-transaction-mode-closure.tcd.json");
 
 async function openSample(page: import("@playwright/test").Page) {
   await page.goto("/");

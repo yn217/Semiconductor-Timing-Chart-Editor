@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { readWave } from "./wave-probe.js";
 
 test("extracts Phase 4 Local Geometry from rendered WaveDrom SVG in Chromium", async ({ page }) => {
   await page.goto("/?probe=geometry");
@@ -9,7 +10,8 @@ test("extracts Phase 4 Local Geometry from rendered WaveDrom SVG in Chromium", a
   const svg = mount.locator("svg.WaveDrom[data-wave-owner='sig_phase3_probe']");
   await expect(svg).toHaveCount(1);
   await expect(svg).toHaveAttribute("data-wave-render-index", "0");
-  await expect(mount.locator("svg.WaveDrom path")).not.toHaveCount(0);
+  // The rendered artifact is a blob image: assert it carries wave shapes through the semantic wave probe.
+  expect((await readWave(page, "sig_phase3_probe")).uses.length, "rendered wave shapes").toBeGreaterThan(0);
   await expect(mount).toHaveAttribute("data-geometry-builds", "1");
   await expect(mount).toHaveAttribute("data-geometry-matrix-reads", "2");
   const geometry = JSON.parse(await mount.getAttribute("data-local-geometry") ?? "null") as Record<string, { x: number; y: number }>;

@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { startInCycleSample } from "./cycle-startup.js";
+import { waveUseHrefs } from "./wave-probe.js";
 
 startInCycleSample(test);
 
@@ -96,6 +97,7 @@ test("Apply after Preview commits exactly the previewed draft as one real Semant
   await expect(mount.locator("svg[data-clock-preview-svg]")).toHaveCount(0);
   await expect(mount.locator("svg")).toHaveCount(1);
   await expect(mount.locator("svg")).not.toHaveCSS("display", "none");
-  const appliedHrefs = await mount.locator("svg use").evaluateAll((nodes) => nodes.map((node) => node.getAttribute("xlink:href")));
+  // The applied artifact is a blob image: read its wave tokens through the semantic probe.
+  const appliedHrefs = await waveUseHrefs(page, "sig_cycle_clock");
   expect(appliedHrefs.slice(0, 8)).toEqual(["#pclk", "#111", "#111", "#111", "#nclk", "#000", "#000", "#000"]);
 });

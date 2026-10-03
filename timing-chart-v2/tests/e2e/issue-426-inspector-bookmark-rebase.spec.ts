@@ -42,3 +42,38 @@ test("Inspector Bookmark keeps a dirty Name draft when Start changes externally,
   await expect(cycle).toHaveValue("15");
   await expect(inspector.getByTestId("bookmark-draft-conflict")).toHaveCount(0);
 });
+
+test("Bottom Bookmark draft rebases unrelated Inspector updates and requires a choice for same-field conflicts", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByLabel("Timeline range start").fill("3");
+  await page.getByLabel("Timeline range end").fill("4");
+  await page.getByRole("button", { name: "Add marker" }).click();
+  await page.getByRole("button", { name: "Open Bookmarks panel", exact: true }).click();
+  const panel = page.getByTestId("bookmark-editor-panel");
+  await panel.getByTestId(/bookmark-row-/).first().click();
+  const inspector = page.getByTestId("inspector");
+  const bottomName = panel.getByLabel("Bottom Bookmark name");
+  const inspectorName = inspector.getByLabel("Inspector bookmark name");
+  const bottomCycle = panel.getByLabel("Bottom Bookmark cycle");
+  const inspectorCycle = inspector.getByLabel("Inspector bookmark cycle");
+
+  await bottomName.fill("local bottom name");
+  await inspectorCycle.fill("9");
+  await inspector.getByTestId("apply-inspector-bookmark").click();
+  await expect(bottomCycle).toHaveValue("9");
+  await expect(bottomName).toHaveValue("local bottom name");
+  await expect(panel.getByTestId("bottom-bookmark-draft-conflict")).toHaveCount(0);
+
+  await inspectorName.fill("external inspector name");
+  await inspector.getByTestId("apply-inspector-bookmark").click();
+  await expect(panel.getByTestId("bottom-bookmark-draft-conflict")).toBeVisible();
+  await expect(bottomName).toHaveValue("local bottom name");
+  await expect(panel.getByTestId("apply-bottom-bookmark")).toBeDisabled();
+  await panel.getByRole("button", { name: "Keep my draft" }).click();
+  await expect(panel.getByTestId("bottom-bookmark-draft-conflict")).toHaveCount(0);
+  await expect(panel.getByTestId("apply-bottom-bookmark")).toBeEnabled();
+  await panel.getByTestId("apply-bottom-bookmark").click();
+  await expect(inspectorName).toHaveValue("local bottom name");
+});

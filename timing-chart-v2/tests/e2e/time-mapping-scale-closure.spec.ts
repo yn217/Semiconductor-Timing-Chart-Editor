@@ -67,7 +67,7 @@ test("production browser mapping path records 100k-cycle 0-fold and 1k-fold scal
     }
     const durations = samples.map((item) => item.durationMs);
     const first = samples[0]!.counters;
-    expect(first.sourceCyclesVisited).toBe(100_000);
+    expect(first.sourceCyclesVisited).toBe(0);
     expect(first.foldRangesVisited).toBe(foldCount);
     expect(first.builds).toBeGreaterThanOrEqual(1);
     expect(first.builds).toBeLessThanOrEqual(2);

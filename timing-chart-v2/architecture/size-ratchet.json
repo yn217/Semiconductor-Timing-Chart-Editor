@@ -1,7 +1,10 @@
 {
   "_doc": "#258 ratchet: a file may never grow past its ceiling (CI fails). When a refactor lowers a file, lower its ceiling in the same change. Targets are the preferred budgets in scripts/check-editor-complexity.mjs.",
   "apps/editor/src/minimal-cycle-view.tsx": 882,
-  "apps/editor/src/editor-secondary-surfaces.tsx": 716,
-  "apps/editor/src/runtime/timeline-surface-controller.ts": 983,
-  "packages/renderer/src/stable-surface.ts": 1497
+  "apps/editor/src/application/use-editor-actions.ts": 507,
+  "apps/editor/src/editor-secondary-surfaces.tsx": 711,
+  "apps/editor/src/runtime/timeline-surface-controller.ts": 981,
+  "apps/editor/src/application/clipboard-actions.ts": 411,
+  "apps/editor/src/panels/inspector-panel.tsx": 552,
+  "packages/renderer/src/stable-surface.ts": 1378
 }

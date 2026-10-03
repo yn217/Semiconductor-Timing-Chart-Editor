@@ -35,6 +35,25 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await page.waitForTimeout(300);
     const roomy = await metrics(page);
     expect(roomy.sh, JSON.stringify(roomy)).toBeLessThanOrEqual(Math.max(roomy.ch, roomy.content) + 1);
+    // Inspector visibility must not add vertical overflow to the Transaction scroll owner.
+    const inspector = page.getByTestId("inspector-shell");
+    if (!(await inspector.isVisible())) {
+      await page.getByLabel("Ribbon tabs").getByRole("button", { name: "View", exact: true }).click();
+      await page.getByTestId("ribbon").getByRole("button", { name: "Inspector", exact: true }).click();
+      await expect(inspector).toBeVisible();
+    }
+    const withInspector = await metrics(page);
+    expect(withInspector.sh, JSON.stringify(withInspector)).toBeLessThanOrEqual(Math.max(withInspector.ch, withInspector.content) + 1);
+    // #945: a track that fills the viewport fits exactly (no phantom horizontal overflow), so create real overflow by zooming in.
+    await page.getByLabel("Ribbon tabs").getByRole("button", { name: "View", exact: true }).click();
+    for (let step = 0; step < 4; step += 1) await page.getByTestId("ribbon").getByRole("button", { name: "Zoom In", exact: true }).click();
+    await expect.poll(() => owner(page).evaluate((el) => el.scrollWidth - el.clientWidth)).toBeGreaterThan(1);
+    const maxHorizontalScroll = await owner(page).evaluate((el) => el.scrollWidth - el.clientWidth);
+    expect(maxHorizontalScroll).toBeGreaterThan(1);
+    const verticalBeforeHorizontalScroll = await owner(page).evaluate((el) => el.scrollTop);
+    await owner(page).evaluate((el) => { el.scrollLeft = Math.min(80, el.scrollWidth - el.clientWidth); el.dispatchEvent(new Event("scroll", { bubbles: true })); });
+    await expect.poll(() => owner(page).evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
+    expect(await owner(page).evaluate((el) => el.scrollTop)).toBe(verticalBeforeHorizontalScroll);
     // When the lanes fit (always at 1672x941 with Bottom shrunk) there must be no vertical overflow at all.
     if (viewport.height >= 900) { expect(roomy.content).toBeLessThanOrEqual(roomy.ch); expect(roomy.sh, JSON.stringify(roomy)).toBeLessThanOrEqual(roomy.ch + 1); }
     // Expanding Bottom again keeps the invariant.

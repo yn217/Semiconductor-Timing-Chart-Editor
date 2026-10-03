@@ -20,9 +20,26 @@ export interface WaveMountRequest {
   readonly isFresh?: () => boolean;
 }
 
+export interface WavePrefetchRequest {
+  readonly signalId: WaveSignalId;
+  readonly documentEpoch: number;
+  readonly ownerDocument: Document;
+  readonly sourceWindow?: Readonly<{ readonly start: number; readonly end: number }>;
+  readonly isFresh: () => boolean;
+}
+
+export interface WavePrefetchBatchResult {
+  readonly requested: number;
+  readonly prepared: number;
+  readonly reused: number;
+  readonly stale: number;
+  readonly failed: number;
+}
+
 export interface WaveMountBatchItem {
   readonly signalId: WaveSignalId;
   readonly result?: WaveMountResult;
+  readonly artifactMarkupCacheHit?: boolean;
   readonly error?: unknown;
   /** The request became obsolete while an async render was in flight. */
   readonly stale?: boolean;
@@ -33,6 +50,8 @@ export interface WaveformSurfaceProvider {
   mountWave(signalId: WaveSignalId, owner: HTMLElement): Promise<WaveMountResult>;
   /** Optional two-phase hook: all requested mounts must complete before any geometry reads. */
   mountWaveBatch?(requests: readonly WaveMountRequest[]): Promise<readonly WaveMountBatchItem[]>;
+  /** Prepare bounded offscreen artifacts without installing DOM or publishing geometry. */
+  prefetchWaveBatch?(requests: readonly WavePrefetchRequest[]): Promise<WavePrefetchBatchResult>;
   disposeWave(signalId: WaveSignalId): void;
   /** Release document-specific geometry/DOM but let the adapter retain a bounded reusable markup artifact. */
   retainWaveArtifact?(signalId: WaveSignalId): void;
@@ -65,6 +84,14 @@ export interface RendererDiagnostics {
   readonly waveBatchFrameYields: number;
   readonly waveBatchMaxSize: number;
   readonly waveBatchPending: number;
+  readonly wavePrefetchOwnerCount: number;
+  readonly wavePrefetchRequestedCount: number;
+  readonly wavePrefetchPreparedCount: number;
+  readonly wavePrefetchReusedCount: number;
+  readonly wavePrefetchStaleCount: number;
+  readonly wavePrefetchFailedCount: number;
+  readonly waveArtifactMarkupCacheHits: number;
+  readonly waveArtifactMarkupCacheMisses: number;
   /** Number of row entries inspected during the latest renderer update. */
   readonly rowsVisited: number;
   /** Full row-layout traversals; ordinary viewport updates must keep this at zero. */

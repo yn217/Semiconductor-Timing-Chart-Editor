@@ -93,10 +93,13 @@ test("keeps canonical state unchanged during a dense Transaction preview drag", 
   const history = await page.getByTestId("history-status").textContent();
   const dirty = await page.getByTestId("dirty-status").textContent();
   const countersBefore = JSON.parse(await host.getAttribute("data-session-counters") ?? "{}") as Record<string, number>;
-  const minimapBefore = await page.getByTestId("minimap").getAttribute("data-transaction-overview-builds");
   const diagnosticsBefore = await host.getAttribute("data-renderer-diagnostic-publishes");
   await page.getByTestId("home-snap-toggle").click();
   await expect(page.getByTestId("snap-status")).toHaveText("Snap: Off");
+  // The Snap toggle itself refreshes the MiniMap overview once; the contract here is that the DRAG PREVIEW builds none, so settle first.
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.waitForTimeout(800);
+  const minimapBefore = await page.getByTestId("minimap").getAttribute("data-transaction-overview-builds");
   await transaction.locator("span").hover();
   await page.mouse.down();
   for (let index = 0; index < 120; index += 1) await page.mouse.move(box.x + 20 + (index % 12), box.y + box.height / 2);
@@ -223,7 +226,7 @@ test("pointercancel discards a live Transaction preview without semantic mutatio
 
 test("live drag keeps unrelated overlapping Transaction stack rows and positions stable", async ({ page }) => {
   await ready(page);
-  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path.resolve(process.cwd(), "samples/acceptance-397/sample-a-basic-transaction-lifecycle.tcd.json"));
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path.resolve(process.cwd(), "samples/old/pre-reset-2026-10-02/acceptance-397/sample-a-basic-transaction-lifecycle.tcd.json"));
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await page.getByRole("tab", { name: "Transaction", exact: true }).click();
@@ -262,7 +265,7 @@ test("Transaction context menu exposes only transaction-supported capabilities",
 
 test("rejects a Transaction resize that would clip a Phase without changing history", async ({ page }) => {
   await ready(page);
-  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path.resolve(process.cwd(), "samples/acceptance-429/sample-transaction-mode-closure.tcd.json"));
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path.resolve(process.cwd(), "samples/old/pre-reset-2026-10-02/acceptance-429/sample-transaction-mode-closure.tcd.json"));
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await page.getByRole("tab", { name: "Transaction", exact: true }).click();
@@ -284,7 +287,7 @@ test("rejects a Transaction resize that would clip a Phase without changing hist
 
 test("rejects an End resize that would remove the final Phase", async ({ page }) => {
   await ready(page);
-  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path.resolve(process.cwd(), "samples/acceptance-429/sample-transaction-mode-closure.tcd.json"));
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path.resolve(process.cwd(), "samples/old/pre-reset-2026-10-02/acceptance-429/sample-transaction-mode-closure.tcd.json"));
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await page.getByRole("tab", { name: "Transaction", exact: true }).click();
@@ -308,7 +311,7 @@ test("rejects an End resize that would remove the final Phase", async ({ page })
 
 test("persists a valid Transaction resize and its Phases through Save/Open", async ({ page }) => {
   await ready(page);
-  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path.resolve(process.cwd(), "samples/acceptance-429/sample-transaction-mode-closure.tcd.json"));
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path.resolve(process.cwd(), "samples/old/pre-reset-2026-10-02/acceptance-429/sample-transaction-mode-closure.tcd.json"));
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await page.getByRole("tab", { name: "Transaction", exact: true }).click();

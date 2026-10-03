@@ -38,6 +38,8 @@ export interface WaveJsonSignal {
   readonly geometryWindow?: Readonly<{ readonly start: number; readonly end: number }>;
   /** Source identity for each local display boundary, supplied by the shared mapping. */
   readonly geometrySourceCycles?: readonly number[];
+  /** Explicit cycle-key domain of extracted geometry; full folded renders use display keys. */
+  readonly geometryCycleDomain?: "source" | "display";
   /** Display-domain interval actually handed to WaveDrom. */
   readonly displayWindow?: Readonly<{ readonly start: number; readonly end: number }>;
 }
@@ -89,6 +91,9 @@ export interface WaveDromAdapterMetrics {
   readonly geometryMatrixReads: number;
   readonly activeOwners: number;
   readonly allocatedRenderIndices: number;
+  readonly imageObjectUrlsCreated?: number;
+  readonly imageObjectUrlsRevoked?: number;
+  readonly imageObjectUrlsRetained?: number;
 }
 
 export interface WaveDromAdapter {
@@ -100,6 +105,8 @@ export interface WaveDromAdapter {
   prepareWave?(signalId: SignalId, waveJson: WaveJsonSignal, ownerDocument: Document, semanticValues?: readonly string[]): Promise<RenderedWave>;
   /** Install a previously prepared SVG into its current owner. */
   installWave?(rendered: RenderedWave, mount: Element): RenderedWave;
+  /** Release a detached prepared result that will not be installed. */
+  releasePrepared?(rendered: RenderedWave): void;
   extractLocalGeometry(rendered: RenderedWave): LocalGeometryMap;
   geometryMetrics(): Readonly<{
     readonly last: GeometryExtractionMetrics | undefined;
@@ -115,6 +122,8 @@ export interface WaveDromAdapter {
   dispose(signalId: SignalId): void;
   /** Release the mounted owner while retaining a bounded, identity-safe artifact for a possible document reopen. */
   retainArtifact?(signalId: SignalId): void;
+  /** Release all DOM, retained artifacts, caches, and document-backed resources when this adapter owner is disposed. */
+  disposeAll?(): void;
   metrics(): WaveDromAdapterMetrics;
 }
 

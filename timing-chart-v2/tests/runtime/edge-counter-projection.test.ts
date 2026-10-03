@@ -4,6 +4,13 @@ import type { RenderProjection } from "@timing-chart-v2/projection";
 import { createEdgeCounterProjectionMetrics, projectEdgeCounters } from "../../apps/editor/src/runtime/edge-counter-projection.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import { ImmutableLocalGeometryMap } from "@timing-chart-v2/geometry";
+import { buildDisplayTimeMapping } from "@timing-chart-v2/projection";
+import type { TimeGroupId } from "@timing-chart-v2/schema";
+
+function identityMapping() {
+  const base = canonicalFixture();
+  return buildDisplayTimeMapping(base.timeline, base.timeGroups);
+}
 
 function geometryForClock(): LocalGeometryMap {
   return {
@@ -23,7 +30,7 @@ describe("selected Clock Edge Counter origin", () => {
   it("starts at the selected rendered rising/falling edge, not merely its cycle", () => {
     const base = canonicalFixture();
     const document = { ...base, signals: [{ ...base.signals[0]!, edgeCounter: { ...base.signals[0]!.edgeCounter, show: true, mode: "both" as const, countFrom: "selected-edge" as const, startNumber: 10 } }, base.signals[1]!] };
-    const overlays = projectEdgeCounters(document, projection(), new Map([["sig_clk", geometryForClock()]]), { start: 0, end: 8 }, 3, 1, { signalId: "sig_clk", cycle: 3, kind: "falling" });
+    const overlays = projectEdgeCounters(document, projection(), new Map([["sig_clk", geometryForClock()]]), identityMapping(), { start: 0, end: 8 }, 3, 1, { signalId: "sig_clk", cycle: 3, kind: "falling" });
     expect(overlays.map((overlay) => overlay.id)).toEqual(["edge:sig_clk:falling:3", "edge:sig_clk:rising:4", "edge:sig_clk:falling:4", "edge:sig_clk:rising:5", "edge:sig_clk:falling:5", "edge:sig_clk:rising:6", "edge:sig_clk:falling:6", "edge:sig_clk:rising:7", "edge:sig_clk:falling:7"]);
     expect(overlays[0]?.label).toBe("10");
   });
@@ -31,7 +38,7 @@ describe("selected Clock Edge Counter origin", () => {
   it("keeps the existing cycle-based behavior when no exact edge is selected", () => {
     const base = canonicalFixture();
     const document = { ...base, signals: [{ ...base.signals[0]!, edgeCounter: { ...base.signals[0]!.edgeCounter, show: true, mode: "rising" as const, countFrom: "selected-edge" as const } }, base.signals[1]!] };
-    const overlays = projectEdgeCounters(document, projection(), new Map([["sig_clk", geometryForClock()]]), { start: 0, end: 8 }, 3);
+    const overlays = projectEdgeCounters(document, projection(), new Map([["sig_clk", geometryForClock()]]), identityMapping(), { start: 0, end: 8 }, 3);
     expect(overlays[0]?.id).toBe("edge:sig_clk:rising:3");
   });
 
@@ -44,8 +51,9 @@ describe("selected Clock Edge Counter origin", () => {
     ]).flat());
     const metrics = createEdgeCounterProjectionMetrics();
     const maps = new Map([["sig_clk", map]]);
-    const first = projectEdgeCounters(document, projection(), maps, { start: 0, end: 8 }, 0, 1, undefined, metrics);
-    const second = projectEdgeCounters(document, projection(), maps, { start: 2, end: 4 }, 0, 1, undefined, metrics);
+    const mapping = identityMapping();
+    const first = projectEdgeCounters(document, projection(), maps, mapping, { start: 0, end: 8 }, 0, 1, undefined, metrics);
+    const second = projectEdgeCounters(document, projection(), maps, mapping, { start: 2, end: 4 }, 0, 1, undefined, metrics);
     expect(first.map((overlay) => overlay.id)).toEqual(["edge:sig_clk:rising:0", "edge:sig_clk:rising:1", "edge:sig_clk:rising:2", "edge:sig_clk:rising:3", "edge:sig_clk:rising:4", "edge:sig_clk:rising:5", "edge:sig_clk:rising:6", "edge:sig_clk:rising:7"]);
     expect(second).toHaveLength(8);
     expect(metrics.edgeCounterEdgeIndexBuilds).toBe(1);
@@ -72,14 +80,15 @@ describe("selected Clock Edge Counter origin", () => {
     const metrics = createEdgeCounterProjectionMetrics();
 
     // First refresh: both Clocks' indexes are built fresh.
-    projectEdgeCounters(document, projection(), new Map([["sig_clk_a", mapA1], ["sig_clk_b", mapB]]), { start: 0, end: 4 }, 0, 1, undefined, metrics);
+    const mapping = identityMapping();
+    projectEdgeCounters(document, projection(), new Map([["sig_clk_a", mapA1], ["sig_clk_b", mapB]]), mapping, { start: 0, end: 4 }, 0, 1, undefined, metrics);
     expect(metrics.edgeCounterEdgeIndexBuilds).toBe(2);
     expect(metrics.edgeCounterEdgeIndexHits).toBe(0);
 
     // Only Clock A's waveform changed -- a genuinely new LocalGeometryMap
     // instance for A; Clock B keeps its already-indexed instance.
     const mapA2 = makeMap("sig_clk_a");
-    projectEdgeCounters(document, projection(), new Map([["sig_clk_a", mapA2], ["sig_clk_b", mapB]]), { start: 0, end: 4 }, 0, 1, undefined, metrics);
+    projectEdgeCounters(document, projection(), new Map([["sig_clk_a", mapA2], ["sig_clk_b", mapB]]), mapping, { start: 0, end: 4 }, 0, 1, undefined, metrics);
     expect(metrics.edgeCounterEdgeIndexBuilds).toBe(3); // +1, for A's new map only
     expect(metrics.edgeCounterEdgeIndexHits).toBe(1); // B's cached index reused
     expect(metrics.edgeCounterCyclesProbed).toBe(0);
@@ -99,14 +108,15 @@ describe("selected Clock Edge Counter origin", () => {
     ]).flat());
     const maps = new Map([["sig_clk", map]]);
     const metrics = createEdgeCounterProjectionMetrics();
-    projectEdgeCounters(document, projection(), maps, { start: 0, end: 4 }, 0, 1, undefined, metrics);
+    const mapping = identityMapping();
+    projectEdgeCounters(document, projection(), maps, mapping, { start: 0, end: 4 }, 0, 1, undefined, metrics);
     expect(metrics.edgeCounterEdgeIndexBuilds).toBe(1);
 
     // Simulate an unrelated Signal rename: same document shape, same maps
     // (the renamed signal's own geometry has nothing to do with this
     // Clock's LocalGeometryMap instance, so it is untouched/reused).
     const renamed = { ...document, signals: [document.signals[0]!, { ...document.signals[1]!, name: "DATA_RENAMED", display: { ...document.signals[1]!.display, name: "DATA_RENAMED" } }] };
-    projectEdgeCounters(renamed, projection(), maps, { start: 0, end: 4 }, 0, 1, undefined, metrics);
+    projectEdgeCounters(renamed, projection(), maps, mapping, { start: 0, end: 4 }, 0, 1, undefined, metrics);
     expect(metrics.edgeCounterEdgeIndexBuilds).toBe(1); // unchanged
     expect(metrics.edgeCounterEdgeIndexHits).toBe(1);
     expect(metrics.edgeCounterCyclesProbed).toBe(0);
@@ -128,11 +138,65 @@ describe("selected Clock Edge Counter origin", () => {
       { cycle, point: "falling-edge" as const, position: { x: cycle * 10 + 5, y: 0 } },
     ]));
     const metrics = createEdgeCounterProjectionMetrics();
-    const overlays = projectEdgeCounters(document, projection(), new Map([["sig_clk", map]]), { start: 0, end: 4 }, 0, 1, undefined, metrics);
+    const overlays = projectEdgeCounters(document, projection(), new Map([["sig_clk", map]]), identityMapping(), { start: 0, end: 4 }, 0, 1, undefined, metrics);
     const cycles = overlays.map((overlay) => Number(overlay.id.split(":").at(-1)));
     expect(cycles).not.toContain(2);
     expect(cycles.sort((left, right) => left - right)).toEqual([0, 0, 1, 1, 3, 3]);
     expect(metrics.edgeCounterCyclesProbed).toBe(0);
     expect(metrics.edgeCounterGeometryLookups).toBe(0);
+  });
+
+  it("keeps folded display-keyed Clock edges in canonical source-cycle identity", () => {
+    const base = canonicalFixture();
+    const timeGroups = [{ id: "fold" as TimeGroupId, name: "Fold", start: 2, end: 4, presentation: { collapsed: true } }];
+    const document = { ...base, timeline: { ...base.timeline, cycleCount: 8 }, timeGroups,
+      signals: [{ ...base.signals[0]!, edgeCounter: { ...base.signals[0]!.edgeCounter, show: true, mode: "rising" as const, countFrom: "visible-range-start" as const, startNumber: 20 } }, base.signals[1]!] };
+    const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
+    const map = new ImmutableLocalGeometryMap("sig_clk", Array.from({ length: mapping.displayCycleCount }, (_, cycle) => ({
+      cycle, point: "rising-edge" as const, position: { x: cycle * 10, y: 0 },
+    })), [], "display");
+
+    const overlays = projectEdgeCounters(document, projection(), new Map([["sig_clk", map]]), mapping, { start: 4, end: 8 }, 4);
+
+    expect(overlays.map((overlay) => overlay.id)).toEqual(["edge:sig_clk:rising:4", "edge:sig_clk:rising:5", "edge:sig_clk:rising:6", "edge:sig_clk:rising:7"]);
+    expect(overlays.map((overlay) => overlay.label)).toEqual(["20", "21", "22", "23"]);
+    expect(overlays[0]?.x).toBe(20); // display boundary 2 maps to source cycle 4
+  });
+
+  it("keeps signal-start numbering continuous when only a distant source window is rendered", () => {
+    const base = canonicalFixture();
+    const clock = { ...base.signals[0]!, generator: { ...base.signals[0]!.generator, period: 2, duty: 0.5 }, edgeCounter: { ...base.signals[0]!.edgeCounter, show: true, mode: "both" as const, startNumber: 1, countFrom: "signal-start" as const } };
+    const document = { ...base, timeline: { ...base.timeline, cycleCount: 12, end: 12 }, signals: [clock, base.signals[1]!] };
+    const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
+    const map = new ImmutableLocalGeometryMap("sig_clk", [6, 8, 10].flatMap((cycle) => [
+      { cycle, point: "rising-edge" as const, position: { x: cycle * 10, y: 0 } },
+      { cycle, point: "falling-edge" as const, position: { x: cycle * 10 + 5, y: 0 } },
+    ]));
+
+    const overlays = projectEdgeCounters(document, projection(), new Map([["sig_clk", map]]), mapping, { start: 6, end: 12 }, 6);
+
+    expect(overlays.map((overlay) => overlay.label)).toEqual(["7", "8", "9", "10", "11", "12"]);
+  });
+
+  it("keeps signal-start ordinals across gated and suppressed source periods", () => {
+    const base = canonicalFixture();
+    const clock = {
+      ...base.signals[0]!,
+      generator: { ...base.signals[0]!.generator, period: 2, duty: 0.5, suppressedPeriods: [1] },
+      enable: [{ start: 0, value: 1 }, { start: 4, value: 0 }, { start: 8, value: 1 }],
+      edgeCounter: { ...base.signals[0]!.edgeCounter, show: true, mode: "both" as const, startNumber: 1, countFrom: "signal-start" as const },
+    };
+    const document = { ...base, timeline: { ...base.timeline, cycleCount: 12, end: 12 }, signals: [clock, base.signals[1]!] };
+    const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
+    const map = new ImmutableLocalGeometryMap("sig_clk", [8, 10].flatMap((cycle) => [
+      { cycle, point: "rising-edge" as const, position: { x: cycle * 10, y: 0 } },
+      { cycle, point: "falling-edge" as const, position: { x: cycle * 10 + 5, y: 0 } },
+    ]));
+
+    const overlays = projectEdgeCounters(document, projection(), new Map([["sig_clk", map]]), mapping, { start: 8, end: 12 }, 8);
+
+    // Period 1 is suppressed and periods 2/3 are gated off, so the visible
+    // period 4 starts after only period 0 contributed edges.
+    expect(overlays.map((overlay) => overlay.label)).toEqual(["3", "4", "5", "6"]);
   });
 });

@@ -26,9 +26,14 @@ test("Bottom Transaction table uses click/Ctrl/Shift selection without checkboxe
   for (const index of [1, 2, 3, 4]) await expect(rows.nth(index)).toHaveAttribute("data-selected", "true");
   await expect(rows.nth(5)).toHaveAttribute("data-selected", "false");
   await expect(bottom.getByTestId("bottom-transaction-duplicate")).toBeEnabled();
-  const countBefore = await page.locator(".transaction-left-tree-row").count();
+  const treeRows = page.locator(".transaction-left-tree-row[data-transaction-tree-id]");
+  const countBefore = await treeRows.count();
+  const idsBefore = await treeRows.evaluateAll((elements) => elements.map((element) => element.getAttribute("data-transaction-tree-id")));
   await bottom.getByTestId("bottom-transaction-duplicate").click();
-  await expect(page.locator(".transaction-left-tree-row")).toHaveCount(countBefore + 4);
+  await expect(treeRows).toHaveCount(countBefore + 4);
+  const idsAfter = await treeRows.evaluateAll((elements) => elements.map((element) => element.getAttribute("data-transaction-tree-id")));
+  expect(new Set(idsAfter).size).toBe(idsAfter.length);
+  expect(idsAfter.filter((id) => !idsBefore.includes(id))).toHaveLength(4);
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.locator(".transaction-left-tree-row")).toHaveCount(countBefore);

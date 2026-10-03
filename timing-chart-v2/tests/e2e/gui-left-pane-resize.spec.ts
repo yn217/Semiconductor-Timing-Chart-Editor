@@ -8,6 +8,7 @@ test("Signal/Group pane splitter resizes the derived columns without mutation", 
   const shell = page.locator(".editor-shell");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const before = {
     revision: await host.getAttribute("data-canonical-revision"),
     history: await host.getAttribute("data-history-depth"),
@@ -41,6 +42,7 @@ test("Signal label and timing splitter resizes shared geometry columns without m
   const shell = page.locator(".editor-shell");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const before = {
     revision: await host.getAttribute("data-canonical-revision"),
     history: await host.getAttribute("data-history-depth"),

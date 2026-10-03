@@ -12,7 +12,7 @@ test(`Large Feature Showcase remains renderable at ${viewport.width}x${viewport.
   await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Cycle");
   await expect(page.getByTestId("wavedrom-status")).toHaveText("WaveDrom: Ready");
 
-  const fixture = await readFile(new URL("../../samples/showcase/21_large_feature_showcase.tcd.json", import.meta.url));
+  const fixture = await readFile(new URL("../../samples/old/pre-reset-2026-10-02/showcase/21_large_feature_showcase.tcd.json", import.meta.url));
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({
     name: "21_large_feature_showcase.tcd.json",
     mimeType: "application/json",

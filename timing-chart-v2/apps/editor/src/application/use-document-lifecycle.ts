@@ -4,12 +4,40 @@ import type { CommandHistorySession } from "@timing-chart-v2/history";
 import { validateDocumentResourceBudget, type CanonicalDocument, type DocumentProblem, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
 import { commitDocumentReplacement } from "./document-replacement.js";
+import { documentIdFromRecentText, isLegacyRecentDocument, loadRecentDocument, recentRecordMatches, saveRecentDocument, type RecentDocumentIdentity, type RecentDocumentMetadata, type RecentDocumentRecord } from "./recent-document-storage.js";
 import { canonicalDocumentOf, createNewDocumentFromProductTemplate, decodeOpenDocumentBytes, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "../file-document-controller.js";
 
-/** Largest serialized document (chars) kept as a synchronous localStorage Recent copy (#789). */
-const RECENT_CONTENT_LIMIT = 512 * 1024;
 const RECENT_KEY = "timing-chart-v2.recent";
 const RECENT_META_KEY = "timing-chart-v2.recent-meta";
+let recentGenerationSequence = 0;
+
+type RecentMetadata = {
+  contentKept?: boolean;
+  filename?: string;
+  title?: string;
+  documentId?: string;
+  generation?: string;
+  savedAt?: number;
+  size?: number;
+  storageVersion?: number;
+  [key: string]: unknown;
+};
+
+function createRecentIdentity(filename: string, documentId: string, size: number): RecentDocumentIdentity {
+  const savedAt = Date.now();
+  const generation = globalThis.crypto?.randomUUID?.() ?? `${savedAt}-${++recentGenerationSequence}`;
+  return { filename, documentId, generation, savedAt, size };
+}
+
+function publishRecentMetadata(identity: RecentDocumentIdentity, title: string): void {
+  let previousStorageVersion: unknown;
+  try {
+    const previous: unknown = JSON.parse(localStorage.getItem(RECENT_META_KEY) ?? "null");
+    if (typeof previous === "object" && previous !== null) previousStorageVersion = (previous as { storageVersion?: unknown }).storageVersion;
+  } catch { /* Missing/corrupt metadata requires one-time legacy cleanup. */ }
+  localStorage.setItem(RECENT_META_KEY, JSON.stringify({ ...identity, title, contentKept: true, storageVersion: 2 }));
+  if (previousStorageVersion !== 2) localStorage.removeItem(RECENT_KEY);
+}
 
 export type PendingDocumentAction = Readonly<{ kind: "new" | "open"; requestId: number; text?: string }>;
 export type CompatibilityPreview = Readonly<{ sourceFormatVersion: number; sourceText: string; readOnly: boolean }>;
@@ -49,6 +77,14 @@ function isSaveDiagnostic(item: DocumentProblem): boolean {
 
 function errorReason(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
+}
+
+function recordSaveMeasure(name: string, start: number, detail?: Readonly<Record<string, number>>): void {
+  try {
+    const end = performance.now();
+    performance.clearMeasures(name);
+    performance.measure(name, { start, end, ...(detail ? { detail } : {}) });
+  } catch { /* Measurement must never affect Save correctness. */ }
 }
 
 function recentSaveWarning(error: unknown): DocumentProblem {
@@ -95,6 +131,7 @@ export function useDocumentLifecycle({
   const [pendingAction, setPendingAction] = useState<PendingDocumentAction | undefined>();
   const [compatibilityPreview, setCompatibilityPreview] = useState<CompatibilityPreview | undefined>();
   const requestIdRef = useRef(0);
+  const recentWriteRef = useRef<Promise<void>>(Promise.resolve());
   const fileReadStartedAtRef = useRef<number | undefined>(undefined);
   const effectsRef = useRef<LifecycleEffects | undefined>(undefined);
 
@@ -224,28 +261,49 @@ export function useDocumentLifecycle({
 
   const save = useCallback((filename: string) => {
     const session = application.runtime.session.current();
+    const saveSnapshot = session.getSnapshot();
+    const savedDocument = saveSnapshot.document;
     let text: string;
-    try { text = serializeSaveDocument(session.getSnapshot().document); }
-    catch (error) { reportSaveFailure(error, "serialize"); return false; }
-    const persistedRevision = session.getSnapshot().revision;
+    const serializeStartedAt = performance.now();
+    try {
+      text = serializeSaveDocument(savedDocument);
+      recordSaveMeasure("timing-chart-v2.save.serialize", serializeStartedAt, { characters: text.length });
+    } catch (error) {
+      recordSaveMeasure("timing-chart-v2.save.serialize", serializeStartedAt);
+      reportSaveFailure(error, "serialize");
+      return false;
+    }
+    const persistedRevision = saveSnapshot.revision;
+    const downloadStartedAt = performance.now();
     try { persistText(text, filename); }
-    catch (error) { reportSaveFailure(error, "storage"); return false; }
+    catch (error) {
+      recordSaveMeasure("timing-chart-v2.save.download", downloadStartedAt, { characters: text.length });
+      reportSaveFailure(error, "storage");
+      return false;
+    }
+    recordSaveMeasure("timing-chart-v2.save.download", downloadStartedAt, { characters: text.length });
     if (session.getSnapshot().revision === persistedRevision) session.markClean();
     application.publishHistory();
     application.setRuntimeDiagnostics((current) => current.filter((item) => !isSaveDiagnostic(item)));
-    try {
-      // #789: Recent metadata is always kept; the full document text goes into synchronous localStorage only under a bounded policy,
-      // so a large Save never pays a synchronous multi-MB copy after the download. Larger documents reopen from the saved file.
-      const document = session.getSnapshot().document;
-      localStorage.setItem(RECENT_META_KEY, JSON.stringify({ filename, title: document.document.title, documentId: document.document.id, size: text.length, savedAt: Date.now(), contentKept: text.length <= RECENT_CONTENT_LIMIT }));
-      if (text.length <= RECENT_CONTENT_LIMIT) localStorage.setItem(RECENT_KEY, text);
-      else localStorage.removeItem(RECENT_KEY);
-      application.setProblem("");
-    } catch (error) {
+    const recentWriteStartedAt = performance.now();
+    const identity = createRecentIdentity(filename, savedDocument.document.id, text.length);
+    const recentWrite = recentWriteRef.current.catch(() => undefined).then(async () => {
+      await saveRecentDocument(text, identity);
+      const recentMetadataStartedAt = performance.now();
+      try {
+        publishRecentMetadata(identity, savedDocument.document.title);
+        application.setProblem("");
+      } finally {
+        recordSaveMeasure("timing-chart-v2.save.recent-metadata", recentMetadataStartedAt, { characters: text.length });
+      }
+    });
+    recentWriteRef.current = recentWrite.catch((error: unknown) => {
       const diagnostic = recentSaveWarning(error);
-      application.setRuntimeDiagnostics((current) => [...current, diagnostic]);
+      application.setRuntimeDiagnostics((current) => [...current.filter((item) => item.code !== "SAVE_RECENT_FAILED"), diagnostic]);
       application.setProblem(`Saved successfully. ${diagnostic.message}`);
-    }
+    }).finally(() => {
+      recordSaveMeasure("timing-chart-v2.save.recent-write", recentWriteStartedAt, { characters: text.length });
+    });
     return true;
   }, [application, persistText, reportSaveFailure]);
 
@@ -257,20 +315,83 @@ export function useDocumentLifecycle({
     performAction(action);
     return true;
   }, [pendingAction, performAction, save]);
-  const openRecent = useCallback(() => {
-    let text: string | null;
-    try { text = localStorage.getItem(RECENT_KEY); }
-    catch (error) {
+  const openRecent = useCallback(async () => {
+    const queueRecentMigration = (text: string, metadata: RecentMetadata | null) => {
+      const documentId = documentIdFromRecentText(text);
+      if (!documentId) return;
+      const filename = typeof metadata?.filename === "string" ? metadata.filename : "Recent document";
+      const title = typeof metadata?.title === "string" ? metadata.title : "Recent document";
+      const identity = createRecentIdentity(filename, documentId, text.length);
+      recentWriteRef.current = recentWriteRef.current.catch(() => undefined).then(async () => {
+        await saveRecentDocument(text, identity);
+        publishRecentMetadata(identity, title);
+      }).catch(() => undefined);
+    };
+    try {
+      // A Save publishes metadata only after its IndexedDB transaction commits.
+      // Wait first so this read observes the matching committed generation.
+      await recentWriteRef.current;
+      const storedText = localStorage.getItem(RECENT_KEY);
+      let metadata: (RecentMetadata & RecentDocumentMetadata) | null = null;
+      const parsedMetadata: unknown = JSON.parse(localStorage.getItem(RECENT_META_KEY) ?? "null");
+      if (typeof parsedMetadata === "object" && parsedMetadata !== null && !Array.isArray(parsedMetadata)) {
+        metadata = parsedMetadata as RecentMetadata;
+      }
+      let legacyText: string | undefined;
+      if (metadata?.storageVersion !== 2 && storedText) {
+        try { if (isLegacyRecentDocument(JSON.parse(storedText))) legacyText = storedText; }
+        catch { /* Invalid legacy storage is not a recoverable document. */ }
+      }
+      let record: RecentDocumentRecord | undefined;
+      try { record = await loadRecentDocument(); }
+      catch (error) {
+        if (!legacyText) throw error;
+        requestOpenText(legacyText);
+        queueRecentMigration(legacyText, metadata);
+        return true;
+      }
+
+      if (metadata?.storageVersion === 2) {
+        if (!recentRecordMatches(record, metadata)) {
+          const diagnostic = recentOpenFailure(new Error("The stored Recent content does not match its committed metadata."));
+          application.setProblem("The latest Recent copy is unavailable or does not match its saved metadata. Use Open to reload the saved file.");
+          application.setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), diagnostic]);
+          return false;
+        }
+        requestOpenText(record.text);
+        return true;
+      }
+
+      if (legacyText) {
+        requestOpenText(legacyText);
+        queueRecentMigration(legacyText, metadata);
+        return true;
+      }
+
+      // Older IDB records can be reopened only when their old metadata proves
+      // the same filename, timestamp, size, and canonical document identity.
+      if (recentRecordMatches(record, metadata ?? {})) {
+        requestOpenText(record.text);
+        if (!record.generation || !record.documentId) queueRecentMigration(record.text, metadata);
+        return true;
+      }
+
+      if (record && metadata?.contentKept === true) {
+        const diagnostic = recentOpenFailure(new Error("The stored Recent content does not match its committed metadata."));
+        application.setProblem("The latest Recent copy is unavailable or does not match its saved metadata. Use Open to reload the saved file.");
+        application.setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), diagnostic]);
+        return false;
+      }
+      application.setProblem(metadata?.contentKept === false
+        ? "The last saved document's Recent copy is unavailable. Use Open to reload the saved file."
+        : "No recent document is available.");
+      return false;
+    } catch (error) {
       const diagnostic = recentOpenFailure(error);
       application.setProblem(diagnostic.message);
       application.setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), diagnostic]);
       return false;
     }
-    if (text) { requestOpenText(text); return true; }
-    let large = false;
-    try { large = (JSON.parse(localStorage.getItem(RECENT_META_KEY) ?? "null") as { contentKept?: boolean } | null)?.contentKept === false; } catch { /* metadata is advisory */ }
-    application.setProblem(large ? "The last saved document is too large to keep as a Recent copy. Use Open to reload the saved file." : "No recent document is available.");
-    return false;
   }, [application, requestOpenText]);
   const attachEffects = useCallback((effects: LifecycleEffects) => {
     effectsRef.current = effects;

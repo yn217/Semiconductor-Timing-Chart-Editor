@@ -10,14 +10,14 @@ import { downloadText } from "./download-text.js";
 import { nextCommandId } from "./command-id.js";
 import { nextEntityId } from "./entity-id.js";
 import { ContextMenuPanel, MinimalCycleViewTitleBar, RenameDialog, BulkRegistrationDialog } from "./minimal-cycle-view-panels.js";
-import { MinimalCycleViewRibbonTabs, refreshTreeCollapsedMetadata, refreshTreeFilterPresentation, refreshTreeRovingFocus } from "./minimal-cycle-view-ui.js";
-import { cycleDocument, transactionDemoDocument, v1ReferenceDocument } from "./fixtures-cycle-reference-documents.js";
+import { MinimalCycleViewRibbonTabs } from "./minimal-cycle-view-ui.js";
 import { signalId } from "./minimal-cycle-view-fixture-helpers.js";
 import { useEditorDialogRuntime } from "./application/use-editor-dialog-runtime.js";
 import { HardwareHierarchyBrowser } from "./hardware-hierarchy-browser.js";
 import { SaveAsDialog } from "./save-as-dialog.js";
 import { DocumentProperties } from "./document-properties.js";
 import { useEditorApplicationOwner } from "./application/use-editor-application-owner.js";
+import { useDocumentEntityIndexes } from "./application/use-document-entity-indexes.js";
 import { useEditorCommandRouter } from "./application/use-editor-command-router.js";
 import { useEditorActions } from "./application/use-editor-actions.js";
 import { useEditorPresentationState } from "./application/use-editor-presentation-state.js";
@@ -33,7 +33,7 @@ import { useDocumentLifecycle } from "./application/use-document-lifecycle.js";
 import { deriveSelectionCapabilities, useSelectionOwner } from "./application/use-selection-owner.js";
 import { useClipboardActions } from "./application/clipboard-actions.js";
 import { useTimelineNavigationOwner } from "./runtime/use-timeline-navigation-owner.js";
-import { readPreferredViewMode, useWorkspaceUiState } from "./workspace/use-workspace-ui-state.js";
+import { useWorkspaceUiState } from "./workspace/use-workspace-ui-state.js";
 import { useTimelinePresentationState } from "./workspace/use-timeline-presentation-state.js";
 import { useDialogMenuState } from "./workspace/use-dialog-menu-state.js";
 import { useTimelineSurfaceRuntime } from "./runtime/use-timeline-surface-runtime.js";
@@ -42,23 +42,15 @@ import { createEditorExportController } from "./application/editor-export-contro
 import type { TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
 import { attachMenuKeyboardNavigation } from "./runtime/interaction-controller.js";
 import { refreshRendererOverlays } from "./runtime/render-coordinator.js";
-import { applyRendererHostSizing } from "./runtime/renderer-host-sizing.js";
-import { refreshRulerRangeSelection, refreshTransactionLinkedRows } from "./runtime/editor-dom-bridge.js";
-function readStartupDocumentPreference(): string | null {
-  try { return window.localStorage.getItem("timing-chart-v2.startup-document"); } catch { return null; }
-}
+import { useEditorDomBridgeEffects } from "./runtime/use-editor-dom-bridge-effects.js";
+import { resolveEditorStartupDocument } from "./workspace/editor-startup-document.js";
 
 export function MinimalCycleView() {
-  const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : undefined;
-  const visualReference = searchParams?.has("visual-reference") === true;
-  // Dev/test entry points for the plain 24-cycle Cycle sample (no demo Transactions/Bookmarks/Annotations): `?cycle-sample` or the
-  // `timing-chart-v2.startup-document=cycle` preference. The product default remains the Transaction demo document.
-  const cycleSample = searchParams?.has("cycle-sample") === true || readStartupDocumentPreference() === "cycle";
-  const initialDocument = visualReference ? v1ReferenceDocument : cycleSample ? cycleDocument : transactionDemoDocument;
+  const { visualReference, initialDocument, productTemplate, initialViewMode } = resolveEditorStartupDocument(typeof window !== "undefined" ? window.location.search : undefined);
   const application = useEditorApplicationOwner(initialDocument);
-  const documentLifecycle = useDocumentLifecycle({ application, productTemplate: cycleDocument, persistText: downloadText });
+  const documentLifecycle = useDocumentLifecycle({ application, productTemplate, persistText: downloadText });
   const exportController = useMemo(() => createEditorExportController(), []);
-  const { snapshot, history, problem, validationDiagnostics, validationPending, runtimeDiagnostics, setProblem, setRuntimeDiagnostics } = application;
+  const { snapshot, lastChangeSet, history, problem, validationDiagnostics, validationPending, runtimeDiagnostics, setProblem, setRuntimeDiagnostics } = application;
   const host = useRef<HTMLDivElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const ruler = useRef<HTMLDivElement>(null);
@@ -102,8 +94,9 @@ export function MinimalCycleView() {
   const timelineRuntimeRef = useRef<TimelineViewportRuntime | null>(null);
   const armArrowPick = useRef<(annotationType: "arrow" | "dependency") => void>(() => undefined);
   const selectAllRef = useRef<() => void>(() => undefined);
-  const snapTransactionCycle = useRef<(clientX: number, surfaceLeft?: number) => number | undefined>(() => undefined);
+  const snapTransactionCycle = useRef<(clientX: number, surfaceLeft?: number, horizontalScroll?: number) => number | undefined>(() => undefined);
   const transactionBoundaryX = useRef<(cycle: number) => number | undefined>(() => undefined);
+  const transactionSourceWindow = useRef<(viewport: HTMLElement) => Readonly<{ start: number; end: number }> | undefined>(() => undefined);
   const fileInput = useRef<HTMLInputElement>(null);
   const selection = useSelectionOwner(visualReference ? signalId("sig_cycle_clock") : undefined);
   const editActions = useClipboardActions({ application, selection });
@@ -130,7 +123,7 @@ export function MinimalCycleView() {
   const workspace = useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId, BookmarkId>({
     documentEpoch,
     cycleCount: snapshot.document.timeline.cycleCount,
-    initialViewMode: visualReference ? "Cycle" : readPreferredViewMode("Transaction"),
+    initialViewMode,
   });
   const {
     ribbonTab, setRibbonTab,
@@ -340,11 +333,7 @@ export function MinimalCycleView() {
   // View-only navigation updates zoom without replacing the canonical document.
   // Keep entity lookup work on the document boundary so large documents do not
   // linearly rescan every signal during each zoom render.
-  const signalById = useMemo(() => new Map(snapshot.document.signals.map((signal) => [signal.id, signal] as const)), [snapshot.document]);
-  const groupById = useMemo(() => new Map(snapshot.document.signalGroups.map((group) => [group.id, group] as const)), [snapshot.document]);
-  const annotationById = useMemo(() => new Map(snapshot.document.annotations.map((annotation) => [annotation.id, annotation] as const)), [snapshot.document]);
-  const transactionById = useMemo(() => new Map(snapshot.document.transactions.map((transaction) => [transaction.id, transaction] as const)), [snapshot.document]);
-  const bookmarkById = useMemo(() => new Map(snapshot.document.bookmarks.map((bookmark) => [bookmark.id, bookmark] as const)), [snapshot.document]);
+  const { signalById, groupById, annotationById, transactionById, bookmarkById } = useDocumentEntityIndexes(snapshot.document);
   const selectedBookmarkIdRef = useRef<BookmarkId | undefined>(undefined);
   const firstNonCommentSignal = useMemo(() => snapshot.document.signals.find((signal) => signal.type !== "commentRow"), [snapshot.document]);
   const referenceClockSignal = useMemo(() => {
@@ -412,27 +401,12 @@ export function MinimalCycleView() {
     if (!followSelection) setFollowSelection(true);
     setContextMenu(undefined);
   }, [documentEpoch]);
-  useEffect(() => {
-    refreshTreeFilterPresentation(host, treeFilter, treeTypeFilter);
-  }, [treePresentationRevision, treeFilter, treeTypeFilter, collapsedGroupIds]);
-  useEffect(() => {
-    refreshTreeCollapsedMetadata(host, collapsedGroupIds);
-  }, [treePresentationRevision, collapsedGroupIds]);
-  useEffect(() => {
-    refreshTreeRovingFocus(host, treeFocusRowIdRef);
-  }, [treePresentationRevision, treeFilter, collapsedGroupIds, selectedId, selectedGroupId]);
+  useEditorDomBridgeEffects({ host, ruler, viewport, timelineRuntimeRef, viewMetricsOwner, treeFilter, treeTypeFilter, treePresentationRevision, collapsedGroupIds, treeFocusRowIdRef, selectedSignalId: selectedId, selectedGroupId, rangeSelectionActive, timelineRange, rangePresentationRevision, cyclesPerTc, leftPaneWidth, frozenPaneWidth, inspectorWidth });
   const diagnostics = useMemo(() => [...validationDiagnostics, ...runtimeDiagnostics], [runtimeDiagnostics, validationDiagnostics]);
   const waveDromHasError = runtimeDiagnostics.some((item) => item.code === "WAVE_RENDER_ERROR");
   const commandRouter = useEditorCommandRouter({ application, selection, editActions, selectAllRef });
   const commandRegistry = commandRouter.commandRegistry;
   const executeBatch = commandRouter.executeBatch;
-  useEffect(() => {
-    refreshRulerRangeSelection(ruler, rangeSelectionActive, timelineRange);
-  }, [rangeSelectionActive, timelineRange, rangePresentationRevision]);
-  useEffect(() => {
-    if (timelineRuntimeRef.current) timelineRuntimeRef.current.onViewportResize();
-    else applyRendererHostSizing({ host, viewport, metrics: viewMetricsOwner.snapshot() });
-  }, [viewMetricsOwner, leftPaneWidth, frozenPaneWidth, inspectorWidth]);
   useTimelineSurfaceRuntime({
     application,
     documentLifecycle,
@@ -442,20 +416,13 @@ export function MinimalCycleView() {
     commandRegistry,
     executeBatch,
     dom: { host, viewport, ruler, gridLayer, viewportLower, rulerLower, hostLower, gridLayerLower, signalSplitRuntimeRef },
-    presentation: { getPinnedSignalIds, collapsedGroupIdsRef, applyCollapsedGroupsRef, forceUpperReprojectRef, lowerCanvasClickRef, timelineRuntimeRef, armArrowPick, snapTransactionCycle, transactionBoundaryX, refreshPlayhead, refreshRangeSelectionBand, publishStateRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, selectedAnnotationRef, gridEnabledRef, snapEnabledRef, treeFocusRowIdRef, suppressCanvasClickRef, menuOriginRef, transactionCyclesPerTcRef },
+    presentation: { getPinnedSignalIds, collapsedGroupIdsRef, applyCollapsedGroupsRef, forceUpperReprojectRef, lowerCanvasClickRef, timelineRuntimeRef, armArrowPick, snapTransactionCycle, transactionBoundaryX, transactionSourceWindow, refreshPlayhead, refreshRangeSelectionBand, publishStateRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, selectedAnnotationRef, gridEnabledRef, snapEnabledRef, treeFocusRowIdRef, suppressCanvasClickRef, menuOriginRef, transactionCyclesPerTcRef },
     state: { setRuntimeDiagnostics, setProblem, setTreePresentationRevision, setTransactionPresentationRevision, setRangePresentationRevision, setPlayheadPresentationRevision, setTimelineRange, setRangeSelectionActive, setSelectedCycle, setBottomPinned, setPinnedBottomSelection, setPinnedSignalIds, setTreeFilter, setTreeTypeFilter, setTreeAddMenuOpen, setTreeMoreMenuOpen, setContextMenu, setArrowPickStatus, setRenameDialogOpen, setCollapsedGroups, resetCollapsedGroups, resetForDocument, toggleCollapsedGroup, closeContextMenu },
     viewMetricsOwner,
     signalSplitEnabled,
     signalSplitRatio,
     viewMode,
   });
-  const previousCyclesPerTcRef = useRef(cyclesPerTc);
-  useEffect(() => {
-    if (previousCyclesPerTcRef.current === cyclesPerTc) return;
-    previousCyclesPerTcRef.current = cyclesPerTc;
-    timelineRuntimeRef.current?.refreshRuler();
-    timelineRuntimeRef.current?.refreshGrid();
-  }, [cyclesPerTc]);
   useViewModeTransition(viewMode, forceUpperReprojectRef, timelineRuntimeRef);
   useOverlayPresentationRefresh({
     refreshPlayhead, refreshRangeSelectionBand, host, selectedCycle, playheadPresentationRevision, rangePresentationRevision,
@@ -506,6 +473,7 @@ export function MinimalCycleView() {
     bottomPinned,
     setBottomPinned,
     followSelection,
+    setFollowSelection: setFollowSelectionWithFreeze,
     pinnedBottomSelection,
     setPinnedBottomSelection,
     selectedSignalId: selectedId,
@@ -526,6 +494,7 @@ export function MinimalCycleView() {
     selectedBookmarkId,
     selectedBookmark,
     selectBookmark,
+    clearBookmarkSelection,
     addBookmarkAtCycle,
     revealBookmark,
     deleteBottomBookmark,
@@ -566,6 +535,12 @@ export function MinimalCycleView() {
     saveAndContinuePendingFileAction,
     requestNewDocument,
   } = actions;
+  const setFollowSelectionFromUi = (value: boolean) => {
+    setFollowSelectionWithFreeze(value);
+    // Bookmark selection is a local Bottom target, not primary selection.
+    // Returning to Follow Selection releases that local target.
+    if (value) clearBookmarkSelection();
+  };
   selectedBookmarkIdRef.current = selectedBookmarkId;
   const bottomBookmark = frozen ? (pinnedBottomSelection!.bookmarkId === undefined ? undefined : bookmarkById.get(pinnedBottomSelection!.bookmarkId)) : (selectedBookmarkId === undefined ? undefined : bookmarkById.get(selectedBookmarkId));
   useEditorDialogRuntime({
@@ -609,6 +584,7 @@ export function MinimalCycleView() {
   });
   const secondarySurfaces = useEditorSecondarySurfaces({
     document: snapshot.document,
+    changeSet: lastChangeSet,
     validationDiagnostics,
     validationPending,
     documentEpoch,
@@ -617,7 +593,7 @@ export function MinimalCycleView() {
     history,
     problem,
     diagnostics,
-    refs: { host, viewport, menuOriginRef, transactionBoundaryX, snapTransactionCycle },
+    refs: { host, viewport, menuOriginRef, transactionBoundaryX, transactionSourceWindow, snapTransactionCycle },
     command: {
       registry: commandRegistry,
       execute: (command) => commandRegistry.current.execute("semantic.execute", command),
@@ -630,7 +606,7 @@ export function MinimalCycleView() {
     bottom: { signal: bottomSignal, group: bottomGroup, annotation: bottomAnnotation, transaction: bottomTransaction, bookmark: bottomBookmark },
     timeline: { range: timelineRange, collapsedGroupIds, setCollapsedGroups, toggleCollapsedGroup },
     setBottomVisible,
-    workspace: { viewMode, setViewMode, activeContext, bottomTabs, bottomTab, setBottomTab, selectBottomTab, onBottomTabKeyDown, followSelection, setFollowSelection: setFollowSelectionWithFreeze, bottomPinned, toggleBottomPin, treeFilter, setTreeFilter, treeTypeFilter, setTreeTypeFilter: (value) => setTreeTypeFilter(value), transactionTreeFilter, setTransactionTreeFilter, transactionTreeFilterMode, setTransactionTreeFilterMode, cyclesPerTc, setCyclesPerTc, setRibbonTab },
+    workspace: { viewMode, setViewMode, activeContext, bottomTabs, bottomTab, setBottomTab, selectBottomTab, onBottomTabKeyDown, followSelection, setFollowSelection: setFollowSelectionFromUi, bottomPinned, toggleBottomPin, treeFilter, setTreeFilter, treeTypeFilter, setTreeTypeFilter: (value) => setTreeTypeFilter(value), transactionTreeFilter, setTransactionTreeFilter, transactionTreeFilterMode, setTransactionTreeFilterMode, cyclesPerTc, setCyclesPerTc, setRibbonTab },
     dialog: { treeAddMenuOpen, setTreeAddMenuOpen, treeMoreMenuOpen, setTreeMoreMenuOpen, bulkRegistrationText, setBulkRegistrationText, bulkRegistrationGroupId, setBulkRegistrationGroupId, bulkRegistrationStatus, setBulkRegistrationStatus, setBulkRegistrationVisible, setHierarchyVisible, contextMenu, setContextMenu, closeTreeAddMenu, closeTreeMoreMenu, bottomResetToken, setBottomResetToken, inspectorResetToken, setInspectorResetToken, setInspectorVisible },
     annotationTargetSignalId,
     referenceClockName: referenceClockSignal?.display.name,
@@ -657,7 +633,7 @@ export function MinimalCycleView() {
     timelineRuntimeRef.current?.onViewportScroll();
   };
   const shellRibbon = {
-    tabs: <MinimalCycleViewRibbonTabs ribbonTab={ribbonTab} setRibbonTab={setRibbonTab} viewMode={viewMode} setViewMode={setViewMode} />,
+    tabs: <MinimalCycleViewRibbonTabs ribbonTab={ribbonTab} setRibbonTab={setRibbonTab} viewMode={viewMode} activeContext={activeContext} setViewMode={setViewMode} />,
     main: {
       commands: secondarySurfaces.surfaceCommands,
       tab: ribbonTab,
@@ -823,7 +799,7 @@ export function MinimalCycleView() {
     zoom,
     snapEnabled,
     viewMode,
-    statusContext: `Workspace: ${workspacePreset} · ${bottomPinned ? "Bottom: Pinned" : followSelection ? "Bottom: Follow" : "Bottom: Fixed"}${selectedSignal ? ` · Scope: ${selectedSignal.source.instancePath.length > 0 ? selectedSignal.source.instancePath.join("/") : "root"}` : ""}`,
+    statusContext: `Workspace: ${workspacePreset}${bottomPinned || !followSelection ? ` · Bottom: ${bottomPinned ? "Pinned" : "Fixed"} · Target: ${bottomBookmark ? `Bookmark ${bottomBookmark.name}` : bottomTransaction ? `Transaction ${bottomTransaction.name}` : bottomAnnotation ? `Annotation ${bottomAnnotation.label || bottomAnnotation.type}` : bottomSignal ? `Signal ${bottomSignal.display.name}` : bottomGroup ? `Group ${bottomGroup.name}` : "None"}` : ""}${selectedSignal ? ` · Scope: ${selectedSignal.source.instancePath.length > 0 ? selectedSignal.source.instancePath.join("/") : "root"}` : ""}`,
     hideRevisionDetail: visualReference,
     revision: snapshot.revision,
     undoDepth: history.undoDepth,
@@ -841,6 +817,30 @@ export function MinimalCycleView() {
     // #407: textual counterpart to the CSS border indicator -- only
     // meaningful in Split (Cycle/Transaction each have exactly one pane).
     activePaneStatus: viewMode === "Split" ? `Active Pane: ${activePane === "transaction" ? "Transaction" : "Signal"}` : undefined,
+    // Surface Open metrics are already published by the runtime. Read them
+    // on demand so the in-app browser can expose measurements without adding
+    // another collector or any work to the Open hot path.
+    openPerformanceData: () => {
+      const surface = host.current;
+      if (!surface) return "Cycle surface is not mounted.";
+      const fields = ["openReadiness", "openPhaseMarks", "openPhaseDurations", "openWaveBatchMetrics", "sessionCounters"] as const;
+      const phaseMarks = JSON.parse(surface.dataset.openPhaseMarks ?? "{}") as Record<string, number>;
+      const durations = JSON.parse(surface.dataset.openPhaseDurations ?? "{}") as Record<string, number>;
+      const waveMetrics = JSON.parse(surface.dataset.openWaveBatchMetrics ?? "{}") as Record<string, number>;
+      const sessionCounters = JSON.parse(surface.dataset.sessionCounters ?? "{}") as { viewMetrics?: { viewportWidth?: number }; mountedWaveOwners?: number };
+      const openStart = phaseMarks["open-command-start"] ?? phaseMarks["open-start"] ?? 0;
+      const openEnd = performance.now();
+      const longTasks = performance.getEntriesByType("longtask").filter((entry) => entry.startTime >= openStart && entry.startTime < openEnd);
+      return JSON.stringify({
+        ...Object.fromEntries(fields.map((field) => [field, surface.dataset[field] ?? null])),
+        openTotalWallMs: durations.idle,
+        openOutsideWaveBatchMs: typeof durations.idle === "number" && typeof waveMetrics.batchWallMs === "number" ? Math.max(0, durations.idle - waveMetrics.batchWallMs) : null,
+        viewportWidth: sessionCounters.viewMetrics?.viewportWidth ?? null,
+        mountedWaveOwners: sessionCounters.mountedWaveOwners ?? null,
+        nativeSchedulerYieldAvailable: typeof (globalThis as typeof globalThis & { scheduler?: { yield?: unknown } }).scheduler?.yield === "function",
+        longTasks: { count: longTasks.length, maxDurationMs: Math.max(0, ...longTasks.map((entry) => entry.duration)) },
+      });
+    },
   };
   return <EditorShellView
     viewModel={{

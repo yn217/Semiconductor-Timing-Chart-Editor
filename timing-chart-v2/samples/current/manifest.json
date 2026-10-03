@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "source": "packages/schema/src/canonical-document.schema.json + current canonical validation",
+  "samples": [
+    {
+      "file": "01_cycle_signals.tcd.json",
+      "documentId": "current.cycle.signals",
+      "title": "Cycle signals and presentation",
+      "coverage": [
+        "SignalType:all",
+        "SignalRole:all",
+        "Clock:reference,period,duty,phase,polarity,enable,suppressedPeriods,edgeCounter",
+        "resetSemantics",
+        "busWidth/displayFormat",
+        "enumDefinitions/enumId",
+        "sourceHierarchy",
+        "spacingBefore/After",
+        "SignalGroups/Spacer/Legend/Layout"
+      ]
+    },
+    {
+      "file": "02_annotations.tcd.json",
+      "documentId": "current.annotations",
+      "title": "Annotation types and semantic anchors",
+      "coverage": [
+        "AnnotationType:all",
+        "anchors:cycle/signal/transition/edge/value/row",
+        "transition:threshold/ratio",
+        "label offset/placement",
+        "line geometry/arrows",
+        "measurement profiles/layout",
+        "Marker verticalSpan",
+        "GhostTrace offset",
+        "Highlight snap/free",
+        "label wrapping",
+        "Annotation Groups"
+      ]
+    },
+    {
+      "file": "03_transactions.tcd.json",
+      "documentId": "current.transactions",
+      "title": "Transaction groups, lanes, and phases",
+      "coverage": [
+        "transactionGroups",
+        "grouped/ungrouped",
+        "laneId:multi/special IDs",
+        "phases",
+        "linkedSignals",
+        "color/description",
+        "category/style/metadata",
+        "transactionTimeScale"
+      ]
+    },
+    {
+      "file": "04_timegroups_bookmarks.tcd.json",
+      "documentId": "current.timegroups",
+      "title": "Bookmarks and nested folded time groups",
+      "coverage": [
+        "Bookmarks",
+        "nested parentId",
+        "collapsed axis-break and compact folds",
+        "resume label anchors/reciprocal ownership",
+        "reference clock across fold",
+        "terminal boundary"
+      ]
+    },
+    {
+      "file": "05_combined_protocol.tcd.json",
+      "documentId": "current.combined.protocol",
+      "title": "Peripheral request and response timing",
+      "coverage": [
+        "Cycle+Transaction+annotations+bookmarks+timegroups",
+        "Clock/Reset",
+        "bus/state/control",
+        "phased linked transactions",
+        "constraint/reset/latency relationships",
+        "mode navigation"
+      ]
+    },
+    {
+      "file": "06_layout_export.tcd.json",
+      "documentId": "current.layout.export",
+      "title": "Signal labels and export layout",
+      "coverage": [
+        "short/long names",
+        "left/center/right alignment",
+        "ellipsis/wrap/expand",
+        "Role/name column widths",
+        "header/footer",
+        "Legend/group backgrounds",
+        "export annotations",
+        "scroll/zoom/Fit extent"
+      ]
+    }
+  ]
+}

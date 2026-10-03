@@ -2,8 +2,8 @@ import { startTransition } from "react";
 import { flushSync } from "react-dom";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
-import type { RenderProjection, VirtualizationWindow } from "@timing-chart-v2/projection";
-import type { Annotation, AnnotationId, CanonicalDocument, DocumentProblem, GroupId, SemanticAnchor, SignalId, SpacerId, TransactionId } from "@timing-chart-v2/schema";
+import { getRowLayoutSourceIndex, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
+import type { AnnotationId, CanonicalDocument, DocumentProblem, GroupId, SignalId, SpacerId, TransactionId } from "@timing-chart-v2/schema";
 import { UiCommandRegistry } from "@timing-chart-v2/ui";
 import type { EditorApplicationOwner } from "../application/use-editor-application-owner.js";
 import { useDocumentLifecycle } from "../application/use-document-lifecycle.js";
@@ -21,6 +21,7 @@ import { resolveTransactionSnapCycle } from "./interaction-controller.js";
 import { scheduleInitialTimelineRefresh } from "./document-lifecycle-controller.js";
 import { refreshRendererForReason } from "./render-coordinator.js";
 import { createWaveformSurfaceProvider } from "./waveform-surface-provider.js";
+import { refreshWaveCanvasViewport } from "./canvas-wave-painter.js";
 import { initialWaveSignalIds, mountInitialTimelineProjection, projectViewportWindow, projectionForInitialWaveBootstrap } from "./viewport-projection.js";
 import { fixedColumnsOutsideTimeline, timelineScrollOwner } from "./timeline-scroll-owner.js";
 import { refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRulerAndGridIfNeeded, refreshTimelinePresentation, syncPresentationScale, syncRulerScroll } from "./timeline-presentation-refresh.js";
@@ -30,12 +31,13 @@ import { publishRendererState } from "./runtime-diagnostics.js";
 import { applyRendererHostSizing } from "./renderer-host-sizing.js";
 import type { TimelineViewportRuntime } from "./timeline-viewport-runtime.js";
 import { nextCommandId } from "../command-id.js";
-import { nextEntityId } from "../entity-id.js";
 import type { BottomPinnedSelection, TreeTypeFilter } from "../workspace/use-workspace-ui-state.js";
 import type { ContextMenuState } from "../workspace/use-dialog-menu-state.js";
 import { resetInspectorAccordionState } from "../inspector-accordion.js";
 import { deriveTransactionExtent } from "./transaction-extent.js";
 import { createTransactionPresentationRefreshRequester, shouldRefreshTransactionPresentation } from "./transaction-presentation-refresh.js";
+import { createTreeKeyboardController } from "./tree-keyboard-controller.js";
+import { TransitionArrowPicker } from "./transition-arrow-picker.js";
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 type TimelineRange = Readonly<{ start: number; end: number }>;
@@ -66,8 +68,9 @@ export interface TimelineSurfacePresentationPort {
   readonly lowerCanvasClickRef: MutableRefObject<(event: MouseEvent, targetHost: HTMLElement, targetViewport: HTMLElement) => void>;
   readonly timelineRuntimeRef: MutableRefObject<TimelineViewportRuntime | null>;
   readonly armArrowPick: MutableRefObject<(annotationType: "arrow" | "dependency") => void>;
-  readonly snapTransactionCycle: MutableRefObject<(clientX: number, surfaceLeft?: number) => number | undefined>;
+  readonly snapTransactionCycle: MutableRefObject<(clientX: number, surfaceLeft?: number, horizontalScroll?: number) => number | undefined>;
   readonly transactionBoundaryX: MutableRefObject<(cycle: number) => number | undefined>;
+  readonly transactionSourceWindow: MutableRefObject<(viewport: HTMLElement) => Readonly<{ start: number; end: number }> | undefined>;
   readonly refreshPlayhead: MutableRefObject<() => void>;
   readonly refreshRangeSelectionBand: MutableRefObject<() => void>;
   readonly publishStateRef: MutableRefObject<() => void>;
@@ -145,7 +148,7 @@ export interface TimelineSurfaceController {
 export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInput): TimelineSurfaceController {
   const { application, documentLifecycle, selection, navigation: timelineNavigation, commandRegistry, executeBatch } = input;
   const { host, viewport, ruler, gridLayer, viewportLower, rulerLower, hostLower, gridLayerLower, signalSplitRuntimeRef } = input.dom;
-  const { collapsedGroupIdsRef, applyCollapsedGroupsRef, forceUpperReprojectRef, lowerCanvasClickRef, timelineRuntimeRef, armArrowPick, snapTransactionCycle, transactionBoundaryX, refreshPlayhead, refreshRangeSelectionBand, publishStateRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, selectedAnnotationRef, gridEnabledRef, snapEnabledRef, treeFocusRowIdRef, suppressCanvasClickRef, menuOriginRef, transactionCyclesPerTcRef } = input.presentation;
+  const { collapsedGroupIdsRef, applyCollapsedGroupsRef, forceUpperReprojectRef, lowerCanvasClickRef, timelineRuntimeRef, armArrowPick, snapTransactionCycle, transactionBoundaryX, transactionSourceWindow, refreshPlayhead, refreshRangeSelectionBand, publishStateRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, selectedAnnotationRef, gridEnabledRef, snapEnabledRef, treeFocusRowIdRef, suppressCanvasClickRef, menuOriginRef, transactionCyclesPerTcRef } = input.presentation;
   const { setRuntimeDiagnostics, setProblem, setTreePresentationRevision, setTransactionPresentationRevision, setRangePresentationRevision, setPlayheadPresentationRevision, setTimelineRange, setRangeSelectionActive, setSelectedCycle, setBottomPinned, setPinnedBottomSelection, setPinnedSignalIds, setTreeFilter, setTreeTypeFilter, setTreeAddMenuOpen, setTreeMoreMenuOpen, setContextMenu, setArrowPickStatus, setRenameDialogOpen, resetForDocument, toggleCollapsedGroup, closeContextMenu } = input.state;
   const viewMetricsOwner = input.viewMetricsOwner;
   const signalSplitEnabled = input.signalSplitEnabled;
@@ -173,7 +176,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     let markOpenPhase: (phase: string, timestamp?: number) => void = () => undefined;
     const openPhaseTracker = createOpenPhaseTracker(rendererHost, undefined, () => {
       input.application.runPendingTimingDiagnostics(() => markOpenPhase("diagnostics-ready"));
-    });
+    }, () => { const openDocument = sessionController.snapshot().document; return openDocument.timeline.referenceClock === undefined && !openDocument.signals.some((signal) => signal.type === "clock"); });
     markOpenPhase = openPhaseTracker.mark;
     const beginOpenMeasurement = openPhaseTracker.begin;
     // Direct reload/startup has no File Open command to begin the phase
@@ -199,6 +202,28 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     let transactionExtentSource: CanonicalDocument["transactions"] | undefined;
     let transactionExtent: Readonly<{ start: number; end: number }> | undefined;
     let publishState: () => void = () => undefined;
+    let pendingOpenDiagnosticPublish = false;
+    let diagnosticPublishFrame = 0;
+    const requestDiagnosticPublish = (): void => {
+      if (!active) return;
+      if (primaryPresentationOpening) {
+        pendingOpenDiagnosticPublish = true;
+        return;
+      }
+      if (diagnosticPublishFrame !== 0) return;
+      const publish = () => {
+        diagnosticPublishFrame = 0;
+        if (!active || !rendererHost.isConnected) return;
+        publishState();
+      };
+      if (typeof globalThis.requestAnimationFrame === "function") diagnosticPublishFrame = globalThis.requestAnimationFrame(publish);
+      else diagnosticPublishFrame = globalThis.setTimeout(publish, 0) as unknown as number;
+    };
+    const flushOpenDiagnosticPublish = (): void => {
+      if (!pendingOpenDiagnosticPublish) return;
+      pendingOpenDiagnosticPublish = false;
+      requestDiagnosticPublish();
+    };
     const timelineGeometry = new TimelineGeometryOwner({
       mappingCache,
       geometryMaps,
@@ -218,10 +243,13 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       geometryRegistry,
       markOpenPhase,
       recordOpenWaveBatch: openPhaseTracker.recordWaveBatch,
+      isPresentationReady: () => {
+        const readiness = rendererHost.dataset.openReadiness;
+        return readiness === "presentation-ready" || readiness === "visible-waveforms-ready" || readiness === "idle";
+      },
       isPrimaryPresentationOpening: () => primaryPresentationOpening,
-      getWaveWidthPxPerDisplayCycle: () => timelineGeometry.waveWidthPxPerDisplayCycle,
-      getWaveOriginPx: () => timelineGeometry.waveOriginPx,
-      getPresentationScale: () => timelineGeometry.presentationScale,
+      getTimeAxisMetrics: () => timelineGeometry.timeAxisMetrics,
+      isTimeAxisMetricsCurrent: (generation) => timelineGeometry.timeAxisMetrics.generation === generation,
       onReferenceGeometryReady: () => {
         if (active) {
           refreshRulerAndGridIfNeeded(
@@ -263,7 +291,8 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       getSourceWindow: (owner) => {
         const viewport = timelineScrollOwner(owner.closest<HTMLElement>(".cycle-viewport") ?? viewportElement);
         const document = sessionController.snapshot().document;
-        const localScale = timelineGeometry.presentationScale * timelineNavigation.getZoom();
+        const timeAxisMetrics = timelineGeometry.timeAxisMetrics;
+        const localScale = timeAxisMetrics.presentationScale * timeAxisMetrics.zoom;
         const window = timelineGeometry.sourceWindowForLocalRange(document, viewport.scrollLeft / localScale, (viewport.scrollLeft + viewport.clientWidth) / localScale);
         // Transaction bars are projected from the same Cycle geometry. For a
         // small/medium document, retain boundaries covering the canonical
@@ -308,20 +337,17 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     markOpenPhase("renderer-updated");
     requestAnimationFrame(() => { if (active) markOpenPhase("row-shell-painted"); });
     const initialPresentationGeneration = primaryPresentationGeneration;
-    void renderer.whenIdle().then(() => {
-      if (active && primaryPresentationGeneration === initialPresentationGeneration) {
-        markOpenPhase("visible-waveforms-ready");
-        markOpenPhase("all-visible-idle");
-        primaryPresentationOpening = false;
-      }
-    });
     // Signal Split View (#200): lets the signalSplitEnabled effect force
     // Upper to reproject/re-render immediately after flipping
     // `projectionCoordinator.setPane()`, using the CURRENT document (not a
     // change -- Split toggling itself is view-only, so this must never
     // touch history/dirty/canonical state).
     const surfaceViewMode = () => rendererHost.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode;
-    let lastReprojectViewMode = surfaceViewMode();
+    const surfacePresentation = () => {
+      const surface = rendererHost.closest<HTMLElement>("[data-view-mode]");
+      return `${surface?.dataset.viewMode ?? ""}:${surface?.dataset.signalSplit ?? "false"}`;
+    };
+    let lastReprojectPresentation = surfacePresentation();
     forceUpperReprojectRef.current = () => {
       if (!active) return;
       // Transaction mode defers every non-reference waveform (see
@@ -329,8 +355,11 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       // they stay blank until an unrelated edit: the renderer only paints
       // dirty/new owners, and the deferred batch already cleared their dirty flag.
       const viewMode = surfaceViewMode();
-      const leavingDeferredMode = lastReprojectViewMode === "Transaction" && viewMode !== "Transaction";
-      lastReprojectViewMode = viewMode;
+      const previousMode = lastReprojectPresentation.split(":", 1)[0];
+      const currentPresentation = surfacePresentation();
+      const reprojectModeChanged = lastReprojectPresentation !== currentPresentation;
+      const leavingDeferredMode = previousMode === "Transaction" && viewMode !== "Transaction";
+      lastReprojectPresentation = currentPresentation;
       // The Cycle viewport has zero height while another mode is active, so a
       // window built then hides every row/annotation candidate; rebuild it now.
       if (leavingDeferredMode) window = buildViewportWindow(viewportElement, sessionController.snapshot().document.timeline.referenceClock, input.presentation.getPinnedSignalIds());
@@ -347,6 +376,11 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       const unpaintedSignalIds = leavingDeferredMode ? reprojectSnapshot.document.signals.map((signal) => signal.id).filter((id) => !paintedSignalIds.has(id)) : [];
       projection = projectionCoordinator.project({ snapshot: reprojectSnapshot, changeSet: unpaintedSignalIds.length > 0 ? { waveSemantics: unpaintedSignalIds } : {}, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       renderer.update(projection);
+      if (reprojectModeChanged) {
+        for (const owner of rendererHost.querySelectorAll<HTMLElement>("[data-role='wave-owner'][data-wave-renderer='canvas']")) {
+          refreshWaveCanvasViewport(owner);
+        }
+      }
       // Horizontal scroll re-publishes the previous projection; do not carry the
       // one-shot wave invalidation into every later scroll frame.
       if (projection.waveSignalIds.length > 0) projection = { ...projection, waveSignalIds: [] };
@@ -372,12 +406,17 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       if (rulerLower.current) refreshPlayheadPresentation(rulerLower.current, selectedCycleRef.current, boundaryToLocalX);
     };
     const refreshRangeSelectionBandNow = () => {
-      refreshRangeBandPresentation(viewportElement, rulerElement, rendererHost, rangeSelectionActiveRef.current, rendererHost.dataset.rangePreview, timelineRangeRef.current, (cycle) => timelineRuntime.sourceBoundaryToLocalX(sessionController.snapshot().document, cycle), timelineNavigation.getZoom(), timelineOffset(), projection.totalHeight);
+      // #937: the Zoom preset path publishes navigation zoom before the geometry generation catches up; publish it before placing the band.
+      if (timelineGeometry.timeAxisMetrics.zoom !== timelineNavigation.getZoom()) timelineGeometry.updateZoom(timelineNavigation.getZoom());
+      const metrics = timelineGeometry.timeAxisMetrics;
+      const document = sessionController.snapshot().document;
+      const boundaryToLocalX = (cycle: number, snapshot: typeof metrics) => timelineGeometry.sourceBoundaryToLocalX(document, cycle, snapshot);
+      refreshRangeBandPresentation(viewportElement, rulerElement, rendererHost, rangeSelectionActiveRef.current, rendererHost.dataset.rangePreview, timelineRangeRef.current, boundaryToLocalX, metrics, timelineOffset(), projection.totalHeight);
       // Signal Split View (#200): the range band's horizontal extent comes
       // from the one shared time mapping, but its vertical extent must span
       // Lower's OWN row content, not Upper's -- reusing Upper's totalHeight
       // here would stretch/shrink the band to the wrong pane's height.
-      if (viewportLower.current && rulerLower.current && signalSplitRuntimeRef.current) refreshRangeBandPresentation(viewportLower.current, rulerLower.current, rendererHost, rangeSelectionActiveRef.current, rendererHost.dataset.rangePreview, timelineRangeRef.current, (cycle) => timelineRuntime.sourceBoundaryToLocalX(sessionController.snapshot().document, cycle), timelineNavigation.getZoom(), timelineOffset(), signalSplitRuntimeRef.current.getTotalHeight());
+      if (viewportLower.current && rulerLower.current && signalSplitRuntimeRef.current) refreshRangeBandPresentation(viewportLower.current, rulerLower.current, rendererHost, rangeSelectionActiveRef.current, rendererHost.dataset.rangePreview, timelineRangeRef.current, boundaryToLocalX, metrics, timelineOffset(), signalSplitRuntimeRef.current.getTotalHeight());
     };
     refreshRangeSelectionBand.current = refreshRangeSelectionBandNow;
     const refreshRangePreview = () => {
@@ -387,6 +426,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     publishState = () => publishRendererState(rendererHost, sessionController.current(), viewMetricsOwner, adapter, geometryRegistry, projectionCoordinator, renderer, mappingCache, timelineGeometry.snapService, timelineGeometry.snapIndex, rulerBuilds, edgeCounterResolvePasses, timelineNavigation.getZoom(), application.validatorInvocationsRef.current, edgeCounterMetrics);
     publishStateRef.current = () => publishState();
     let frame = 0;
+    let scrollOverlayRefreshGeneration = 0;
     // Definite-assignment: assigned below before the viewport runtime's
     // returned closures can ever be invoked (matches this file's rangeInteractions/
     // treeDrag forward-declaration convention); no dummy body is reachable.
@@ -394,7 +434,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     const timelineRuntime = createTimelineViewportRuntime({
       dom: { viewportRef: { current: viewportElement }, waveformRef: { current: rendererHost }, rulerRef: { current: rulerElement }, gridRef: { current: gridElement }, overlayRef: { current: rendererHost.querySelector<HTMLElement>("[data-role='annotation-overlay-surface']") }, rangeBandRef: { current: viewportElement.querySelector<HTMLElement>("[data-role='range-selection-band']") }, playheadRef: { current: rulerElement.querySelector<HTMLElement>("[data-role='playhead']") } },
       geometry: {
-        getDisplayTimeMapping: () => timelineGeometry.displayMapping,
+        getTimeAxisMetrics: () => timelineGeometry.timeAxisMetrics,
         getTimeAxisGeometry: () => timelineGeometry.timeAxis.geometry,
         getLocalGeometryMap: () => geometryMaps,
         sourceCycleToLocalX: (cycle) => timelineGeometry.sourceBoundaryToLocalX(sessionController.snapshot().document, cycle),
@@ -403,16 +443,16 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       clearRequestedSourceCycle: () => timelineGeometry.clearRequestedSourceCycle(),
         localXToScreenX: (localX) => localX,
       },
-      viewport: { getMetrics: () => { const metrics = viewMetricsOwner.snapshot(); return { width: timelineScrollOwner(viewportElement).clientWidth, leftInset: fixedColumnsOutsideTimeline(viewportElement) ? 0 : metrics.leftPaneWidth + metrics.frozenPaneWidth }; }, getScrollState: () => ({ left: timelineScrollOwner(viewportElement).scrollLeft, top: viewportElement.scrollTop }), setScrollState: (state) => { if (state.left !== undefined) timelineScrollOwner(viewportElement).scrollLeft = state.left; if (state.top !== undefined) viewportElement.scrollTop = state.top; }, getZoom: timelineNavigation.getZoom, setZoom: timelineNavigation.setZoom },
+      viewport: { getMetrics: () => { const metrics = viewMetricsOwner.snapshot(); return { width: timelineScrollOwner(viewportElement).clientWidth, leftInset: fixedColumnsOutsideTimeline(viewportElement) ? 0 : metrics.leftPaneWidth + metrics.frozenPaneWidth }; }, getScrollState: () => ({ left: timelineScrollOwner(viewportElement).scrollLeft, top: viewportElement.scrollTop }), setScrollState: (state) => { if (state.left !== undefined) timelineScrollOwner(viewportElement).scrollLeft = state.left; if (state.top !== undefined) viewportElement.scrollTop = state.top; }, getZoom: timelineNavigation.getZoom, setZoom: (zoom) => { timelineNavigation.setZoom(zoom); timelineGeometry.updateZoom(zoom); } },
       document: { getSnapshot: () => sessionController.snapshot().document, getCanonicalRevision: () => sessionController.snapshot().revision, getDocumentEpoch: () => documentEpoch.current() },
-      render: { requestRender: (reason) => timelineRender(reason), requestOverlayRefresh: (reason) => { rendererHost.dataset.overlayRefreshReason = reason; const viewport = timelineScrollOwner(viewportElement); const localScale = timelineGeometry.presentationScale * timelineNavigation.getZoom(); const viewportQuery = timelineGeometry.viewportForLocalRange(viewport.scrollLeft / localScale, (viewport.scrollLeft + viewport.clientWidth) / localScale, viewportElement.scrollTop, viewportElement.scrollTop + viewportElement.clientHeight, documentEpoch.current(), selectedAnnotationRef.current ? [selectedAnnotationRef.current] : []); refreshRendererForReason(renderer, host, reason, sessionController.snapshot().document, projection, geometryMaps, mappingCache, timelineGeometry.presentationScale, timelineRangeRef.current, selectedCycleRef.current, selectedAnnotationRef.current, selectedEdgeRef.current, edgeCounterMetrics, viewportQuery); edgeCounterResolvePasses += 1; }, waitForRendererIdle: () => renderer.whenIdle().then(() => undefined) },
+      render: { requestRender: (reason) => timelineRender(reason), requestOverlayRefresh: (reason) => { rendererHost.dataset.overlayRefreshReason = reason; const timeAxisMetrics = timelineGeometry.timeAxisMetrics; const viewport = timelineScrollOwner(viewportElement); const localScale = timeAxisMetrics.presentationScale * timeAxisMetrics.zoom; const viewportQuery = timelineGeometry.viewportForLocalRange(viewport.scrollLeft / localScale, (viewport.scrollLeft + viewport.clientWidth) / localScale, viewportElement.scrollTop, viewportElement.scrollTop + viewportElement.clientHeight, documentEpoch.current(), selectedAnnotationRef.current ? [selectedAnnotationRef.current] : []); refreshRendererForReason(renderer, host, reason, sessionController.snapshot().document, projection, geometryMaps, timeAxisMetrics, timelineRangeRef.current, selectedCycleRef.current, selectedAnnotationRef.current, selectedEdgeRef.current, edgeCounterMetrics, viewportQuery); edgeCounterResolvePasses += 1; }, waitForRendererIdle: () => renderer.whenIdle().then(() => undefined) },
       lifecycle: { isCurrentEpoch: (epoch) => documentEpoch.isCurrent(epoch) },
     });
     timelineRuntimeRef.current = timelineRuntime;
     timelineRender = (reason) => {
       rendererHost.dataset.timelineRefreshReason = reason;
       if (reason === "scroll") {
-        syncRulerScroll(rulerElement, viewportElement, timelineNavigation.getZoom());
+        syncRulerScroll(rulerElement, viewportElement, timelineGeometry.timeAxisMetrics.zoom);
         cancelAnimationFrame(frame);
         frame = requestAnimationFrame(() => projectViewportWindow({
           viewport: viewportElement,
@@ -429,6 +469,18 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
             renderer.update(projection);
             rendererHost.dataset.viewportStartY = String(window.viewportStartY);
             publishState();
+            // Annotation overlays are viewport-filtered too. A scroll can
+            // move a previously-offscreen source anchor into view without
+            // changing the mounted Signal rows; refresh after any newly
+            // requested geometry has settled, and discard superseded scroll
+            // continuations so rapid scrolling publishes only the latest
+            // viewport's overlays.
+            const refreshGeneration = ++scrollOverlayRefreshGeneration;
+            const refreshEpoch = documentEpoch.current();
+            void renderer.whenIdle().then(() => {
+              if (!active || !rendererHost.isConnected || refreshGeneration !== scrollOverlayRefreshGeneration || !documentEpoch.isCurrent(refreshEpoch)) return;
+              timelineRuntime.refreshOverlays();
+            });
           },
         }));
         return;
@@ -436,6 +488,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       if (reason === "navigate-cycle") renderer.update(projection);
       const document = sessionController.snapshot().document;
       if (reason === "ruler") rulerBuilds += 1;
+      const scaleBefore = timelineGeometry.presentationScale;
       const presentation = refreshTimelinePresentation({
         reason,
         document,
@@ -450,7 +503,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         mappingCache,
         metricsOwner: viewMetricsOwner,
         currentZoom: timelineNavigation.getZoom(),
-        previousScale: timelineGeometry.presentationScale,
+        previousScale: scaleBefore,
         rulerInitialized,
         timeAxis: timelineGeometry.timeAxis,
         totalHeight: projection.totalHeight,
@@ -459,9 +512,10 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         onPlayhead: () => refreshPlayhead.current(),
         onRange: () => refreshRangeSelectionBand.current(),
         onResize: () => applyRendererHostSizing({ host, viewport, metrics: viewMetricsOwner.snapshot() }),
+        publishTimeAxisMetrics: (timeAxis, scale, width, origin, zoom) => timelineGeometry.updatePresentation(timeAxis, scale, width, origin, zoom),
+        publishTimeAxisZoom: (zoom) => timelineGeometry.updateZoom(zoom),
+        getTimeAxisMetrics: () => timelineGeometry.timeAxisMetrics,
       });
-      const scaleBefore = timelineGeometry.presentationScale;
-      timelineGeometry.updatePresentation(presentation.timeAxis, presentation.screenGeometryScale, presentation.waveWidthPxPerDisplayCycle, presentation.waveOriginPx);
       // #750: a changed geometry scale (cyclesPerTC compression on/off or a new factor) moves every Transaction X; bars/Phases/Bookmarks
       // are memoized on the presentation revision, so publish it.
       if (Math.abs(timelineGeometry.presentationScale - scaleBefore) > 1e-9) { setTransactionPresentationRevision((value) => value + 1); requestAnimationFrame(() => timelineNavigation.setZoom(timelineNavigation.getZoom())); }
@@ -475,13 +529,26 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       // its OWN row content height, not Upper's, so this reuses Upper's
       // inputs with Lower's own totalHeight rather than cloning Upper's
       // grid DOM outright.
-      if (reason === "grid" && gridLayerLower.current && signalSplitRuntimeRef.current) {
+      if (reason !== "scroll" && gridLayerLower.current && signalSplitRuntimeRef.current) { // #937: Lower follows every Upper grid refresh (zoom, fit, ruler, resize), not only the "grid" reason
         const metrics = viewMetricsOwner.snapshot();
-        refreshGridPresentation(gridLayerLower.current, document, geometryMaps, mappingCache, gridEnabledRef.current, signalSplitRuntimeRef.current.getTotalHeight(), globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth, presentation.screenGeometryScale, transactionCyclesPerTcRef.current);
+        refreshGridPresentation(gridLayerLower.current, document, geometryMaps, mappingCache, gridEnabledRef.current, signalSplitRuntimeRef.current.getTotalHeight(), globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth, presentation.screenGeometryScale, transactionCyclesPerTcRef.current, timelineGeometry.timeAxisMetrics);
+        gridLayerLower.current.style.transformOrigin = "0 0"; gridLayerLower.current.style.scale = `${timelineNavigation.getZoom()} 1`; // same CSS zoom as Upper's grid
       }
     };
     timelineRuntime.attach();
     transactionBoundaryX.current = (cycle) => timelineGeometry.sourceBoundaryToLocalX(sessionController.snapshot().document, cycle);
+    transactionSourceWindow.current = (sourceViewport) => {
+      const document = sessionController.snapshot().document;
+      const timeAxisMetrics = timelineGeometry.timeAxisMetrics;
+      const localScale = timeAxisMetrics.presentationScale * timeAxisMetrics.zoom;
+      if (!Number.isFinite(localScale) || localScale <= 0 || sourceViewport.clientWidth <= 0) return undefined;
+      const sharedViewport = timelineScrollOwner(sourceViewport);
+      return timelineGeometry.visibleSourceRangeForLocalRange(
+        document,
+        sharedViewport.scrollLeft / localScale,
+        (sharedViewport.scrollLeft + sharedViewport.clientWidth) / localScale,
+      );
+    };
     const currentViewMetrics = () => {
       viewMetricsOwner.update({ viewportWidth: viewportElement.clientWidth, zoom: timelineNavigation.getZoom() });
       return viewMetricsOwner.snapshot();
@@ -497,7 +564,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       viewport: viewportElement,
       ruler: rulerElement,
       scalable: [gridElement, ...rendererHost.querySelectorAll<HTMLElement>("[data-role='timing-semantic-rows'], [data-role='stable-waveform-surface'], [data-role='annotation-overlay-surface'], [data-role='interactive-overlay-surface']")],
-      rulerViewport: rulerViewportElement,
+      extraScalable: () => (gridLayerLower.current ? [gridLayerLower.current] : []), rulerViewport: rulerViewportElement,
       viewMetrics: viewMetricsOwner,
       timelineOffset,
       getPresentationScale: () => timelineGeometry.presentationScale,
@@ -508,27 +575,24 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       setRange: setTimelineRange,
       publishState,
     });
-    const cycleBoundaryAtX = createTimelineCycleBoundaryResolver({ rendererHost, timelineGeometry, getZoom: timelineNavigation.getZoom, isSnapEnabled: () => snapEnabledRef.current });
-    const transactionSnapAxisY = (() => {
-      const axisOwner = timelineGeometry.timeAxis.ownerSignalId;
-      return axisOwner === undefined ? undefined : projection.rowLayout.find((row) => row.rowId === axisOwner)?.y;
-    })();
-    snapTransactionCycle.current = (clientX, surfaceLeft) => resolveTransactionSnapCycle({
-      clientX,
-      surfaceLeft,
-      snapAxisRowY: transactionSnapAxisY,
-      timeAxis: timelineGeometry.timeAxis,
-      screenGeometry: timelineGeometry.screen,
-      zoom: timelineNavigation.getZoom(),
-      snapEnabled: snapEnabledRef.current,
-      document: sessionController.snapshot().document,
-      currentSnapIndex: () => timelineGeometry.currentSnapIndex(),
-      cycleBoundaryAtPointerX: cycleBoundaryAtX,
-      cycleBoundaryAtX,
-      cycleBoundaryAtLocalX: (localX, zoom, snapEnabled) => timelineGeometry.cycleBoundaryAtLocalX(localX, zoom, snapEnabled),
-    });
-    publishState();
-
+    const cycleBoundaryAtX = createTimelineCycleBoundaryResolver({ rendererHost, timelineGeometry, isSnapEnabled: () => snapEnabledRef.current });
+    snapTransactionCycle.current = (clientX, surfaceLeft, horizontalScroll = 0) => {
+      const timeAxisMetrics = timelineGeometry.timeAxisMetrics;
+      const axisOwner = timeAxisMetrics.timeAxis.ownerSignalId;
+      const snapAxisRowY = axisOwner === undefined ? undefined : projection.rowLayout.find((row) => row.rowId === axisOwner)?.y;
+      return resolveTransactionSnapCycle({
+        clientX, surfaceLeft, horizontalScroll,
+        snapAxisRowY,
+        timeAxisMetrics,
+        screenGeometry: timelineGeometry.screen,
+        snapEnabled: snapEnabledRef.current,
+        document: sessionController.snapshot().document,
+        currentSnapIndex: () => timelineGeometry.currentSnapIndex(),
+        cycleBoundaryAtPointerX: cycleBoundaryAtX,
+        cycleBoundaryAtX,
+        cycleBoundaryAtLocalX: (localX, snapEnabled) => timelineGeometry.cycleBoundaryAtLocalX(localX, snapEnabled),
+      });
+    };
     const initialDocumentEpoch = documentEpoch.current();
     scheduleInitialTimelineRefresh(renderer, rendererHost, {
       ruler: () => { if (active) timelineRuntime.refreshRuler(); },
@@ -540,6 +604,15 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       transactionPresentation: requestTransactionPresentationRefresh,
       collectErrors: () => { if (active) collectWaveErrors(); },
       publish: () => { if (active) publishState(); },
+      onPresentationReady: () => {
+        if (!active || primaryPresentationGeneration !== initialPresentationGeneration) return;
+        markOpenPhase("visible-waveforms-ready");
+        markOpenPhase("all-visible-idle");
+        primaryPresentationOpening = false;
+        // scheduleInitialTimelineRefresh already queues one diagnostic
+        // publication after this visual-ready boundary.
+        pendingOpenDiagnosticPublish = false;
+      },
     }, { isCurrent: () => active && documentEpoch.isCurrent(initialDocumentEpoch) });
 
     const collectWaveErrors = () => {
@@ -606,10 +679,9 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         // perform another DOM pass for an unchanged range.
         return range.start === start && range.end === end ? range : { start, end };
       });
-      publishState();
+      requestDiagnosticPublish();
       void renderer.whenIdle().then(() => {
         if (!active || !rendererHost.isConnected) return;
-        markOpenPhase("visible-waveforms-ready");
         // Accepted timeline-semantic changes must rebuild the ruler even after
         // its first paint.  The previous guard only refreshed during the
         // initialisation window, leaving Time Group collapse/expand controls
@@ -622,10 +694,12 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         if (refreshGridNow) timelineRuntime.refreshGrid();
         timelineRuntime.setZoom(timelineNavigation.getZoom());
         if (refreshOverlaysNow) timelineRuntime.refreshOverlays();
-        collectWaveErrors();
-        publishState();
+        markOpenPhase("visible-waveforms-ready");
         markOpenPhase("all-visible-idle");
         if (openingGenerationForCompletion !== undefined && primaryPresentationGeneration === openingGenerationForCompletion) primaryPresentationOpening = false;
+        flushOpenDiagnosticPublish();
+        collectWaveErrors();
+        requestDiagnosticPublish();
         requestAnimationFrame(() => {
           if (!active || !rendererHost.isConnected || commandGeneration !== acceptedCommandGeneration) return;
           const idleAt = globalThis.performance.now();
@@ -659,8 +733,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       setPinnedSignalIds([]);
       resetInspectorAccordionState();
        interactionHandle?.cancel();
-      pendingArrow = undefined;
-      pendingArrowAnnotationType = "arrow";
+      arrowPicker.reset();
       delete rendererHost.dataset.arrowPick;
       delete rendererHost.dataset.editorIdle;
       delete rendererHost.dataset.cycleViewReady;
@@ -698,7 +771,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       markOpenPhase("renderer-updated");
       requestAnimationFrame(() => { if (active) markOpenPhase("row-shell-painted"); });
       rulerElement.replaceChildren();
-      publishState();
+      requestDiagnosticPublish();
       void renderer.whenIdle().then(() => {
         if (!active || !rendererHost.isConnected) return;
         // The reference-geometry callback may already have built the ruler
@@ -708,85 +781,33 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         timelineRuntime.refreshPlayhead();
         timelineRuntime.setZoom(timelineNavigation.getZoom());
         timelineRuntime.refreshOverlays();
-        collectWaveErrors();
-        publishState();
         markOpenPhase("visible-waveforms-ready");
         markOpenPhase("all-visible-idle");
         if (primaryPresentationGeneration === openingGeneration) primaryPresentationOpening = false;
+        flushOpenDiagnosticPublish();
+        collectWaveErrors();
+        requestDiagnosticPublish();
       });
       },
     });
 
     const onViewportKeyDown = createTimelineViewportKeyDownHandler(viewportElement);
-    let pendingArrow: "armed" | SemanticAnchor | undefined;
+    const arrowPicker = new TransitionArrowPicker({
+      rendererHost,
+      geometry: timelineGeometry,
+      getDocument: () => sessionController.snapshot().document,
+      execute: (command) => application.execute(command),
+      selectAnnotation: (id) => selection.selectAnnotation(id),
+      publishState,
+      setProblem,
+      setStatus: setArrowPickStatus,
+    });
     // #375: the picked-transitions workflow is shared by both line-shaped
     // types that need real geometry-anchored endpoints -- Arrow and
     // Dependency -- so it must produce whichever type the Annotation type
     // dropdown currently has selected, not a type hardcoded to "arrow".
-    let pendingArrowAnnotationType: "arrow" | "dependency" = "arrow";
-    armArrowPick.current = (annotationType) => {
-      pendingArrow = "armed";
-      pendingArrowAnnotationType = annotationType;
-      setArrowPickStatus("from");
-      rendererHost.dataset.arrowPick = "from";
-    };
-    const leftTree = rendererHost.querySelector<HTMLElement>("[data-role='left-tree-rows']");
-    const treeItems = () => [...(leftTree?.querySelectorAll<HTMLElement>("[role='treeitem']") ?? [])].filter((item) => !item.hidden && !item.closest("[hidden]"));
-    const focusTreeItem = (item: HTMLElement | undefined) => {
-      if (!item || !leftTree) return;
-      treeFocusRowIdRef.current = item.dataset.rowId;
-      for (const candidate of leftTree.querySelectorAll<HTMLElement>("[role='treeitem']")) candidate.tabIndex = candidate === item ? 0 : -1;
-      item.focus({ preventScroll: true });
-      leftTree.dataset.focusRowId = item.dataset.rowId ?? "";
-    };
-    const focusTreeChild = (groupId: string) => focusTreeItem(treeItems().find((item) => item.dataset.groupId === groupId && item.dataset.groupHeader !== "true"));
-    const onTreeKeyDown = (event: KeyboardEvent) => {
-      if (!leftTree || !(event.target instanceof Element) || !leftTree.contains(event.target)) return;
-      const item = event.target.closest<HTMLElement>("[role='treeitem']");
-      const items = treeItems();
-      if (items.length === 0) return;
-      const active = item ?? items.find((candidate) => candidate.dataset.rowId === treeFocusRowIdRef.current) ?? items[0];
-      if (!active) return;
-      const index = items.indexOf(active);
-      const move = (next: HTMLElement | undefined) => { if (next) { event.preventDefault(); event.stopPropagation(); focusTreeItem(next); requestAnimationFrame(() => focusTreeItem(next)); } };
-      if (event.key === "ArrowDown") { move(items[Math.min(items.length - 1, index + 1)]); return; }
-      if (event.key === "ArrowUp") { move(items[Math.max(0, index - 1)]); return; }
-      if (event.key === "Home") { move(items[0]); return; }
-      if (event.key === "End") { move(items.at(-1)); return; }
-      if (event.key === "ArrowRight" && active.dataset.groupHeader === "true") {
-        if (active.getAttribute("aria-expanded") === "false") {
-          event.preventDefault();
-          event.stopPropagation();
-          active.querySelector<HTMLElement>("[data-role='tree-collapse']")?.click();
-          requestAnimationFrame(() => focusTreeChild(active.dataset.groupId ?? ""));
-        } else move(items.find((candidate) => candidate.dataset.groupId === active.dataset.groupId && candidate.dataset.groupHeader !== "true"));
-        return;
-      }
-      if (event.key === "ArrowLeft") {
-        if (active.dataset.groupHeader === "true" && active.getAttribute("aria-expanded") !== "false") {
-          event.preventDefault();
-          event.stopPropagation();
-          active.querySelector<HTMLElement>("[data-role='tree-collapse']")?.click();
-          requestAnimationFrame(() => focusTreeItem(active));
-        } else if (active.dataset.groupHeader !== "true") {
-          move(items.find((candidate) => candidate.dataset.groupId === active.dataset.groupId && candidate.dataset.groupHeader === "true"));
-        }
-        return;
-      }
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        event.stopPropagation();
-        const target = active.dataset.groupHeader === "true" ? active.querySelector<HTMLElement>("[data-role='tree-branch']") : active;
-        target?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: globalThis.window }));
-        return;
-      }
-      if (event.key === "ContextMenu" || (event.key === "F10" && event.shiftKey)) {
-        event.preventDefault();
-        event.stopPropagation();
-        const rect = active.getBoundingClientRect();
-        active.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2, view: globalThis.window }));
-      }
-    };
+    armArrowPick.current = arrowPicker.arm;
+    const { onKeyDown: onTreeKeyDown, focusItem: focusTreeItem } = createTreeKeyboardController(rendererHost, treeFocusRowIdRef);
     const onSelect = (event: MouseEvent, options?: { readonly synchronous?: boolean }) => {
       const closestFromEvent = <T extends Element>(selector: string): T | null => {
         const target = event.target instanceof Element ? event.target.closest<T>(selector) : null;
@@ -840,34 +861,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       // overlay sits above the actual waveform.  The snap resolver still uses
       // semantic geometry; this only keeps the overlay from swallowing the
       // browser click before that resolver runs.
-      if (pendingArrow && event.target instanceof Element && event.target.closest("[data-role='timing-semantic-rows'], [data-role='stable-waveform-surface'], [data-role='annotation-overlay-surface'], [data-role='interactive-overlay-surface']")) {
-        const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
-        if (!waveLayer) return;
-        const bounds = waveLayer.getBoundingClientRect();
-        const currentZoom = timelineNavigation.getZoom();
-        const localPointer = timelineGeometry.screenToLocal({ x: event.clientX - bounds.left, y: 0 }, currentZoom);
-        const snap = timelineGeometry.currentSnapIndex().nearest({ x: localPointer.x, y: event.clientY - bounds.top }, 12 / currentZoom, ["clock-edge", "signal-transition", "bus-transition"]);
-        publishState();
-        if (!snap) {
-          setProblem("No rendered transition is within the 12 px snap tolerance.");
-          return;
-        }
-        if (pendingArrow === "armed") {
-          pendingArrow = snap.anchor;
-          setArrowPickStatus("to");
-          rendererHost.dataset.arrowPick = "to";
-          rendererHost.dataset.snapKind = snap.kind;
-          return;
-        }
-        const annotation: Annotation = { id: nextEntityId("annotation", sessionController.snapshot().document) as AnnotationId, type: pendingArrowAnnotationType, label: "Transition", visible: true, color: "#d04a36", from: pendingArrow, to: snap.anchor, lineType: "straight", arrowhead: "end" };
-        const result = application.execute({ id: nextCommandId("annotation_transition_arrow"), type: "annotation.create", annotation });
-      if (result.ok) selection.selectAnnotation(annotation.id);
-        pendingArrow = undefined;
-        setArrowPickStatus("idle");
-        delete rendererHost.dataset.arrowPick;
-        rendererHost.dataset.snapKind = snap.kind;
-        return;
-      }
+      if (arrowPicker.handleClick(event)) return;
       const annotationOwner = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='annotation-owner'][data-annotation-id]") : null;
       if (annotationOwner?.dataset.annotationId) {
         const id = annotationOwner.dataset.annotationId as AnnotationId;
@@ -877,13 +871,16 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-row-id]") : null;
       const id = target?.dataset.rowId;
       if (!id) return;
-      const spacerGroup = sessionController.snapshot().document.signalGroups.find((group) => group.rows.includes(id as SpacerId) && group.spacers?.some((spacer) => spacer.id === id));
+      const currentDocument = sessionController.snapshot().document;
+      const sourceIndex = getRowLayoutSourceIndex(currentDocument).index;
+      const spacer = sourceIndex.spacersById.get(id as SpacerId);
+      const spacerGroup = spacer ? currentDocument.signalGroups.find((group) => group.spacers?.some((item) => item.id === spacer.id)) : undefined;
       if (spacerGroup) {
         selection.selectSpacer(spacerGroup.id, id as SpacerId);
         focusTreeItem(target);
         return;
       }
-      const signal = sessionController.snapshot().document.signals.find((candidate) => candidate.id === id);
+      const signal = sourceIndex.signalsById.get(id);
       if (!signal) return;
       const commitSelection = () => selection.selectSignal(signal.id, event.ctrlKey || event.metaKey);
       if (options?.synchronous === true) flushSync(commitSelection); else startTransition(commitSelection);
@@ -926,8 +923,8 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       timelineRuntime,
       getProjection: () => projection,
       getTimelineOffset: timelineOffset,
-      getPendingArrow: () => pendingArrow,
-      clearPendingArrow: () => { pendingArrow = undefined; },
+      getPendingArrow: () => arrowPicker.pending,
+      clearPendingArrow: arrowPicker.clear,
       applyCanvasCycleSelection,
       onSelect,
       onTreeKeyDown,
@@ -936,7 +933,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         // scrollable overlay surface. The runtime render path is intentionally
         // coalesced, but ruler alignment must be immediate for pointer/test
         // observers that sample geometry in the same task.
-        syncRulerScroll(rulerElement, viewportElement, timelineNavigation.getZoom());
+        syncRulerScroll(rulerElement, viewportElement, timelineGeometry.timeAxisMetrics.zoom);
         timelineRuntime.onViewportScroll();
       },
       onViewportKeyDown,
@@ -976,6 +973,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       armArrowPick.current = () => undefined;
       snapTransactionCycle.current = () => undefined;
       renderCoordinator.dispose();
+      adapter.disposeAll();
     };
     },
   };

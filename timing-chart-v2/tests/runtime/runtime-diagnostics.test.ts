@@ -95,12 +95,13 @@ describe("open phase readiness contract", () => {
     const zeroMetrics = {
       batchWallMs: 0, waveJsonPreparationMs: 0, renderAwaitMs: 0, renderCount: 0, cooperativeYieldCount: 0, cooperativeYieldWaitMs: 0,
       requestedCount: 0, requiredNowCount: 0, deferredCount: 0, skippedStaleBeforeRunCount: 0, staleAfterRunCount: 0,
+      artifactInstallsBeforePresentationReady: 0, staleProgressiveInstallPreventedCount: 0,
       duplicateOwnerRequestCount: 0, reusedMarkupCount: 0, markupCacheMissCount: 0, waveJsonBytes: 0, semanticValuesBytes: 0,
       svgMarkupBytes: 0, cacheKeySerializeMs: 0, waveDromRenderAnyMs: 0, onmlStringifyMs: 0, valueLabelLayoutMs: 0,
       markupSafetyMs: 0, templateParseMs: 0, svgSafetyDomWalkMs: 0, domInstallMs: 0, totalSignalWallMs: 0,
     };
-    tracker.recordWaveBatch({ ...zeroMetrics, batchWallMs: 120, waveJsonPreparationMs: 40, renderAwaitMs: 80, renderCount: 4, cooperativeYieldCount: 3, cooperativeYieldWaitMs: 45, requestedCount: 6, requiredNowCount: 4, deferredCount: 1, skippedStaleBeforeRunCount: 1, reusedMarkupCount: 2, markupCacheMissCount: 2, svgMarkupBytes: 900 });
-    tracker.recordWaveBatch({ ...zeroMetrics, batchWallMs: 30, waveJsonPreparationMs: 10, renderAwaitMs: 20, renderCount: 1, cooperativeYieldCount: 1, cooperativeYieldWaitMs: 16, requestedCount: 1, requiredNowCount: 1, markupCacheMissCount: 1, svgMarkupBytes: 300 });
+    tracker.recordWaveBatch({ ...zeroMetrics, batchWallMs: 120, waveJsonPreparationMs: 40, renderAwaitMs: 80, renderCount: 4, cooperativeYieldCount: 3, cooperativeYieldWaitMs: 45, requestedCount: 6, requiredNowCount: 4, deferredCount: 1, skippedStaleBeforeRunCount: 1, artifactInstallsBeforePresentationReady: 2, staleProgressiveInstallPreventedCount: 3, reusedMarkupCount: 2, markupCacheMissCount: 2, svgMarkupBytes: 900 });
+    tracker.recordWaveBatch({ ...zeroMetrics, batchWallMs: 30, waveJsonPreparationMs: 10, renderAwaitMs: 20, renderCount: 1, cooperativeYieldCount: 1, cooperativeYieldWaitMs: 16, requestedCount: 1, requiredNowCount: 1, artifactInstallsBeforePresentationReady: 1, staleProgressiveInstallPreventedCount: 1, markupCacheMissCount: 1, svgMarkupBytes: 300 });
     expect(JSON.parse(host.dataset.openWaveBatchMetrics!)).toEqual({
       batchCount: 2,
       batchWallMs: 150,
@@ -114,6 +115,8 @@ describe("open phase readiness contract", () => {
       deferredCount: 1,
       skippedStaleBeforeRunCount: 1,
       staleAfterRunCount: 0,
+      artifactInstallsBeforePresentationReady: 3,
+      staleProgressiveInstallPreventedCount: 4,
       duplicateOwnerRequestCount: 0,
       reusedMarkupCount: 2,
       markupCacheMissCount: 3,
@@ -134,6 +137,6 @@ describe("open phase readiness contract", () => {
     tracker.begin(200);
     expect(host.dataset.openWaveBatchMetrics).toBeUndefined();
     tracker.recordWaveBatch({ ...zeroMetrics, batchWallMs: 10, renderAwaitMs: 7, renderCount: 1 });
-    expect(JSON.parse(host.dataset.openWaveBatchMetrics!)).toMatchObject({ batchCount: 1, renderCount: 1, cooperativeYieldCount: 0 });
+    expect(JSON.parse(host.dataset.openWaveBatchMetrics!)).toMatchObject({ batchCount: 1, renderCount: 1, cooperativeYieldCount: 0, artifactInstallsBeforePresentationReady: 0, staleProgressiveInstallPreventedCount: 0 });
   });
 });

@@ -1,10 +1,10 @@
 import type { LocalGeometryMap } from "@timing-chart-v2/geometry";
 import { waveDomainPaddingPx, waveOwnerPlacement } from "./wave-owner-placement.js";
-import { buildTimeGroupHierarchy, type CanonicalDocument, type SignalId } from "@timing-chart-v2/schema";
+import { cachedTimeGroupHierarchy, type CanonicalDocument, type SignalId } from "@timing-chart-v2/schema";
 import { timeGroupOutlineHeight, type DisplayTimeMapping } from "@timing-chart-v2/projection";
 import type { TimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { presentationCycles } from "../presentation-cycles.js";
-import { displayWindowForSource } from "./display-boundary.js";
+import { displayBoundaryForGeometryKey, displayWindowForSource, sourceBoundaryGeometryPoint } from "./display-boundary.js";
 
 export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, mapping: DisplayTimeMapping, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock", minimumWidth = 0, viewportElement?: HTMLElement, referenceViewBoxWidth?: number, tcScale = 1): Readonly<{ scale: number; targetWidth: number; waveOriginPx: number }> {
   element.dataset.axisMode = axisMode;
@@ -22,7 +22,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   rangeBand.dataset.testid = "range-preview";
   rangeBand.setAttribute("aria-hidden", "true");
   rangeBand.hidden = true;
-  const hierarchy = buildTimeGroupHierarchy(document.timeGroups);
+  const hierarchy = cachedTimeGroupHierarchy(document.timeGroups);
   const outlineHeight = timeGroupOutlineHeight(document);
   const rulerFrame = element.parentElement;
   if (rulerFrame) {
@@ -59,25 +59,27 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
       });
       row.append(levelButton);
     }
-    for (const group of document.timeGroups.filter((item) => hierarchy.depthById.get(item.id) === depth)) {
+    for (const group of hierarchy.groupsByDepth[depth] ?? []) {
       // A collapsed group removes its interior source cycles from the
       // display mapping. Keep the Outline item visible by anchoring its
       // start to the preceding visible boundary when the exact start is
       // folded away, just as the Gap marker does below.
-      const startDisplay = mapping.sourceToDisplay[group.start]
-        ?? (group.start > 0 ? mapping.sourceToDisplay[group.start - 1] : undefined)
-        ?? mapping.sourceToDisplay[group.end]
+      const startDisplay = mapping.sourceToDisplay(group.start)
+        ?? (group.start > 0 ? mapping.sourceToDisplay(group.start - 1) : undefined)
+        ?? mapping.sourceToDisplay(group.end)
         ?? 0;
-      const endDisplay = mapping.sourceToDisplay[group.end] ?? mapping.displayCycleCount;
+      const endDisplay = mapping.sourceToDisplay(group.end) ?? mapping.displayCycleCount;
       // Local geometry is keyed by SOURCE cycle; a collapsed group leaves holes in that keying, so resolve the display
       // boundaries back to source cycles exactly as the tick loop below does.
-      const sourceOfDisplay = (display: number) => display === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[display] ?? display);
-      const startPoint = startDisplay === undefined ? undefined : geometry.find({ signalId: axisOwnerSignalId, cycle: sourceOfDisplay(startDisplay), point: "cycle-start" })?.point;
-      const endPoint = geometry.find({ signalId: axisOwnerSignalId, cycle: sourceOfDisplay(endDisplay), point: "cycle-start" })?.point;
+      const sourceOfDisplay = (display: number) => display === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource(display) ?? display);
+      const startPoint = startDisplay === undefined ? undefined : sourceBoundaryGeometryPoint(geometry, axisOwnerSignalId, sourceOfDisplay(startDisplay), startDisplay);
+      const endPoint = sourceBoundaryGeometryPoint(geometry, axisOwnerSignalId, sourceOfDisplay(endDisplay), endDisplay);
       if (!startPoint || !endPoint) continue;
       const item = element.ownerDocument.createElement("span");
       item.className = "time-outline-item";
       item.dataset.outlineTimeGroupId = group.id;
+      item.dataset.geometrySourceCycle = String(sourceOfDisplay(startDisplay));
+      item.dataset.geometryEndSourceCycle = String(sourceOfDisplay(endDisplay));
       item.style.left = `${startPoint.x * scale}px`;
       item.style.width = `${Math.max(18, (endPoint.x - startPoint.x) * scale)}px`;
       const toggle = element.ownerDocument.createElement("button");
@@ -106,8 +108,10 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   // retained value is only a first-paint fallback; keeping it over a valid
   // SVG matrix lets ruler/grid pitch drift after layout or zoom changes.
   let finalX = 0;
-  const cycleZeroPoint = geometry.find({ signalId: axisOwnerSignalId, cycle: 0, point: "cycle-start" })?.point;
-  const cycleOnePoint = mapping.displayCycleCount > 0 ? geometry.find({ signalId: axisOwnerSignalId, cycle: 1, point: "cycle-start" })?.point : undefined;
+  const cycleZeroSource = mapping.displayToSource(0) ?? 0;
+  const cycleOneSource = mapping.displayCycleCount > 0 ? mapping.displayToSource(1) : undefined;
+  const cycleZeroPoint = sourceBoundaryGeometryPoint(geometry, axisOwnerSignalId, cycleZeroSource, 0);
+  const cycleOnePoint = cycleOneSource === undefined ? undefined : sourceBoundaryGeometryPoint(geometry, axisOwnerSignalId, cycleOneSource, 1);
   const pixelsPerCycle = cycleZeroPoint && cycleOnePoint ? (cycleOnePoint.x - cycleZeroPoint.x) * scale : Infinity;
   // `geometry.cycleBoundaryEntries()` only covers whatever cycle range the
   // axis-owner signal's bounded/windowed geometry (#587) currently has
@@ -145,7 +149,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   let secondFoundPoint: { readonly x: number } | undefined;
   let secondFoundDisplay: number | undefined;
   for (const entry of boundaryEntries) {
-    const display = mapping.sourceToDisplay[entry.cycle] ?? (entry.cycle === document.timeline.cycleCount ? mapping.displayCycleCount : undefined);
+    const display = displayBoundaryForGeometryKey(entry.cycle, geometry, mapping);
     if (display === undefined) continue;
     if (firstFoundDisplay === undefined || display < firstFoundDisplay) { firstFoundPoint = entry.position; firstFoundDisplay = display; }
     if (secondFoundDisplay === undefined || display > secondFoundDisplay) { secondFoundPoint = entry.position; secondFoundDisplay = display; }
@@ -165,8 +169,8 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     ? (firstFoundPoint.x - firstFoundDisplay * windowLocalPixelsPerCycle) * scale
     : 0;
   for (const display of presentationCycles(semanticDisplayCycleCount, pixelsPerCycle, rulerTickBudget, tcScale > 1 ? tcScale : 1)) {
-    const sourceCycle = display === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[display] ?? display);
-    const resolvedPoint = geometry.find({ signalId: axisOwnerSignalId, cycle: sourceCycle, point: "cycle-start" })?.point;
+    const sourceCycle = display === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource(display) ?? display);
+    const resolvedPoint = sourceBoundaryGeometryPoint(geometry, axisOwnerSignalId, sourceCycle, display);
     const point = resolvedPoint ?? (firstFoundPoint && firstFoundDisplay !== undefined && windowLocalPixelsPerCycle !== undefined
       ? { x: firstFoundPoint.x + (display - firstFoundDisplay) * windowLocalPixelsPerCycle }
       : undefined);
@@ -175,6 +179,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     tick.dataset.cycle = String(mapping.labelFor(display));
     tick.dataset.displayCycle = String(display);
     tick.dataset.sourceCycle = String(sourceCycle);
+    tick.dataset.geometrySourceCycle = String(sourceCycle);
     tick.className = "cycle-tick";
     tick.style.left = `${point.x * scale}px`;
     tick.style.top = `${outlineHeight}px`;
@@ -192,17 +197,18 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   }
   const overlays: HTMLElement[] = [];
   for (const bookmark of document.bookmarks) {
-    const displayCycle = mapping.sourceToDisplay[bookmark.start];
-    const containingFold = displayCycle === undefined ? document.timeGroups.find((group) => group.presentation?.collapsed && bookmark.start >= group.start && bookmark.start < group.end) : undefined;
+    const displayCycle = mapping.sourceToDisplay(bookmark.start);
+    const containingFold = displayCycle === undefined ? mapping.collapsedGroupAtSource(bookmark.start) : undefined;
     const anchorCycle = containingFold === undefined ? displayCycle : (containingFold.end < document.timeline.cycleCount ? containingFold.end : Math.max(0, containingFold.start - 1));
-    const anchorDisplay = anchorCycle === undefined ? undefined : mapping.sourceToDisplay[anchorCycle];
+    const anchorDisplay = anchorCycle === undefined ? undefined : mapping.sourceToDisplay(anchorCycle);
     if (anchorCycle === undefined || anchorDisplay === undefined) continue;
-    const point = geometry.find({ signalId: axisOwnerSignalId, cycle: anchorCycle, point: "cycle-start" })?.point;
+    const point = sourceBoundaryGeometryPoint(geometry, axisOwnerSignalId, anchorCycle, anchorDisplay);
     if (!point) continue;
     const marker = element.ownerDocument.createElement("span");
     marker.className = containingFold === undefined ? "timeline-marker" : "timeline-marker timeline-marker-hidden";
     marker.dataset.bookmarkId = bookmark.id;
     marker.dataset.sourceCycle = String(bookmark.start);
+    marker.dataset.geometrySourceCycle = String(anchorCycle);
     if (containingFold !== undefined) marker.dataset.insideCollapsed = containingFold.name;
     marker.style.left = `${point.x * scale}px`;
     marker.style.top = `${outlineHeight + 19}px`;
@@ -215,13 +221,14 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   }
   for (const group of document.timeGroups.filter((item) => item.presentation?.collapsed)) {
     const anchorCycle = group.end < document.timeline.cycleCount ? group.end : (group.start > 0 ? group.start - 1 : undefined);
-    const anchorDisplay = anchorCycle === undefined ? undefined : mapping.sourceToDisplay[anchorCycle];
+    const anchorDisplay = anchorCycle === undefined ? undefined : mapping.sourceToDisplay(anchorCycle);
     if (anchorCycle === undefined || anchorDisplay === undefined) continue;
-    const point = geometry.find({ signalId: axisOwnerSignalId, cycle: anchorCycle, point: "cycle-start" })?.point;
+    const point = sourceBoundaryGeometryPoint(geometry, axisOwnerSignalId, anchorCycle, anchorDisplay);
     if (!point) continue;
     const gap = element.ownerDocument.createElement("span");
     gap.className = "timeline-gap";
     gap.dataset.timeGroupId = group.id;
+    gap.dataset.geometrySourceCycle = String(anchorCycle);
     gap.style.left = `${point.x * scale}px`;
     gap.style.top = `${outlineHeight + 2}px`;
     gap.textContent = group.presentation?.foldLabel ?? group.name;
@@ -260,7 +267,13 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   const geometryWidth = windowIndependentWidth ?? (Number.isFinite(referenceViewBoxWidth) && (referenceViewBoxWidth ?? 0) > 0
     ? referenceViewBoxWidth!
     : finalX + 24);
-  const targetWidth = Math.max(Math.ceil(geometryWidth * scale), Math.ceil(minimumWidth));
+  // #945: standalone Transaction sizes the track to fill the scroll owner (`minimumWidth` = its clientWidth). The time-domain box adds the
+  // WaveDrom margins on top of the track, so filling with the full clientWidth made the content always clientWidth+margin wide: a phantom
+  // horizontal scrollbar whose own height then forced a vertical one, whose width shrank clientWidth, which rebuilt the ruler narrower, and so
+  // on every frame. Reserve the margins inside the minimum so a filled track exactly fits.
+  const fillsViewport = element.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction";
+  const minimumTrackWidth = fillsViewport ? Math.max(0, minimumWidth - waveDomainPaddingPx(scale)) : minimumWidth;
+  const targetWidth = Math.max(Math.ceil(geometryWidth * scale), Math.ceil(minimumTrackWidth));
   // The time-domain box is the whole rendered SVG: the cycle span plus WaveDrom's left/right margins (the ticks start one
   // left margin in), so the terminal boundary and the last cycle cell stay inside the ruler/overlay/interactive layers.
   const timeDomainWidth = targetWidth + waveDomainPaddingPx(scale);

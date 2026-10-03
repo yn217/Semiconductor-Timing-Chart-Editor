@@ -9,6 +9,8 @@ startInCycleSample(test);
 async function ready(page: Page) {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  // The canonical revision is published after the first render; specs that capture it as a baseline read null (and Playwright throws) if they run first.
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-canonical-revision", /^\d+$/);
 }
 
 // The Inspector's default content is its always-mounted Layout panel
@@ -1030,6 +1032,7 @@ test("Bus Decimal/Signed/Unsigned formats stay consistent in Bottom and survive 
   const bottomTabs = page.getByTestId("bottom-tabs");
   await bottomTabs.locator("[data-bottom-tab='Signal']").click();
   const formattedA5 = page.getByTestId("event-row-value-3");
+  const busOwner = host.locator("[data-role='wave-owner'][data-signal-id='sig_cycle_data']");
 
   for (const [format, expectedValue, historyCount] of [
     ["decimal", "165", 1],
@@ -1041,7 +1044,10 @@ test("Bus Decimal/Signed/Unsigned formats stay consistent in Bottom and survive 
     await expect(host).toHaveAttribute("data-editor-idle", "true");
     await expect(inspector.getByLabel("Inspector bus format")).toHaveValue(format);
     await expect(formattedA5).toHaveText(expectedValue);
-    await expect(host.locator("[data-role='stable-waveform-surface'] svg text").filter({ hasText: expectedValue })).toHaveCount(1);
+    await expect.poll(async () => busOwner.locator("image[data-wave-svg-image]").evaluate(async (image) => {
+      const source = image.getAttribute("data-wave-svg-source");
+      return source ? await (await fetch(source)).text() : "";
+    })).toContain(expectedValue);
     await expect(page.getByTestId("history-status")).toHaveText(`History ${historyCount} / Redo 0`);
   }
 
@@ -1050,7 +1056,10 @@ test("Bus Decimal/Signed/Unsigned formats stay consistent in Bottom and survive 
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 1");
   await expect(inspector.getByLabel("Inspector bus format")).toHaveValue("signed");
   await expect(formattedA5).toHaveText("-91");
-  await expect(host.locator("[data-role='stable-waveform-surface'] svg text").filter({ hasText: "-91" })).toHaveCount(1);
+  await expect.poll(async () => busOwner.locator("image[data-wave-svg-image]").evaluate(async (image) => {
+    const source = image.getAttribute("data-wave-svg-source");
+    return source ? await (await fetch(source)).text() : "";
+  })).toContain("-91");
   await ribbon.getByRole("button", { name: "Redo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
   await expect(inspector.getByLabel("Inspector bus format")).toHaveValue("unsigned");
@@ -1068,7 +1077,10 @@ test("Bus Decimal/Signed/Unsigned formats stay consistent in Bottom and survive 
   await bottomTabs.locator("[data-bottom-tab='Signal']").click();
   await expect(inspector.getByLabel("Inspector bus format")).toHaveValue("unsigned");
   await expect(page.getByTestId("event-row-value-3")).toHaveText("165");
-  await expect(host.locator("[data-role='stable-waveform-surface'] svg text").filter({ hasText: "165" })).toHaveCount(1);
+  await expect.poll(async () => busOwner.locator("image[data-wave-svg-image]").evaluate(async (image) => {
+    const source = image.getAttribute("data-wave-svg-source");
+    return source ? await (await fetch(source)).text() : "";
+  })).toContain("165");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
@@ -1085,8 +1097,9 @@ test("applies Group Inspector presentation properties as one semantic operation"
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(inspector.getByLabel("Inspector group name")).toHaveValue("Control Group");
-  await expect(host.locator("[data-role='timing-row'][data-group-id='grp_cycle_control']").first()).toHaveCSS("opacity", "0.8");
-  await expect(host.locator("[data-role='timing-row'][data-group-id='grp_cycle_control']").first()).toHaveCSS("background-color", "rgb(238, 245, 252)");
+  // #797: Group opacity is a background-band alpha only; the row shell (and so every foreground layer) keeps full opacity.
+  await expect(host.locator("[data-role='timing-row'][data-group-id='grp_cycle_control']").first()).toHaveCSS("opacity", "1");
+  await expect(host.locator("[data-role='timing-row'][data-group-id='grp_cycle_control']").first()).toHaveCSS("background-color", "color(srgb 0.933333 0.960784 0.988235 / 0.8)"); // the same #EEF5FC with the 0.8 opacity carried as background alpha
 });
 
 test("applies Transaction Inspector phases through one semantic operation", async ({ page }) => {
@@ -1094,9 +1107,10 @@ test("applies Transaction Inspector phases through one semantic operation", asyn
   const host = page.getByTestId("cycle-surface");
   await page.getByRole("button", { name: "Transaction", exact: true }).click();
   await page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true }).click();
+  // Transaction form and Phase fields are in TC (1 TC = 10 cycles): 0.2..0.8 TC = cycles 2..8 on the 24-cycle sample.
   await page.getByLabel("New Transaction name").fill("Transfer");
-  await page.getByLabel("New Transaction start").fill("2");
-  await page.getByLabel("New Transaction end").fill("8");
+  await page.getByLabel("New Transaction start").fill("0.2");
+  await page.getByLabel("New Transaction end").fill("0.8");
   // Scoped to the transaction editor's own submit button -- an unscoped
   // page-wide "Create Transaction" is now ambiguous against the Ribbon's
   // "Create Transaction" button, which shares the same accessible name.
@@ -1108,12 +1122,12 @@ test("applies Transaction Inspector phases through one semantic operation", asyn
   const inspector = page.getByTestId("inspector");
   await inspector.getByTestId("add-transaction-phase").click();
   await inspector.getByLabel("Phase 1 name").fill("Address");
-  await inspector.getByLabel("Phase 1 start").fill("2");
-  await inspector.getByLabel("Phase 1 end").fill("4");
+  await inspector.getByLabel("Phase 1 start").fill("0.2");
+  await inspector.getByLabel("Phase 1 end").fill("0.4");
   await inspector.getByTestId("add-transaction-phase").click();
   await inspector.getByLabel("Phase 2 name").fill("Data");
-  await inspector.getByLabel("Phase 2 start").fill("4");
-  await inspector.getByLabel("Phase 2 end").fill("7");
+  await inspector.getByLabel("Phase 2 start").fill("0.4");
+  await inspector.getByLabel("Phase 2 end").fill("0.7");
   await inspector.getByTestId("apply-inspector-transaction").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
@@ -1312,10 +1326,11 @@ test("renders Clock Edge Numbers from actual Geometry without WaveDrom regenerat
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
   expect(await host.locator("[data-role='clock-edge-number'][data-signal-id='sig_cycle_clock']").count()).toBeGreaterThan(5);
-  // Open/New resets the transient range to the default Timeline range [2, 4), so a persisted visible-range-start
-  // counter restarts at the first clock edge inside it (cycle 2), not at the cycle-0 edge.
+  // Open/New resets the transient range to [0, 1) (status: "Range: [0, 1)"), so a persisted visible-range-start
+  // counter restarts at the first clock edge inside it: the cycle-0 edge.
+  await expect(page.getByTestId("range-status")).toHaveText("Range: [0, 1)");
+  await expect(host.locator("[data-role='clock-edge-number'][data-edge-counter-id='edge:sig_cycle_clock:rising:0']")).toHaveCount(1);
   await expect(host.locator("[data-role='clock-edge-number'][data-edge-counter-id='edge:sig_cycle_clock:rising:2']")).toHaveCount(1);
-  await expect(host.locator("[data-role='clock-edge-number'][data-edge-counter-id='edge:sig_cycle_clock:rising:0']")).toHaveCount(0);
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 

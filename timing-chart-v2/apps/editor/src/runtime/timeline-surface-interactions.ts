@@ -94,11 +94,11 @@ export function createTimelineViewportKeyDownHandler(viewportElement: HTMLElemen
   };
 }
 
-export function createTimelineCycleBoundaryResolver(input: Readonly<{ rendererHost: HTMLElement; timelineGeometry: TimelineGeometryOwner; getZoom: () => number; isSnapEnabled: () => boolean }>): (clientX: number) => number | undefined {
+export function createTimelineCycleBoundaryResolver(input: Readonly<{ rendererHost: HTMLElement; timelineGeometry: TimelineGeometryOwner; isSnapEnabled: () => boolean }>): (clientX: number) => number | undefined {
   return (clientX) => {
     const waveLayer = input.rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
     if (!waveLayer) return undefined;
-    return input.timelineGeometry.cycleBoundaryAtScreenX(clientX, waveLayer.getBoundingClientRect().left, input.getZoom(), input.isSnapEnabled());
+    return input.timelineGeometry.cycleBoundaryAtScreenX(clientX, waveLayer.getBoundingClientRect().left, input.isSnapEnabled());
   };
 }
 
@@ -130,14 +130,14 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
   };
   const cycleBoundaryAtX = (clientX: number): number | undefined => {
     const left = timeOriginLeft();
-    return left === undefined ? undefined : timelineGeometry.cycleBoundaryAtScreenX(clientX, left, timelineNavigation.getZoom(), snapEnabledRef.current);
+    return left === undefined ? undefined : timelineGeometry.cycleBoundaryAtScreenX(clientX, left, snapEnabledRef.current);
   };
   /** The ruler cell [start, end) containing the pointer: deterministic floor, never snapped to the nearest tick or glyph. */
   const rulerCellAtX = (clientX: number): number | undefined => {
     const left = rulerOriginLeft();
     // Boundary rule: cells are [start, end) -- a pointer exactly on a tick boundary belongs to the cell that starts there
     // (the 0.01px slack absorbs sub-pixel float error in the ruler/viewport transforms).
-    return left === undefined ? undefined : timelineGeometry.cycleBoundaryAtScreenX(clientX, left - 0.01, timelineNavigation.getZoom(), false);
+    return left === undefined ? undefined : timelineGeometry.cycleBoundaryAtScreenX(clientX, left - 0.01, false);
   };
   const timeDomainExclusions = [
     "[data-role='left-tree-rows']", "[data-role='frozen-label-rows']", "[data-role='annotation-owner']",
@@ -162,7 +162,7 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
     if (!waveLayer) return undefined;
     const bounds = waveLayer.getBoundingClientRect();
-    const zoom = timelineNavigation.getZoom();
+    const zoom = timelineGeometry.timeAxisMetrics.zoom;
     const local = timelineGeometry.screenToLocal({ x: event.clientX - bounds.left, y: event.clientY - bounds.top }, zoom);
     const snap = timelineGeometry.currentSnapIndex().nearest({ x: local.x, y: event.clientY - bounds.top }, 14 / zoom, ["clock-edge"]);
     const point = snap?.anchor.point;
@@ -217,7 +217,7 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     if (!target || target.closest(timeDomainExclusions) || event.clientX < bounds.left + getTimelineOffset() || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) return;
     const waveLayer = targetHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
     if (!waveLayer) return;
-    const cycle = timelineGeometry.cycleBoundaryAtScreenX(event.clientX, waveLayer.getBoundingClientRect().left, timelineNavigation.getZoom(), snapEnabledRef.current);
+    const cycle = timelineGeometry.cycleBoundaryAtScreenX(event.clientX, waveLayer.getBoundingClientRect().left, snapEnabledRef.current);
     if (cycle === undefined || !applyCanvasCycleSelection(cycle, event.shiftKey)) return;
     selectedEdgeRef.current = undefined;
     targetHost.dataset.selectedCycle = String(cycle);
@@ -249,7 +249,7 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
   };
   const treeDrag = new TreeDragInteractionOwner({ rendererHost, getDocument: () => getSnapshot().document, execute });
   const annotationInteraction = new AnnotationInteractionOwner({
-    rendererHost, renderer, timelineGeometry, documentEpoch, getZoom: timelineNavigation.getZoom,
+    rendererHost, renderer, timelineGeometry, documentEpoch,
     getDocument: () => getSnapshot().document, getProjection, isSnapEnabled: () => snapEnabledRef.current,
     execute, executeBatch,
     getDragTargets: (annotationId) => {

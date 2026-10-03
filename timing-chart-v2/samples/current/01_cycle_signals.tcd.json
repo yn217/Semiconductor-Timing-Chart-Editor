@@ -1,0 +1,513 @@
+{
+  "formatVersion": 2,
+  "document": {
+    "id": "current.cycle.signals",
+    "title": "Cycle signals and presentation",
+    "header": {
+      "subtitle": "Current product contract",
+      "description": "Cycle signals and presentation",
+      "notes": "Authored from the current canonical schema; not migrated from a historical fixture.",
+      "preconditions": [],
+      "constraints": [],
+      "exceptions": []
+    },
+    "footer": {
+      "figureNumber": "CURRENT.CYCLE.SIGNALS",
+      "revision": "Current",
+      "text": "Current-spec reference"
+    }
+  },
+  "timeline": {
+    "start": 0,
+    "end": 64,
+    "timeBase": "cycle",
+    "cycleCount": 64,
+    "edge": "rising",
+    "labelAnchors": [],
+    "referenceClock": "sig.clk"
+  },
+  "signalGroups": [
+    {
+      "id": "group.core",
+      "name": "Request controller",
+      "rows": [
+        "sig.clk",
+        "sig.reset",
+        "sig.req",
+        "sig.addr",
+        "spacer.core",
+        "sig.state",
+        "sig.logic",
+        "sig.event",
+        "sig.pulse",
+        "sig.note",
+        "sig.clk.aux",
+        "sig.sync-reset"
+      ],
+      "spacers": [
+        {
+          "id": "spacer.core",
+          "height": 10
+        }
+      ],
+      "spacingAfter": 4,
+      "style": {
+        "showBackground": true,
+        "background": "#eaf2ff",
+        "opacity": 0.15,
+        "extend": "both",
+        "showHeader": true
+      }
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig.clk",
+      "name": "core_clk",
+      "type": "clock",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "soc",
+          "timing"
+        ],
+        "signalName": "core_clk"
+      },
+      "display": {
+        "name": "core_clk",
+        "visible": true
+      },
+      "generator": {
+        "start": 0,
+        "period": 4,
+        "duty": 0.5,
+        "phase": 0,
+        "initial": 0,
+        "polarity": "positive"
+      },
+      "edgeCounter": {
+        "show": true,
+        "mode": "rising",
+        "startNumber": 0,
+        "countFrom": "signal-start",
+        "labelEvery": 4,
+        "position": "above",
+        "offset": {
+          "x": 0,
+          "y": -6
+        }
+      }
+    },
+    {
+      "id": "sig.reset",
+      "name": "reset_n",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "soc",
+          "timing"
+        ],
+        "signalName": "reset_n"
+      },
+      "display": {
+        "name": "reset_n",
+        "visible": true
+      },
+      "values": [
+        {
+          "id": "change.reset.0",
+          "start": 0,
+          "value": 0
+        },
+        {
+          "id": "change.reset.1",
+          "start": 4,
+          "value": 1
+        }
+      ],
+      "resetSemantics": {
+        "polarity": "active-low",
+        "synchronization": "asynchronous",
+        "assertCycle": 0,
+        "deassertCycle": 4
+      }
+    },
+    {
+      "id": "sig.req",
+      "name": "request_valid",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "soc",
+          "timing"
+        ],
+        "signalName": "request_valid"
+      },
+      "display": {
+        "name": "request_valid",
+        "visible": true
+      },
+      "values": [
+        {
+          "id": "change.req.0",
+          "start": 0,
+          "value": 0
+        },
+        {
+          "id": "change.req.1",
+          "start": 8,
+          "value": 1
+        },
+        {
+          "id": "change.req.2",
+          "start": 12,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig.addr",
+      "name": "request_address[15:0]",
+      "type": "bus",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "soc",
+          "bus"
+        ],
+        "signalName": "request_address",
+        "msb": 15,
+        "lsb": 0
+      },
+      "display": {
+        "name": "request_address[15:0]",
+        "align": "right",
+        "overflow": "ellipsis"
+      },
+      "values": [
+        {
+          "id": "change.addr.0",
+          "start": 0,
+          "value": "0x0000"
+        },
+        {
+          "id": "change.addr.1",
+          "start": 8,
+          "value": "0x1200"
+        }
+      ],
+      "width": 16,
+      "displayFormat": "hex"
+    },
+    {
+      "id": "sig.state",
+      "name": "controller_state",
+      "type": "state",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "timing"
+        ],
+        "signalName": "controller_state"
+      },
+      "display": {
+        "name": "controller_state",
+        "visible": true
+      },
+      "values": [
+        {
+          "id": "change.state.0",
+          "start": 0,
+          "value": "IDLE"
+        },
+        {
+          "id": "change.state.1",
+          "start": 8,
+          "value": "CAPTURE"
+        }
+      ],
+      "enumId": "enum.controller",
+      "spacingBefore": 3,
+      "spacingAfter": 2
+    },
+    {
+      "id": "sig.logic",
+      "name": "scan_enable",
+      "type": "logic",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "timing"
+        ],
+        "signalName": "scan_enable"
+      },
+      "display": {
+        "name": "scan_enable",
+        "visible": true
+      },
+      "values": [
+        {
+          "id": "change.logic.0",
+          "start": 0,
+          "value": 0
+        },
+        {
+          "id": "change.logic.1",
+          "start": 16,
+          "value": "X"
+        },
+        {
+          "id": "change.logic.2",
+          "start": 20,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig.event",
+      "name": "request_event",
+      "type": "event",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "soc",
+          "timing"
+        ],
+        "signalName": "request_event"
+      },
+      "display": {
+        "name": "request_event",
+        "visible": true
+      },
+      "values": [
+        {
+          "id": "change.event.0",
+          "start": 0,
+          "value": "none"
+        },
+        {
+          "id": "change.event.1",
+          "start": 8,
+          "value": "rise"
+        },
+        {
+          "id": "change.event.2",
+          "start": 12,
+          "value": "fall"
+        }
+      ]
+    },
+    {
+      "id": "sig.pulse",
+      "name": "response_pulse",
+      "type": "pulse",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "soc",
+          "timing"
+        ],
+        "signalName": "response_pulse"
+      },
+      "display": {
+        "name": "response_pulse",
+        "visible": true
+      },
+      "values": [
+        {
+          "id": "change.pulse.0",
+          "start": 0,
+          "value": 0
+        },
+        {
+          "id": "change.pulse.1",
+          "start": 12,
+          "value": 1
+        },
+        {
+          "id": "change.pulse.2",
+          "start": 13,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig.note",
+      "name": "Protocol note",
+      "type": "commentRow",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "timing"
+        ],
+        "signalName": "Protocol note"
+      },
+      "display": {
+        "name": "Protocol note",
+        "visible": true
+      },
+      "title": "Protocol note",
+      "body": "Current contract example authored for the active schema."
+    },
+    {
+      "id": "sig.clk.aux",
+      "name": "peripheral_clk",
+      "type": "clock",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "timing"
+        ],
+        "signalName": "peripheral_clk"
+      },
+      "display": {
+        "name": "peripheral_clk",
+        "visible": true
+      },
+      "generator": {
+        "start": 0,
+        "period": 8,
+        "duty": 0.5,
+        "phase": 4,
+        "initial": 1,
+        "polarity": "negative",
+        "suppressedPeriods": [
+          4,
+          5
+        ]
+      },
+      "edgeCounter": {
+        "show": true,
+        "mode": "rising",
+        "startNumber": 0,
+        "countFrom": "signal-start",
+        "labelEvery": 4,
+        "position": "above",
+        "offset": {
+          "x": 0,
+          "y": -6
+        }
+      },
+      "enable": [
+        {
+          "id": "change.aux.enable.0",
+          "start": 0,
+          "value": 1
+        },
+        {
+          "id": "change.aux.enable.1",
+          "start": 32,
+          "value": 0
+        },
+        {
+          "id": "change.aux.enable.2",
+          "start": 40,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig.sync-reset",
+      "name": "watchdog_reset",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "soc",
+          "timing"
+        ],
+        "signalName": "watchdog_reset"
+      },
+      "display": {
+        "name": "watchdog_reset",
+        "visible": true
+      },
+      "values": [
+        {
+          "id": "change.sync-reset.0",
+          "start": 0,
+          "value": 0
+        },
+        {
+          "id": "change.sync-reset.1",
+          "start": 24,
+          "value": 1
+        }
+      ],
+      "resetSemantics": {
+        "polarity": "active-high",
+        "synchronization": "synchronous",
+        "assertCycle": 24
+      }
+    }
+  ],
+  "bookmarks": [],
+  "timeGroups": [],
+  "annotations": [],
+  "annotationGroups": [],
+  "legend": {
+    "show": true,
+    "orientation": "horizontal",
+    "usedRolesOnly": true,
+    "position": {
+      "x": 0,
+      "y": 0
+    },
+    "items": [
+      {
+        "id": "legend.input",
+        "role": "input",
+        "label": "input",
+        "visible": true,
+        "order": 0
+      },
+      {
+        "id": "legend.output",
+        "role": "output",
+        "label": "output",
+        "visible": true,
+        "order": 1
+      },
+      {
+        "id": "legend.internal",
+        "role": "internal",
+        "label": "internal",
+        "visible": true,
+        "order": 2
+      }
+    ]
+  },
+  "layout": {
+    "roleColumnWidth": 56,
+    "signalNameWidth": 190,
+    "signalNameAlign": "left",
+    "rowHeight": 30,
+    "signalSpacing": 4,
+    "overflow": "ellipsis"
+  },
+  "transactions": [],
+  "constraints": [],
+  "checkSettings": {},
+  "enumDefinitions": [
+    {
+      "id": "enum.controller",
+      "name": "Controller state",
+      "entries": [
+        {
+          "value": "IDLE",
+          "label": "Idle"
+        },
+        {
+          "value": "CAPTURE",
+          "label": "Capture"
+        }
+      ]
+    }
+  ]
+}

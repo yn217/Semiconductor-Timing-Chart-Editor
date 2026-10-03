@@ -1,59 +1,18 @@
 import { UNGROUPED_DISCLOSURE_KEY, type TransactionDisclosure } from "../workspace/use-transaction-disclosure.js";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import type { Bookmark, BookmarkId, CanonicalDocument, Transaction, TransactionId } from "@timing-chart-v2/schema";
+import { transactionLaneIdentityKey } from "@timing-chart-v2/projection";
 import { EditorIcon } from "../editor-icon.js";
 import type { TransactionLaneCommandActions } from "../application/editor-surface-command-controller.js";
 import { InlineNameInput } from "../inline-name-input.js";
 import { registerActiveGestureCancel } from "./active-gesture-cancellation.js";
-import { buildSourceIntervalIndex, queryFoldIntervals, querySourceIntervalIndex, sourceCycleWindowForXRange, type SourceIntervalIndex } from "./transaction-viewport-index.js";
+import { mergeTransactionFoldRanges, transactionFoldBoundariesInWindow, transactionFoldContainingCycle, transactionFoldContainingEndBoundary, transactionFoldRangesIntersecting, transactionVisibleSegments, type TransactionFoldRange } from "./transaction-fold-index.js";
+import { bookmarksOutsideFolds, hiddenBookmarkFoldSummaries, indexTransactionIntervals, INITIAL_TRANSACTION_SOURCE_WINDOW, transactionGeometryGuidesInSourceWindow, transactionIntervalsOutsideFolds, type TransactionIntervalIndex, type TransactionSourceWindowState } from "./transaction-virtual-index.js";
+import { TRANSACTION_LANE_ROW_HEIGHT as LANE_ROW_HEIGHT, transactionLaneBandHeights } from "./transaction-lane-layout.js";
 
-const LANE_ROW_HEIGHT = 40;
 const GROUP_HEADER_HEIGHT = 24;
 let transactionLanesMountSerial = 0;
 const EMPTY_TRANSACTION_GROUPS: NonNullable<CanonicalDocument["transactionGroups"]> = [];
-const transactionIntervalIndexes = new WeakMap<readonly Transaction[], SourceIntervalIndex<Transaction>>();
-const bookmarkOrderIndexes = new WeakMap<readonly Bookmark[], readonly Bookmark[]>();
-const treeOrderIndexes = new WeakMap<readonly Transaction[], readonly Transaction[]>();
-
-function transactionIntervalIndex(items: readonly Transaction[]): SourceIntervalIndex<Transaction> {
-  let index = transactionIntervalIndexes.get(items);
-  if (!index) {
-    index = buildSourceIntervalIndex(items);
-    transactionIntervalIndexes.set(items, index);
-  }
-  return index;
-}
-
-function visibleBookmarks(items: readonly Bookmark[], start: number, end: number): readonly Bookmark[] {
-  let sorted = bookmarkOrderIndexes.get(items);
-  if (!sorted) {
-    sorted = [...items].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
-    bookmarkOrderIndexes.set(items, sorted);
-  }
-  let low = 0;
-  let high = sorted.length;
-  while (low < high) {
-    const middle = low + Math.floor((high - low) / 2);
-    if (sorted[middle]!.start < start) low = middle + 1;
-    else high = middle;
-  }
-  const result: Bookmark[] = [];
-  for (let index = low; index < sorted.length && sorted[index]!.start < end; index += 1) result.push(sorted[index]!);
-  return result;
-}
-
-function treeOrder(items: readonly Transaction[]): readonly Transaction[] {
-  let sorted = treeOrderIndexes.get(items);
-  if (!sorted) {
-    sorted = [...items].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
-    treeOrderIndexes.set(items, sorted);
-  }
-  return sorted;
-}
-
-function visibleTreeRows(items: readonly Transaction[], startRow: number, endRow: number): readonly Transaction[] {
-  return treeOrder(items).slice(Math.max(0, startRow), Math.max(0, endRow));
-}
 
 // #452: within one lane, Transactions whose [start,end) ranges overlap must
 // stack into separate rows rather than fully occluding each other -- a
@@ -111,7 +70,7 @@ function assignStackRows(transactions: readonly Transaction[]): { readonly rowOf
   return { rowOf, rowCount: Math.max(1, rowCount) };
 }
 
-type LaneBand = { readonly key: string; readonly laneId: string; readonly groupId: string | undefined; readonly labelTop: number; readonly trackTop: number; readonly labelHeight: number; readonly trackHeight: number; readonly rowOf: ReadonlyMap<TransactionId, number>; readonly treeRowOf: ReadonlyMap<TransactionId, number> };
+type LaneBand = { readonly key: string; readonly laneId: string; readonly groupId: string | undefined; readonly labelTop: number; readonly trackTop: number; readonly labelHeight: number; readonly trackHeight: number; readonly rowOf: ReadonlyMap<TransactionId, number> };
 type GroupHeaderBand = { readonly key: string; readonly labelTop: number; readonly trackTop: number; readonly label: string; readonly color: string | undefined; readonly count: number; readonly groupId: string | undefined; readonly collapsed: boolean };
 
 type TransactionDragEdge = "body" | "start" | "end";
@@ -157,13 +116,13 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
   readonly getBoundaryX: (cycle: number) => number | undefined;
   readonly boundaryXByCycle: ReadonlyMap<number, number>;
   readonly visibleBoundaryXs: readonly { readonly cycle: number; readonly x: number }[];
-  readonly foldRanges: readonly (readonly [number, number])[];
-  readonly onSnap: (clientX: number, surfaceLeft?: number) => number | undefined;
+  readonly foldRanges: readonly TransactionFoldRange[];
+  readonly onSnap: (clientX: number, surfaceLeft?: number, horizontalScroll?: number) => number | undefined;
   readonly onSelect: (id: TransactionId, additive?: boolean) => void;
   readonly commands: Pick<TransactionLaneCommandActions, "move" | "resize">;
   readonly onContextMenu?: (event: MouseEvent<HTMLButtonElement>, id: TransactionId) => void;
 }) {
-  const [drag, setDrag] = useState<{ edge: TransactionDragEdge; documentEpoch: number; surfaceLeft: number | undefined; startClientX: number }>();
+  const [drag, setDrag] = useState<{ edge: TransactionDragEdge; documentEpoch: number; surfaceLeft: number | undefined; scrollViewport: HTMLElement | undefined; startClientX: number }>();
   const [preview, setPreview] = useState<TransactionPreview>();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const pendingPreviewClientX = useRef<number | undefined>(undefined);
@@ -175,10 +134,12 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
   const dragSnapQueries = useRef(0);
   const dragThresholdCrossed = useRef(false);
   const current = preview ?? { start: transaction.start, end: transaction.end };
-  const transactionFolds = queryFoldIntervals(foldRanges, current.start, current.end);
-  const containingFold = transactionFolds.find(([fromCycle, toCycle]) => transaction.start >= fromCycle && transaction.end <= toCycle);
-  const startHiddenFold = transactionFolds.find(([fromCycle, toCycle]) => transaction.start >= fromCycle && transaction.start < toCycle && transaction.end > toCycle);
-  const endHiddenFold = transactionFolds.find(([fromCycle, toCycle]) => transaction.end > fromCycle && transaction.end <= toCycle && transaction.start < fromCycle);
+  const transactionFolds = transactionFoldRangesIntersecting(foldRanges, transaction.start, transaction.end);
+  const startFold = transactionFoldContainingCycle(foldRanges, transaction.start);
+  const containingFold = startFold && transaction.end <= startFold[1] ? startFold : undefined;
+  const startHiddenFold = startFold && transaction.end > startFold[1] ? startFold : undefined;
+  const endFold = transactionFoldContainingEndBoundary(foldRanges, transaction.end);
+  const endHiddenFold = endFold && transaction.end > endFold[0] && transaction.start < endFold[0] ? endFold : undefined;
   const resolveCachedBoundaryX = (cycle: number) => {
     const cached = previewBoundaryCache.current.get(cycle);
     if (cached !== undefined) return cached;
@@ -248,7 +209,7 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
       if (clientX === undefined || !drag || drag.documentEpoch !== documentEpoch) return;
       dragSnapQueries.current += 1;
       buttonRef.current?.setAttribute("data-drag-snap-queries", String(dragSnapQueries.current));
-      const cycle = onSnap(clientX, drag.surfaceLeft);
+      const cycle = onSnap(clientX, drag.surfaceLeft, drag.scrollViewport?.scrollLeft ?? 0);
       if (cycle === undefined) return;
       const nextPreview = previewTransaction(transaction, drag.edge, cycle, cycleCount);
       setPreview((current) => {
@@ -262,6 +223,9 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
   const begin = (event: ReactPointerEvent<HTMLElement>, edge: TransactionDragEdge) => {
     event.preventDefault();
     event.stopPropagation();
+    // Pin the active bar through horizontal viewport re-projection while the
+    // captured pointer crosses the viewport boundary.
+    onSelect(transaction.id);
     buttonRef.current?.setPointerCapture(event.pointerId);
     dragPointerMoves.current = 0;
     dragPreviewFrames.current = 0;
@@ -277,7 +241,8 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
       button.dataset.dragSnapLayoutReads = "0";
     }
     dragThresholdCrossed.current = false;
-    setDrag({ edge, documentEpoch, startClientX: event.clientX, surfaceLeft: buttonRef.current?.closest<HTMLElement>(".transaction-track")?.getBoundingClientRect().left });
+    const scrollViewport = buttonRef.current?.closest<HTMLElement>(".cycle-viewport") ?? undefined;
+    setDrag({ edge, documentEpoch, startClientX: event.clientX, scrollViewport, surfaceLeft: scrollViewport?.getBoundingClientRect().left });
     setPreview({ start: transaction.start, end: transaction.end });
   };
   const cancel = (event?: ReactPointerEvent<HTMLButtonElement>) => {
@@ -301,7 +266,7 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
       setPreview(undefined);
       return;
     }
-    const cycle = onSnap(event.clientX, drag.surfaceLeft);
+    const cycle = onSnap(event.clientX, drag.surfaceLeft, drag.scrollViewport?.scrollLeft ?? 0);
     const final = cycle === undefined ? preview : previewTransaction(transaction, drag.edge, cycle, cycleCount);
     setDrag(undefined);
     setPreview(undefined);
@@ -319,33 +284,21 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
   // undefined. Keep the canonical bar interaction as one owner, but expose
   // the visible source intervals explicitly so a folded transaction is
   // rendered as two segments around the axis break.
-  const visibleSegments = transactionFolds.reduce<Array<{ start: number; end: number }>>((segments, [fromCycle, toCycle]) => {
-    const next: Array<{ start: number; end: number }> = [];
-    for (const segment of segments) {
-      if (toCycle <= segment.start || fromCycle >= segment.end) next.push(segment);
-      else {
-        if (segment.start < fromCycle) next.push({ start: segment.start, end: fromCycle });
-        if (segment.end > toCycle) next.push({ start: toCycle, end: segment.end });
-      }
-    }
-    return next;
-  }, [{ start: current.start, end: current.end }]).filter((segment) => segment.end > segment.start);
+  const visibleSegments = transactionVisibleSegments(current.start, current.end, transactionFoldRangesIntersecting(foldRanges, current.start, current.end));
   const phaseSegments = (phase: NonNullable<typeof phases>[number]) => {
-    const phaseFolds = queryFoldIntervals(foldRanges, phase.start, phase.end);
-    const cuts = [phase.start, ...phaseFolds.flatMap(([fromCycle, toCycle]) => [Math.max(phase.start, fromCycle), Math.min(phase.end, toCycle)]), phase.end];
-    return Array.from({ length: cuts.length - 1 }, (_, index) => ({ start: cuts[index]!, end: cuts[index + 1]! })).filter((segment) => segment.end > segment.start && !phaseFolds.some(([fromCycle, toCycle]) => segment.start >= fromCycle && segment.end <= toCycle));
+    const phaseFolds = transactionFoldRangesIntersecting(foldRanges, phase.start, phase.end);
+    return transactionVisibleSegments(phase.start, phase.end, phaseFolds);
   };
   return <button ref={buttonRef} type="button" data-transaction-id={transaction.id} data-selected={String(selected)} data-drag-preview={String(preview !== undefined)} title={transaction.name} aria-label={transaction.name} style={{ left: startX, width: endX - startX, top: 4 + row * LANE_ROW_HEIGHT, ...(color ? { "--transaction-color": color } as CSSProperties : {}) }} onClick={(event) => onSelect(transaction.id, event.ctrlKey || event.metaKey)} onContextMenu={(event) => { event.preventDefault(); onSelect(transaction.id); onContextMenu?.(event, transaction.id); }} onPointerMove={updatePreview} onPointerUp={finish} onPointerCancel={cancel}><i data-edge="start" onPointerDown={(event) => begin(event, "start")} />{startHiddenFold && <i className="transaction-fold-affordance" data-fold-affordance="start-hidden" title="Transaction starts inside collapsed range" aria-label="Transaction start hidden in collapsed range" /> }<span onPointerDown={(event) => begin(event, "body")} data-label-compact={String(endX - startX < BAR_LABEL_MIN_PX)}>{endX - startX < BAR_LABEL_MIN_PX ? "" : transaction.name}</span>{visibleSegments.length > 1 && visibleSegments.map((segment, index) => { const from = resolveSegmentBoundary(segment.start, 1); const to = resolveSegmentBoundary(segment.end, -1); return from === undefined || to === undefined ? null : <i key={`segment-${index}`} className="transaction-axis-segment" data-transaction-segment="true" aria-hidden="true" style={{ left: `${100 * (from - startX) / (endX - startX)}%`, width: `${100 * (to - from) / (endX - startX)}%` }} />; })}{gaps.map((gap, index) => <i key={`axis-break-${index}`} className="transaction-axis-break-gap" style={gap} aria-hidden="true" />)}<div className="transaction-phases" aria-hidden="true">{phases?.flatMap((phase) => phaseSegments(phase).map((segment, index) => { const from = resolveSegmentBoundary(segment.start, 1); const to = resolveSegmentBoundary(segment.end, -1); if (from === undefined || to === undefined || endX <= startX) return null; return <small key={`${phase.start}:${phase.end}:${phase.name}:${index}`} data-phase-segment="true" title={`${phase.name}: ${phase.start}–${phase.end}`} style={{ left: `${100 * (from - startX) / (endX - startX)}%`, width: `${100 * (to - from) / (endX - startX)}%` }}>{to - from < PHASE_LABEL_MIN_PX ? "" : phase.name}</small>; }))}</div>{endHiddenFold && <i className="transaction-fold-affordance" data-fold-affordance="end-hidden" title="Transaction ends inside collapsed range" aria-label="Transaction end hidden in collapsed range" /> }<i data-edge="end" onPointerDown={(event) => begin(event, "end")} /></button>;
 }
 
-export function TransactionLanes({ document: rawDocument, documentEpoch, viewMode, presentationRevision, zoom, selectedId, selectedIds, filter = "", getBoundaryX, onSelect, onSnap, commands, onContextMenu, bookmarks = [], onNavigateBookmark, disclosure }: { /** #759: workspace-level Group disclosure owner shared with the Left Tree. */ readonly disclosure: TransactionDisclosure; readonly document: CanonicalDocument; readonly documentEpoch: number; readonly viewMode: "Cycle" | "Transaction" | "Split"; readonly presentationRevision?: number; readonly zoom: number; readonly selectedId: TransactionId | undefined; readonly selectedIds?: ReadonlySet<TransactionId>; readonly filter?: string; readonly getBoundaryX: (cycle: number) => number | undefined; readonly onSelect: (id: TransactionId, additive?: boolean) => void; readonly onSnap: (clientX: number, surfaceLeft?: number) => number | undefined; readonly commands: Pick<TransactionLaneCommandActions, "move" | "resize" | "renameTransactionGroup" | "deleteTransactionGroup">; readonly onContextMenu?: (event: MouseEvent<HTMLButtonElement>, id: TransactionId) => void; readonly bookmarks?: readonly Bookmark[]; readonly onNavigateBookmark?: (cycle: number, bookmarkId?: BookmarkId) => void }) {
+export function TransactionLanes({ document: rawDocument, documentEpoch, viewMode, presentationRevision, zoom, selectedId, selectedIds, filter = "", getBoundaryX, getVisibleSourceWindow, onSelect, onSnap, commands, onContextMenu, bookmarks = [], onNavigateBookmark, disclosure }: { /** #759: workspace-level Group disclosure owner shared with the Left Tree. */ readonly disclosure: TransactionDisclosure; readonly document: CanonicalDocument; readonly documentEpoch: number; readonly viewMode: "Cycle" | "Transaction" | "Split"; readonly presentationRevision?: number; readonly zoom: number; readonly selectedId: TransactionId | undefined; readonly selectedIds?: ReadonlySet<TransactionId>; readonly filter?: string; readonly getBoundaryX: (cycle: number) => number | undefined; readonly getVisibleSourceWindow: (viewport: HTMLElement) => Readonly<{ start: number; end: number }> | undefined; readonly onSelect: (id: TransactionId, additive?: boolean) => void; readonly onSnap: (clientX: number, surfaceLeft?: number, horizontalScroll?: number) => number | undefined; readonly commands: Pick<TransactionLaneCommandActions, "move" | "resize" | "renameTransactionGroup" | "deleteTransactionGroup">; readonly onContextMenu?: (event: MouseEvent<HTMLButtonElement>, id: TransactionId) => void; readonly bookmarks?: readonly Bookmark[]; readonly onNavigateBookmark?: (cycle: number, bookmarkId?: BookmarkId) => void }) {
   const isTransactionSelected = (id: TransactionId) => selectedId === id || selectedIds?.has(id) === true;
   const mountSerial = useRef(++transactionLanesMountSerial);
   const laneIndexBuilds = useRef(0);
   const stackRowBuilds = useRef(0);
-  const treeRowBuilds = useRef(0);
+  const transactionFilterBuilds = useRef(0);
   const stackRowsCache = useRef(new WeakMap<readonly Transaction[], ReturnType<typeof assignStackRows>>());
-  const treeRowsCache = useRef(new WeakMap<readonly Transaction[], ReadonlyMap<TransactionId, number>>());
   const laneArrayCache = useRef<ReadonlyMap<string, readonly Transaction[]> | undefined>(undefined);
   const laneTransactionCache = useRef<ReadonlyMap<TransactionId, Transaction> | undefined>(undefined);
   const laneKeyCache = useRef<ReadonlyMap<TransactionId, string> | undefined>(undefined);
@@ -360,11 +313,24 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   const needle = filter.trim().toLocaleLowerCase();
   const transactionGroupById = useMemo(() => new Map<string, NonNullable<CanonicalDocument["transactionGroups"]>[number]>((rawDocument.transactionGroups ?? []).map((group) => [group.id, group])), [rawDocument.transactionGroups]);
   const groupNameById = useMemo(() => new Map([...transactionGroupById].map(([id, group]) => [id, group.name])), [transactionGroupById]);
-  const document = useMemo<CanonicalDocument>(() => {
-    const visible = rawDocument.transactions.filter((transaction) => transaction.visible !== false);
-    if (needle.length === 0) return visible.length === rawDocument.transactions.length ? rawDocument : { ...rawDocument, transactions: visible };
-    return { ...rawDocument, transactions: visible.filter((transaction) => transaction.name.toLocaleLowerCase().includes(needle) || (transaction.groupId !== undefined && (groupNameById.get(transaction.groupId) ?? "").toLocaleLowerCase().includes(needle))) };
-  }, [groupNameById, needle, rawDocument, rawDocument.transactions, selectedId]);
+  const visibleTransactions = useMemo(() => {
+    transactionFilterBuilds.current += 1;
+    const visible: Transaction[] = [];
+    let hasHidden = false;
+    for (const transaction of rawDocument.transactions) {
+      if (transaction.visible === false) { hasHidden = true; continue; }
+      if (needle.length > 0 && !transaction.name.toLocaleLowerCase().includes(needle)
+        && !(transaction.groupId !== undefined && (groupNameById.get(transaction.groupId) ?? "").toLocaleLowerCase().includes(needle))) continue;
+      visible.push(transaction);
+    }
+    return needle.length === 0 && !hasHidden ? rawDocument.transactions : visible;
+  }, [groupNameById, needle, rawDocument.transactions]);
+  // Selection and unrelated document edits do not change the filtered list.
+  // Keep the canonical root current without rerunning the O(N) transaction scan.
+  const document = useMemo<CanonicalDocument>(
+    () => visibleTransactions === rawDocument.transactions ? rawDocument : { ...rawDocument, transactions: visibleTransactions },
+    [rawDocument, visibleTransactions],
+  );
   // #759: Group disclosure is a view-only presentation state owned once at the workspace level and shared with the Left Tree
   // (never persisted, never touches Canonical/History/Dirty).
   const collapsedGroups = disclosure.collapsed;
@@ -402,16 +368,64 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   // #767: zoom re-lays the geometry out (X scaled here) instead of CSS-scaling the whole track, which stretched every glyph horizontally.
   const zoomFactor = Number.isFinite(zoom) && zoom > 0 ? zoom : 1;
   const getScaledBoundaryX = useCallback((cycle: number) => { const px = getBoundaryX(cycle); return px === undefined ? undefined : px * zoomFactor; }, [getBoundaryX, zoomFactor]);
-  const foldRanges = useMemo<readonly (readonly [number, number])[]>(() => {
-    const ranges = (rawDocument.timeGroups ?? []).filter((group) => group.presentation?.collapsed).map((group) => [group.start, group.end] as const).sort((left, right) => left[0] - right[0] || left[1] - right[1]);
-    const merged: Array<readonly [number, number]> = [];
-    for (const range of ranges) {
-      const previous = merged.at(-1);
-      if (!previous || range[0] > previous[1]) merged.push(range);
-      else merged[merged.length - 1] = [previous[0], Math.max(previous[1], range[1])];
-    }
-    return merged;
-  }, [rawDocument.timeGroups]);
+  const [horizontalSourceWindow, setHorizontalSourceWindow] = useState<TransactionSourceWindowState>(INITIAL_TRANSACTION_SOURCE_WINDOW);
+  useLayoutEffect(() => {
+    const laneRoot = owner.current;
+    const viewport = laneRoot?.closest<HTMLElement>(".cycle-viewport");
+    if (!viewport) { setHorizontalSourceWindow(undefined); return; }
+    const update = () => {
+      const next = getVisibleSourceWindow(viewport);
+      // A temporarily unavailable geometry window is not permission to mount
+      // the whole document. Keep the initial empty state (or last valid window)
+      // until the shared geometry owner can publish a bounded range.
+      if (next !== undefined) setHorizontalSourceWindow(next);
+    };
+    update();
+    const refreshFrame = requestAnimationFrame(update);
+    viewport.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      cancelAnimationFrame(refreshFrame);
+      viewport.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [documentEpoch, document.timeline.cycleCount, getVisibleSourceWindow, presentationRevision, viewMode, zoom]);
+  const horizontalDocumentIndex = useMemo(() => indexTransactionIntervals(document.transactions), [document.transactions]);
+  const orderedBookmarks = useMemo(() => [...bookmarks].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id)), [bookmarks]);
+  const collapsedFoldRanges = useMemo(() => mergeTransactionFoldRanges((rawDocument.timeGroups ?? []).filter((group) => group.presentation?.collapsed).map((group) => [group.start, group.end] as const)), [rawDocument.timeGroups]);
+  const visibleBookmarks = useMemo(() => bookmarksOutsideFolds(orderedBookmarks, collapsedFoldRanges, horizontalSourceWindow), [collapsedFoldRanges, horizontalSourceWindow, orderedBookmarks]);
+  const hiddenBookmarkSummaries = useMemo(() => hiddenBookmarkFoldSummaries(orderedBookmarks, collapsedFoldRanges, horizontalSourceWindow), [collapsedFoldRanges, horizontalSourceWindow, orderedBookmarks]);
+  const horizontalDocumentCandidates = useMemo(() => {
+    // Keep only the active stable-ID selection mounted when it is hidden by a
+    // fold. A multi-selection set must not turn fold rescue back into O(N) DOM.
+    const pinned = selectedId === undefined ? undefined : new Set<string>([selectedId]);
+    return transactionIntervalsOutsideFolds(horizontalDocumentIndex, collapsedFoldRanges, horizontalSourceWindow, pinned);
+  }, [collapsedFoldRanges, horizontalDocumentIndex, horizontalSourceWindow, selectedId]);
+  const collapsedFoldBoundaries = useMemo(() => (rawDocument.timeGroups ?? [])
+    .filter((group) => group.presentation?.collapsed)
+    .flatMap((group) => [group.start, group.end])
+    .sort((left, right) => left - right), [rawDocument.timeGroups]);
+  const { cycleXs, boundaryXByCycle } = useMemo(() => {
+    const foldBoundaryCycles = horizontalSourceWindow === null
+      ? []
+      : horizontalSourceWindow === undefined
+        ? collapsedFoldBoundaries
+        : transactionFoldBoundariesInWindow(collapsedFoldBoundaries, horizontalSourceWindow.start, horizontalSourceWindow.end);
+    const sourceRange = horizontalSourceWindow;
+    const transactionCycles = horizontalDocumentCandidates.flatMap((transaction) => [transaction.start, transaction.end, ...(transaction.phases ?? []).filter((phase) => sourceRange === undefined || (sourceRange !== null && phase.end >= sourceRange.start && phase.start <= sourceRange.end)).flatMap((phase) => [phase.start, phase.end])]);
+    const relevantCycles = [...new Set([...transactionCycles, ...visibleBookmarks.map((bookmark) => bookmark.start), ...foldBoundaryCycles])].sort((left, right) => left - right);
+    const cycleXs = relevantCycles.flatMap((cycle) => { const x = getScaledBoundaryX(cycle); return x === undefined ? [] : [{ cycle, x }]; });
+    return { cycleXs, boundaryXByCycle: new Map(cycleXs.map(({ cycle, x }) => [cycle, x] as const)) };
+  }, [collapsedFoldBoundaries, getScaledBoundaryX, horizontalDocumentCandidates, horizontalSourceWindow, presentationRevision, visibleBookmarks]);
+  const visibleGuideXs = useMemo(() => horizontalSourceWindow === null
+    ? []
+    : horizontalSourceWindow === undefined
+      ? cycleXs
+      : transactionGeometryGuidesInSourceWindow(cycleXs, horizontalSourceWindow.start, horizontalSourceWindow.end), [cycleXs, horizontalSourceWindow]);
+  const x = (cycle: number) => boundaryXByCycle.get(cycle);
+  const foldRanges = useMemo<readonly TransactionFoldRange[]>(() => mergeTransactionFoldRanges(
+    (rawDocument.timeGroups ?? []).filter((group) => group.presentation?.collapsed).map((group) => [group.start, group.end] as const),
+  ), [rawDocument.timeGroups]);
 
   // #452: Group headers only appear once real Groups are in use -- a
   // document with no `transactionGroups` (or none actually referenced)
@@ -422,8 +436,8 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   // tracks, not one shared one), matching the approved reference's
   // "Memory / Lane 0" vs "CPU / Lane 1" structure.
   const groups = document.transactionGroups ?? EMPTY_TRANSACTION_GROUPS;
-  const laneKey = (groupId: string | undefined, laneId: string) => `${groupId ?? "ungrouped"}\u0000${laneId}`;
-  const { laneTransactionsByKey, transactionCountByGroup } = useMemo(() => {
+  const laneKey = transactionLaneIdentityKey;
+  const { laneTransactionsByKey, transactionCountByGroup, currentKeys } = useMemo(() => {
     laneIndexBuilds.current += 1;
     const previous = laneArrayCache.current;
     const previousTransactions = laneTransactionCache.current;
@@ -483,8 +497,18 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
     laneTransactionCache.current = currentTransactions;
     laneKeyCache.current = currentKeys;
     laneOrderCache.current = currentOrder;
-    return { laneTransactionsByKey, transactionCountByGroup };
+    return { laneTransactionsByKey, transactionCountByGroup, currentKeys };
   }, [document.transactions]);
+  const horizontalCandidatesByLane = useMemo(() => {
+    const byLane = new Map<string, Transaction[]>();
+    for (const transaction of horizontalDocumentCandidates) {
+      const key = currentKeys.get(transaction.id);
+      if (key === undefined) continue;
+      const bucket = byLane.get(key);
+      if (bucket) bucket.push(transaction); else byLane.set(key, [transaction]);
+    }
+    return byLane;
+  }, [currentKeys, horizontalDocumentCandidates]);
   // Transaction Mode GUI realignment: this used to also require "at least
   // one Transaction already references a Group" -- a freshly-created,
   // still-empty Group (the Tree's own "+" -> Add Transaction Group button)
@@ -541,37 +565,19 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
         stackRowsCache.current.set(laneTransactions, stackRows);
       }
       const { rowOf, rowCount } = stackRows;
-      // #451/#452: the Tree label list needs one row per Transaction
-      // ALWAYS (two Transactions that don't overlap in time still need
-      // two separate, independently-clickable list lines), whereas the
-      // central bars only need a new row when two Transactions actually
-      // overlap -- `rowOf` (time-based) is correct for bar placement but
-      // wrong for the Tree: two sequential, non-overlapping Transactions
-      // in one lane would both land on `rowOf=0` and render on top of
-      // each other in the label column. `treeRowOf` is a separate,
-      // always-one-row-per-Transaction sequence (stable start-then-id
-      // order), and the lane's height is whichever of the two needs more
-      // room, so neither the bars nor the Tree rows ever overlap.
-      let treeRowOf = treeRowsCache.current.get(laneTransactions);
-      if (!treeRowOf) {
-        treeRowOf = new Map(treeOrder(laneTransactions).map((transaction, index) => [transaction.id, index] as const));
-        treeRowBuilds.current += 1;
-        treeRowsCache.current.set(laneTransactions, treeRowOf);
-      }
-      // Transaction Mode's center label column represents the Lane only;
-      // Transaction names live in the bar header, as in the approved
-      // reference. Keep the label band to one compact Lane row even when
-      // several non-overlapping Transactions share that lane.
-      const labelHeight = LANE_ROW_HEIGHT;
-      const trackHeight = Math.max(rowCount, 1) * LANE_ROW_HEIGHT;
-      laneBands.push({ key: `lane:${section.groupId ?? "ungrouped"}:${laneId}`, laneId, groupId: section.groupId, labelTop: labelCursor, trackTop: trackCursor, labelHeight, trackHeight, rowOf, treeRowOf });
+      // The center label column is Lane-only. Transaction navigation and
+      // names belong to the authoritative left Transaction Tree; mirroring
+      // them here creates rows outside the single-row label band whenever
+      // one lane contains multiple sequential Transactions.
+      const { labelHeight, trackHeight } = transactionLaneBandHeights(rowCount);
+      laneBands.push({ key: transactionLaneIdentityKey(section.groupId, laneId), laneId, groupId: section.groupId, labelTop: labelCursor, trackTop: trackCursor, labelHeight, trackHeight, rowOf });
       labelCursor += labelHeight;
       trackCursor += trackHeight;
     }
     }
     return { groupHeaders, laneBands, totalHeight: Math.max(labelCursor, trackCursor, LANE_ROW_HEIGHT) };
   }, [collapsedGroups, laneTransactionsByKey, sections, transactionCountByGroup]);
-  const [virtualWindow, setVirtualWindow] = useState({ top: 0, height: 900, left: 0, width: 1200 });
+  const [virtualWindow, setVirtualWindow] = useState({ top: 0, height: 900 });
   useEffect(() => {
     const laneRoot = owner.current;
     // Combined mode owns a nested vertical scroller for the transaction pane;
@@ -584,15 +590,12 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
       ?? laneRoot?.closest<HTMLElement>(".cycle-viewport")
       ?? panel?.querySelector<HTMLElement>(".transaction-left-tree");
     if (!viewport) return;
-    const horizontalViewport = laneRoot?.closest<HTMLElement>(".cycle-viewport") ?? viewport;
-    const update = () => setVirtualWindow({ top: viewport.scrollTop, height: viewport.clientHeight || 900, left: horizontalViewport.scrollLeft, width: horizontalViewport.clientWidth || 1200 });
+    const update = () => setVirtualWindow({ top: viewport.scrollTop, height: viewport.clientHeight || 900 });
     update();
     viewport.addEventListener("scroll", update, { passive: true });
-    if (horizontalViewport !== viewport) horizontalViewport.addEventListener("scroll", update, { passive: true });
     window.addEventListener("resize", update);
     return () => {
       viewport.removeEventListener("scroll", update);
-      if (horizontalViewport !== viewport) horizontalViewport.removeEventListener("scroll", update);
       window.removeEventListener("resize", update);
     };
   }, [documentEpoch, totalHeight, document.transactions.length, filter, viewMode]);
@@ -605,47 +608,8 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   const virtualBottom = Math.min(totalHeight, virtualWindow.top + virtualWindow.height + virtualOverscan);
   const isVisible = (top: number, height: number) => top < virtualBottom && top + height > virtualTop;
   const visibleGroupHeaders = groupHeaders.filter((header) => isVisible(header.labelTop, GROUP_HEADER_HEIGHT));
-  const selectedTransaction = selectedId === undefined ? undefined : laneTransactionCache.current?.get(selectedId);
-  const bandContainsSelected = (band: LaneBand) => selectedTransaction !== undefined
-    && selectedTransaction.laneId === band.laneId
-    && selectedTransaction.groupId === band.groupId;
+  const bandContainsSelected = (band: LaneBand) => selectedId !== undefined && currentKeys.get(selectedId) === laneKey(band.groupId, band.laneId);
   const visibleLaneBands = laneBands.filter((band) => isVisible(band.labelTop, band.labelHeight) || isVisible(band.trackTop, band.trackHeight) || bandContainsSelected(band));
-  const sourceWindow = useMemo(() => sourceCycleWindowForXRange(
-    getScaledBoundaryX,
-    document.timeline.cycleCount,
-    Math.max(0, virtualWindow.left - 120),
-    virtualWindow.left + virtualWindow.width + 120,
-    2,
-  ) ?? { start: 0, end: document.timeline.cycleCount }, [document.timeline.cycleCount, getScaledBoundaryX, presentationRevision, virtualWindow.left, virtualWindow.width]);
-  const horizontalTransactionCandidates = useMemo(() => {
-    const candidates = new Set<Transaction>();
-    for (const band of visibleLaneBands) {
-      const laneTransactions = laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? [];
-      for (const transaction of querySourceIntervalIndex(transactionIntervalIndex(laneTransactions), sourceWindow.start, sourceWindow.end)) {
-        if (transaction.visible !== false) candidates.add(transaction);
-      }
-    }
-    if (selectedTransaction) candidates.add(selectedTransaction);
-    return candidates;
-  }, [laneTransactionsByKey, selectedTransaction, sourceWindow.end, sourceWindow.start, visibleLaneBands]);
-  const { cycleXs, boundaryXByCycle } = useMemo(() => {
-    const relevantCycles = new Set<number>([sourceWindow.start, sourceWindow.end]);
-    for (const transaction of horizontalTransactionCandidates) {
-      relevantCycles.add(transaction.start);
-      relevantCycles.add(transaction.end);
-      for (const phase of transaction.phases ?? []) { relevantCycles.add(phase.start); relevantCycles.add(phase.end); }
-    }
-    for (const bookmark of visibleBookmarks(bookmarks, sourceWindow.start, sourceWindow.end)) relevantCycles.add(bookmark.start);
-    for (const [start, end] of foldRanges) {
-      if (start < sourceWindow.end && end > sourceWindow.start) { relevantCycles.add(start); relevantCycles.add(end); }
-    }
-    const cycleXs = [...relevantCycles].sort((left, right) => left - right).flatMap((cycle) => {
-      const position = getScaledBoundaryX(cycle);
-      return position === undefined ? [] : [{ cycle, x: position }];
-    });
-    return { cycleXs, boundaryXByCycle: new Map(cycleXs.map(({ cycle, x }) => [cycle, x] as const)) };
-  }, [bookmarks, foldRanges, getScaledBoundaryX, horizontalTransactionCandidates, sourceWindow.end, sourceWindow.start]);
-  const x = (cycle: number) => boundaryXByCycle.get(cycle) ?? getScaledBoundaryX(cycle);
   const isTrackTransactionVisible = (band: LaneBand, transaction: Transaction) => {
     if (isTransactionSelected(transaction.id)) return true;
     const row = band.rowOf.get(transaction.id) ?? 0;
@@ -665,11 +629,11 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   // scrolling .cycle-viewport that drives virtualWindow. Keep its normal CSS
   // top (34px); applying -virtualWindow.top here would subtract the scroll
   // offset a second time and make offscreen lanes unreachable.
-  return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" data-mount-serial={mountSerial.current} data-lane-index-builds={laneIndexBuilds.current} data-stack-row-builds={stackRowBuilds.current} data-tree-row-builds={treeRowBuilds.current} data-total-transactions={document.transactions.length} data-horizontal-candidate-transactions={horizontalTransactionCandidates.size} data-visible-source-start={sourceWindow.start} data-visible-source-end={sourceWindow.end} style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
+  return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" data-mount-serial={mountSerial.current} data-total-transactions={document.transactions.length} data-horizontal-candidate-transactions={horizontalDocumentCandidates.length} data-hidden-bookmark-fold-summaries={hiddenBookmarkSummaries.length} data-lane-index-builds={laneIndexBuilds.current} data-stack-row-builds={stackRowBuilds.current} data-transaction-filter-builds={transactionFilterBuilds.current} style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
     <div className="transaction-lane-labels">
       {visibleGroupHeaders.map((header) => {
         const group = header.groupId === undefined ? undefined : transactionGroupById.get(header.groupId);
-        return <div key={header.key} className="transaction-group-header" data-testid="transaction-group-header" data-transaction-group-id={header.groupId ?? "ungrouped"} data-collapsed={String(header.collapsed)} style={{ top: header.labelTop, height: GROUP_HEADER_HEIGHT }}>
+        return <div key={header.key} className="transaction-group-header" data-testid="transaction-group-header" data-transaction-group-id={header.groupId} data-ungrouped={String(header.groupId === undefined)} data-collapsed={String(header.collapsed)} style={{ top: header.labelTop, height: GROUP_HEADER_HEIGHT }}>
           {/* #764: label/controls are a sticky context layer pinned to the Timeline viewport's left edge, so horizontal scrolling never leaves half-cut glyphs. */}
           <div className="transaction-group-header-context">
           <button type="button" className="transaction-group-header-chevron" aria-label={header.collapsed ? `Expand ${header.label}` : `Collapse ${header.label}`} aria-expanded={!header.collapsed} onClick={() => toggleGroupCollapsed(header.groupId ?? UNGROUPED_DISCLOSURE_KEY)}><EditorIcon name={header.collapsed ? "right" : "down"} /></button>
@@ -686,38 +650,26 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
         </div>;
       })}
       {visibleLaneBands.map((band) => {
-        // #451/#452 convergence: the same per-Transaction rows the central
-        // bars occupy are also listed here, by name, in this sticky label
-        // column -- this *is* Transaction Mode's left Tree content for the
-        // Lane/Transaction level (Groups above, Transaction names here),
-        // reading one shared `document.transactions` + `selectedId`/
-        // `onSelect`, not a second selection-owning tree.
-        const laneTransactions = laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? [];
-        return <span key={band.key} className="transaction-lane-label" data-testid="transaction-lane-label" data-lane-id={band.laneId} data-transaction-group-id={band.groupId ?? "ungrouped"} style={{ top: band.labelTop, height: band.labelHeight }}>
+        // Keep the center label plane strictly to Lane identity. Transaction
+        // names and selection live in the dedicated, virtualized left Tree.
+        return <span key={band.key} className="transaction-lane-label" data-testid="transaction-lane-label" data-lane-id={band.laneId} data-transaction-group-id={band.groupId} data-ungrouped={String(band.groupId === undefined)} style={{ top: band.labelTop, height: band.labelHeight }}>
           <em className="transaction-lane-label-name">{band.laneId.replace(/^lane_(\d+)$/i, "Lane $1")}</em>
-          {/* Transaction Mode GUI realignment ("長い名前は ellipsis +
-              tooltip"): the CSS already truncates a long name with
-              ellipsis (center-columns.css's overflow:hidden/text-overflow:
-              ellipsis on this class), but nothing surfaced the full name
-              once it was cut off. `title` is the same native-tooltip
-              affordance the rest of the app already uses for truncated
-              text, not a new pattern. */}
-          {[...new Set([
-            ...visibleTreeRows(laneTransactions, Math.floor((virtualTop - band.labelTop - 4) / LANE_ROW_HEIGHT), Math.ceil((virtualBottom - band.labelTop - 4) / LANE_ROW_HEIGHT)),
-            ...(selectedTransaction && selectedTransaction.groupId === band.groupId && (selectedTransaction.laneId ?? "lane_0") === band.laneId ? [selectedTransaction] : []),
-          ])].filter((transaction) => transaction.visible !== false).map((transaction) => <button type="button" key={transaction.id} className="transaction-lane-label-row" data-testid={`transaction-tree-row-${transaction.id}`} data-selected={String(isTransactionSelected(transaction.id))} title={transaction.name} style={{ top: 4 + (band.treeRowOf.get(transaction.id) ?? 0) * LANE_ROW_HEIGHT }} onClick={(event) => onSelect(transaction.id, event.ctrlKey || event.metaKey)}><i className="transaction-lane-label-swatch" aria-hidden="true" style={{ background: transaction.color ?? transactionGroupById.get(transaction.groupId ?? "")?.color ?? "#8895a7" }} />{transaction.name}</button>)}
         </span>;
       })}
     </div>
       <div className="transaction-track" data-transaction-track="true" style={{ height: totalHeight }}>
-      <div className="transaction-geometry-guides" aria-hidden="true">{cycleXs.map((value) => <i className="transaction-geometry-line" key={`cycle-${value.cycle}`} data-cycle={value.cycle} style={{ left: value.x }} />)}</div>
-      <div className="transaction-bookmark-markers" aria-label="Transaction bookmarks">{visibleBookmarks(bookmarks, sourceWindow.start, sourceWindow.end).map((bookmark) => { const left = x(bookmark.start); return left === undefined ? null : <button type="button" key={bookmark.id} data-bookmark-id={bookmark.id} data-source-cycle={bookmark.start} aria-label={`Go to bookmark ${bookmark.name}`} title={`${bookmark.name}: ${bookmark.start}`} style={{ left }} onClick={() => onNavigateBookmark?.(bookmark.start, bookmark.id)} />; })}</div>
+      <div className="transaction-geometry-guides" data-total-guide-count={cycleXs.length} data-mounted-guide-count={visibleGuideXs.length} aria-hidden="true">{visibleGuideXs.map((value) => <i className="transaction-geometry-line" key={`cycle-${value.cycle}`} data-cycle={value.cycle} style={{ left: value.x }} />)}</div>
+      <div className="transaction-bookmark-markers" aria-label="Transaction bookmarks">{visibleBookmarks.map((bookmark) => { const left = x(bookmark.start); return left === undefined ? null : <button type="button" key={bookmark.id} data-bookmark-id={bookmark.id} data-source-cycle={bookmark.start} aria-label={`Go to bookmark ${bookmark.name}`} title={`${bookmark.name}: ${bookmark.start}`} style={{ left }} onClick={() => onNavigateBookmark?.(bookmark.start, bookmark.id)} />; })}{hiddenBookmarkSummaries.map((summary) => { const left = x(summary.end) ?? x(summary.start); return left === undefined ? null : <button type="button" key={`fold-bookmarks-${summary.start}-${summary.end}`} className="transaction-fold-bookmark-summary" data-hidden-bookmark-count={summary.count} data-fold-start={summary.start} data-fold-end={summary.end} aria-label={`${summary.count} bookmarks inside collapsed range`} title={`${summary.count} bookmarks inside collapsed range`} style={{ left }} onClick={() => onNavigateBookmark?.(summary.start)} />; })}</div>
       {visibleGroupHeaders.map((header) => <div key={header.key} className="transaction-group-header-band" aria-hidden="true" style={{ top: header.trackTop, height: GROUP_HEADER_HEIGHT }} />)}
       {visibleLaneBands.map((band) => <div className="transaction-lane" key={band.key} data-lane-id={band.laneId} style={{ top: band.trackTop, height: band.trackHeight }}>
-        {[...horizontalTransactionCandidates].filter((transaction) => transaction.groupId === band.groupId && (transaction.laneId ?? "lane_0") === band.laneId && transaction.visible !== false && isTrackTransactionVisible(band, transaction)).map((transaction) => {
+        {(horizontalCandidatesByLane.get(laneKey(band.groupId, band.laneId)) ?? []).filter((transaction) => transaction.visible !== false && isTrackTransactionVisible(band, transaction)).map((transaction) => {
           const startX = x(transaction.start);
           const endX = x(transaction.end);
-          if (startX === undefined || endX === undefined) return null;
+          // A Transaction fully inside a collapsed TimeGroup has no rendered X, but must still mount its "hidden in fold" affordance
+          // (selectable, aria-labelled); only Transactions that are neither positioned nor fold-hidden are skipped.
+          const containingFold = transactionFoldContainingCycle(foldRanges, transaction.start);
+          const hiddenInFold = containingFold !== undefined && transaction.end <= containingFold[1];
+          if ((startX === undefined || endX === undefined) && !hiddenInFold) return null;
           const row = band.rowOf.get(transaction.id) ?? 0;
           // #429/#397 Transaction Mode Product Closure P0-4: the bar's own
           // color/Group color was resolved and applied to the Tree row's
