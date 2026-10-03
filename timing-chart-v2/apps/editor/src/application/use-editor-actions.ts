@@ -20,6 +20,7 @@ import { createFileActionController } from "./file-action-controller.js";
 import { createSelectionActions } from "./selection-actions.js";
 import { createBottomEditorActions } from "./bottom-editor-actions.js";
 import { transactionInsertion } from "../transaction-insertion.js";
+import { createRevealAIEntityAction, createSelectAIEntityAction } from "./ai-entity-reveal.js";
 
 export interface EditorActionsInput {
   readonly document: CanonicalDocument;
@@ -177,38 +178,6 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     setSelectedBookmarkId(undefined);
     input.selection.selectLegend();
   };
-  const selectAIEntity = ({ entityType, entityId }: { readonly entityType: AISelectionEntityType; readonly entityId: string }) => {
-    if (entityType === "signal") selectHierarchySignal(entityId as SignalId);
-    else if (entityType === "group") input.selection.selectGroup(entityId as GroupId);
-    else if (entityType === "transaction") selectTransaction(entityId as TransactionId);
-    else if (entityType === "annotation") selectAnnotation(entityId as AnnotationId);
-    else selectBookmark(entityId as BookmarkId);
-  };
-  const revealAIEntity = ({ entityType, entityId }: { readonly entityType: AISelectionEntityType; readonly entityId: string }) => {
-    selectAIEntity({ entityType, entityId });
-    let sourceCycle: number | undefined;
-    let selector: string;
-    if (entityType === "signal") selector = `[data-role='left-tree-rows'] [data-row-id='${CSS.escape(entityId)}']`;
-    else if (entityType === "group") selector = `[data-role='left-group-header'][data-group-id='${CSS.escape(entityId)}'], [role='treeitem'][data-row-id='${CSS.escape(entityId)}:header'], [data-transaction-group-id='${CSS.escape(entityId)}']`;
-    else if (entityType === "transaction") {
-      const transaction = input.document.transactions.find((item) => item.id === entityId);
-      sourceCycle = transaction?.start;
-      selector = `[data-transaction-id='${CSS.escape(entityId)}'][data-selected], [data-transaction-tree-id='${CSS.escape(entityId)}']`;
-    } else if (entityType === "bookmark") {
-      const bookmark = input.document.bookmarks.find((item) => item.id === entityId);
-      sourceCycle = bookmark?.start;
-      selector = `[data-bookmark-id='${CSS.escape(entityId)}']`;
-    } else {
-      const annotation = input.document.annotations.find((item) => item.id === entityId);
-      const anchors = [annotation?.anchor, annotation?.start, annotation?.end, annotation?.from, annotation?.to];
-      sourceCycle = anchors.find((anchor) => anchor !== undefined && Number.isFinite(anchor.cycle))?.cycle;
-      selector = `[data-role='annotation-owner'][data-annotation-id='${CSS.escape(entityId)}']`;
-    }
-    if (sourceCycle !== undefined) input.navigation.navigateToCycle(sourceCycle);
-    const revealElement = () => host.current?.querySelector<HTMLElement>(selector)?.scrollIntoView({ block: "nearest", inline: "nearest" });
-    if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => requestAnimationFrame(revealElement));
-    else revealElement();
-  };
   const addBookmarkAtCycle = (cycle: number) => {
     const maxCycle = Math.max(0, input.document.timeline.cycleCount - 1);
     const start = Math.max(0, Math.min(maxCycle, Math.trunc(cycle)));
@@ -263,6 +232,8 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
   });
   const selectionActions = createSelectionActions({ document: input.document, selection: input.selection, hostRef: input.hostRef, selectedSignalId: input.selectedSignal?.id });
   const { selectAnnotation, selectTransaction, selectTransactions, clearSelection, selectAllSignals, selectAllTransactions, selectHierarchySignal, revealSelectedInHierarchy } = selectionActions;
+  const selectAIEntity = createSelectAIEntityAction({ selectSignal: selectHierarchySignal, selectGroup: input.selection.selectGroup, selectTransaction, selectAnnotation, selectBookmark });
+  const revealAIEntity = createRevealAIEntityAction({ document: input.document, hostRef: input.hostRef, navigation: input.navigation, select: selectAIEntity });
   const selectAll = () => input.viewMode === "Transaction" ? selectAllTransactions() : input.selection.refs.state.current.annotationId !== undefined ? selectionActions.selectAllAnnotations() : selectAllSignals();
   const bottomActions = createBottomEditorActions({
     application: input.application,
