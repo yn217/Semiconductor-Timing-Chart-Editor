@@ -603,6 +603,23 @@
       "replacementTest": null
     },
     {
+      "file": "issue-431-bus-radix.spec.ts",
+      "domain": "bus-radix",
+      "originIssue": 431,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Per-Signal Bus format agrees across waveform labels, Bottom event table and Save/Open.",
+      "duplicateGroup": "bus-radix",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Added in the #431 non-Scenario verification pass; no duplicate coverage of the shared formatter across surfaces.",
+      "replacementTest": null
+    },
+    {
       "file": "issue-431-enum-state-save-open.spec.ts",
       "domain": "enum-state-save-open",
       "originIssue": 431,

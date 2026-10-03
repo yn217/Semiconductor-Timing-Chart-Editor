@@ -33,7 +33,7 @@ for (const size of sizes) {
 
     const symbolicLabels = async () => {
       await expect.poll(async () => (await readWave(page, stateId)).present, { timeout: 30_000 }).toBe(true);
-      return (await readWave(page, stateId)).labels.map((label) => label.text);
+      return (await readWave(page, stateId)).labels.map((label) => label.shownText);
     };
     const first = await symbolicLabels();
     expect(first.join("|"), "symbolic labels rendered for mapped values").toContain("IDLE");
