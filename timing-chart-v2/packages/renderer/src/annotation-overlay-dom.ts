@@ -20,14 +20,45 @@ function syncOverlayIdentity(owner: HTMLElement, primitive: AnnotationOverlayPri
   owner.setAttribute("aria-label", `${primitive.type}: ${primitive.label}${primitive.locked ? " (locked)" : ""}`);
 }
 
+function directChild(parent: HTMLElement, role: string, key?: string, value?: string): HTMLElement | undefined {
+  for (const child of Array.from(parent.children)) {
+    const element = child as HTMLElement;
+    if (element.dataset.role !== role) continue;
+    if (key !== undefined && element.dataset[key] !== value) continue;
+    return element;
+  }
+  return undefined;
+}
+
+function directSvgChild(parent: HTMLElement, role: string): SVGSVGElement | undefined {
+  return Array.from(parent.children).find((child) => child.namespaceURI === "http://www.w3.org/2000/svg" && (child as SVGSVGElement).dataset.role === role) as SVGSVGElement | undefined;
+}
+
+function syncChildren(parent: HTMLElement, desired: readonly HTMLElement[]): void {
+  if (parent.children.length === desired.length && desired.every((child, index) => parent.children[index] === child)) return;
+  parent.replaceChildren(...desired);
+}
+
 export function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive): void {
   syncOverlayIdentity(owner, primitive);
   owner.hidden = !primitive.visible;
   owner.style.setProperty("--annotation-color", primitive.color ?? "#d04a36");
   owner.style.height = `${primitive.surfaceHeight}px`;
   const document = owner.ownerDocument;
-  const body = document.createElement("span");
-  body.dataset.role = "annotation-body";
+  const renderKind = `${primitive.type}|${primitive.shape}|${primitive.lineType ?? "straight"}|${primitive.arrowhead ?? "none"}`;
+  const structureChanged = owner.dataset.overlayRenderKind !== renderKind;
+  let body = directChild(owner, "annotation-body");
+  if (!body) { body = document.createElement("span"); body.dataset.role = "annotation-body"; }
+  let label = directChild(owner, "annotation-label");
+  if (!label) { label = document.createElement("span"); label.dataset.role = "annotation-label"; }
+  if (structureChanged) {
+    body.style.cssText = "";
+    body.replaceChildren();
+    delete body.dataset.lineRenderer;
+    delete body.dataset.orthogonalDirection;
+    label.style.cssText = "";
+    label.replaceChildren();
+  }
   const first = primitive.anchors[0] ?? { field: "anchor" as const, x: 0, y: 0 };
   const second = primitive.anchors[1] ?? first;
   const dx = second.x - first.x;
@@ -88,7 +119,7 @@ export function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPr
     polyline.setAttribute("stroke-dasharray", "6 4");
     polyline.setAttribute("opacity", String(primitive.opacity ?? 0.55));
     svg.append(polyline);
-    body.append(svg);
+    body.replaceChildren(svg);
     if (rotationDeg !== 0) body.style.transform = `rotate(${rotationDeg}deg)`;
     body.dataset.annotationField = first.field;
   } else {
@@ -111,12 +142,15 @@ export function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPr
     const base = presentation.fillColor === "none" ? undefined : presentation.fillColor ?? primitive.color ?? "#d04a36";
     body.style.backgroundColor = base === undefined ? "transparent" : `color-mix(in srgb, ${base} ${Math.round((presentation.fillOpacity ?? 0.12) * 100)}%, transparent)`;
   } else body.style.removeProperty("background-color");
-  const label = document.createElement("span");
-  label.dataset.role = "annotation-label";
   label.dataset.annotationLabel = "true";
   const labelPresentation = parsePresentationStyle(primitive.style);
   const textStyle = parseTextStyle(primitive.style);
-  label.textContent = labelPresentation.labelWrap === false ? primitive.label : wrapAnnotationLabel(primitive.label, labelPresentation.labelMaxWidth ?? ANNOTATION_LABEL_MAX_WIDTH.default, textStyle.fontSize);
+  const labelText = labelPresentation.labelWrap === false ? primitive.label : wrapAnnotationLabel(primitive.label, labelPresentation.labelMaxWidth ?? ANNOTATION_LABEL_MAX_WIDTH.default, textStyle.fontSize);
+  if (label.firstChild?.nodeType !== 3 || label.firstChild.textContent !== labelText) {
+    const lock = directSvgChild(label, "annotation-lock-glyph");
+    label.replaceChildren(document.createTextNode(labelText));
+    if (lock && primitive.locked) label.append(lock);
+  }
   // Authored label layout remains presentation-only but follows the same
   // persisted style consumed by ExportScene. Missing fields retain the
   // historical 180px wrap behavior.
@@ -137,34 +171,40 @@ export function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPr
   // block for this glyph's own `position: absolute`, so it rides along with
   // the label's translate() with no extra positioning math needed here.
   if (primitive.locked) {
-    const svgNs = "http://www.w3.org/2000/svg";
-    const lock = document.createElementNS(svgNs, "svg");
-    lock.dataset.role = "annotation-lock-glyph";
-    lock.setAttribute("viewBox", "0 0 10 10");
-    lock.setAttribute("aria-hidden", "true");
-    lock.style.position = "absolute";
-    lock.style.left = "-14px";
-    lock.style.top = "2px";
-    lock.style.width = "10px";
-    lock.style.height = "10px";
-    lock.style.color = "#334155";
-    const shackle = document.createElementNS(svgNs, "path");
-    shackle.setAttribute("d", "M 2.5 4 V 2.5 A 2.5 2.5 0 0 1 7.5 2.5 V 4");
-    shackle.setAttribute("fill", "none");
-    shackle.setAttribute("stroke", "currentColor");
-    shackle.setAttribute("stroke-width", "1.2");
-    const body2 = document.createElementNS(svgNs, "rect");
-    body2.setAttribute("x", "1.5"); body2.setAttribute("y", "4"); body2.setAttribute("width", "7"); body2.setAttribute("height", "5.5"); body2.setAttribute("rx", "1");
-    body2.setAttribute("fill", "currentColor");
-    lock.append(shackle, body2);
-    label.append(lock);
+    let lock = directSvgChild(label, "annotation-lock-glyph");
+    if (!lock) {
+      const svgNs = "http://www.w3.org/2000/svg";
+      const created = document.createElementNS(svgNs, "svg");
+      created.dataset.role = "annotation-lock-glyph";
+      created.setAttribute("viewBox", "0 0 10 10");
+      created.setAttribute("aria-hidden", "true");
+      created.style.position = "absolute";
+      created.style.left = "-14px";
+      created.style.top = "2px";
+      created.style.width = "10px";
+      created.style.height = "10px";
+      created.style.color = "#334155";
+      const shackle = document.createElementNS(svgNs, "path");
+      shackle.setAttribute("d", "M 2.5 4 V 2.5 A 2.5 2.5 0 0 1 7.5 2.5 V 4");
+      shackle.setAttribute("fill", "none");
+      shackle.setAttribute("stroke", "currentColor");
+      shackle.setAttribute("stroke-width", "1.2");
+      const lockBody = document.createElementNS(svgNs, "rect");
+      lockBody.setAttribute("x", "1.5"); lockBody.setAttribute("y", "4"); lockBody.setAttribute("width", "7"); lockBody.setAttribute("height", "5.5"); lockBody.setAttribute("rx", "1");
+      lockBody.setAttribute("fill", "currentColor");
+      created.append(shackle, lockBody);
+      lock = created;
+    }
+    if (lock.parentElement !== label) label.append(lock);
+  } else {
+    directChild(label, "annotation-lock-glyph")?.remove();
   }
   const dimensionParts: HTMLElement[] = [];
   if (primitive.type === "measurement" && primitive.measurementLayout && dimensionY !== undefined) {
     const layout = primitive.measurementLayout;
     const addMarker = (anchor: typeof first, side: "start" | "end", kind: "none" | "bar" | "arrow") => {
       if (kind === "none") return;
-      const marker = document.createElement("span");
+      const marker = directChild(owner, "measurement-marker", "markerSide", side) ?? document.createElement("span");
       marker.dataset.role = "measurement-marker";
       marker.dataset.markerSide = side;
       marker.dataset.markerKind = kind;
@@ -174,7 +214,7 @@ export function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPr
     };
     const addExtension = (anchor: typeof first, side: "start" | "end") => {
       if (!(layout.extensionLines === "both" || layout.extensionLines === side)) return;
-      const extension = document.createElement("span");
+      const extension = directChild(owner, "measurement-extension", "extensionSide", side) ?? document.createElement("span");
       extension.dataset.role = "measurement-extension";
       extension.dataset.extensionSide = side;
       extension.style.height = `${Math.abs(dimensionY - anchor.y)}px`;
@@ -187,15 +227,19 @@ export function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPr
     addExtension(second, "end");
   }
   const handles = primitive.anchors.map((anchor) => {
-    const handle = document.createElement("span");
+    const handle = directChild(owner, "annotation-handle", "annotationField", anchor.field) ?? document.createElement("span");
     handle.dataset.role = "annotation-handle";
     handle.dataset.annotationField = anchor.field;
     if (anchor.threshold !== undefined) handle.dataset.anchorThreshold = String(anchor.threshold);
+    else delete handle.dataset.anchorThreshold;
     if (anchor.transitionKind !== undefined) handle.dataset.anchorTransitionKind = anchor.transitionKind;
+    else delete handle.dataset.anchorTransitionKind;
     handle.style.transform = `translate(${anchor.x}px, ${anchor.y}px)`;
     return handle;
   });
-  owner.replaceChildren(body, label, ...dimensionParts, ...handles);
+  const desiredChildren = [body, label, ...dimensionParts, ...handles];
+  syncChildren(owner, desiredChildren);
+  owner.dataset.overlayRenderKind = renderKind;
 }
 
 type LinePoint = Readonly<{ x: number; y: number }>;
@@ -375,4 +419,3 @@ export function applyTextStyle(element: HTMLElement, parsed: ReturnType<typeof p
   if (parsed.textDecoration !== undefined) element.style.textDecoration = parsed.textDecoration; else element.style.removeProperty("text-decoration");
   if (parsed.lineHeight) element.style.lineHeight = String(parsed.lineHeight); else element.style.removeProperty("line-height");
 }
-
