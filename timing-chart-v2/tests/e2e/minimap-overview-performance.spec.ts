@@ -100,7 +100,8 @@ test("MiniMap viewport updates do not rebuild the static overview", async ({ pag
   expect(afterPan.dirty).toBe(before.dirty);
 });
 
-test("non-overview Signal property commits reuse the static MiniMap overview", async ({ page }) => {
+for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }]) test(`non-overview Signal property commits keep the MiniMap continuously visible at ${size.width}x${size.height}`, async ({ page }) => {
+  await page.setViewportSize(size);
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
@@ -112,9 +113,27 @@ test("non-overview Signal property commits reuse the static MiniMap overview", a
   const before = await readState(page);
   expect(before.overviewRows).toBeGreaterThan(0);
   await page.getByTestId("inspector").locator("input[aria-label='Inspector signal name']").fill("REQUEST_RENAMED");
+  await page.evaluate(() => {
+    const state = window as typeof window & { __minimapContinuitySamples?: Array<{ readonly busy: string | null; readonly rows: number; readonly builds: string | undefined }>; __minimapContinuityActive?: boolean };
+    state.__minimapContinuitySamples = [];
+    state.__minimapContinuityActive = true;
+    const sample = () => {
+      const minimap = document.querySelector<HTMLElement>("[data-testid='minimap']");
+      state.__minimapContinuitySamples!.push({ busy: minimap?.getAttribute("aria-busy") ?? null, rows: minimap?.querySelectorAll(".minimap-rows > span").length ?? 0, builds: minimap?.dataset.overviewBuilds });
+      if (state.__minimapContinuityActive) requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
   await page.getByTestId("inspector").locator("input[aria-label='Inspector signal name']").press("Enter");
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(minimap).toHaveAttribute("aria-busy", "false");
+  const continuity = await page.evaluate(() => {
+    const state = window as typeof window & { __minimapContinuitySamples?: Array<{ readonly busy: string | null; readonly rows: number; readonly builds: string | undefined }>; __minimapContinuityActive?: boolean };
+    state.__minimapContinuityActive = false;
+    return state.__minimapContinuitySamples ?? [];
+  });
+  expect(continuity.length).toBeGreaterThan(0);
+  expect(continuity.every((sample) => sample.busy === "false" && sample.rows > 0 && sample.builds === before.overviewBuilds)).toBe(true);
   const after = await readState(page);
   expect(after.overviewBuilds).toBe(before.overviewBuilds);
   // This reports the cached overview's last derivation, not work performed by this commit.
