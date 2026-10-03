@@ -146,8 +146,8 @@ test("Bookmark inside a collapsed TimeGroup is identified in the Bookmarks panel
   await expect(page.locator(".transaction-axis-break-gap")).toHaveCount(0);
   await expect(page.getByTestId("bookmark-row-bookmark-inside-fold")).toContainText("25");
   await page.getByRole("button", { name: "Undo", exact: true }).last().click();
-  await expect(page.getByTestId("bookmark-inside-collapsed")).toContainText("Fold");
-  await expect(page.getByTestId("bookmark-inside-collapsed")).toContainText("Nested Fold");
+  // One Expand and Jump is one History entry: a single Undo re-collapses BOTH groups.
+  await expect(page.getByTestId("bookmark-inside-collapsed")).toHaveText("inside collapsed: Fold, Nested Fold");
   await page.getByRole("button", { name: "Redo", exact: true }).last().click();
   await expect(page.getByTestId("bookmark-inside-collapsed")).toBeHidden();
 });

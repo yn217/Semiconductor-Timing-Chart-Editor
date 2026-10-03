@@ -34,7 +34,10 @@ export function parseBusValue(input: string | number, width?: number): ParsedBus
 export function formatBusValue(input: string | number, format: BusValueFormat = "hex", width?: number): string {
   const parsed = parseBusValue(input, width); if (parsed.kind !== "numeric") return String(input);
   const bits = width ?? parsed.width; let value = parsed.value!;
-  if (format === "signed") { const w = bits ?? Math.max(1, value.toString(2).length); if ((value & (1n << BigInt(w - 1))) !== 0n) value -= 1n << BigInt(w); }
+  // Two's complement needs a declared width (argument or sized literal); a
+  // value's own bit length is not a width, so without one it stays non-negative.
+  const signedWidth = width ?? (typeof input === "number" ? undefined : parsed.width);
+  if (format === "signed" && signedWidth !== undefined && (value & (1n << BigInt(signedWidth - 1))) !== 0n) value -= 1n << BigInt(signedWidth);
   if (format === "binary") return `0b${value.toString(2).padStart(bits ?? 1, "0")}`;
   if (format === "decimal" || format === "signed" || format === "unsigned") return value.toString(10);
   if (format === "symbolic") return String(input);

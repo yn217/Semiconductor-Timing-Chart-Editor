@@ -28,4 +28,13 @@ describe("shared bus value parser/formatter", () => {
     expect(parseBusValue("8'b10XZ")).toMatchObject({ kind: "unknown", width: 8 });
     expect(formatBusValue("READY", "hex", 8)).toBe("READY");
   });
+  it("treats signed values as non-negative when no width is declared", () => {
+    expect(formatBusValue("5", "signed")).toBe("5");
+    expect(formatBusValue(5, "signed")).toBe("5");
+    expect(formatBusValue("0xFF", "signed")).toBe("255");
+    expect(formatBusValue("0xFFFFFFFFFFFFFFFF", "signed")).toBe("18446744073709551615");
+    expect(formatBusValue("0xFFFFFFFFFFFFFFFF", "signed", 64)).toBe("-1");
+    expect(formatBusValue("4'hF", "signed")).toBe("-1");
+    expect(formatBusValue("8'b10XZ", "signed")).toBe("8'b10XZ");
+  });
 });

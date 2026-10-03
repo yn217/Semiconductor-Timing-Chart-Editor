@@ -6,7 +6,7 @@ import { resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import type { TimelineNavigationOwner } from "../runtime/use-timeline-navigation-owner.js";
 import type { BottomTab } from "../workspace/use-workspace-ui-state.js";
 import type { SelectionOwner } from "./use-selection-owner.js";
-import type { ClipboardActions } from "./clipboard-actions.js";
+import { NO_SIGNAL_GROUP_STATUS, type ClipboardActions } from "./clipboard-actions.js";
 import type { AISelectionEntityType } from "../ai-bridge-client.js";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
 import type { DocumentLifecycleOwner } from "./use-document-lifecycle.js";
@@ -310,11 +310,9 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
   };
   const applyRename = () => {
     const name = input.renameDraft.trim();
-    if (!name) {
-      input.setRenameError("Name is required.");
-      return;
-    }
-    input.commandRegistry.current.execute("selection.rename", { name });
+    if (!name) { input.setRenameError("Name is required."); return; }
+    const result = input.commandRegistry.current.execute<{ readonly name: string }, CommandResult | undefined>("selection.rename", { name });
+    if (result && !result.ok) { input.setRenameError(result.problems[0]?.message ?? "Name was rejected."); return; }
     input.setRenameDialogOpen(false);
     input.setRenameError("");
   };
@@ -332,7 +330,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
       return;
     }
     const target = resolveInsertionTarget(input.document, input.selectedSignalId, input.selectedGroupId);
-    if (!target) return;
+    if (!target) { input.editActions.reportStatus(NO_SIGNAL_GROUP_STATUS); return; }
     const { group: targetGroup, index } = target;
     if (kind === "spacer") {
       const spacer = { id: nextEntityId("spacer", input.document) as SpacerId, height: 24 };

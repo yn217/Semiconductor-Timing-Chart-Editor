@@ -22,4 +22,10 @@ describe("Event Table read-only value presentation", () => {
     expect(formatBusValueAtCycle(signal, 9, "binary")).toBe("0b00001111");
     expect(formatBusValueAtCycle({ ...signal, values: [{ start: 2, value: "01" }] }, 1)).toBeUndefined();
   });
+
+  it("uses the same default as the table and waveform label when a bus has no displayFormat", () => {
+    const signal = { type: "bus", width: 8, values: [{ start: 0, value: "10" }] } as const;
+    expect(formatEventRowValue(signal, { value: "10" })).toBe("10");
+    expect(formatBusValueAtCycle(signal, 0)).toBe("10");
+  });
 });
