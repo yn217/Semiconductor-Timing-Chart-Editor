@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 test("double-clicking a Transaction Group header toggles it and does not start rename", async ({ page }) => {
   await page.goto("/?transaction-demo");
@@ -8,15 +9,13 @@ test("double-clicking a Transaction Group header toggles it and does not start r
   const rows = group.locator(".transaction-left-tree-row");
   const before = await rows.count();
   expect(before).toBeGreaterThan(0);
-  const history = await page.getByTestId("history-status").innerText();
-  const dirty = await page.getByTestId("dirty-status").innerText();
+  const viewOnlyBefore = await documentState(page);
   const revision = await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision");
   await header.dblclick({ position: { x: 90, y: 12 } });
   await expect(rows).toHaveCount(0);
   await expect(group.locator("input")).toHaveCount(0);
   await header.dblclick({ position: { x: 90, y: 12 } });
   await expect(rows).toHaveCount(before);
-  await expect(page.getByTestId("history-status")).toHaveText(history);
-  await expect(page.getByTestId("dirty-status")).toHaveText(dirty);
+  await expectViewOnly(page, viewOnlyBefore);
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-canonical-revision", revision!);
 });

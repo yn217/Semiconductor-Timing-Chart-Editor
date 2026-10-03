@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
   test(`Transaction Tree menus stay readable, anchored and view-only at ${viewport.width}x${viewport.height}`, async ({ page }) => {
@@ -13,8 +14,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     const groupHeader = group.locator(".transaction-left-tree-group-header");
     const menu = page.getByTestId("transaction-tree-action-menu");
     const revision = await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision");
-    const history = await page.getByTestId("history-status").innerText();
-    const dirty = await page.getByTestId("dirty-status").innerText();
+    const viewOnlyBefore = await documentState(page);
     const headerBefore = await groupHeader.boundingBox();
 
     await groupTrigger.click();
@@ -53,7 +53,6 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await expect(transactionTrigger).toBeFocused();
 
     await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-canonical-revision", revision!);
-    await expect(page.getByTestId("history-status")).toHaveText(history);
-    await expect(page.getByTestId("dirty-status")).toHaveText(dirty);
+    await expectViewOnly(page, viewOnlyBefore);
   });
 }
