@@ -56,3 +56,38 @@ describe("annotationsNearViewport", () => {
     expect(result.items).toContain(ghost);
   });
 });
+
+describe("wide-interval index with a full-span Annotation (#175/#863)", () => {
+  const wideRange = (id: string, start: number, end: number) => ({ id, type: "range", label: "w", visible: true, start: { cycle: start, point: "cycle-start" }, end: { cycle: end, point: "cycle-end" } } as unknown as Annotation);
+  const build = (count: number): Annotation[] => [
+    wideRange("full", 0, 10_000 * count + 10_000),
+    ...Array.from({ length: count }, (_, index) => wideRange(`w${index}`, 10_000 + index * 10_000, 10_000 + index * 10_000 + 5_000)),
+  ];
+  // Reference: every wide time hit, document order.
+  const reference = (annotations: readonly Annotation[], start: number, end: number) => annotations.filter((annotation) => annotation.start!.cycle <= end && annotation.end!.cycle >= start);
+
+  it("visits matches + O(log N) at the END of the timeline, not every wide interval", () => {
+    const count = 20_000;
+    const annotations = build(count);
+    const last = 10_000 + (count - 1) * 10_000;
+    const result = indexedAnnotationsNearViewport(annotations, last + 100, last + 200);
+    expect(result.items.map((item) => item.id)).toEqual(["full", `w${count - 1}`]);
+    expect(result.indexEntriesVisited).toBeLessThanOrEqual(result.items.length + 2);
+    expect(result.wideNodesVisited).toBeLessThanOrEqual(4 * (result.items.length + 1) * Math.ceil(Math.log2(count + 1)));
+  });
+
+  it("returns the same items as a brute-force overlap scan over randomized windows", () => {
+    let seed = 175;
+    const random = () => { seed = (seed * 1_103_515_245 + 12_345) % 2_147_483_648; return seed / 2_147_483_648; };
+    const annotations: Annotation[] = Array.from({ length: 3_000 }, (_, index) => {
+      const start = Math.floor(random() * 2_000_000);
+      const length = random() < 0.05 ? Math.floor(random() * 2_000_000) : 4_096 + Math.floor(random() * 60_000);
+      return wideRange(`r${index}`, start, start + length);
+    });
+    for (let trial = 0; trial < 400; trial += 1) {
+      const start = Math.floor(random() * 2_100_000) - 50_000;
+      const end = start + Math.floor(random() * (trial % 4 === 0 ? 300_000 : 3_000));
+      expect(indexedAnnotationsNearViewport(annotations, start, end).items).toEqual(reference(annotations, start, end));
+    }
+  });
+});

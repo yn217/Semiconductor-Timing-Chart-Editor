@@ -13,8 +13,10 @@ export const annotationFields = ["anchor", "start", "end", "from", "to"] as cons
 const BUCKET_CYCLES = 256;
 const WIDE_BUCKETS = 16;
 const INDEX_THRESHOLD = 256;
-interface WideAnnotationInterval { readonly position: number; readonly start: number; readonly end: number; readonly prefixMaxEnd: number }
-interface AnnotationTimeIndex { readonly buckets: ReadonlyMap<number, readonly number[]>; readonly wideIntervals: readonly WideAnnotationInterval[]; readonly byId: ReadonlyMap<string, number> }
+interface WideAnnotationInterval { readonly position: number; readonly start: number; readonly end: number }
+/** `wideMaxEnd` is a max-end segment tree over start-sorted `wideIntervals` (leaves at `wideLeafCount + i`), so an overlap
+ * query is O(log N + k) even when one full-span Annotation would make a prefix-max bound degenerate to the whole list. */
+interface AnnotationTimeIndex { readonly buckets: ReadonlyMap<number, readonly number[]>; readonly wideIntervals: readonly WideAnnotationInterval[]; readonly wideMaxEnd: Float64Array; readonly wideLeafCount: number; readonly byId: ReadonlyMap<string, number> }
 const annotationTimeIndexes = new WeakMap<readonly Annotation[], AnnotationTimeIndex>();
 function annotationTimeIndex(annotations: readonly Annotation[]): AnnotationTimeIndex {
   let index = annotationTimeIndexes.get(annotations);
@@ -40,44 +42,36 @@ function annotationTimeIndex(annotations: readonly Annotation[]): AnnotationTime
     }
   });
   wide.sort((left, right) => left.start - right.start || left.end - right.end || left.position - right.position);
-  let prefixMaxEnd = Number.NEGATIVE_INFINITY;
-  const wideIntervals = wide.map((interval) => {
-    prefixMaxEnd = Math.max(prefixMaxEnd, interval.end);
-    return { ...interval, prefixMaxEnd };
-  });
-  index = { buckets, wideIntervals, byId };
+  let wideLeafCount = 1;
+  while (wideLeafCount < wide.length) wideLeafCount *= 2;
+  const wideMaxEnd = new Float64Array(wideLeafCount * 2).fill(Number.NEGATIVE_INFINITY);
+  wide.forEach((interval, offset) => { wideMaxEnd[wideLeafCount + offset] = interval.end; });
+  for (let node = wideLeafCount - 1; node > 0; node -= 1) wideMaxEnd[node] = Math.max(wideMaxEnd[node * 2]!, wideMaxEnd[node * 2 + 1]!);
+  index = { buckets, wideIntervals: wide, wideMaxEnd, wideLeafCount, byId };
   annotationTimeIndexes.set(annotations, index);
   return index;
 }
 export function annotationsNearViewport(annotations: readonly Annotation[], sourceStart: number, sourceEnd: number): readonly Annotation[] {
   return indexedAnnotationsNearViewport(annotations, sourceStart, sourceEnd).items;
 }
-export function indexedAnnotationsNearViewport(annotations: readonly Annotation[], sourceStart: number, sourceEnd: number, pinnedIds: ReadonlySet<string> = new Set()): Readonly<{ items: readonly Annotation[]; indexEntriesVisited: number; pinnedInjectedCount: number }> {
+export function indexedAnnotationsNearViewport(annotations: readonly Annotation[], sourceStart: number, sourceEnd: number, pinnedIds: ReadonlySet<string> = new Set()): Readonly<{ items: readonly Annotation[]; indexEntriesVisited: number; wideNodesVisited: number; pinnedInjectedCount: number }> {
   const index = annotationTimeIndex(annotations);
   const positions = new Set<number>();
   let indexEntriesVisited = 0;
-  // Wide intervals are sorted by start and carry a monotonic prefix maximum
-  // end. Find the first prefix that can overlap the viewport, then stop once
-  // interval starts pass its end; offscreen wide Annotations no longer make
-  // every scroll visit the entire wide-interval collection.
-  let low = 0, high = index.wideIntervals.length;
-  while (low < high) {
-    const middle = (low + high) >>> 1;
-    if (index.wideIntervals[middle]!.prefixMaxEnd < sourceStart) low = middle + 1;
-    else high = middle;
-  }
-  const wideStart = low;
-  high = index.wideIntervals.length;
-  while (low < high) {
-    const middle = (low + high) >>> 1;
-    if (index.wideIntervals[middle]!.start <= sourceEnd) low = middle + 1;
-    else high = middle;
-  }
-  for (let intervalIndex = wideStart; intervalIndex < low; intervalIndex += 1) {
-    const interval = index.wideIntervals[intervalIndex]!;
-    indexEntriesVisited += 1;
-    if (interval.end >= sourceStart) positions.add(interval.position);
-  }
+  // Closed-interval overlap (start <= sourceEnd && end >= sourceStart): prune subtrees whose max end precedes the viewport
+  // or whose first (smallest) start follows it. Leaves reached are exactly the hits.
+  let wideNodesVisited = 0;
+  const { wideIntervals, wideMaxEnd, wideLeafCount } = index;
+  const visit = (node: number, left: number, right: number): void => {
+    if (left >= wideIntervals.length) return;
+    wideNodesVisited += 1;
+    if (wideMaxEnd[node]! < sourceStart || wideIntervals[left]!.start > sourceEnd) return;
+    if (right - left === 1) { indexEntriesVisited += 1; positions.add(wideIntervals[left]!.position); return; }
+    const middle = (left + right) >>> 1;
+    visit(node * 2, left, middle);
+    visit(node * 2 + 1, middle, right);
+  };
+  if (wideIntervals.length > 0) visit(1, 0, wideLeafCount);
   for (let bucket = Math.floor(sourceStart / BUCKET_CYCLES); bucket <= Math.floor(sourceEnd / BUCKET_CYCLES); bucket += 1) {
     const entries = index.buckets.get(bucket) ?? [];
     indexEntriesVisited += entries.length;
@@ -89,7 +83,7 @@ export function indexedAnnotationsNearViewport(annotations: readonly Annotation[
     if (position !== undefined && !positions.has(position)) { positions.add(position); pinnedInjectedCount += 1; }
   }
   const ordered = [...positions].sort((left, right) => left - right);
-  return { items: ordered.map((position) => annotations[position]!), indexEntriesVisited, pinnedInjectedCount };
+  return { items: ordered.map((position) => annotations[position]!), indexEntriesVisited, wideNodesVisited, pinnedInjectedCount };
 }
 
 function measurementAnchorLabel(annotation: Pick<Annotation, "label" | "measurement" | "start" | "end">): string {
