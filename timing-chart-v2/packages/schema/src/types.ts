@@ -435,6 +435,8 @@ export interface DocumentProblem {
   readonly field?: string;
   readonly value?: string | number | boolean;
   readonly expected?: string;
+  /** Canonical source cycle associated with a timing diagnostic, when known. */
+  readonly sourceCycle?: number;
   readonly recommendation?: string;
   readonly source?: "validation" | "command" | "parser" | "save" | "open" | "export" | "clipboard" | "renderer" | "ai";
   readonly stage?: "parse" | "validate" | "serialize" | "storage" | "rasterize" | "clipboard-write" | "render" | "commit";

@@ -428,11 +428,11 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     const target = resolveProblemTarget(path, snapshot.document, problem);
     const targetSignal = target.kind === "signal" ? snapshot.document.signals.find((signal) => signal.id === target.id) : undefined;
     const valueIndex = /^\$\.signals\[\d+\]\.values\[(\d+)\]/.exec(path)?.[1];
-    const semanticCycle = valueIndex !== undefined && targetSignal && targetSignal.type !== "clock" && targetSignal.type !== "commentRow"
+    const semanticCycle = target.cycle ?? (valueIndex !== undefined && targetSignal && targetSignal.type !== "clock" && targetSignal.type !== "commentRow"
       ? targetSignal.values[Number(valueIndex)]?.start
       : target.kind === "transaction" ? snapshot.document.transactions.find((item) => item.id === target.id)?.start
       : target.kind === "annotation" ? Object.values(snapshot.document.annotations.find((item) => item.id === target.id) ?? {}).find((value) => value && typeof value === "object" && "cycle" in value && typeof (value as { cycle?: unknown }).cycle === "number")?.cycle as number | undefined
-      : undefined;
+      : undefined);
     const targetSignalId = target.kind === "signal" ? target.id as SignalId : undefined;
     selection.selectTarget({
       signalId: targetSignalId,

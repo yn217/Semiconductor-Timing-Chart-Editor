@@ -99,8 +99,8 @@ export function mayRouteGlobalShortcut(event: Pick<KeyboardEvent, "isComposing" 
   return scope !== "editable" && scope !== "modal" && scope !== "gesture";
 }
 
-export type ProblemTarget = Readonly<{ kind: "signal" | "group" | "annotation" | "transaction" | "timeline"; id?: string }>;
-export type ProblemTargetHint = Readonly<{ readonly entityId?: string; readonly objectId?: string; readonly objectType?: string }>;
+export type ProblemTarget = Readonly<{ kind: "signal" | "group" | "annotation" | "transaction" | "timeline"; id?: string; cycle?: number }>;
+export type ProblemTargetHint = Readonly<{ readonly entityId?: string; readonly objectId?: string; readonly objectType?: string; readonly sourceCycle?: number }>;
 
 /** Resolves canonical validation paths/IDs without persisting diagnostics as editor state. */
 export function resolveProblemTarget(path: string, document: {
@@ -108,19 +108,30 @@ export function resolveProblemTarget(path: string, document: {
   readonly signalGroups: readonly Readonly<{ id: string }>[];
   readonly annotations: readonly Readonly<{ id: string }>[];
   readonly transactions?: readonly Readonly<{ id: string }>[];
+  readonly constraints?: readonly Readonly<{ id: string; type: string; data?: Readonly<Record<string, unknown>> }>[];
 }, hint: ProblemTargetHint = {}): ProblemTarget {
   const stableId = hint.objectId ?? hint.entityId;
+  const cycle = Number.isFinite(hint.sourceCycle) ? hint.sourceCycle : undefined;
   if (stableId) {
-    if (document.signals.some((item) => item.id === stableId)) return { kind: "signal", id: stableId };
-    if (document.signalGroups.some((item) => item.id === stableId)) return { kind: "group", id: stableId };
-    if (document.annotations.some((item) => item.id === stableId)) return { kind: "annotation", id: stableId };
-    if (document.transactions?.some((item) => item.id === stableId)) return { kind: "transaction", id: stableId };
+    if (document.signals.some((item) => item.id === stableId)) return { kind: "signal", id: stableId, ...(cycle === undefined ? {} : { cycle }) };
+    if (document.signalGroups.some((item) => item.id === stableId)) return { kind: "group", id: stableId, ...(cycle === undefined ? {} : { cycle }) };
+    if (document.annotations.some((item) => item.id === stableId)) return { kind: "annotation", id: stableId, ...(cycle === undefined ? {} : { cycle }) };
+    if (document.transactions?.some((item) => item.id === stableId)) return { kind: "transaction", id: stableId, ...(cycle === undefined ? {} : { cycle }) };
+    const constraint = hint.objectType === "constraint" ? document.constraints?.find((item) => item.id === stableId) : undefined;
+    if (constraint) {
+      const data = constraint.data ?? {};
+      const candidates = [hint.entityId, data.responseSignalId, data.acknowledgeSignalId, data.triggerSignalId, data.requestSignalId,
+        ...(Array.isArray(data.stableSignalIds) ? data.stableSignalIds : [])];
+      const signalId = candidates.find((candidate): candidate is string => typeof candidate === "string" && document.signals.some((signal) => signal.id === candidate));
+      if (signalId) return { kind: "signal", id: signalId, ...(cycle === undefined ? {} : { cycle }) };
+      return { kind: "timeline", ...(cycle === undefined ? {} : { cycle }) };
+    }
   }
   const match = /^\$\.(signals|signalGroups|annotations|transactions)\[(\d+)\]/.exec(path);
-  if (!match) return { kind: "timeline" };
+  if (!match) return { kind: "timeline", ...(cycle === undefined ? {} : { cycle }) };
   const index = Number(match[2]);
-  if (match[1] === "signals") return document.signals[index] ? { kind: "signal", id: document.signals[index].id } : { kind: "signal" };
-  if (match[1] === "signalGroups") return document.signalGroups[index] ? { kind: "group", id: document.signalGroups[index].id } : { kind: "group" };
-  if (match[1] === "transactions") return document.transactions?.[index] ? { kind: "transaction", id: document.transactions[index].id } : { kind: "transaction" };
-  return document.annotations[index] ? { kind: "annotation", id: document.annotations[index].id } : { kind: "annotation" };
+  if (match[1] === "signals") return document.signals[index] ? { kind: "signal", id: document.signals[index].id, ...(cycle === undefined ? {} : { cycle }) } : { kind: "signal", ...(cycle === undefined ? {} : { cycle }) };
+  if (match[1] === "signalGroups") return document.signalGroups[index] ? { kind: "group", id: document.signalGroups[index].id, ...(cycle === undefined ? {} : { cycle }) } : { kind: "group", ...(cycle === undefined ? {} : { cycle }) };
+  if (match[1] === "transactions") return document.transactions?.[index] ? { kind: "transaction", id: document.transactions[index].id, ...(cycle === undefined ? {} : { cycle }) } : { kind: "transaction", ...(cycle === undefined ? {} : { cycle }) };
+  return document.annotations[index] ? { kind: "annotation", id: document.annotations[index].id, ...(cycle === undefined ? {} : { cycle }) } : { kind: "annotation", ...(cycle === undefined ? {} : { cycle }) };
 }

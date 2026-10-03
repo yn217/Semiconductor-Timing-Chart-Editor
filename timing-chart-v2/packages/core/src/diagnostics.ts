@@ -314,8 +314,8 @@ function handshakeDiagnostics(
 ): TimingDiagnostic[] {
   const problems: TimingDiagnostic[] = [];
   const indexes = providedIndexes ?? buildTimingDiagnosticIndexes(document, enabled);
-  const addConstraintProblem = (code: TimingDiagnosticCode, path: string, message: string, constraintId: string): void => {
-    problems.push({ code, category: "protocol", severity: "warning", path, message, entityId: constraintId, objectType: "constraint", objectId: constraintId, source: "validation", stage: "validate" });
+  const addConstraintProblem = (code: TimingDiagnosticCode, path: string, message: string, constraintId: string, sourceCycle?: number): void => {
+    problems.push({ code, category: "protocol", severity: "warning", path, message, entityId: constraintId, objectType: "constraint", objectId: constraintId, source: "validation", stage: "validate", ...(sourceCycle === undefined ? {} : { sourceCycle }) });
   };
 
   document.constraints.forEach((constraint, constraintIndex) => {
@@ -353,7 +353,7 @@ function handshakeDiagnostics(
       const ackIndex = firstChangeAtOrAfter(acknowledgeChanges, requestChange.start);
       const ackChange = acknowledgeChanges[ackIndex];
       if (!ackChange) {
-        if (enabled.has("protocol")) addConstraintProblem("HANDSHAKE_NO_ACK", `${basePath}.acknowledgeSignalId`, `Handshake request '${request.name}' at cycle ${requestChange.start} has no acknowledge assertion before the timeline ends.`, constraint.id);
+        if (enabled.has("protocol")) addConstraintProblem("HANDSHAKE_NO_ACK", `${basePath}.acknowledgeSignalId`, `Handshake request '${request.name}' at cycle ${requestChange.start} has no acknowledge assertion before the timeline ends.`, constraint.id, requestChange.start);
         return;
       }
       if (!enabled.has("stability")) return;
@@ -414,13 +414,13 @@ function latencyDiagnostics(document: CanonicalDocument, enabled: ReadonlySet<Ti
       while (responseIndex < responseCycles.length && responseCycles[responseIndex]! < triggerCycle) responseIndex += 1;
       const responseCycle = responseCycles[responseIndex];
       if (responseCycle === undefined) {
-        problems.push({ code: "LATENCY_RESPONSE_MISSING", category: "protocol", severity: "warning", path: `$.signals[${responseIndexInDocument}]`, message: `Signal '${response.name}' has no ${responseEdge} edge for '${trigger.name}' ${triggerEdge} at cycle ${triggerCycle}.`, entityId: response.id, objectType: "constraint", objectId: constraint.id, objectLabel: constraint.id, source: "validation", stage: "validate", expected: `${minCycles}..${maxCycles} cycles` });
+        problems.push({ code: "LATENCY_RESPONSE_MISSING", category: "protocol", severity: "warning", path: `$.signals[${responseIndexInDocument}]`, message: `Signal '${response.name}' has no ${responseEdge} edge for '${trigger.name}' ${triggerEdge} at cycle ${triggerCycle}.`, entityId: response.id, objectType: "constraint", objectId: constraint.id, objectLabel: constraint.id, source: "validation", stage: "validate", sourceCycle: triggerCycle, expected: `${minCycles}..${maxCycles} cycles` });
         return;
       }
       responseIndex += 1;
       const latency = responseCycle - triggerCycle;
       if (latency < minCycles || latency > maxCycles) {
-        problems.push({ code: "LATENCY_OUT_OF_RANGE", category: "protocol", severity: "warning", path: `$.signals[${responseIndexInDocument}]`, message: `Signal '${response.name}' edge at cycle ${responseCycle} is ${latency} cycles after '${trigger.name}' at cycle ${triggerCycle}; expected ${minCycles}..${maxCycles}.`, entityId: response.id, objectType: "constraint", objectId: constraint.id, objectLabel: constraint.id, source: "validation", stage: "validate", value: latency, expected: `${minCycles}..${maxCycles} cycles` });
+        problems.push({ code: "LATENCY_OUT_OF_RANGE", category: "protocol", severity: "warning", path: `$.signals[${responseIndexInDocument}]`, message: `Signal '${response.name}' edge at cycle ${responseCycle} is ${latency} cycles after '${trigger.name}' at cycle ${triggerCycle}; expected ${minCycles}..${maxCycles}.`, entityId: response.id, objectType: "constraint", objectId: constraint.id, objectLabel: constraint.id, source: "validation", stage: "validate", sourceCycle: responseCycle, value: latency, expected: `${minCycles}..${maxCycles} cycles` });
       }
     });
   });

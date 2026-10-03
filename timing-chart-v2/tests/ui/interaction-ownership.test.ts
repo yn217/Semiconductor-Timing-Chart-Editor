@@ -40,4 +40,26 @@ describe("UI interaction ownership", () => {
     expect(resolveProblemTarget(diagnostic.path, document, diagnostic)).toEqual({ kind: "signal", id: "sig_runtime_owner" });
     expect(resolveProblemTarget(diagnostic.path, document)).toEqual({ kind: "timeline" });
   });
+
+  it("reveals a constraint problem through its stable related Signal and source cycle", () => {
+    const document = {
+      signals: [{ id: "sig_request" }, { id: "sig_ack" }],
+      signalGroups: [], annotations: [], transactions: [],
+      constraints: [{ id: "constraint_latency", type: "latency", data: { triggerSignalId: "sig_request", responseSignalId: "sig_ack" } }],
+    };
+    const diagnostic = { objectType: "constraint", objectId: "constraint_latency", entityId: "sig_ack", sourceCycle: 7 };
+
+    expect(resolveProblemTarget("$.constraints[0].data", document, diagnostic)).toEqual({ kind: "signal", id: "sig_ack", cycle: 7 });
+  });
+
+  it("resolves malformed constraint diagnostics to a referenced stable Signal, not a row index", () => {
+    const document = {
+      signals: [{ id: "sig_request" }, { id: "sig_ack" }],
+      signalGroups: [], annotations: [], transactions: [],
+      constraints: [{ id: "constraint_invalid", type: "latency", data: { triggerSignalId: "sig_request", responseSignalId: "missing" } }],
+    };
+
+    expect(resolveProblemTarget("$.constraints[0].data", document, { objectType: "constraint", objectId: "constraint_invalid", entityId: "constraint_invalid" }))
+      .toEqual({ kind: "signal", id: "sig_request" });
+  });
 });
