@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { startInCycleMode } from "./cycle-startup.js";
 import { openBottomSettings } from "./bottom-settings";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 startInCycleMode(test);
 
@@ -31,9 +32,7 @@ test("Inspector Cancel restores signal and clock drafts without a canonical muta
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  const revision = await host.getAttribute("data-canonical-revision");
-  const history = await page.getByTestId("history-status").textContent();
-  const dirty = await page.getByTestId("dirty-status").textContent();
+  const viewOnlyBefore = await documentState(page);
 
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const signalInspector = page.getByTestId("inspector");
@@ -41,9 +40,7 @@ test("Inspector Cancel restores signal and clock drafts without a canonical muta
   await signalInspector.getByLabel("Inspector signal name", { exact: true }).fill("TRANSIENT_CANCELLED");
   await signalInspector.getByLabel("Inspector signal name", { exact: true }).press("Escape");
   await expect(page.getByTestId("inspector").getByLabel("Inspector signal name", { exact: true })).toHaveValue(originalName);
-  await expect(host).toHaveAttribute("data-canonical-revision", revision!);
-  await expect(page.getByTestId("history-status")).toHaveText(history!);
-  await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
+  await expectViewOnly(page, viewOnlyBefore);
 
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
   const clockInspector = page.getByTestId("inspector");
@@ -52,9 +49,7 @@ test("Inspector Cancel restores signal and clock drafts without a canonical muta
   await expect(clockInspector.getByTestId("cancel-inspector-draft")).toBeVisible();
   await clockInspector.getByTestId("cancel-inspector-draft").click();
   await expect(page.getByTestId("inspector").getByLabel("Inspector clock period")).toHaveValue(originalPeriod);
-  await expect(host).toHaveAttribute("data-canonical-revision", revision!);
-  await expect(page.getByTestId("history-status")).toHaveText(history!);
-  await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
+  await expectViewOnly(page, viewOnlyBefore);
 });
 
 // Bottom Panel Visual Reference pass (#402/#426): Name moved to Inspector,

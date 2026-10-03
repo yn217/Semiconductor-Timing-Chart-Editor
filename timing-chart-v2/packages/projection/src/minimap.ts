@@ -225,9 +225,87 @@ function transactionIndex(transactions: readonly Transaction[], requireById = fa
 }
 
 const DEFAULT_TRANSACTION_COLOR = "#8895a7";
+const MAX_TRANSACTION_MINIMAP_SEGMENTS = 1_024;
 
 function sortTransactionSegments(left: MiniMapTransactionSegment, right: MiniMapTransactionSegment): number {
   return left.start - right.start || left.end - right.end || (left.color < right.color ? -1 : left.color > right.color ? 1 : 0);
+}
+
+/** Keep dense lane overviews pixel-bounded while preserving occupancy and a deterministic representative color per time bucket. */
+function transactionSegments(transactions: readonly Transaction[], groupColor: string | undefined, cycleCount: number): readonly MiniMapTransactionSegment[] {
+  if (transactions.length <= MAX_TRANSACTION_MINIMAP_SEGMENTS) {
+    return transactions.map((transaction) => ({ start: transaction.start, end: transaction.end, color: transaction.color ?? groupColor ?? DEFAULT_TRANSACTION_COLOR })).sort(sortTransactionSegments);
+  }
+  const bucketWidth = cycleCount / MAX_TRANSACTION_MINIMAP_SEGMENTS;
+  const bestCoverage = new Float64Array(MAX_TRANSACTION_MINIMAP_SEGMENTS);
+  const edgeColors: (string | undefined)[] = Array.from({ length: MAX_TRANSACTION_MINIMAP_SEGMENTS });
+  const fullRangeColors: (string | undefined)[] = Array.from({ length: MAX_TRANSACTION_MINIMAP_SEGMENTS * 4 });
+  const updateFullRange = (node: number, left: number, right: number, from: number, to: number, color: string): void => {
+    if (from > right || to < left) return;
+    if (from <= left && right <= to) {
+      const current = fullRangeColors[node];
+      if (current === undefined || color < current) fullRangeColors[node] = color;
+      return;
+    }
+    const middle = Math.floor((left + right) / 2);
+    updateFullRange(node * 2, left, middle, from, to, color);
+    updateFullRange(node * 2 + 1, middle + 1, right, from, to, color);
+  };
+  const fullRangeColorAt = (bucket: number): string | undefined => {
+    let node = 1;
+    let left = 0;
+    let right = MAX_TRANSACTION_MINIMAP_SEGMENTS - 1;
+    let color: string | undefined;
+    while (left <= right) {
+      const candidate = fullRangeColors[node];
+      if (candidate !== undefined && (color === undefined || candidate < color)) color = candidate;
+      if (left === right) break;
+      const middle = Math.floor((left + right) / 2);
+      if (bucket <= middle) { node *= 2; right = middle; }
+      else { node = node * 2 + 1; left = middle + 1; }
+    }
+    return color;
+  };
+  const recordEdge = (bucket: number, coverage: number, color: string): void => {
+    if (coverage > bestCoverage[bucket]! || (coverage === bestCoverage[bucket] && color < (edgeColors[bucket] ?? "\uffff"))) {
+      bestCoverage[bucket] = coverage;
+      edgeColors[bucket] = color;
+    }
+  };
+  for (const transaction of transactions) {
+    const start = Math.max(0, Math.min(cycleCount, transaction.start));
+    const end = Math.max(start, Math.min(cycleCount, transaction.end));
+    if (end <= start) continue;
+    const firstBucket = Math.min(MAX_TRANSACTION_MINIMAP_SEGMENTS - 1, Math.floor(start / bucketWidth));
+    const lastBucket = Math.min(MAX_TRANSACTION_MINIMAP_SEGMENTS - 1, Math.ceil(end / bucketWidth) - 1);
+    const color = transaction.color ?? groupColor ?? DEFAULT_TRANSACTION_COLOR;
+    if (firstBucket === lastBucket) {
+      recordEdge(firstBucket, end - start, color);
+    } else {
+      const firstCoverage = Math.min(end, (firstBucket + 1) * bucketWidth) - start;
+      const lastCoverage = end - lastBucket * bucketWidth;
+      if (firstCoverage >= bucketWidth - Number.EPSILON * cycleCount) updateFullRange(1, 0, MAX_TRANSACTION_MINIMAP_SEGMENTS - 1, firstBucket, firstBucket, color);
+      else recordEdge(firstBucket, firstCoverage, color);
+      if (lastCoverage >= bucketWidth - Number.EPSILON * cycleCount) updateFullRange(1, 0, MAX_TRANSACTION_MINIMAP_SEGMENTS - 1, lastBucket, lastBucket, color);
+      else recordEdge(lastBucket, lastCoverage, color);
+      if (lastBucket > firstBucket + 1) updateFullRange(1, 0, MAX_TRANSACTION_MINIMAP_SEGMENTS - 1, firstBucket + 1, lastBucket - 1, color);
+    }
+  }
+  const segments: MiniMapTransactionSegment[] = [];
+  for (let bucket = 0; bucket < MAX_TRANSACTION_MINIMAP_SEGMENTS; bucket += 1) {
+    const fullColor = fullRangeColorAt(bucket);
+    const edgeColor = edgeColors[bucket];
+    const color = fullColor !== undefined && (bestCoverage[bucket]! < bucketWidth || edgeColor === undefined || fullColor <= edgeColor)
+      ? fullColor
+      : edgeColor;
+    if (!color) continue;
+    const start = Math.max(0, Math.round(bucket * bucketWidth));
+    const end = Math.min(cycleCount, Math.round((bucket + 1) * bucketWidth));
+    const previous = segments.at(-1);
+    if (previous?.color === color && previous.end === start) segments[segments.length - 1] = { ...previous, end };
+    else segments.push({ start, end, color });
+  }
+  return segments;
 }
 
 /**
@@ -255,9 +333,7 @@ export function buildMiniMapTransactionOverview(document: Pick<CanonicalDocument
   });
   const rows = orderedBuckets.map((bucket, rowIndex) => {
     const groupColor = bucket.groupId ? colorByGroupId.get(bucket.groupId) : undefined;
-    const segments = bucket.transactions
-      .map((transaction) => ({ start: transaction.start, end: transaction.end, color: transaction.color ?? groupColor ?? DEFAULT_TRANSACTION_COLOR }))
-      .sort(sortTransactionSegments);
+    const segments = transactionSegments(bucket.transactions, groupColor, cycleCount);
     return { key: transactionLaneIdentityKey(bucket.groupId, bucket.laneId), groupId: bucket.groupId, laneId: bucket.laneId, rowIndex, segments };
   });
   const overview = Object.freeze({ cycleCount, rows: Object.freeze(rows), transactionsVisited: document.transactions.length, laneBucketsRebuilt: rows.length });
@@ -325,7 +401,7 @@ export function updateMiniMapTransactionOverview(previous: MiniMapTransactionOve
       nextBuckets.set(key, bucket);
       const rowIndex = rowIndexes.get(key);
       const groupColor = bucket.groupId ? colorByGroupId.get(bucket.groupId) : undefined;
-      const segments = bucketTransactions.map((transaction) => ({ start: transaction.start, end: transaction.end, color: transaction.color ?? groupColor ?? DEFAULT_TRANSACTION_COLOR })).sort(sortTransactionSegments);
+      const segments = transactionSegments(bucketTransactions, groupColor, previous.cycleCount);
       rowsByKey.set(key, { key, groupId: bucket.groupId, laneId: bucket.laneId, rowIndex: rowIndex ?? 0, segments });
     }
     const { orderById: orderByGroupId } = transactionGroupPresentationIndex(document.transactionGroups);
@@ -360,7 +436,7 @@ export function updateMiniMapTransactionOverview(previous: MiniMapTransactionOve
     if (!bucket || bucket.transactions.length === 0) return undefined;
     const resolvedGroupId = bucket.groupId;
     const groupColor = resolvedGroupId ? colorByGroupId.get(resolvedGroupId) : undefined;
-    return { key: transactionLaneIdentityKey(resolvedGroupId, bucket.laneId), groupId: resolvedGroupId, laneId: bucket.laneId, rowIndex, segments: bucket.transactions.map((transaction) => ({ start: transaction.start, end: transaction.end, color: transaction.color ?? groupColor ?? DEFAULT_TRANSACTION_COLOR })).sort(sortTransactionSegments) };
+    return { key: transactionLaneIdentityKey(resolvedGroupId, bucket.laneId), groupId: resolvedGroupId, laneId: bucket.laneId, rowIndex, segments: transactionSegments(bucket.transactions, groupColor, previous.cycleCount) };
   };
   const rowsByKey = new Map(previous.rows.map((row) => [row.key, row] as const));
   for (const key of changedLanes) {

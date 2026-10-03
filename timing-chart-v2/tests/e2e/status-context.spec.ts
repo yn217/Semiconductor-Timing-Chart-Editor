@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { openBottomSettings } from "./bottom-settings";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 test.describe("status context", () => {
   test("reflects workspace, view mode and zoom without mutation", async ({ page }) => {
@@ -51,9 +52,7 @@ test.describe("status context", () => {
     const host = page.getByTestId("cycle-surface");
     await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
     await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
-    const revision = await host.getAttribute("data-canonical-revision");
-    const history = await page.getByTestId("history-status").textContent();
-    const dirty = await page.getByTestId("dirty-status").textContent();
+    const viewOnlyBefore = await documentState(page);
     await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
     await expect(page.getByTestId("status-context")).toContainText("Scope: dut");
     await openBottomSettings(page);
@@ -62,9 +61,7 @@ test.describe("status context", () => {
     await openBottomSettings(page);
     await page.getByTestId("bottom-pin").click();
     await expect(page.getByTestId("status-context")).toContainText("Bottom: Pinned");
-    expect(await host.getAttribute("data-canonical-revision")).toBe(revision);
-    expect(await page.getByTestId("history-status").textContent()).toBe(history);
-    expect(await page.getByTestId("dirty-status").textContent()).toBe(dirty);
+    await expectViewOnly(page, viewOnlyBefore);
   });
 
   test("exposes and clears a temporary arrow-pick mode", async ({ page }) => {
@@ -72,16 +69,12 @@ test.describe("status context", () => {
     const host = page.getByTestId("cycle-surface");
     await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
     await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
-    const revision = await host.getAttribute("data-canonical-revision");
-    const history = await page.getByTestId("history-status").textContent();
-    const dirty = await page.getByTestId("dirty-status").textContent();
+    const viewOnlyBefore = await documentState(page);
     await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
     await page.getByRole("button", { name: "Pick arrow endpoints", exact: true }).click();
     await expect(page.getByTestId("tool-status")).toHaveText("Arrow pick · from");
     await page.keyboard.press("Escape");
     await expect(page.getByTestId("tool-status")).toHaveText("Ready · Tool: Select");
-    expect(await host.getAttribute("data-canonical-revision")).toBe(revision);
-    expect(await page.getByTestId("history-status").textContent()).toBe(history);
-    expect(await page.getByTestId("dirty-status").textContent()).toBe(dirty);
+    await expectViewOnly(page, viewOnlyBefore);
   });
 });

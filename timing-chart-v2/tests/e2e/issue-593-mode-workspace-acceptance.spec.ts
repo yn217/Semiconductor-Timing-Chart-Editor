@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 /**
  * #593 acceptance: Cycle / Transaction / Combined own their workspace layout independently. Exact fixture 24, both target
@@ -18,9 +19,7 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
     await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
     await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/old/pre-reset-2026-10-02/showcase/24_protocol_transaction_showcase.tcd.json"));
     await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 30_000 });
-    const revision = await surface.getAttribute("data-canonical-revision");
-    const history = await page.getByTestId("history-status").innerText();
-    const dirty = await page.getByTestId("dirty-status").innerText();
+    const viewOnlyBefore = await documentState(page);
 
     const snapshot = (): Promise<Snapshot> => page.evaluate(() => {
       const owners = [...document.querySelectorAll<HTMLElement>("*")]
@@ -64,8 +63,6 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
     expect(resized.owners).toEqual(cycle1.owners);
     expect(resized.pitch).toBe(40);
 
-    expect(await surface.getAttribute("data-canonical-revision")).toBe(revision);
-    expect(await page.getByTestId("history-status").innerText()).toBe(history);
-    expect(await page.getByTestId("dirty-status").innerText()).toBe(dirty);
+    await expectViewOnly(page, viewOnlyBefore);
   });
 }

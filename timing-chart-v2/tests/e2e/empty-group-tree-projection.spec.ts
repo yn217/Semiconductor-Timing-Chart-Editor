@@ -10,9 +10,9 @@ async function ready(page: import("@playwright/test").Page): Promise<void> {
 }
 
 async function revealTreeBottom(page: import("@playwright/test").Page): Promise<void> {
-  await page.getByTestId("cycle-viewport").evaluate((element) => {
+  await page.getByTestId("cycle-viewport").evaluate(async (element) => {
     element.scrollTop = element.scrollHeight;
-    element.dispatchEvent(new Event("scroll"));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   });
   await page.waitForTimeout(100);
 }

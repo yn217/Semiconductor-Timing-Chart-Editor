@@ -858,9 +858,9 @@ test("keeps Bookmark flags aligned with their rendered Ruler cycle through zoom 
     await assertAligned(`zoom=${zoom}`);
   }
 
-  const scrollLeft = await viewport.evaluate((element) => {
+  const scrollLeft = await viewport.evaluate(async (element) => {
     element.scrollLeft = element.scrollWidth;
-    element.dispatchEvent(new Event("scroll"));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     return element.scrollLeft;
   });
   expect(scrollLeft).toBeGreaterThan(0);

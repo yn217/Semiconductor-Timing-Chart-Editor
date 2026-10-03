@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { startInCycleSample } from "./cycle-startup.js";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 startInCycleSample(test);
 
@@ -31,15 +32,11 @@ test("Bottom transition bulk selection is scoped to its stable Signal ID", async
   const requestStartAgain = editor.locator("form.event-row[data-event-start='0']");
   await requestStartAgain.getByRole("button", { name: /Edit transition/ }).click();
   await requestStartAgain.getByLabel("Comment 0").fill("belongs only to REQUEST");
-  const revision = await host.getAttribute("data-canonical-revision");
-  const history = await page.getByTestId("history-status").innerText();
-  const dirty = await page.getByTestId("dirty-status").innerText();
+  const viewOnlyBefore = await documentState(page);
 
   await ready.click();
   const readyStart = editor.locator("form.event-row[data-event-start='0']");
   await expect(readyStart.getByLabel("Comment 0")).toHaveCount(0);
   await expect(editor.getByTestId("event-selected-count")).toHaveText("0 rows selected");
-  await expect(host).toHaveAttribute("data-canonical-revision", revision!);
-  await expect(page.getByTestId("history-status")).toHaveText(history);
-  await expect(page.getByTestId("dirty-status")).toHaveText(dirty);
+  await expectViewOnly(page, viewOnlyBefore);
 });

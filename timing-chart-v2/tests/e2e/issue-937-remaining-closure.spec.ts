@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 import { readWave } from "./wave-probe.js";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 /**
  * #937 closure audit: the coordinate-matrix rows not covered by the Cycle/Transaction/Combined/Signal Split matrices —
@@ -71,8 +72,7 @@ for (const size of sizes) {
     const resizer = page.getByTestId("inspector-resizer");
     await expect(resizer).toBeVisible();
     const revision = await surface.getAttribute("data-canonical-revision");
-    const history = await page.getByTestId("history-status").textContent();
-    const dirty = await page.getByTestId("dirty-status").textContent();
+    const viewOnlyBefore = await documentState(page);
     await expect.poll(() => surface.locator("[data-role='wave-owner'][data-signal-id]:has(image[data-wave-svg-image])").count()).toBeGreaterThan(0);
     const signalId = await surface.locator("[data-role='wave-owner'][data-signal-id]:has(image[data-wave-svg-image])").first().getAttribute("data-signal-id");
     const widths: number[] = [];
@@ -96,8 +96,7 @@ for (const size of sizes) {
     }
     expect(new Set(widths.map(Math.round)).size, "the Inspector really changed width").toBeGreaterThan(1);
     expect(await surface.getAttribute("data-canonical-revision")).toBe(revision);
-    expect(await page.getByTestId("history-status").textContent()).toBe(history);
-    expect(await page.getByTestId("dirty-status").textContent()).toBe(dirty);
+    await expectViewOnly(page, viewOnlyBefore);
   });
 
   test(`Transaction Phase boundaries stay on the Ruler across zoom at ${size.width}x${size.height}`, async ({ page }) => {

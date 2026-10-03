@@ -113,10 +113,10 @@ test("10k Transactions, 10k Bookmarks, and 2k collapsed folds stay bounded durin
   expect(initial.mountedMarkers).toBeLessThan(1_000);
   expect(initial.scrollWidth).toBeGreaterThan(initial.clientWidth);
 
-  await viewport.evaluate((element) => {
+  await viewport.evaluate(async (element) => {
     const node = element as HTMLElement;
     node.scrollLeft = Math.min(node.scrollWidth - node.clientWidth, Math.max(1, node.scrollWidth * 0.6));
-    node.dispatchEvent(new Event("scroll"));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   });
   await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(initial.scrollLeft);
   await expect.poll(() => markers.count()).toBeGreaterThan(0);
@@ -269,10 +269,10 @@ test("selected Transaction drag survives a horizontal virtualization window chan
   await page.mouse.move(startX, y);
   await page.mouse.down();
   await page.mouse.move(startX + 12, y, { steps: 2 });
-  await viewport.evaluate((element) => {
+  await viewport.evaluate(async (element) => {
     const node = element as HTMLElement;
     node.scrollLeft = Math.max(0, node.scrollWidth - node.clientWidth);
-    node.dispatchEvent(new Event("scroll"));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   });
   await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
   await expect(bar).toHaveAttribute("data-selected", "true");

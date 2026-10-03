@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 // #722: splitters advertise themselves (resize cursor, hit area larger than the 1px line, hover reveal) and their size is view state that
 // neither selection nor a mode round-trip changes, and never touches Canonical/History/Dirty.
@@ -8,8 +9,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await page.goto("/");
     await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
     await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
-    const history = await page.getByTestId("history-status").innerText();
-    const dirty = await page.getByTestId("dirty-status").innerText();
+    const viewOnlyBefore = await documentState(page);
     const revision = await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision");
     const bottom = page.getByTestId("bottom-resizer");
     const inspector = page.getByTestId("inspector-resizer");
@@ -36,8 +36,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     expect(resized[0]).not.toBe(before[0]);
     for (const mode of ["Transaction", "Cycle"]) await page.locator(".view-mode").getByRole("button", { name: mode, exact: true }).click();
     expect(await sizes()).toEqual(resized);
-    await expect(page.getByTestId("history-status")).toHaveText(history);
-    await expect(page.getByTestId("dirty-status")).toHaveText(dirty);
+    await expectViewOnly(page, viewOnlyBefore);
     await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-canonical-revision", revision!);
   });
 }
@@ -45,8 +44,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
 test("double-clicking the Bottom and Inspector splitters restores default sizes without touching the document", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
-  const history = await page.getByTestId("history-status").innerText();
-  const dirty = await page.getByTestId("dirty-status").innerText();
+  const viewOnlyBefore = await documentState(page);
   const bottom = page.getByTestId("bottom-resizer");
   const inspector = page.getByTestId("inspector-resizer");
   const defaultBottom = await bottom.getAttribute("aria-valuenow");
@@ -63,6 +61,5 @@ test("double-clicking the Bottom and Inspector splitters restores default sizes 
   await inspector.dblclick({ force: true });
   await expect(bottom).toHaveAttribute("aria-valuenow", defaultBottom!);
   await expect(inspector).toHaveAttribute("aria-valuenow", defaultInspector!);
-  await expect(page.getByTestId("history-status")).toHaveText(history);
-  await expect(page.getByTestId("dirty-status")).toHaveText(dirty);
+  await expectViewOnly(page, viewOnlyBefore);
 });

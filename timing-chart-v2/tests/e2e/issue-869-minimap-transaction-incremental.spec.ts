@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 /**
  * #869 (Transaction overview): editing ONE Transaction in an 8,000-Transaction document must update the MiniMap's Transaction overview
@@ -47,4 +48,52 @@ test("a single Transaction edit updates the MiniMap Transaction overview increme
   expect(after.laneBuckets, "only the affected lane bucket is rebuilt (of 8)").toBeLessThanOrEqual(2);
   expect(after.visited, "Transactions visited are bounded by the affected lane(s), well below the document's 8,000").toBeLessThan(4000);
   expect(latency, "edit-to-idle (loose, machine independent)").toBeLessThan(15_000);
+});
+
+for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] as const) test(`10k Transactions in one lane produce pixel-bounded MiniMap DOM at ${size.width}x${size.height}`, async ({ page }) => {
+  test.setTimeout(240_000);
+  await page.addInitScript(() => { try { window.localStorage.setItem("timing-chart-v2.view-mode", "Transaction"); } catch { /* best effort */ } });
+  await page.setViewportSize(size);
+  await page.goto("/");
+  const surface = page.getByTestId("cycle-surface");
+  await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
+  const base = generatePerformanceDocument({ signalCount: 1, cycleCount: 10_000, profile: "transaction-heavy" });
+  const document = {
+    ...base,
+    transactions: Array.from({ length: 10_000 }, (_, index) => ({
+      id: `txn_dense_lane_${index}`,
+      name: `Dense lane ${index}`,
+      start: index,
+      end: index + 1,
+      laneId: "lane_dense",
+      color: index % 2 === 0 ? "#112233" : "#aabbcc",
+      linkedSignals: [],
+    })),
+  };
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "issue-869-transaction-minimap-dense.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", "10000", { timeout: 180_000 });
+  const minimap = page.getByTestId("minimap");
+  await expect(minimap).toBeVisible({ timeout: 60_000 });
+  await expect(minimap).toHaveAttribute("aria-busy", "false", { timeout: 60_000 });
+  const segments = await page.locator(".minimap-segment-transaction").count();
+  console.log("E869T-DOM", JSON.stringify({ transactions: 10_000, laneCount: 1, mountedTransactionMiniMapSegments: segments }));
+  expect(segments).toBeGreaterThan(0);
+  expect(segments, "Transaction MiniMap DOM stays bounded per dense lane").toBeLessThanOrEqual(1_024);
+  // Canonical data is untouched by the MiniMap aggregation, and the page-wide DOM stays far below one node per Transaction.
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", "10000");
+  const bars = await page.getByTestId("transaction-lanes").locator("[data-transaction-id]").count();
+  console.log("E869T-BARS", JSON.stringify({ size, transactionBarDom: bars }));
+  expect(bars, "TransactionBar DOM is viewport-bounded, not one per canonical Transaction").toBeLessThan(2_000);
+  // Navigation through the MiniMap is view-only and moves the viewport.
+  const before = await documentState(page);
+  const box = (await minimap.boundingBox())!;
+  const scrollBefore = await page.getByTestId("cycle-viewport").evaluate((element) => element.scrollLeft);
+  await page.mouse.click(box.x + box.width * 0.6, box.y + Math.min(8, box.height / 2));
+  await expect.poll(() => page.getByTestId("cycle-viewport").evaluate((element) => element.scrollLeft)).not.toBe(scrollBefore);
+  await expectViewOnly(page, before);
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await expect(page.getByTestId("minimap")).toHaveAttribute("aria-busy", "false", { timeout: 60_000 });
+  expect(await page.locator(".minimap-segment-transaction").count()).toBeLessThanOrEqual(1_024);
+  await expectViewOnly(page, before);
 });

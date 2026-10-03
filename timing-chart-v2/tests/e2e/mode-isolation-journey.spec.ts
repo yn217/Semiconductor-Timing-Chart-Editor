@@ -105,8 +105,8 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
       const styles = getComputedStyle(element);
       return {
         grid: styles.gridTemplateColumns.split(/\s+/).map((track) => Number.parseFloat(track)),
-        left: Number.parseFloat(getComputedStyle(shellElement).getPropertyValue("--gui-left-width")),
-        frozen: Number.parseFloat(getComputedStyle(shellElement).getPropertyValue("--gui-frozen-width")),
+        left: Number(shellElement.dataset.leftPaneWidth), // published layout state, not the CSS custom property that happens to carry it
+        frozen: Number(shellElement.dataset.frozenPaneWidth),
       };
     });
     expect(columns.grid[0], "Combined timing surface left column follows the mode's left-width owner").toBe(columns.left);

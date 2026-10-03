@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import { startInCycleMode } from "./cycle-startup.js";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 startInCycleMode(test);
 
@@ -41,9 +42,7 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
     await expect(page.getByTestId("follow-selection")).not.toBeChecked();
     await page.getByTestId("bottom-settings").click();
     await expect(inspector).toHaveAttribute("data-inspector-context", "signal");
-    const revision = await surface.getAttribute("data-canonical-revision");
-    const history = await page.getByTestId("history-status").innerText();
-    const dirty = await page.getByTestId("dirty-status").innerText();
+    const viewOnlyBefore = await documentState(page);
 
     await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
     await expect(page.getByTestId("ribbon-context")).toHaveCount(0);
@@ -71,9 +70,7 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
     await page.locator(".surface-host").click({ position: { x: 100, y: 100 } });
     await expect(page.getByTestId("active-pane-status")).toHaveText("Active Pane: Signal");
     await expect(page.getByTestId("ribbon-context")).toHaveCount(0);
-    expect(await surface.getAttribute("data-canonical-revision")).toBe(revision);
-    expect(await page.getByTestId("history-status").innerText()).toBe(history);
-    expect(await page.getByTestId("dirty-status").innerText()).toBe(dirty);
+    await expectViewOnly(page, viewOnlyBefore);
   });
 }
 

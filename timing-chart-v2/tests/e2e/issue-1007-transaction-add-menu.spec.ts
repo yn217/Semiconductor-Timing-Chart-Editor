@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { documentState } from "./view-only.js";
 
 /**
  * #1007: the Transaction left panel's `+ Add` opens the same Add menu surface as Cycle (Transaction / Group); the standalone `+ Group`
@@ -6,11 +7,7 @@ import { expect, test, type Page } from "@playwright/test";
  */
 const sizes = [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] as const;
 
-const state = (page: Page) => page.evaluate(() => ({
-  revision: document.querySelector("[data-testid='cycle-surface']")?.getAttribute("data-canonical-revision"),
-  history: document.querySelector("[data-testid='history-status']")?.textContent,
-  dirty: document.querySelector("[data-testid='dirty-status']")?.textContent,
-}));
+const state = documentState;
 
 for (const mode of ["Transaction"] as const) for (const size of sizes) {
   test(`${mode}: Add menu offers Transaction / Group with mouse, keyboard, Esc, outside click and focus return at ${size.width}x${size.height}`, async ({ page }) => {
