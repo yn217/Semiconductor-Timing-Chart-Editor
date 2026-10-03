@@ -310,8 +310,8 @@ test("Transactions x5000: largest legal Paste (5,000 -> 10,000) is one History s
   expect(legal.ms, "5k Transaction Paste apply-to-idle (directional bound)").toBeLessThan(60_000);
 });
 
-// Annotations: the clipboard carries ONE Annotation (single-entity Copy/Paste/Duplicate); the approved bulk route is the Annotation collection
-// Import (annotation.replaceCollection: the imported array becomes the collection, stable IDs from the file are kept, references validated).
+// Annotations: the clipboard carries ALL selected Annotations (multi-entity Copy/Cut/Paste/Duplicate, owner decision on #864; covered at the
+// end of this file as E864-ANN-MULTI); the Annotation collection Import (annotation.replaceCollection, file IDs kept) is the other bulk route.
 function annotationDocument() {
   const base = generatePerformanceDocument({ signalCount: 1_000, cycleCount: 100, profile: "annotation-heavy" }); // 2,000 measurement Annotations
   const annotationGroups = [
@@ -321,14 +321,15 @@ function annotationDocument() {
   return { ...base, annotations: base.annotations.slice(0, 1_000), annotationGroups: annotationGroups.map((group) => ({ ...group, annotationIds: group.annotationIds.filter((id) => Number(id.split("_").at(-1)) < 1_000) })), extra: base.annotations.slice(1_000) };
 }
 
-async function openAnnotations(page: Page) {
-  const { extra, ...document } = annotationDocument();
-  await page.setViewportSize(sizes[1]);
+async function openAnnotations(page: Page, size: { width: number; height: number } = sizes[1], override?: Record<string, unknown>) {
+  const { extra, ...generated } = annotationDocument();
+  const document = { ...generated, ...override };
+  await page.setViewportSize(size);
   await page.goto("/");
   const surface = page.getByTestId("cycle-surface");
   await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "a864.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
-  await expect(page.getByTestId("annotation-count-status")).toHaveText("Annotations: 1000", { timeout: 240_000 });
+  await expect(page.getByTestId("annotation-count-status")).toHaveText(`Annotations: ${(document.annotations as unknown[]).length}`, { timeout: 240_000 });
   await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 240_000 });
   await home(page);
   await page.getByRole("tablist", { name: "Bottom context panels" }).getByRole("tab", { name: "Annotation" }).click();
@@ -459,4 +460,135 @@ test("Signals x100 on 1k vs 100k cycles: Select All -> Copy -> Paste cost does n
   console.log("E864-CYCLES", JSON.stringify({ results, p50_1k: median(results[1_000]!), p50_100k: median(results[100_000]!) }));
   // Directional guard only (shared machine): a 100x longer timeline must not make the same batch ~proportionally slower.
   expect(median(results[100_000]!), "100k-cycle Paste p50 vs 1k-cycle p50").toBeLessThan(Math.max(3_000, median(results[1_000]!) * 5));
+});
+
+// ---------------------------------------------------------------------------------------------------------------------------------------
+// #864 multi-Annotation clipboard (E864-ANN-MULTI): Select All in Annotation context -> Copy/Cut/Duplicate/Paste of the whole selection as ONE
+// annotation.bulkCreate / annotation.bulkDelete History entry. Fresh stable IDs, Signal references unchanged, a source group with >= 2 copied
+// members is recreated as a NEW group (same name) over the copies, exact Undo/Redo on the saved Canonical JSON. Timings are directional.
+// ---------------------------------------------------------------------------------------------------------------------------------------
+const annotationCount = async (page: Page) => Number(/Annotations: (\d+)/.exec((await page.getByTestId("annotation-count-status").textContent()) ?? "")?.[1] ?? "-1");
+async function selectAllAnnotations(page: Page) {
+  await page.getByRole("tablist", { name: "Bottom context panels" }).getByRole("tab", { name: "Annotation" }).click();
+  const row = page.getByTestId("annotation-list").locator("[data-annotation-list-id]").first();
+  await row.click();
+  await row.focus();
+  await page.keyboard.press("Control+a");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true", { timeout: 120_000 });
+  await home(page);
+}
+const strip = <T extends { id: string }>(items: readonly T[]) => items.map(({ id: _id, ...rest }) => rest);
+/** `created` are the pasted copies in source order; checks content/references and the mirrored new group (no dangling members). */
+function expectMirroredCopies(base: Saved, after: Saved, created: readonly SavedAnnotation[], label: string) {
+  expect(created, `${label}: 1000 copies`).toHaveLength(1_000);
+  expect(new Set(after.annotations.map((item) => item.id)).size, `${label}: IDs unique`).toBe(after.annotations.length);
+  expect(created.some((item) => base.annotations.some((source) => source.id === item.id)), `${label}: fresh stable IDs`).toBe(false);
+  expect(strip(created), `${label}: content and Signal references preserved in order`).toEqual(strip(base.annotations));
+  const newIdByOld = new Map(base.annotations.map((item, index) => [item.id, created[index]!.id]));
+  const sourceEven = base.annotationGroups!.find((group) => group.id === "ag_b864_even")!;
+  const newGroups = after.annotationGroups!.filter((group) => !base.annotationGroups!.some((item) => item.id === group.id));
+  expect(newGroups.map(({ id: _id, ...rest }) => rest), `${label}: the copied group is recreated over the copies`).toEqual([{ name: "Even", annotationIds: sourceEven.annotationIds.map((id) => newIdByOld.get(id)) }]);
+}
+const newAnnotations = (base: Saved, after: Saved) => { const ids = new Set(base.annotations.map((item) => item.id)); return after.annotations.filter((item) => !ids.has(item.id)); };
+
+for (const size of sizes) {
+  test(`Annotations x1000: Select All -> Copy -> Paste = 2000 in one History step; fresh IDs, references and group membership; exact Undo/Redo (E864-ANN-MULTI) at ${size.width}x${size.height}`, async ({ page }) => {
+    test.setTimeout(600_000);
+    await openAnnotations(page, size);
+    const base = await saveSnapshot(page);
+    await selectAllAnnotations(page);
+    const ribbon = page.getByTestId("ribbon");
+    await ribbon.getByRole("button", { name: "Copy", exact: true }).click();
+    await expect(ribbon.getByTestId("clipboard-status")).toHaveText("Copied 1000 annotations");
+    const s0 = await editorState(page);
+    const run = await timed(page, () => ribbon.getByRole("button", { name: "Paste", exact: true }).click());
+    await expect.poll(() => annotationCount(page), { timeout: 120_000 }).toBe(2_000);
+    await expect(ribbon.getByTestId("clipboard-status")).toHaveText("Pasted 1000 annotations");
+    const s1 = await editorState(page);
+    expect([s1.history - s0.history, s1.revision - s0.revision, s1.dirty], "one History entry, one revision, Dirty").toEqual([1, 1, "Modified"]);
+    const after = await saveSnapshot(page);
+    expectMirroredCopies(base, after, newAnnotations(base, after), "Paste");
+    await page.keyboard.press("Control+z");
+    await expect.poll(() => annotationCount(page), { timeout: 120_000 }).toBe(1_000);
+    expect((await editorState(page)).history).toBe(s0.history);
+    const undone = await saveSnapshot(page);
+    expect([undone.annotations, undone.annotationGroups], "one Undo restores exactly").toEqual([base.annotations, base.annotationGroups]);
+    await ribbon.getByRole("button", { name: "Redo", exact: true }).first().click();
+    await expect.poll(() => annotationCount(page), { timeout: 120_000 }).toBe(2_000);
+    const redone = await saveSnapshot(page);
+    expect([redone.annotations, redone.annotationGroups], "Redo is exact").toEqual([after.annotations, after.annotationGroups]);
+    console.log("E864-ANN-MULTI", JSON.stringify({ case: "copy-paste", size, run, s0, s1 }));
+    expect(run.ms, "1k Annotation Paste apply-to-idle (directional bound)").toBeLessThan(30_000);
+  });
+}
+
+test("Annotations x1000: Select All -> Cut (one bulk delete) -> Paste (one bulk create); Duplicate; exact Undo (E864-ANN-MULTI) at 1672x941", async ({ page }) => {
+  test.setTimeout(600_000);
+  await openAnnotations(page);
+  const base = await saveSnapshot(page);
+  const ribbon = page.getByTestId("ribbon");
+  await selectAllAnnotations(page);
+  const s0 = await editorState(page);
+  const cut = await timed(page, () => ribbon.getByRole("button", { name: "Cut", exact: true }).click());
+  await expect.poll(() => annotationCount(page), { timeout: 120_000 }).toBe(0);
+  await expect(ribbon.getByTestId("clipboard-status")).toHaveText("Cut 1000 annotations");
+  const s1 = await editorState(page);
+  expect([s1.history - s0.history, s1.revision - s0.revision], "Cut is one History entry").toEqual([1, 1]);
+  const paste = await timed(page, () => ribbon.getByRole("button", { name: "Paste", exact: true }).click());
+  await expect.poll(() => annotationCount(page), { timeout: 120_000 }).toBe(1_000);
+  await expect(ribbon.getByTestId("clipboard-status")).toHaveText("Pasted 1000 annotations");
+  expect((await editorState(page)).history - s1.history, "Paste is one History entry").toBe(1);
+  const pasted = await saveSnapshot(page);
+  // Cut prunes the members from the source group (kept, empty, exactly as single Annotation delete does); Paste mirrors it in a new group.
+  expect(pasted.annotationGroups!.find((group) => group.id === "ag_b864_even")!.annotationIds).toEqual([]);
+  expectMirroredCopies(base, pasted, pasted.annotations, "Cut -> Paste");
+  await page.keyboard.press("Control+z");
+  await expect.poll(() => annotationCount(page), { timeout: 120_000 }).toBe(0);
+  await page.keyboard.press("Control+z");
+  await expect.poll(() => annotationCount(page), { timeout: 120_000 }).toBe(1_000);
+  expect((await editorState(page)).history).toBe(s0.history);
+  const restored = await saveSnapshot(page);
+  expect([restored.annotations, restored.annotationGroups], "two Undo steps restore exactly").toEqual([base.annotations, base.annotationGroups]);
+  await selectAllAnnotations(page);
+  const s2 = await editorState(page);
+  const duplicate = await timed(page, () => ribbon.getByRole("button", { name: "Duplicate", exact: true }).first().click());
+  await expect.poll(() => annotationCount(page), { timeout: 120_000 }).toBe(2_000);
+  await expect(ribbon.getByTestId("clipboard-status")).toHaveText("Duplicated 1000 annotations");
+  expect((await editorState(page)).history - s2.history, "Duplicate is one History entry").toBe(1);
+  const duplicated = await saveSnapshot(page);
+  expectMirroredCopies(base, duplicated, newAnnotations(base, duplicated), "Duplicate");
+  await page.keyboard.press("Control+z");
+  await expect.poll(() => annotationCount(page), { timeout: 120_000 }).toBe(1_000);
+  console.log("E864-ANN-MULTI", JSON.stringify({ case: "cut-paste-duplicate", cut, paste, duplicate }));
+});
+
+test("Annotations x10000: largest legal Paste (10,000 -> 20,000) is one History step; a further Paste over the 20,000 limit is rejected atomically with a RESOURCE_LIMIT_EXCEEDED Problem (E864-ANN-MULTI) at 1672x941", async ({ page }) => {
+  test.setTimeout(900_000);
+  const template = annotationDocument();
+  const pool = [...template.annotations, ...template.extra];
+  const annotations = Array.from({ length: 10_000 }, (_, index) => ({ ...pool[index % pool.length]!, id: `ann_b864_limit_${index}`, label: `L${index}` }));
+  await openAnnotations(page, sizes[1], { annotations, annotationGroups: [] });
+  const ribbon = page.getByTestId("ribbon");
+  await selectAllAnnotations(page);
+  await ribbon.getByRole("button", { name: "Copy", exact: true }).click();
+  await expect(ribbon.getByTestId("clipboard-status")).toHaveText("Copied 10000 annotations");
+  const s0 = await editorState(page);
+  const legal = await timed(page, () => ribbon.getByRole("button", { name: "Paste", exact: true }).click());
+  await expect.poll(() => annotationCount(page), { timeout: 180_000 }).toBe(20_000);
+  const s1 = await editorState(page);
+  expect([s1.history - s0.history, s1.revision - s0.revision], "largest legal Paste is one History entry").toEqual([1, 1]);
+  const problems = async () => Number(/Problems:\s*(\d+)/.exec((await page.getByTestId("problems-status").textContent()) ?? "")?.[1] ?? "-1");
+  const problemsBefore = await problems();
+  const before = await documentState(page);
+  const rejected = await timed(page, () => ribbon.getByRole("button", { name: "Paste", exact: true }).click());
+  await expectViewOnly(page, before, "a rejected over-limit Annotation Paste leaves Canonical / History / Dirty untouched");
+  expect(await annotationCount(page), "no partial paste").toBe(20_000);
+  await expect.poll(problems, { message: "the over-limit Paste adds a Problem" }).toBe(problemsBefore + 1);
+  await expect(ribbon.getByTestId("clipboard-status")).toHaveText(/Paste rejected:.*resource limit exceeded for annotations/i);
+  await page.getByRole("tablist", { name: "Bottom context panels" }).getByRole("tab", { name: /Problems/ }).click();
+  await expect(page.getByTestId("problems-panel")).toContainText("RESOURCE_LIMIT_EXCEEDED");
+  await page.keyboard.press("Control+z");
+  await expect.poll(() => annotationCount(page), { timeout: 180_000 }).toBe(10_000);
+  console.log("E864-ANN-MULTI", JSON.stringify({ case: "limit", legal, rejected, status: await ribbon.getByTestId("clipboard-status").textContent() }));
+  expect(legal.ms, "10k Annotation Paste apply-to-idle (directional bound)").toBeLessThan(90_000);
 });

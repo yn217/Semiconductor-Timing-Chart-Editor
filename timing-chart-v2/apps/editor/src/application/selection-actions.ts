@@ -16,6 +16,8 @@ export interface SelectionActions {
   readonly clearSelection: () => void;
   readonly selectAllSignals: () => void;
   readonly selectAllTransactions: () => void;
+  /** #864: Select All in Annotation context (an Annotation is selected) selects every Annotation, for multi-Annotation clipboard. */
+  readonly selectAllAnnotations: () => void;
   readonly selectHierarchySignal: (id: SignalId) => void;
   readonly revealSelectedInHierarchy: () => void;
 }
@@ -34,6 +36,10 @@ export function createSelectionActions(input: SelectionActionsInput): SelectionA
     const ids = input.document.transactions.filter((transaction) => transaction.visible !== false).map((transaction) => transaction.id);
     input.selection.selectTransactions(new Set(ids), ids[0]);
   };
+  const selectAllAnnotations = () => {
+    const ids = input.document.annotations.map((annotation) => annotation.id);
+    input.selection.selectAnnotations(new Set(ids), ids[0]);
+  };
   const selectHierarchySignal = (id: SignalId) => {
     if (input.document.signals.some((item) => item.id === id)) input.selection.selectSignal(id);
   };
@@ -43,5 +49,5 @@ export function createSelectionActions(input: SelectionActionsInput): SelectionA
     input.selection.selectSignal(id);
     requestAnimationFrame(() => input.hostRef.current?.querySelector<HTMLElement>(`[data-role='left-tree-rows'] [data-row-id='${CSS.escape(id)}']`)?.scrollIntoView({ block: "nearest" }));
   };
-  return { selectAnnotation, selectTransaction, selectTransactions, clearSelection, selectAllSignals, selectAllTransactions, selectHierarchySignal, revealSelectedInHierarchy };
+  return { selectAnnotation, selectTransaction, selectTransactions, clearSelection, selectAllSignals, selectAllTransactions, selectAllAnnotations, selectHierarchySignal, revealSelectedInHierarchy };
 }

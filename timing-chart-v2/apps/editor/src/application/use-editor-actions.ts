@@ -237,7 +237,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
   });
   const selectionActions = createSelectionActions({ document: input.document, selection: input.selection, hostRef: input.hostRef, selectedSignalId: input.selectedSignal?.id });
   const { selectAnnotation, selectTransaction, selectTransactions, clearSelection, selectAllSignals, selectAllTransactions, selectHierarchySignal, revealSelectedInHierarchy } = selectionActions;
-  const selectAll = () => input.viewMode === "Transaction" ? selectAllTransactions() : selectAllSignals();
+  const selectAll = () => input.viewMode === "Transaction" ? selectAllTransactions() : input.selection.refs.state.current.annotationId !== undefined ? selectionActions.selectAllAnnotations() : selectAllSignals();
   const bottomActions = createBottomEditorActions({
     application: input.application,
     editActions: input.editActions,
