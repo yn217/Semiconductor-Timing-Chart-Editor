@@ -8,7 +8,7 @@ test("Combined divider stays visible and draggable after a horizontal scroll", a
   await page.getByRole("button", { name: "Combined", exact: true }).click();
   await expect(page.locator(".cycle-panel")).toHaveAttribute("data-view-mode", "Split");
   const viewport = page.getByTestId("cycle-viewport");
-  await viewport.evaluate((element) => { element.scrollLeft = 900; element.dispatchEvent(new Event("scroll")); });
+  await viewport.evaluate(async (element) => { element.scrollLeft = 900; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
   await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(400);
   const divider = page.getByTestId("combined-split-divider");
   const viewportBox = (await viewport.boundingBox())!;

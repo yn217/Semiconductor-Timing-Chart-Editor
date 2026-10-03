@@ -21,7 +21,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     expect(overflow.scrollWidth).toBeGreaterThan(overflow.clientWidth);
     const target = Math.min(120, overflow.scrollWidth - overflow.clientWidth);
     for (const position of [0, Math.floor(target / 2), target]) {
-      await viewportEl.evaluate((element, value) => { element.scrollLeft = value; element.dispatchEvent(new Event("scroll", { bubbles: true })); }, position);
+      await viewportEl.evaluate(async (element, value) => { element.scrollLeft = value; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); }, position);
       await expect.poll(() => viewportEl.evaluate((element) => element.scrollLeft)).toBe(position);
       const after = await frozen.boundingBox();
       expect(after).not.toBeNull();
