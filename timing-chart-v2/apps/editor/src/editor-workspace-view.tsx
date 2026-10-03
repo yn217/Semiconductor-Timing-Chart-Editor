@@ -35,7 +35,7 @@ export interface EditorWorkspaceViewModel {
     readonly onSignalSplitKeyDown: KeyboardEventHandler<HTMLDivElement>; readonly onSignalSplitPointerDown: PointerEventHandler<HTMLDivElement>; readonly onSignalSplitPointerMove: PointerEventHandler<HTMLDivElement>; readonly onSignalSplitPointerUp: PointerEventHandler<HTMLDivElement>;
     readonly onViewportKeyDown?: KeyboardEventHandler<HTMLDivElement>;
     readonly onSetCursorAtCycle?: (which: "a" | "b", cycle: number) => void;
-    readonly resolveCursorCycleAtClientX?: (clientX: number, viewport: HTMLDivElement) => number | undefined;
+    readonly resolveCursorCycleAtClientX?: (clientX: number, viewport: HTMLDivElement, rulerContent?: HTMLDivElement) => number | undefined;
     readonly resolveCursorViewportXForCycle?: (cycle: number, viewport: HTMLDivElement, rulerContent: HTMLDivElement) => number | undefined;
   };
 }

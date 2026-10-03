@@ -25,8 +25,12 @@ export function cursorSourceCycleAtClientX(
   runtime: Pick<TimelineViewportRuntime, "screenXToSourceCycle"> | null | undefined,
   clientX: number,
   viewport: HTMLElement,
+  rulerContent?: HTMLElement | null,
 ): number | undefined {
   if (!runtime) return undefined;
+  // Exact inverse of cursorViewportXForSourceCycle: the transformed ruler content is the screen-origin frame (it already carries
+  // scroll and Combined's time-domain inset), so pointer input and cursor projection share one origin.
+  if (rulerContent) return runtime.screenXToSourceCycle(clientX - rulerContent.getBoundingClientRect().left);
   const scroller = timelineScrollOwner(viewport);
   const rect = scroller.getBoundingClientRect();
   return runtime.screenXToSourceCycle(clientX - rect.left + scroller.scrollLeft);

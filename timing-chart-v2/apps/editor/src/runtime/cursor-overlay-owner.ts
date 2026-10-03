@@ -1,7 +1,7 @@
 export type CursorOverlayPresentation = Readonly<{
   cursorA: number | undefined;
   cursorB: number | undefined;
-  resolveCursorCycleAtClientX: ((clientX: number, viewport: HTMLDivElement) => number | undefined) | undefined;
+  resolveCursorCycleAtClientX: ((clientX: number, viewport: HTMLDivElement, rulerContent?: HTMLDivElement) => number | undefined) | undefined;
   resolveCursorViewportXForCycle: ((cycle: number, viewport: HTMLDivElement, rulerContent: HTMLDivElement) => number | undefined) | undefined;
   onSetCursorAtCycle: ((which: "a" | "b", cycle: number) => void) | undefined;
 }>;
@@ -51,7 +51,7 @@ export class CursorOverlayOwner {
         trace();
         const applyCursorAt = (clientX: number) => {
           const current = this.#input?.getPresentation();
-          const resolved = current?.resolveCursorCycleAtClientX?.(clientX, viewport);
+          const resolved = current?.resolveCursorCycleAtClientX?.(clientX, viewport, ruler);
           if (resolved !== undefined) current?.onSetCursorAtCycle?.(which, resolved);
         };
         const move = (moveEvent: PointerEvent) => {
