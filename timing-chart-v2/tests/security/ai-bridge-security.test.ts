@@ -68,6 +68,15 @@ describe("Agent Bridge security boundaries (#395 item 11)", () => {
     expect(new Set(inventoryNames)).toEqual(new Set(catalogNames));
   });
 
+  it("advertises the Transaction group, lane, and source-range filters to MCP clients", () => {
+    const tool = source.match(/\{ name: "get_transactions",[\s\S]*?inputSchema: \{[\s\S]*?\n/);
+    expect(tool?.[0]).toContain("groupId: { type: \"string\", minLength: 1 }");
+    expect(tool?.[0]).toContain("laneId: { type: \"string\", minLength: 1 }");
+    expect(tool?.[0]).toContain("visibleRange: { type: \"object\"");
+    expect(tool?.[0]).toContain("start: { type: \"integer\", minimum: 0 }");
+    expect(tool?.[0]).toContain("end: { type: \"integer\", minimum: 1 }");
+  });
+
   it("uses distinct bearer credentials for MCP and Editor transport routes", () => {
     const routeCredentialIndex = source.indexOf("const expectedToken = url.pathname");
     const tokenCheckIndex = source.indexOf("timingSafeTokenEquals(bearerToken(req), expectedToken)");

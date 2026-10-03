@@ -193,9 +193,21 @@ function executeAIBridgeToolCore(tool: string, args: Record<string, unknown>, co
     return { transactionId, signals, unresolvedSignalIds: linkedIds.filter((id) => !signalIndex.has(id)) };
   }
   if (tool === "get_transactions") {
+    const { groupId, laneId, visibleRange } = args;
+    if (groupId !== undefined && (typeof groupId !== "string" || groupId.length === 0)) throw new Error("groupId must be a non-empty string.");
+    if (laneId !== undefined && (typeof laneId !== "string" || laneId.length === 0)) throw new Error("laneId must be a non-empty string.");
+    if (visibleRange !== undefined && (typeof visibleRange !== "object" || visibleRange === null
+      || !Number.isInteger((visibleRange as { start?: unknown }).start) || (visibleRange as { start: number }).start < 0
+      || !Number.isInteger((visibleRange as { end?: unknown }).end) || (visibleRange as { end: number }).end <= (visibleRange as { start: number }).start)) {
+      throw new Error("visibleRange must contain integer source-cycle boundaries with 0 <= start < end.");
+    }
+    const sourceRange = visibleRange as { start: number; end: number } | undefined;
     return {
       transactionGroups: (context.document.transactionGroups ?? []).map((group) => ({ id: group.id, name: group.name, color: group.color })),
-      transactions: context.document.transactions.map((transaction) => ({ id: transaction.id, name: transaction.name, groupId: transaction.groupId, laneId: transaction.laneId, start: transaction.start, end: transaction.end, color: transaction.color, description: transaction.description, linkedSignalIds: transaction.linkedSignals ?? [], phaseCount: transaction.phases?.length ?? 0 })),
+      transactions: context.document.transactions.filter((transaction) => (groupId === undefined || transaction.groupId === groupId)
+        && (laneId === undefined || transaction.laneId === laneId)
+        && (sourceRange === undefined || (transaction.start < sourceRange.end && transaction.end > sourceRange.start)))
+        .map((transaction) => ({ id: transaction.id, name: transaction.name, groupId: transaction.groupId, laneId: transaction.laneId, start: transaction.start, end: transaction.end, color: transaction.color, description: transaction.description, linkedSignalIds: transaction.linkedSignals ?? [], phaseCount: transaction.phases?.length ?? 0 })),
     };
   }
   if (tool === "get_annotations") {

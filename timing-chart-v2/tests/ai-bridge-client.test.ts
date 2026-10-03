@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { GroupId, SignalId } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, GroupId, SignalId } from "@timing-chart-v2/schema";
 import { executeAIBridgeTool, type AIBridgeContext } from "../apps/editor/src/ai-bridge-client.js";
 import { canonicalFixture } from "./fixtures/canonical.js";
 
@@ -79,6 +79,39 @@ describe("Agent Bridge typed proposal batching", () => {
 });
 
 describe("Agent Bridge indexed read tools", () => {
+  it("filters Transactions by stable group/lane IDs and intersecting source-cycle range", () => {
+    const base = canonicalFixture();
+    const document = {
+      ...base,
+      transactions: [
+        { id: "txn_a", name: "A", groupId: "group_a", laneId: "lane_0", start: 1, end: 3 },
+        { id: "txn_touching", name: "Touching", groupId: "group_a", laneId: "lane_1", start: 3, end: 5 },
+        { id: "txn_overlap", name: "Overlap", groupId: "group_b", laneId: "lane_0", start: 2, end: 4 },
+      ] as unknown as CanonicalDocument["transactions"],
+    };
+    const context = { document } as unknown as AIBridgeContext;
+    const byGroupLane = executeAIBridgeTool("get_transactions", { groupId: "group_a", laneId: "lane_0" }, context) as { transactions: Array<{ id: string }> };
+    const byRange = executeAIBridgeTool("get_transactions", { visibleRange: { start: 2, end: 3 } }, context) as { transactions: Array<{ id: string }> };
+
+    expect(byGroupLane.transactions.map((transaction) => transaction.id)).toEqual(["txn_a"]);
+    expect(byRange.transactions.map((transaction) => transaction.id)).toEqual(["txn_a", "txn_overlap"]);
+    expect(byRange.transactionGroups).toEqual([]);
+  });
+
+  it("rejects invalid Transaction read filters before returning data", () => {
+    const context = { document: canonicalFixture() } as unknown as AIBridgeContext;
+    for (const visibleRange of [
+      { start: -1, end: 2 },
+      { start: 1.5, end: 2 },
+      { start: 2, end: 2 },
+      { start: 3, end: 2 },
+    ]) {
+      expect(() => executeAIBridgeTool("get_transactions", { visibleRange }, context)).toThrow("integer source-cycle boundaries");
+    }
+    expect(() => executeAIBridgeTool("get_transactions", { groupId: "" }, context)).toThrow("groupId must be a non-empty string");
+    expect(() => executeAIBridgeTool("get_transactions", { laneId: 4 }, context)).toThrow("laneId must be a non-empty string");
+  });
+
   it("derives 10k Signal group ownership with bounded row-membership work", () => {
     const base = canonicalFixture();
     let membershipChecks = 0;
