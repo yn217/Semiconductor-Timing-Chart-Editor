@@ -76,14 +76,14 @@ test("J7/J8/J15 far horizontal + vertical scroll -> select, zoom -> scroll -> mo
   await fresh(page); await mode(page, "Cycle").click();
   const host = page.getByTestId("cycle-surface");
   const viewport = page.getByTestId("cycle-viewport");
-  await timelineOwner(page).evaluate((element) => { element.scrollLeft = element.scrollWidth; element.dispatchEvent(new Event("scroll", { bubbles: true })); });
+  await timelineOwner(page).evaluate(async (element) => { element.scrollLeft = element.scrollWidth; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
   await expect.poll(() => timelineOwner(page).evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
-  await viewport.evaluate((element) => { element.scrollTop = element.scrollHeight; element.dispatchEvent(new Event("scroll", { bubbles: true })); });
+  await viewport.evaluate(async (element) => { element.scrollTop = element.scrollHeight; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
   await host.locator("[data-role='frozen-row']").last().click();
   await expect(page.getByTestId("selection-status")).not.toHaveText("None");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Zoom In", exact: true }).click();
-  await timelineOwner(page).evaluate((element) => { element.scrollLeft = Math.floor(element.scrollWidth / 2); element.dispatchEvent(new Event("scroll", { bubbles: true })); });
+  await timelineOwner(page).evaluate(async (element) => { element.scrollLeft = Math.floor(element.scrollWidth / 2); await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
   await mode(page, "Transaction").click();
   await mode(page, "Cycle").click();
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");

@@ -175,7 +175,7 @@ test("selects Cycle 0 and the terminal boundary from the rendered waveform", asy
   await expect(page.getByLabel("Timeline range end")).toHaveValue("1");
 
   const viewport = timelineOwner(page);
-  await viewport.evaluate((element) => { element.scrollLeft = element.scrollWidth; element.dispatchEvent(new Event("scroll")); });
+  await viewport.evaluate(async (element) => { element.scrollLeft = element.scrollWidth; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
   const terminalTick = page.getByTestId("cycle-ruler").locator("[data-cycle='24']");
   // The ruler syncs its scroll transform on the next frame; wait until the terminal tick reaches the viewport's right edge.
   const viewportRight = (await viewport.boundingBox())!.x + (await viewport.boundingBox())!.width;
@@ -437,7 +437,7 @@ test("ruler range drag cancels without mutation and remains semantic after scrol
   await expect(page.getByLabel("Timeline range start")).toHaveValue("2");
   await expect(page.getByLabel("Timeline range end")).toHaveValue("4");
 
-  await viewport.evaluate((element) => { element.scrollLeft = Math.min(180, element.scrollWidth); element.dispatchEvent(new Event("scroll")); });
+  await viewport.evaluate(async (element) => { element.scrollLeft = Math.min(180, element.scrollWidth); await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
   const scrolledStart = await ruler.locator("[data-cycle='5']").boundingBox();
   const scrolledEnd = await ruler.locator("[data-cycle='9']").boundingBox();
   expect(scrolledStart).not.toBeNull();

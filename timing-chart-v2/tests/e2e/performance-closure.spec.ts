@@ -31,7 +31,7 @@ test("View-only operations keep canonical validation and render counters unchang
   await page.getByTestId("ribbon").getByRole("button", { name: "Inspector", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Zoom In", exact: true }).click();
   await page.getByTestId("bottom-tabs").getByRole("tab", { name: "Problems", exact: true }).click();
-  await page.getByTestId("cycle-viewport").evaluate((element) => { element.scrollTop = 80; element.dispatchEvent(new Event("scroll")); });
+  await page.getByTestId("cycle-viewport").evaluate(async (element) => { element.scrollTop = 80; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
   await page.waitForTimeout(250);
   const afterSession = JSON.parse(await host.getAttribute("data-session-counters") ?? "{}") as Record<string, any>;
   const afterRender = JSON.parse(await surface.getAttribute("data-render-counters") ?? "{}") as Record<string, any>;
@@ -275,14 +275,14 @@ test("PR guard: 100x500 selection/reorder/edit/annotation/view hard invariants w
   const box = await annotation.locator("[data-role='annotation-body']").boundingBox(); await page.mouse.move(box!.x + 2, box!.y + 2); await page.mouse.down(); await page.mouse.move(box!.x + 10, box!.y + 4); await annotation.dispatchEvent("pointercancel"); await page.mouse.up();
   expect(await counters(page)).toEqual(previewBefore); await expect(page.getByTestId("history-status")).toHaveText(historyBeforePreview!);
 
-  const viewport = page.getByTestId("cycle-viewport"); const sessionBeforeScroll = await sessionCounters(page); await viewport.evaluate((element) => { element.scrollTop = 300; element.dispatchEvent(new Event("scroll")); }); await page.waitForTimeout(500);
+  const viewport = page.getByTestId("cycle-viewport"); const sessionBeforeScroll = await sessionCounters(page); await viewport.evaluate(async (element) => { element.scrollTop = 300; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); }); await page.waitForTimeout(500);
   const sessionAfterScroll = await sessionCounters(page);
   expect(sessionAfterScroll.fullVisibleRowScans).toBe(sessionBeforeScroll.fullVisibleRowScans);
   expect(sessionAfterScroll.viewportOnlyBuilds).toBeGreaterThan(sessionBeforeScroll.viewportOnlyBuilds);
   expect(sessionAfterScroll.viewportRowsVisited).toBeGreaterThan(0);
   expect(sessionAfterScroll.rowLayoutBuilds).toBe(sessionBeforeScroll.rowLayoutBuilds);
   const viewBefore = await counters(page); const sessionBeforeView = await sessionCounters(page); const historyBeforeView = await page.getByTestId("history-status").textContent();
-  await viewport.evaluate((element) => { element.scrollLeft += 8; element.dispatchEvent(new Event("scroll")); }); await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click(); await page.getByTestId("ribbon").getByRole("button", { name: "Zoom in" }).click(); await page.waitForTimeout(100);
+  await viewport.evaluate(async (element) => { element.scrollLeft += 8; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); }); await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click(); await page.getByTestId("ribbon").getByRole("button", { name: "Zoom in" }).click(); await page.waitForTimeout(100);
   const viewAfter = await counters(page); expect(viewAfter.waveDromRenders).toBe(viewBefore.waveDromRenders); expect(viewAfter.localGeometryBuilds).toBe(viewBefore.localGeometryBuilds); await expect(page.getByTestId("history-status")).toHaveText(historyBeforeView!);
   const sessionAfterView = await sessionCounters(page); expect(sessionAfterView.rowLayoutBuilds).toBe(sessionBeforeView.rowLayoutBuilds); expect(sessionAfterView.commits).toBe(sessionBeforeView.commits);
 
@@ -305,7 +305,7 @@ test("1000x1000 virtualization mounts viewport-scale rows and avoids duplicate b
   expect(diagnostic.mountedRows).toBeLessThan(60); expect(diagnostic.mountedWaveOwners).toBeLessThan(60);
   expect(await page.getByTestId("cycle-surface").locator("[data-row-id]").count()).toBeLessThan(180);
   const viewport = page.getByTestId("cycle-viewport");
-  for (let step = 1; step <= 8; step += 1) { await viewport.evaluate((element, fraction) => { element.scrollTop = (element.scrollHeight - element.clientHeight) * fraction; element.dispatchEvent(new Event("scroll")); }, step / 8); await page.waitForTimeout(250); }
+  for (let step = 1; step <= 8; step += 1) { await viewport.evaluate(async (element, fraction) => { element.scrollTop = (element.scrollHeight - element.clientHeight) * fraction; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); }, step / 8); await page.waitForTimeout(250); }
   diagnostic = await diagnostics(page); expect(diagnostic.mountedRows).toBeLessThan(60); expect(diagnostic.mountedWaveOwners).toBeLessThan(60);
   expect(diagnostic.cachedWaveOwners).toBeLessThanOrEqual(diagnostic.waveOwnerCacheLimit);
   const duplicate = await page.getByTestId("cycle-surface").locator("[data-role='stable-waveform-surface'] > [data-signal-id]").evaluateAll((owners) => owners.length - new Set(owners.map((owner) => (owner as HTMLElement).dataset.signalId)).size);
@@ -344,7 +344,7 @@ test("viewport-only projection remains bounded at 1k, 5k, and 10k rows", async (
     const viewport = page.getByTestId("cycle-viewport");
     const before = await sessionCounters(page);
     const rendererBefore = await diagnostics(page);
-    await viewport.evaluate((element) => { element.scrollTop = Math.max(1, element.scrollHeight - element.clientHeight) / 2; element.dispatchEvent(new Event("scroll")); });
+    await viewport.evaluate(async (element) => { element.scrollTop = Math.max(1, element.scrollHeight - element.clientHeight) / 2; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
     await page.waitForTimeout(250);
     const after = await sessionCounters(page);
     const renderer = await diagnostics(page);

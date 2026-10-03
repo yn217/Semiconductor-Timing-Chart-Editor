@@ -523,7 +523,7 @@ test("keeps semantic alignment through reorder, zoom, and scroll without wavefor
   const tick = page.getByTestId("cycle-ruler").locator("[data-cycle='2']");
   const aligned = async () => Math.abs((((await handle.boundingBox())!.x + (await handle.boundingBox())!.width / 2) - (await tick.boundingBox())!.x));
   expect(await aligned()).toBeLessThan(1);
-  await page.getByTestId("cycle-viewport").evaluate((element) => { element.scrollLeft = 120; element.scrollTop = 40; element.dispatchEvent(new Event("scroll")); });
+  await page.getByTestId("cycle-viewport").evaluate(async (element) => { element.scrollLeft = 120; element.scrollTop = 40; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
   expect(await aligned()).toBeLessThan(1);
 });
 

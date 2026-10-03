@@ -44,7 +44,7 @@ test(`Large Feature Showcase remains renderable at ${viewport.width}x${viewport.
   await expect(page.getByTestId("problems-status")).toHaveText("Problems: 0");
   expect(await host.getAttribute("data-canonical-revision")).toBe(canonicalRevision);
   expect(await page.getByTestId("history-status").textContent()).toBe(history);
-  await cycleViewport.evaluate((el) => { el.scrollTop = 0; el.dispatchEvent(new Event("scroll", { bubbles: true })); });
+  await cycleViewport.evaluate(async (el) => { el.scrollTop = 0; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
 
   // Mode changes must not revive the batch failure or replace rows with stale
   // projections. Cycle is the primary surface for the clock geometry.

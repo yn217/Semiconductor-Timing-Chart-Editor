@@ -38,7 +38,7 @@ for (const { name, signalCount, cycleCount, base, far, line, rangeStart, rangeEn
     await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
     if (far) {
       const timeline = page.locator("[data-role='timeline-viewport']");
-      await timeline.evaluate((element) => { element.scrollLeft = element.scrollWidth - element.clientWidth; element.dispatchEvent(new Event("scroll", { bubbles: true })); });
+      await timeline.evaluate(async (element) => { element.scrollLeft = element.scrollWidth - element.clientWidth; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
       await expect.poll(() => timeline.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
       await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
     }
