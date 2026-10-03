@@ -108,9 +108,12 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
   mapping = timeAxisMetrics?.mapping ?? mapping;
   xScale = timeAxisMetrics?.presentationScale ?? xScale;
   const startedAt = performance.now();
-  const rowIds = new Set((viewport
-    ? rowsIntersectingVerticalViewport(projection.rowLayout, viewport.rowStart, viewport.rowEnd)
-    : projection.rowLayout.filter((row) => row.visible)).map((row) => row.rowId));
+  // Without a viewport, candidate() intentionally accepts the supplied pool
+  // as-is (notably the single-Annotation drag-preview path). Do not scan the
+  // complete navigation layout to build a row set that path never consults.
+  const rowIds = viewport
+    ? new Set(rowsIntersectingVerticalViewport(projection.rowLayout, viewport.rowStart, viewport.rowEnd).map((row) => row.rowId))
+    : undefined;
   const pinned = new Set(viewport?.pinnedIds ?? []);
   const candidate = (annotation: Annotation): boolean => {
     if (!viewport || pinned.has(annotation.id)) return true;
@@ -126,7 +129,7 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
     // owner by resolveAnchorPoint(); it has no explicit row ID to test here.
     // Treat it as row-independent so indexed viewport filtering does not drop
     // an annotation that the resolver can otherwise project.
-    const rowHit = anchors.some((anchor) => anchor.signalId === undefined || rowIds.has(anchor.signalId)) || (annotation.sourceSignalId !== undefined && rowIds.has(annotation.sourceSignalId));
+    const rowHit = anchors.some((anchor) => anchor.signalId === undefined || rowIds?.has(anchor.signalId) === true) || (annotation.sourceSignalId !== undefined && rowIds?.has(annotation.sourceSignalId) === true);
     return timeHit && rowHit;
   };
   // Pinned Annotations are always candidates and may lie outside the time window, so the time index only narrows the rest.

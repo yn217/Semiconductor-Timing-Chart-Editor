@@ -15,6 +15,24 @@ function projectionFor(signalId: SignalId, visible: boolean): RenderProjection {
 }
 
 describe("annotation visibility and semantic targets", () => {
+  it("does not enumerate navigation rows for no-viewport Annotation preview projections", () => {
+    const source = canonicalFixture();
+    const signal = source.signals.find((item) => item.type === "clock") ?? source.signals.find((item) => item.type !== "commentRow")!;
+    const annotation = { id: "ann_preview_no_row_scan" as never, type: "text" as const, label: "Preview", visible: true, anchor: { cycle: 1, point: "cycle-start" as const } };
+    const document = { ...source, annotations: [annotation] };
+    const baseProjection = projectionFor(signal.id, true);
+    const rowLayout = new Proxy(baseProjection.rowLayout, {
+      get(target, property, receiver) {
+        if (property === "filter") throw new Error("no-viewport preview must not scan navigation rows");
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const projection = { ...baseProjection, rowLayout } as RenderProjection;
+    const geometry = new ImmutableLocalGeometryMap(signal.id, [{ cycle: 1, point: "cycle-start", position: { x: 10, y: 0 } }]);
+
+    expect(projectAnnotationOverlays(document, projection, new Map([[signal.id, geometry]]), buildDisplayTimeMapping(document.timeline, []))).toHaveLength(1);
+  });
+
   it("caches clockless axis-owner metadata by Signal collection and avoids per-Annotation Signal scans", () => {
     const source = canonicalFixture();
     const signal = source.signals.find((item) => item.type !== "commentRow")!;
