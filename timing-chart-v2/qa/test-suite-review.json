@@ -643,7 +643,7 @@
       "type": "PERFORMANCE_INVARIANT",
       "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": "Largest legal same-document Signal Paste (1k->2k, 5k->10k; 5 samples p50/p95/max + Long Tasks), one History entry and exact Undo; 10k->20k over-limit Paste rejected atomically with a RESOURCE_LIMIT_EXCEEDED Problem; Cut = immediate atomic bulk delete (Problems on dependents), Paste re-inserts, exact two-step Undo.",
+      "primaryContract": "Largest legal same-document Signal Paste (1k->2k, 5k->10k; 5 samples p50/p95/max + Long Tasks), one History entry and exact Undo; 10k->20k over-limit Paste rejected atomically with a RESOURCE_LIMIT_EXCEEDED Problem; Cut = immediate atomic bulk delete (Problems on dependents), Paste re-inserts, exact two-step Undo. Transactions: 1k Select All Copy->Paste / Duplicate / Cut->Paste each one History entry + one revision + Dirty with exact Undo/Redo on saved JSON, fresh IDs, preserved links/group; 5k->10k legal Paste and 15k over-limit rejection (atomic, Problem, visible status). Annotations: 1k->2k collection Import one History step with exact Undo/Redo and group-membership pruning/restore; missing-Signal reference rejects atomically; single Annotation Paste regenerates ID. 100-Signal Paste on 1k vs 100k cycles (directional).",
       "duplicateGroup": "bulk-clipboard-scale",
       "executionTier": "TIER_4_HEAVY_INTEGRATION",
       "profiles": [
