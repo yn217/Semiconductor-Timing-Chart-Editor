@@ -42,6 +42,7 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
   await cycleRow.click();
   await cycleRow.focus();
   await expect(cycleRow).toHaveAttribute("data-selected", "true");
+  await expect(cycleRow).toHaveAttribute("aria-selected", "true");
   await expect(page.getByTestId("selection-status")).toContainText("SIG_1");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   await page.getByLabel("Zoom preset").selectOption("150");
@@ -161,6 +162,7 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
   await expect(shell).toHaveAttribute("data-frozen-pane-width", String(cycleFrozenAfter));
   await expect(shell).toHaveAttribute("data-inspector-visible", "false");
   await expect(cycleRow).toHaveAttribute("data-selected", "true");
+  await expect(cycleRow).toHaveAttribute("aria-selected", "true");
   await expect(page.getByTestId("selection-status")).toContainText("SIG_1");
   await assertViewOnly();
   console.log(JSON.stringify({ viewportSize, before, cycle: { zoom: cycleZoom, left: cycleLeftAfter, frozen: cycleFrozenAfter, bottom: cycleBottomAfter, inspectorVisible: false, scrollLeft: cycleScroll }, transaction: { zoom: transactionZoom, left: transactionLeftAfter, bottomVisible: false }, combined: { scrollLeft: combinedScroll, divider: combinedDivider, transactionScrollTop: transactionVerticalScroll, cycleScrollTop: cycleVerticalScroll } }));

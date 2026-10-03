@@ -429,7 +429,7 @@ export function EditorWorkspaceView({
         {workspace.upperPane}
         <TimelinePaneContents gridLayer={gridLayer} ruler={ruler} host={host} gridEnabled={viewModel.view.gridEnabled} rulerEnabled={viewModel.view.rulerEnabled} snapEnabled={viewModel.view.snapEnabled} body={workspace.timelineBody} combined={workspace.mode === "Split"} />
       </div>
-      <TimelineHorizontalScrollbar viewport={viewport} />
+      {workspace.timeViewportOwner === "cycle-inner" && <TimelineHorizontalScrollbar viewport={viewport} />}
       {workspace.auxiliary}
     </section>
     {workspace.rail}

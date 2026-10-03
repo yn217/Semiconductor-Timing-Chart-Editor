@@ -4,6 +4,7 @@ import postcss from "postcss";
 
 const root = path.resolve(import.meta.dirname, "..");
 const css = await readFile(path.join(root, "apps/editor/src/styles/mode-cycle.css"), "utf8");
+const workspaceView = await readFile(path.join(root, "apps/editor/src/editor-workspace-view.tsx"), "utf8");
 const stylesheet = postcss.parse(css);
 const errors = [];
 
@@ -27,6 +28,9 @@ requireDeclaration('.desktop-workspace[data-workspace-owner="CycleWorkspace"] .s
 requireDeclaration('.desktop-workspace[data-workspace-owner="CycleWorkspace"] .surface-host [data-role="timeline-viewport"]', "display", "grid");
 requireDeclaration('.desktop-workspace[data-workspace-owner="CycleWorkspace"] .surface-host [data-role="timeline-viewport"]', "grid-column", "3");
 requireDeclaration('.desktop-workspace[data-workspace-owner="CycleWorkspace"] .surface-host [data-role="timeline-viewport"]', "overflow-x", "scroll");
+if (!/\{workspace\.timeViewportOwner === "cycle-inner" && <TimelineHorizontalScrollbar viewport=\{viewport\} \/>\}/.test(workspaceView)) {
+  errors.push("TimelineHorizontalScrollbar must only mount for the Cycle inner viewport owner; Transaction and Combined use their own viewport overflow.");
+}
 
 if (errors.length) {
   console.error(errors.join("\n"));
