@@ -1,6 +1,5 @@
 import { useEffect, useRef, type KeyboardEventHandler, type PointerEventHandler, type ReactNode, type RefObject } from "react";
 import { LEFT_PANE_MAX_WIDTH, LEFT_PANE_MIN_WIDTH, type ViewMode } from "./workspace/use-workspace-ui-state.js";
-import { composeMode } from "./workspace/mode-composition.js";
 import { timelineScrollOwner } from "./runtime/timeline-scroll-owner.js";
 
 /**
@@ -158,6 +157,65 @@ function CycleWorkspaceAuxiliary({ viewModel }: EditorWorkspaceViewProps) {
   return <CycleSignalSplitPane signalSplitRatio={view.signalSplitRatio} gridEnabled={view.gridEnabled} rulerEnabled={view.rulerEnabled} viewportLower={refs.viewportLower} gridLayerLower={refs.gridLayerLower} rulerLower={refs.rulerLower} hostLower={refs.hostLower} onViewportKeyDown={interactions.onViewportKeyDown} onKeyDown={interactions.onSignalSplitKeyDown} onPointerDown={interactions.onSignalSplitPointerDown} onPointerMove={interactions.onSignalSplitPointerMove} onPointerUp={interactions.onSignalSplitPointerUp} />;
 }
 
+/**
+ * A mode owner selects every mode-specific workspace attachment in one place.
+ * The timeline frame itself stays a shared, stable primitive: its renderer refs
+ * are imperative runtime owners and must not be duplicated by each mode.
+ */
+type WorkspaceOwnerPlan = Readonly<{
+  mode: ViewMode;
+  name: "CycleWorkspace" | "TransactionWorkspace" | "CombinedWorkspace";
+  headerAbove: ReactNode;
+  panelChrome: ReactNode;
+  rail: ReactNode;
+  upperPane: ReactNode;
+  timelineBody: ReactNode;
+  auxiliary: ReactNode;
+}>;
+
+function createWorkspaceOwnerPlan(viewModel: EditorWorkspaceViewModel): WorkspaceOwnerPlan {
+  const mode = viewModel.view.viewMode as ViewMode;
+  switch (mode) {
+    case "Cycle":
+      return {
+        mode,
+        name: "CycleWorkspace",
+        headerAbove: null,
+        panelChrome: <CycleWorkspace viewModel={viewModel} />,
+        rail: <CycleWorkspaceRail content={viewModel.content.leftRail} />,
+        upperPane: null,
+        timelineBody: viewModel.content.viewportLegend,
+        auxiliary: <CycleWorkspaceAuxiliary viewModel={viewModel} />,
+      };
+    case "Transaction":
+      return {
+        mode,
+        name: "TransactionWorkspace",
+        headerAbove: <TransactionWorkspace viewModel={viewModel} />,
+        panelChrome: null,
+        rail: <TransactionWorkspaceRail content={viewModel.content.transactionTree} />,
+        upperPane: null,
+        timelineBody: viewModel.content.viewportContent,
+        auxiliary: null,
+      };
+    case "Split":
+      return {
+        mode,
+        name: "CombinedWorkspace",
+        headerAbove: <CombinedWorkspace viewModel={viewModel} />,
+        panelChrome: null,
+        rail: <CombinedWorkspaceRail content={viewModel.content.transactionTree} />,
+        upperPane: <CombinedWorkspacePanes viewModel={viewModel} />,
+        timelineBody: viewModel.content.viewportLegend,
+        auxiliary: null,
+      };
+    default: {
+      const exhaustive: never = mode;
+      throw new Error(`Unsupported workspace mode: ${String(exhaustive)}`);
+    }
+  }
+}
+
 function TimelinePaneContents({ gridLayer, ruler, host, gridEnabled, rulerEnabled, snapEnabled, body, combined = false }: Readonly<{ gridLayer: RefObject<HTMLDivElement | null>; ruler: RefObject<HTMLDivElement | null>; host: RefObject<HTMLDivElement | null>; gridEnabled: boolean; rulerEnabled: boolean; snapEnabled: boolean; body: ReactNode; combined?: boolean }>) {
   return <div className={`split-signal-content${combined ? "" : " non-split-signal-content"}`}>
     <div className="geometry-grid" ref={gridLayer} data-testid="geometry-grid" data-grid-enabled={String(gridEnabled)} aria-hidden="true" />
@@ -180,10 +238,10 @@ export function EditorWorkspaceView({
   viewModel,
 }: EditorWorkspaceViewProps) {
   const { viewMode, zoom, cursorPresentationRevision, cursor } = viewModel.view;
-  const composition = composeMode(viewMode as ViewMode);
+  const workspace = createWorkspaceOwnerPlan(viewModel);
   const { bottomVisible, bottomHeight, inspectorVisible, inspectorWidth } = viewModel.layout;
   const { viewport, gridLayer, ruler, host, viewportLower, gridLayerLower, rulerLower, hostLower } = viewModel.refs;
-  const { transactionTree, leftRail, bottom, inspector } = viewModel.content;
+  const { bottom, inspector } = viewModel.content;
   const { onBottomReset, onInspectorReset, onBottomKeyDown, onBottomPointerDown, onBottomPointerMove, onBottomPointerUp, onInspectorKeyDown, onInspectorPointerDown, onInspectorPointerMove, onInspectorPointerUp, onSetCursorAtCycle, resolveCursorCycleAtClientX } = viewModel.interactions;
   useEffect(() => {
     // Cursor A/B are workspace-only source-cycle markers. The ruler is the
@@ -354,29 +412,18 @@ export function EditorWorkspaceView({
       window.removeEventListener("resize", update);
     };
   }, [ruler, rulerLower, cursor.a, cursor.b, cursorPresentationRevision, zoom, viewport, viewportLower]);
-  const ownerName = viewMode === "Split" ? "CombinedWorkspace" : `${viewMode}Workspace`;
-  const headerAbove = composition.headerPlacement === "above"
-    ? viewMode === "Transaction" ? <TransactionWorkspace viewModel={viewModel} /> : <CombinedWorkspace viewModel={viewModel} />
-    : null;
-  const railContent = composition.leftRail === "transactions" ? transactionTree : leftRail;
-  const modeRail = viewMode === "Cycle"
-    ? <CycleWorkspaceRail content={railContent} />
-    : viewMode === "Transaction"
-      ? <TransactionWorkspaceRail content={railContent} />
-      : <CombinedWorkspaceRail content={railContent} />;
-  const timelineBody = viewMode === "Transaction" ? viewModel.content.viewportContent : viewModel.content.viewportLegend;
   return <div className="desktop-workspace">
-    {headerAbove}
-    <section className={`cycle-panel mode-${viewMode.toLowerCase()}`} aria-label={`${viewMode === "Split" ? "Combined" : viewMode} View`} data-view-mode={viewMode} data-workspace-owner={ownerName} data-signal-split={String(viewModel.view.signalSplitEnabled && viewMode === "Cycle")}>
-      {viewMode === "Cycle" && <CycleWorkspace viewModel={viewModel} />}
+    {workspace.headerAbove}
+    <section className={`cycle-panel mode-${workspace.mode.toLowerCase()}`} aria-label={`${workspace.mode === "Split" ? "Combined" : workspace.mode} View`} data-view-mode={workspace.mode} data-workspace-owner={workspace.name} data-signal-split={String(viewModel.view.signalSplitEnabled && workspace.mode === "Cycle")}>
+      {workspace.panelChrome}
       <div className={`cycle-viewport${viewMode === "Split" ? " split-signal-pane" : ""}`} ref={viewport} data-testid="cycle-viewport" data-pane={viewMode === "Split" ? "signal" : undefined} tabIndex={0} aria-label="Timing canvas navigation" onKeyDown={viewModel.interactions.onViewportKeyDown}>
-        {viewMode === "Split" && <CombinedWorkspacePanes viewModel={viewModel} />}
-        <TimelinePaneContents gridLayer={gridLayer} ruler={ruler} host={host} gridEnabled={viewModel.view.gridEnabled} rulerEnabled={viewModel.view.rulerEnabled} snapEnabled={viewModel.view.snapEnabled} body={timelineBody} combined={viewMode === "Split"} />
+        {workspace.upperPane}
+        <TimelinePaneContents gridLayer={gridLayer} ruler={ruler} host={host} gridEnabled={viewModel.view.gridEnabled} rulerEnabled={viewModel.view.rulerEnabled} snapEnabled={viewModel.view.snapEnabled} body={workspace.timelineBody} combined={workspace.mode === "Split"} />
       </div>
       <TimelineHorizontalScrollbar viewport={viewport} />
-      {viewMode === "Cycle" && <CycleWorkspaceAuxiliary viewModel={viewModel} />}
+      {workspace.auxiliary}
     </section>
-    {modeRail}
+    {workspace.rail}
     {bottomVisible && <div className="bottom-resize-track" data-testid="bottom-resizer" role="separator" aria-label="Resize bottom editor" aria-orientation="horizontal" aria-valuemin={180} aria-valuemax={420} aria-valuenow={bottomHeight} tabIndex={0} title="Drag to resize; double-click to reset" onDoubleClick={onBottomReset} onKeyDown={onBottomKeyDown} onPointerDown={onBottomPointerDown} onPointerMove={onBottomPointerMove} onPointerUp={onBottomPointerUp} onPointerCancel={onBottomPointerUp} />}
     {bottomVisible && bottom}
     <aside hidden={!inspectorVisible} className="inspector-shell" data-testid="inspector-shell"><div className="inspector-resize-handle" data-testid="inspector-resizer" role="separator" aria-label="Resize Inspector" aria-orientation="vertical" aria-valuemin={240} aria-valuemax={420} aria-valuenow={inspectorWidth} tabIndex={0} title="Drag to resize; double-click to reset" onDoubleClick={onInspectorReset} onKeyDown={onInspectorKeyDown} onPointerDown={onInspectorPointerDown} onPointerMove={onInspectorPointerMove} onPointerUp={onInspectorPointerUp} onPointerCancel={onInspectorPointerUp} />{inspector}</aside>
