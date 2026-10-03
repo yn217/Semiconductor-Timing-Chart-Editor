@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 405 spec files and 1185 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 406 spec files and 1188 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1184/1185 cases reviewed.
+Semantic review progress: 1186/1188 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,7 +10,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 597 |
+| `integration` | 599 |
 | `nightly` | 226 |
 | `performance` | 66 |
 | `pr` | 375 |
@@ -150,10 +150,11 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `interaction-visual-scenarios.spec.ts` | 11 | 11/11 reviewed |
 | `issue-1004-group-hierarchy.spec.ts` | 2 | 2/2 reviewed |
 | `issue-1007-transaction-add-menu.spec.ts` | 4 | 4/4 reviewed |
+| `issue-1055-signal-tree-offscreen-filter.spec.ts` | 1 | 0/1 reviewed |
 | `issue-175-scrollbar-effect-lifecycle.spec.ts` | 1 | 1/1 reviewed |
 | `issue-175-scrollbar-geometry-matrix.spec.ts` | 2 | 2/2 reviewed |
 | `issue-208-open-epoch-coherence.spec.ts` | 1 | 1/1 reviewed |
-| `issue-219-wave-url-lifetime.spec.ts` | 2 | 2/2 reviewed |
+| `issue-219-wave-url-lifetime.spec.ts` | 4 | 4/4 reviewed |
 | `issue-426-event-selection-scope.spec.ts` | 1 | 1/1 reviewed |
 | `issue-426-external-bottom-draft-update.spec.ts` | 3 | 3/3 reviewed |
 | `issue-426-inspector-bookmark-rebase.spec.ts` | 2 | 2/2 reviewed |

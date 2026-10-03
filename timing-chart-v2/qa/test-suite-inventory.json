@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-03T18:57:57.935Z",
+  "generatedAt": "2026-10-03T19:23:08.074Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,11 +11,11 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 405,
-  "caseCount": 1185,
-  "reviewedCaseCount": 1184,
+  "specFileCount": 406,
+  "caseCount": 1188,
+  "reviewedCaseCount": 1186,
   "curatedProfileCounts": {
-    "integration": 597,
+    "integration": 599,
     "nightly": 226,
     "performance": 66,
     "pr": 375,
@@ -9942,6 +9942,28 @@
       "contractId": "transaction-add-menu"
     },
     {
+      "file": "issue-1055-signal-tree-offscreen-filter.spec.ts",
+      "suitePath": [],
+      "line": 4,
+      "title": "Signal Tree filters offscreen canonical Signals, compacts matches, and restores scroll without document mutation",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": null,
+      "originIssue": null,
+      "type": null,
+      "costClass": null,
+      "measuredRuntimeMs": null,
+      "primaryContract": null,
+      "duplicateGroup": null,
+      "executionTier": null,
+      "decision": "UNREVIEWED",
+      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "replacementTest": null,
+      "reviewStatus": "UNREVIEWED"
+    },
+    {
       "file": "issue-175-scrollbar-effect-lifecycle.spec.ts",
       "suitePath": [],
       "line": 5,
@@ -10076,6 +10098,58 @@
       "suitePath": [],
       "line": 51,
       "title": ">64 unique waveform artifacts: no early revoke, bounded live URLs, flat heap across repeated Open/scroll/edit at 1672x941",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "wave-artifact-lifetime",
+      "originIssue": 219,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Repeated Open/scroll/edit with >64 unique waveform artifacts: no early URL revoke, bounded live URLs, flat heap.",
+      "duplicateGroup": "wave-artifact-lifetime",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "Lifetime/leak matrix requested on #219; no other spec observes blob URL create/revoke.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ],
+      "contractId": "wave-artifact-lifetime"
+    },
+    {
+      "file": "issue-219-wave-url-lifetime.spec.ts",
+      "suitePath": [],
+      "line": 100,
+      "title": "Open A/B/C/A with scroll, edit and mode switch: URL and renderer owner/index state plateau at 1280x720",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "wave-artifact-lifetime",
+      "originIssue": 219,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Repeated Open/scroll/edit with >64 unique waveform artifacts: no early URL revoke, bounded live URLs, flat heap.",
+      "duplicateGroup": "wave-artifact-lifetime",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "Lifetime/leak matrix requested on #219; no other spec observes blob URL create/revoke.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ],
+      "contractId": "wave-artifact-lifetime"
+    },
+    {
+      "file": "issue-219-wave-url-lifetime.spec.ts",
+      "suitePath": [],
+      "line": 100,
+      "title": "Open A/B/C/A with scroll, edit and mode switch: URL and renderer owner/index state plateau at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
@@ -32171,6 +32245,15 @@
       "semanticReviewStatus": "REVIEWED"
     },
     {
+      "file": "issue-1055-signal-tree-offscreen-filter.spec.ts",
+      "caseCount": 1,
+      "reviewedCaseCount": 0,
+      "originIssue": "1055",
+      "declaredTimeoutMs": 60,
+      "candidateSignals": [],
+      "semanticReviewStatus": "UNREVIEWED"
+    },
+    {
       "file": "issue-175-scrollbar-effect-lifecycle.spec.ts",
       "caseCount": 1,
       "reviewedCaseCount": 1,
@@ -32203,8 +32286,8 @@
     },
     {
       "file": "issue-219-wave-url-lifetime.spec.ts",
-      "caseCount": 2,
-      "reviewedCaseCount": 2,
+      "caseCount": 4,
+      "reviewedCaseCount": 4,
       "originIssue": "219",
       "declaredTimeoutMs": 1500,
       "candidateSignals": [
