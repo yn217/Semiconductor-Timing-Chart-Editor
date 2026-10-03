@@ -6,6 +6,7 @@ for (const width of [1672, 1000]) {
     await page.goto("/?visual-reference");
     const host = page.getByTestId("cycle-surface");
     await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+    await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
     const filter = page.getByTestId("signal-tree-type-filter");
     const search = page.getByTestId("signal-tree-search-top");
     await expect(filter).toBeVisible();

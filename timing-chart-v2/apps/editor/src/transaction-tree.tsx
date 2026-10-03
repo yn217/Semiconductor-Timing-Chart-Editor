@@ -572,7 +572,7 @@ export function TransactionTree({
               resolveTransactionColor(document, transaction),
           }}
         />
-        {transaction.name}
+        <span className="transaction-left-tree-name">{transaction.name}</span>
       </button>}
       <span className="transaction-left-tree-row-actions" aria-label={`${transaction.name} row actions`}>
         {onSetVisibility ? (
