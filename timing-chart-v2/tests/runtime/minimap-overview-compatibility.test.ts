@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canRetainSignalMiniMapOverview, type SignalMiniMapSource } from "../../apps/editor/src/runtime/minimap-overview-compatibility.js";
+import { canRetainSignalMiniMapOverview, planSignalMiniMapOverviewUpdate, type SignalMiniMapSource } from "../../apps/editor/src/runtime/minimap-overview-compatibility.js";
 
 describe("Signal MiniMap overview continuity", () => {
   const groups = [];
@@ -12,6 +12,19 @@ describe("Signal MiniMap overview continuity", () => {
 
   it("keeps an identical waveform overview visible across a non-overview Signal property edit", () => {
     expect(canRetainSignalMiniMapOverview(cached, { ...cached, signalCollection: [] }, { rowPresentation: [] })).toBe(true);
+  });
+
+  it("reuses the cached overview without row traversal for an unrelated Annotation edit", () => {
+    const current = { ...cached, signalCollection: [] };
+    expect(planSignalMiniMapOverviewUpdate(cached, current, { annotationPosition: ["ann-1"] })).toEqual({ kind: "reuse" });
+    expect(planSignalMiniMapOverviewUpdate(cached, current, { annotationStyle: ["ann-1"] })).toEqual({ kind: "reuse" });
+  });
+
+  it("updates only changed Signal IDs and rebuilds on topology or explicit overview invalidation", () => {
+    const current = { ...cached, signalCollection: [] };
+    expect(planSignalMiniMapOverviewUpdate(cached, current, { waveSemantics: ["sig-a"] })).toEqual({ kind: "incremental", changedSignalIds: ["sig-a"] });
+    expect(planSignalMiniMapOverviewUpdate(cached, current, { rowOrder: ["sig-a"] })).toEqual({ kind: "rebuild" });
+    expect(planSignalMiniMapOverviewUpdate(cached, current, { minimapOverview: true })).toEqual({ kind: "rebuild" });
   });
 
   it.each([

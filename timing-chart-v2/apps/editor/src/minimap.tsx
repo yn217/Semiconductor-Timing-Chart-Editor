@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, RefObject } from "react";
 import type { ChangeSet } from "@timing-chart-v2/commands";
-import type { CanonicalDocument } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
 import { buildMiniMapOverview, buildMiniMapTransactionOverview, updateMiniMapOverview, updateMiniMapTransactionOverview } from "@timing-chart-v2/projection";
 import { calculateMiniMapViewportMetrics } from "./runtime/minimap-viewport.js";
 import { timelineScrollOwner } from "./runtime/timeline-scroll-owner.js";
-import { canRetainSignalMiniMapOverview } from "./runtime/minimap-overview-compatibility.js";
+import { canRetainSignalMiniMapOverview, planSignalMiniMapOverviewUpdate } from "./runtime/minimap-overview-compatibility.js";
 import { MiniMapOverviewRows, MiniMapTransactionOverviewRows } from "./minimap-overview-rows.js";
 
 type MiniMapSource = Pick<CanonicalDocument, "signalGroups" | "signals" | "timeline">;
@@ -17,13 +17,6 @@ type MiniMapOverviewCache = Readonly<{
   overview: MiniMapOverview;
 }>;
 type TransactionOverviewCache = Readonly<{ transactions: CanonicalDocument["transactions"]; groups: CanonicalDocument["transactionGroups"]; cycleCount: number; overview: ReturnType<typeof buildMiniMapTransactionOverview> }>;
-
-function hasSignalOverviewTopologyChange(changeSet: ChangeSet): boolean {
-  return changeSet.fullDocumentReplace === true || changeSet.rowOrder !== undefined
-    || changeSet.addedSignals !== undefined || changeSet.removedSignals !== undefined
-    || changeSet.addedGroups !== undefined || changeSet.removedGroups !== undefined
-    || changeSet.timelineSemantics === true;
-}
 
 export function pointerRatio(client: number, start: number, size: number): number {
   if (!Number.isFinite(size) || size <= 0) return 0;
@@ -68,17 +61,14 @@ export function MiniMap({ document, changeSet, viewport, mode = "signal" }: { re
       if (mode === "signal") {
         const cycleCount = Math.max(1, document.timeline.cycleCount);
         const cached = overviewCache.current;
-        if (cached && cached.signalGroups === document.signalGroups && cached.cycleCount === cycleCount && cached.signalCollection === document.signals) {
+        const updatePlan = planSignalMiniMapOverviewUpdate(cached, { signalGroups: document.signalGroups, signalCollection: document.signals, cycleCount }, changeSet);
+        if (updatePlan.kind === "reuse" && cached) {
           overview = cached.overview;
         } else {
-          const canIncrement = changeSet !== undefined && cached !== undefined && cached.signalGroups === document.signalGroups && cached.cycleCount === cycleCount && !hasSignalOverviewTopologyChange(changeSet);
-          const changedSignalIds = canIncrement ? changeSet.waveSemantics : undefined;
-          if (canIncrement && (changedSignalIds === undefined || changedSignalIds.length === 0)) {
-            overview = cached.overview;
-          } else {
-            overview = cached ? updateMiniMapOverview(cached.overview, document, canIncrement ? changedSignalIds : undefined) : buildMiniMapOverview(document);
-            overviewBuilds.current += 1;
-          }
+          overview = cached
+            ? updateMiniMapOverview(cached.overview, document, updatePlan.kind === "incremental" ? updatePlan.changedSignalIds as readonly SignalId[] : undefined)
+            : buildMiniMapOverview(document);
+          overviewBuilds.current += 1;
           overviewCache.current = { signalGroups: document.signalGroups, signalCollection: document.signals, cycleCount, overview };
         }
       } else {
