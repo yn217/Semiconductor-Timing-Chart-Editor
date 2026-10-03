@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent, RefObject } from "react";
+import type { ChangeSet } from "@timing-chart-v2/commands";
 import { clockFrequency, type CanonicalDocument, type ClockGenerator, type ClockSignal, type EdgeCounterSettings, type Signal, type SignalRole } from "@timing-chart-v2/schema";
 import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
 import { InlineNameInput } from "./inline-name-input.js";
@@ -10,7 +11,7 @@ import { styleNumber, styleString } from "./inspector-style.js";
 import { InspectorHeaderBar, InspectorSelectionHeader } from "./inspector-selection-header.js";
 import { DraftStatus } from "./draft-status.js";
 
-function InspectorClockEditor({ signal, document, viewport, commands, onReveal, onCancel, onClose }: { readonly signal: ClockSignal; readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null>; readonly commands: Pick<EditorSurfaceCommandController, "updateSignalProperties" | "renameSignal" | "convertClock" | "setReferenceClock" | "setReferenceEdge" | "updateClockGenerator" | "updateEdgeCounter">; readonly onReveal: () => void; readonly onCancel: () => void; readonly onClose: () => void }) {
+function InspectorClockEditor({ signal, document, changeSet, viewport, commands, onReveal, onCancel, onClose }: { readonly signal: ClockSignal; readonly document: Readonly<CanonicalDocument>; readonly changeSet: ChangeSet; readonly viewport: RefObject<HTMLDivElement | null>; readonly commands: Pick<EditorSurfaceCommandController, "updateSignalProperties" | "renameSignal" | "convertClock" | "setReferenceClock" | "setReferenceEdge" | "updateClockGenerator" | "updateEdgeCounter">; readonly onReveal: () => void; readonly onCancel: () => void; readonly onClose: () => void }) {
   const [name, setName] = useState(signal.name);
   const [problem, setProblem] = useState("");
   const [role, setRole] = useState<SignalRole>(signal.role);
@@ -163,7 +164,7 @@ function InspectorClockEditor({ signal, document, viewport, commands, onReveal, 
       {edgeCounterChanged && <DraftStatus testId="inspector-edge-counter-unapplied" />}
       <span className="inspector-footer-buttons"><button type="button" data-testid="cancel-inspector-draft" aria-label="Discard unapplied Inspector draft" title="Discard unapplied changes and restore the last applied values" onClick={onCancel}>Revert draft</button></span>
     </div>
-    <MiniMap document={document} viewport={viewport} />
+    <MiniMap document={document} changeSet={changeSet} viewport={viewport} />
   </aside>;
 }
 

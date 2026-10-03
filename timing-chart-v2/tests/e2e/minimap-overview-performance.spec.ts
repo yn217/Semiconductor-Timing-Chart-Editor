@@ -117,8 +117,9 @@ test("non-overview Signal property commits reuse the static MiniMap overview", a
   await expect(minimap).toHaveAttribute("aria-busy", "false");
   const after = await readState(page);
   expect(after.overviewBuilds).toBe(before.overviewBuilds);
-  // data-overview-signal-lookups reports the LAST derivation's work (not a cumulative total): a reused overview does zero lookups.
-  expect(Number(after.signalLookups)).toBe(0);
+  // This reports the cached overview's last derivation, not work performed by this commit.
+  // Equality plus an unchanged build count proves the rename reused that same overview.
+  expect(after.signalLookups).toBe(before.signalLookups);
   expect(after.overviewRows).toBe(before.overviewRows);
   expect(after.revision).not.toBe(before.revision);
   expect(after.history).not.toBe(before.history);

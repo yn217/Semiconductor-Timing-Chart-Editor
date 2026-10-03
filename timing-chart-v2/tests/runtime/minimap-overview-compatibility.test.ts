@@ -14,6 +14,11 @@ describe("Signal MiniMap overview continuity", () => {
     expect(canRetainSignalMiniMapOverview(cached, { ...cached, signalCollection: [] }, { rowPresentation: [] })).toBe(true);
   });
 
+  it("reuses the overview for the Inspector rename command's row-presentation ChangeSet", () => {
+    const current = { ...cached, signalCollection: [] };
+    expect(planSignalMiniMapOverviewUpdate(cached, current, { rowPresentation: ["sig-a"] })).toEqual({ kind: "reuse" });
+  });
+
   it("reuses the cached overview without row traversal for an unrelated Annotation edit", () => {
     const current = { ...cached, signalCollection: [] };
     expect(planSignalMiniMapOverviewUpdate(cached, current, { annotationPosition: ["ann-1"] })).toEqual({ kind: "reuse" });
