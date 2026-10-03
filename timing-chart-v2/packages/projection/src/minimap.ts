@@ -25,12 +25,45 @@ export interface MiniMapOverview {
   readonly valueChangesVisited: number;
 }
 
+/** The overview is ~280 px wide: more than this many segments per row are sub-pixel and only cost DOM/paint (#856: 20k segments made every scroll frame ~40 ms). */
+const MAX_EXACT_SEGMENTS = 1_024;
+const OVERVIEW_BUCKETS = 1_024;
+
 function valueSegments(values: readonly SignalValueChange[], cycleCount: number): readonly MiniMapSegment[] {
-  return values.map((change, index) => ({
-    start: change.start,
-    end: values[index + 1]?.start ?? cycleCount,
-    tone: String(change.value).toLowerCase() === "0" ? "low" : "high",
-  }));
+  const toneOf = (value: SignalValueChange["value"]): MiniMapTone => String(value).toLowerCase() === "0" ? "low" : "high";
+  if (values.length <= MAX_EXACT_SEGMENTS) {
+    return values.map((change, index) => ({ start: change.start, end: values[index + 1]?.start ?? cycleCount, tone: toneOf(change.value) }));
+  }
+  // Dense rows: reduce to <= OVERVIEW_BUCKETS pixel-scale buckets, each carrying the duration-dominant tone, then merge equal neighbours.
+  const bucketWidth = Math.max(1, cycleCount / OVERVIEW_BUCKETS);
+  const lowDuration = new Float64Array(OVERVIEW_BUCKETS);
+  const highDuration = new Float64Array(OVERVIEW_BUCKETS);
+  for (let index = 0; index < values.length; index += 1) {
+    const change = values[index]!;
+    const tone = toneOf(change.value);
+    const end = values[index + 1]?.start ?? cycleCount;
+    let cursor = Math.max(0, change.start);
+    while (cursor < end) {
+      const bucket = Math.min(OVERVIEW_BUCKETS - 1, Math.floor(cursor / bucketWidth));
+      const bucketEnd = Math.min(end, (bucket + 1) * bucketWidth);
+      const span = Math.max(bucketEnd - cursor, 0);
+      if (tone === "low") lowDuration[bucket] = (lowDuration[bucket] ?? 0) + span; else highDuration[bucket] = (highDuration[bucket] ?? 0) + span;
+      if (bucketEnd <= cursor) break;
+      cursor = bucketEnd;
+    }
+  }
+  const segments: MiniMapSegment[] = [];
+  for (let bucket = 0; bucket < OVERVIEW_BUCKETS; bucket += 1) {
+    const covered = (lowDuration[bucket] ?? 0) + (highDuration[bucket] ?? 0);
+    if (covered === 0) continue;
+    const tone: MiniMapTone = (highDuration[bucket] ?? 0) >= (lowDuration[bucket] ?? 0) ? "high" : "low";
+    const start = Math.round(bucket * bucketWidth);
+    const end = Math.min(cycleCount, Math.round((bucket + 1) * bucketWidth));
+    const previous = segments[segments.length - 1];
+    if (previous && previous.tone === tone && previous.end === start) segments[segments.length - 1] = { ...previous, end };
+    else segments.push({ start, end, tone });
+  }
+  return segments;
 }
 
 const constantSegmentCache = new Map<string, readonly MiniMapSegment[]>();

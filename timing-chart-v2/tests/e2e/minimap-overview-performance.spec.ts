@@ -28,6 +28,9 @@ test("Bookmark-only document commits do not compare the unchanged MiniMap Signal
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
+  // The static overview is built in an idle callback after ready; read baselines only once it exists.
+  await expect(page.getByTestId("minimap")).toHaveAttribute("aria-busy", "false");
   const before = await readState(page);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByLabel("Timeline range start").fill("0");
@@ -46,6 +49,9 @@ test("MiniMap viewport updates do not rebuild the static overview", async ({ pag
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
+  // The static overview is built in an idle callback after ready; read baselines only once it exists.
+  await expect(page.getByTestId("minimap")).toHaveAttribute("aria-busy", "false");
   const minimap = page.getByTestId("minimap");
   const before = await readState(page);
   expect(Number(before.overviewBuilds)).toBeGreaterThan(0);
@@ -90,6 +96,9 @@ test("non-overview Signal property commits reuse the static MiniMap overview", a
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
+  // The static overview is built in an idle callback after ready; read baselines only once it exists.
+  await expect(page.getByTestId("minimap")).toHaveAttribute("aria-busy", "false");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const minimap = page.getByTestId("minimap");
   const before = await readState(page);
