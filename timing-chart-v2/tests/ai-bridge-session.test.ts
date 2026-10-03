@@ -158,6 +158,20 @@ describe("Agent Bridge Editor-session routing", () => {
     expect(JSON.parse(resolved.result!.content![0]!.text)).toEqual({ title: editorB.documentTitle, documentId: editorB.documentId });
   });
 
+  it("distinguishes invalid and stale base revisions before queueing a typed proposal batch", async () => {
+    const editor = session("typed-batch-validation");
+    await registerEditor(editor);
+    const operation = { tool: "propose_create_bookmark", arguments: { name: "Checkpoint", cycle: 4 } };
+    const invalidRevision = await callTool("submit_proposal", { editorSessionId: editor.editorSessionId, baseRevision: "3", operations: [operation] });
+    expect(invalidRevision.error).toEqual(expect.objectContaining({ code: -32602, message: expect.stringContaining("non-negative integer baseRevision") }));
+
+    const staleRevision = await callTool("submit_proposal", { editorSessionId: editor.editorSessionId, baseRevision: 2, operations: [operation] });
+    expect(staleRevision.error).toEqual(expect.objectContaining({ code: -32009, message: expect.stringContaining("Stale baseRevision") }));
+
+    const invalidOperation = await callTool("submit_proposal", { editorSessionId: editor.editorSessionId, baseRevision: 3, operations: [{ tool: "arbitrary_json_patch", arguments: {} }] });
+    expect(invalidOperation.error).toEqual(expect.objectContaining({ code: -32602, message: expect.stringContaining("allowlisted typed proposal tool") }));
+  });
+
   it("rejects queued or in-flight calls when a tab replaces or closes its targeted session", async () => {
     const oldSession = session("replace-tab", "old");
     const unrelatedSession = session("unrelated-tab", "unrelated");

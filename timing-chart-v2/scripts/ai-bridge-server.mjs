@@ -268,7 +268,8 @@ async function handleMcp(res, body) {
     if (!editorSessions.has(editorSessionId)) { replyError(-32004, staleSessionError(editorSessionId).message); return; }
     if (name === "submit_proposal") {
       const operations = args?.operations;
-      if (!Number.isSafeInteger(args?.baseRevision) || args.baseRevision < 0 || args.baseRevision !== editorSessions.get(editorSessionId)?.revision) { replyError(-32009, "Stale baseRevision. Read the current Editor session and regenerate the complete proposal."); return; }
+      if (!Number.isSafeInteger(args?.baseRevision) || args.baseRevision < 0) { replyError(-32602, "submit_proposal requires a non-negative integer baseRevision."); return; }
+      if (args.baseRevision !== editorSessions.get(editorSessionId)?.revision) { replyError(-32009, "Stale baseRevision. Read the current Editor session and regenerate the complete proposal."); return; }
       if (!Array.isArray(operations) || operations.length < 1 || operations.length > 50) { replyError(-32602, "submit_proposal requires between 1 and 50 typed operations."); return; }
       const invalid = operations.findIndex((operation) => !operation || typeof operation !== "object" || !BATCHABLE_PROPOSAL_TOOLS.includes(operation.tool) || !operation.arguments || typeof operation.arguments !== "object" || Array.isArray(operation.arguments));
       if (invalid >= 0) { replyError(-32602, `operations[${invalid}] must use an allowlisted typed proposal tool and arguments object.`); return; }
