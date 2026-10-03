@@ -19,7 +19,6 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await expect(page.getByTestId("transaction-lanes")).toBeVisible();
   const cycleViewport = page.getByTestId("cycle-viewport");
-  await expect.poll(() => cycleViewport.evaluate((element) => element.scrollWidth - element.clientWidth), { timeout: 5_000, message: "Cycle viewport must have real horizontal overflow before the mode-isolation journey" }).toBeGreaterThan(0);
   const before = {
     revision: await host.getAttribute("data-canonical-revision"),
     history: await host.getAttribute("data-history-depth"),
@@ -33,6 +32,8 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
 
   await modes.getByRole("button", { name: "Cycle", exact: true }).click();
   await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Cycle", { timeout: 5_000 });
+  // The standalone Transaction track fits its viewport (#945); the real horizontal overflow precondition belongs to Cycle's own scroll owner.
+  await expect.poll(() => timelineOwner(page).evaluate((element) => element.scrollWidth - element.clientWidth), { timeout: 5_000, message: "Cycle viewport must have real horizontal overflow before the mode-isolation journey" }).toBeGreaterThan(0);
   const cycleTimeOrigin = await page.getByTestId("geometry-grid").evaluate((element) => Number.parseFloat(getComputedStyle(element).left));
   expect(cycleTimeOrigin).toBe(Number(await shell.getAttribute("data-left-pane-width")) + Number(await shell.getAttribute("data-frozen-pane-width")));
   // #765: standalone Transaction no longer inherits the hidden Cycle rows' height, so the large-document precondition is checked where the rows are shown.
@@ -87,6 +88,9 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
   // Transaction Mode uses a fixed-width tree (composeMode.fixedLeftWidth) and has no left-pane resizer.
   await expect(page.getByTestId("left-pane-resizer")).toHaveCount(0);
   const transactionLeftAfter = transactionLeft;
+  // The EFFECTIVE Transaction rail width (the observable result) must survive Combined's left-pane resize; the shell's data-left-pane-width attribute is the shared resizable value, not the rail's width.
+  const transactionRailWidth = () => page.getByTestId("transaction-tree-header").evaluate((element) => Math.round(element.getBoundingClientRect().width));
+  const transactionRailBefore = await transactionRailWidth();
   await page.getByTestId("ribbon").getByRole("button", { name: "Bottom Editor", exact: true }).click();
   await expect(shell).toHaveAttribute("data-bottom-visible", "false");
   await assertViewOnly();
@@ -129,9 +133,11 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
   const combinedCyclePane = page.locator(".split-signal-content");
   await combinedTransactionPane.hover();
   await page.mouse.wheel(0, 250);
+  await expect.poll(() => combinedTransactionPane.evaluate((element) => element.scrollTop), { timeout: 5_000, message: "Combined Transaction pane wheel must scroll it" }).toBeGreaterThan(0);
   const transactionVerticalScroll = await combinedTransactionPane.evaluate((element) => element.scrollTop);
   await combinedCyclePane.hover();
   await page.mouse.wheel(0, 250);
+  await expect.poll(() => combinedCyclePane.evaluate((element) => element.scrollTop), { timeout: 5_000, message: "Combined Cycle pane wheel must scroll it" }).toBeGreaterThan(0);
   const cycleVerticalScroll = await combinedCyclePane.evaluate((element) => element.scrollTop);
   expect(transactionVerticalScroll).toBeGreaterThan(0);
   expect(cycleVerticalScroll).toBeGreaterThan(0);
@@ -142,7 +148,8 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
   await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Transaction", { timeout: 5_000 });
   await expect(page.getByTestId("zoom-status")).toHaveText(transactionZoom!);
   await expect.poll(() => timelineOwner(page).evaluate((element) => element.scrollLeft), { timeout: 5_000, message: "Combined scrolling must not replace Transaction's standalone horizontal position" }).toBe(transactionScroll);
-  await expect(shell).toHaveAttribute("data-left-pane-width", String(transactionLeftAfter));
+  expect(await transactionRailWidth(), "Transaction rail width is untouched by Combined's left-pane resize").toBe(transactionRailBefore);
+  void transactionLeftAfter;
   await expect(shell).toHaveAttribute("data-bottom-visible", "false");
   await assertViewOnly();
   await modes.getByRole("button", { name: "Cycle", exact: true }).click();

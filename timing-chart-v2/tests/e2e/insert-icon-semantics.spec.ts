@@ -11,6 +11,8 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
     await page.locator(".ribbon-tabs").getByRole("button", { name: "Insert", exact: true }).click();
     const insert = page.getByTestId("insert-ribbon");
+    // The Insert ribbon mounts its icons after the tab click; wait for the full set before measuring.
+    await expect(insert.locator("[data-insert-icon]")).toHaveCount(14);
     const contract = await insert.locator("[data-insert-icon]").evaluateAll((icons) => icons.map((icon) => ({
       kind: icon.getAttribute("data-insert-icon"),
       useCount: icon.querySelectorAll("use").length,
@@ -46,6 +48,8 @@ test("keeps semantic Insert icons crisp at higher device scale", async ({ browse
     await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
     await page.locator(".ribbon-tabs").getByRole("button", { name: "Insert", exact: true }).click();
     const insert = page.getByTestId("insert-ribbon");
+    // The Insert ribbon mounts its icons after the tab click; wait for the full set before measuring.
+    await expect(insert.locator("[data-insert-icon]")).toHaveCount(14);
     expect(await page.evaluate(() => window.devicePixelRatio)).toBe(2);
     const boxes = await insert.locator("[data-insert-icon]").evaluateAll((icons) => icons.map((icon) => {
       const box = icon.getBoundingClientRect();

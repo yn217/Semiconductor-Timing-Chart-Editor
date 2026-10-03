@@ -20,7 +20,18 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
 
     await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
     await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
-    await expect.poll(() => page.evaluate(() => localStorage.getItem("timing-chart-v2.recent")?.length ?? 0)).toBeGreaterThan(0);
+    // Recent documents are persisted in IndexedDB (recent-document-storage.ts), not localStorage.
+    await expect.poll(() => page.evaluate(() => new Promise<number>((resolve) => {
+      const open = indexedDB.open("timing-chart-v2");
+      open.onerror = () => resolve(0);
+      open.onsuccess = () => {
+        const database = open.result;
+        if (!database.objectStoreNames.contains("recent-documents")) { database.close(); resolve(0); return; }
+        const count = database.transaction("recent-documents", "readonly").objectStore("recent-documents").count();
+        count.onsuccess = () => { database.close(); resolve(count.result); };
+        count.onerror = () => { database.close(); resolve(0); };
+      };
+    }))).toBeGreaterThan(0);
 
     await page.reload();
     await expect(host).toHaveAttribute("data-editor-idle", "true");

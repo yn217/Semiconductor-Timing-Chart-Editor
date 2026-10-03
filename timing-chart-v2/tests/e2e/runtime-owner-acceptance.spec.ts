@@ -38,13 +38,13 @@ test("Open then Annotation drag uses the current document geometry", async ({ pa
   const owner = annotationOwnerById(host, createdId);
   const handle = owner.locator("[data-role='annotation-handle'][data-annotation-field='from']");
   const handleBox = await handle.boundingBox();
-  const x2 = Number.parseFloat(await page.getByTestId("cycle-ruler").locator("[data-cycle='2']").evaluate((element) => (element as HTMLElement).style.left));
-  const x5 = Number.parseFloat(await page.getByTestId("cycle-ruler").locator("[data-cycle='5']").evaluate((element) => (element as HTMLElement).style.left));
   expect(handleBox).not.toBeNull();
 
   await page.mouse.move(handleBox!.x + 4, handleBox!.y + 4);
   await page.mouse.down();
-  await page.mouse.move(handleBox!.x + 4 + (x5 - x2), handleBox!.y + 4);
+  // Drag to the ABSOLUTE cycle-5 boundary (the new arrow anchors to the opened document's own Timeline range, not necessarily cycle 2).
+  const tick5 = (await page.getByTestId("cycle-ruler").locator("[data-cycle='5']").boundingBox())!;
+  await page.mouse.move(tick5.x, handleBox!.y + 4);
   await expect(host).toHaveAttribute("data-snap-kind", "cycle-boundary");
   await expect(host).toHaveAttribute("data-snap-cycle", "5");
   await page.mouse.up();
