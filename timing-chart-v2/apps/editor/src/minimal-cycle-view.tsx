@@ -1,4 +1,4 @@
-import { timelineScrollOwner } from "./runtime/timeline-scroll-owner.js";
+import { resolveCursorCycleAtClientX as resolveCursorCycleFromGeometry, resolveCursorOverlayLeftAtCycle as resolveCursorOverlayFromGeometry } from "./runtime/cursor-overlay-geometry.js";
 import { startTransition, useEffect, useMemo, useRef } from "react";
 import type { RefObject } from "react";
 import type { CommandResult } from "@timing-chart-v2/commands";
@@ -779,14 +779,8 @@ export function MinimalCycleView() {
       onSignalSplitKeyDown: resizeSignalSplitByKeyboard, onSignalSplitPointerDown: startSignalSplitResize, onSignalSplitPointerMove: moveSignalSplitResize, onSignalSplitPointerUp: finishSignalSplitResize,
       onViewportKeyDown: onCursorKeyDown,
       onSetCursorAtCycle: (which: "a" | "b", cycle: number) => setCursor(which, cycle),
-      resolveCursorCycleAtClientX: (clientX: number, viewportElement: HTMLDivElement) => {
-        const runtime = timelineRuntimeRef.current;
-        if (!runtime) return undefined;
-        const scroller = timelineScrollOwner(viewportElement);
-        const rect = scroller.getBoundingClientRect();
-        const scrollLeft = scroller.scrollLeft;
-        return runtime.screenXToSourceCycle(clientX - rect.left + scrollLeft);
-      },
+      resolveCursorCycleAtClientX: (clientX: number, viewportElement: HTMLDivElement) => resolveCursorCycleFromGeometry(timelineRuntimeRef.current, clientX, viewportElement),
+      resolveCursorOverlayLeftAtCycle: (cycle: number, viewportElement: HTMLDivElement) => resolveCursorOverlayFromGeometry(timelineRuntimeRef.current, snapshot.document, zoom, cycle, viewportElement),
     },
   };
   const shellStatus = {
