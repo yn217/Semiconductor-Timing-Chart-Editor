@@ -104,6 +104,7 @@ test("Signals x10000: over-limit Paste rejection gives user-visible RESOURCE_LIM
   const status = (await ui.status()) ?? "";
   const problemsAfter = await problems();
   console.log("E864-LIMIT", JSON.stringify({ status, problemsBefore, problemsAfter }));
+  expect(status, "the Clipboard status explains why Paste was rejected").toMatch(/Paste rejected:.*resource limit exceeded for signals/i);
   // The rejection is surfaced through Problems (RESOURCE_LIMIT_EXCEEDED on signal.bulkCreateAcrossGroups, 20,000 exceeds 10,000).
   expect(Number(problemsAfter), "the over-limit Paste adds a Problem").toBe(Number(problemsBefore) + 1);
   await page.getByRole("tab", { name: /^Problems/ }).or(page.locator("[role=tab]:has-text('Problems')")).first().click();

@@ -218,7 +218,7 @@ export function useClipboardActions({ application, selection }: { application: E
       const ids = created.map((signal) => signal.id);
       selection.selectSignals(new Set(ids), ids[0]);
       setStatus(operation === "paste" ? `Pasted ${created.length} signal${created.length === 1 ? "" : "s"}` : `Duplicated ${created.length} signal${created.length === 1 ? "" : "s"}`);
-    }
+    } else setStatus(`${operation === "paste" ? "Paste" : "Duplicate"} rejected: ${result.problems[0]?.message ?? result.reason}`);
   };
   const createGroup = (input: GroupClipboardItem, operation: "paste" | "duplicate") => {
     const current = document();
