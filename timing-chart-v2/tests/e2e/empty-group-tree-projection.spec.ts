@@ -23,7 +23,7 @@ async function mountedTreeGroupIds(page: import("@playwright/test").Page): Promi
 
 async function allTreeGroupIds(page: import("@playwright/test").Page): Promise<string[]> {
   const viewport = page.getByTestId("cycle-viewport");
-  await viewport.evaluate((element) => { element.scrollTop = 0; element.dispatchEvent(new Event("scroll")); });
+  await viewport.evaluate(async (element) => { element.scrollTop = 0; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
   await page.waitForTimeout(100);
   const top = await mountedTreeGroupIds(page);
   await revealTreeBottom(page);

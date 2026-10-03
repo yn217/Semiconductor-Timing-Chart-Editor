@@ -135,7 +135,7 @@ test("Signal and Group rename use the same explicit Enter/Escape draft contract"
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toContainText(originalSignalName);
 
-  await page.getByTestId("cycle-viewport").evaluate((element) => { element.scrollTop = element.scrollHeight; element.dispatchEvent(new Event("scroll")); });
+  await page.getByTestId("cycle-viewport").evaluate(async (element) => { element.scrollTop = element.scrollHeight; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
   await page.locator("[data-role='left-group-header'][data-group-id='grp_cycle_scratch'] [data-role='tree-branch']").click();
   const groupName = page.getByTestId("inspector").getByLabel("Inspector group name");
   const originalGroupName = await groupName.inputValue();

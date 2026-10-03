@@ -14,7 +14,7 @@ for (const viewportSize of [{ width: 1672, height: 941 }, { width: 1280, height:
   const metrics = await viewport.evaluate((element) => ({ scrollWidth: element.scrollWidth, clientWidth: element.clientWidth, scrollLeft: element.scrollLeft }));
   console.log(`[transaction-overflow] ${JSON.stringify(metrics)}`);
   expect(metrics.scrollWidth).toBeGreaterThan(metrics.clientWidth);
-  await viewport.evaluate((element) => { element.scrollLeft = Math.min(120, element.scrollWidth - element.clientWidth); element.dispatchEvent(new Event("scroll")); });
+  await viewport.evaluate(async (element) => { element.scrollLeft = Math.min(120, element.scrollWidth - element.clientWidth); await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
   await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
   const revision = await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision");
   const history = await page.getByTestId("history-status").textContent();
@@ -291,7 +291,7 @@ test("central Transaction surface remains viewport-bounded across 1k/5k/10k with
     const selectionMs = await page.evaluate((startedAt) => performance.now() - startedAt, selectionStarted);
     const scrollStarted = await page.evaluate(() => performance.now());
     const mountedIdsBeforeScroll = await lanes.locator("[data-transaction-id]").evaluateAll((bars) => bars.map((bar) => bar.getAttribute("data-transaction-id")).filter((id): id is string => id !== null).sort());
-    await viewport.evaluate((element) => { element.scrollTop = Math.max(1, (element.scrollHeight - element.clientHeight) / 2); element.dispatchEvent(new Event("scroll")); });
+    await viewport.evaluate(async (element) => { element.scrollTop = Math.max(1, (element.scrollHeight - element.clientHeight) / 2); await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
     await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
     await expect.poll(async () => lanes.locator("[data-transaction-id]").evaluateAll((bars) => bars.map((bar) => bar.getAttribute("data-transaction-id")).filter((id): id is string => id !== null).sort())).not.toEqual(mountedIdsBeforeScroll);
     const scrollMs = await page.evaluate((startedAt) => performance.now() - startedAt, scrollStarted);
