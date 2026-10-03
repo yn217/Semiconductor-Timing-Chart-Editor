@@ -125,13 +125,13 @@ function TransactionWorkspace({ viewModel }: EditorWorkspaceViewProps) {
 
 /** Owns Combined-only header and left splitter; the pane composer below uses one shared outer horizontal viewport. */
 function CombinedWorkspace({ viewModel }: EditorWorkspaceViewProps) {
-  const { layout, content, interactions } = viewModel;
-  const { leftPaneWidth } = layout;
+  const { content } = viewModel;
   const { header } = content;
-  return <>
-    <div className="workspace-header">{header}</div>
-    <LeftPaneResizer width={leftPaneWidth} interactions={interactions} />
-  </>;
+  return <div className="workspace-header">{header}</div>;
+}
+
+function CombinedWorkspaceChrome({ viewModel }: EditorWorkspaceViewProps) {
+  return <LeftPaneResizer width={viewModel.layout.leftPaneWidth} interactions={viewModel.interactions} className="combined-left-pane-resizer" />;
 }
 
 function CombinedWorkspacePanes({ viewModel }: EditorWorkspaceViewProps) {
@@ -212,7 +212,7 @@ function createWorkspaceOwnerPlan(viewModel: EditorWorkspaceViewModel): Workspac
         timeViewportOwner: "combined-viewport",
         contentWidthOwner: "combined-source-time",
         headerAbove: <CombinedWorkspace viewModel={viewModel} />,
-        panelChrome: null,
+        panelChrome: <CombinedWorkspaceChrome viewModel={viewModel} />,
         rail: <CombinedWorkspaceRail content={viewModel.content.transactionTree} />,
         upperPane: <CombinedWorkspacePanes viewModel={viewModel} />,
         timelineBody: viewModel.content.viewportLegend,
@@ -235,8 +235,8 @@ function TimelinePaneContents({ gridLayer, ruler, host, gridEnabled, rulerEnable
   </div>;
 }
 
-function LeftPaneResizer({ width, interactions }: Readonly<{ width: number; interactions: EditorWorkspaceViewModel["interactions"] }>) {
-  return <div className="left-pane-resize-handle" data-testid="left-pane-resizer" role="separator" aria-label="Resize Signal Group pane" aria-orientation="vertical" aria-valuemin={LEFT_PANE_MIN_WIDTH} aria-valuemax={LEFT_PANE_MAX_WIDTH} aria-valuenow={width} tabIndex={0} onKeyDown={interactions.onLeftPaneKeyDown} onPointerDown={interactions.onLeftPanePointerDown} onPointerMove={interactions.onLeftPanePointerMove} onPointerUp={interactions.onLeftPanePointerUp} onPointerCancel={interactions.onLeftPanePointerUp} />;
+function LeftPaneResizer({ width, interactions, className }: Readonly<{ width: number; interactions: EditorWorkspaceViewModel["interactions"]; className?: string }>) {
+  return <div className={`left-pane-resize-handle${className ? ` ${className}` : ""}`} data-testid="left-pane-resizer" role="separator" aria-label="Resize Signal Group pane" aria-orientation="vertical" aria-valuemin={LEFT_PANE_MIN_WIDTH} aria-valuemax={LEFT_PANE_MAX_WIDTH} aria-valuenow={width} tabIndex={0} onKeyDown={interactions.onLeftPaneKeyDown} onPointerDown={interactions.onLeftPanePointerDown} onPointerMove={interactions.onLeftPanePointerMove} onPointerUp={interactions.onLeftPanePointerUp} onPointerCancel={interactions.onLeftPanePointerUp} />;
 }
 
 function FrozenPaneResizer({ width, minWidth, interactions }: Readonly<{ width: number; minWidth: number; interactions: EditorWorkspaceViewModel["interactions"] }>) {
