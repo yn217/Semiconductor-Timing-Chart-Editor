@@ -26,6 +26,8 @@ test("Inspector rename does not reinstall the Timeline scrollbar listener", asyn
   const bytes = readFileSync(resolve(process.cwd(), "samples/performance/perf_1000x1000_virtualized.tcd.json"));
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "perf_1000x1000_virtualized.tcd.json", mimeType: "application/json", buffer: bytes });
   await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 90_000 });
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-view-mode", "Cycle");
 
   const bar = page.locator(".timeline-hscroll");
   const before = await page.evaluate(() => (window as typeof window & { __timelineScrollbarListenerCounts: { adds: number; removes: number } }).__timelineScrollbarListenerCounts);
