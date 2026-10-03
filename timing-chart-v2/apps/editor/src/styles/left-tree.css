@@ -24,6 +24,7 @@
 
 .left-column-actions > .tree-more-button:hover { background: var(--gui-hover-bg); }
 
+.tree-add-menu--floating { position: fixed !important; top: auto; right: auto; }
 .tree-add-menu { position: absolute; top: 31px; right: 5px; z-index: 30; display: grid; width: 142px; padding: 4px; border: 1px solid #aebdce; border-radius: 4px; background: white; box-shadow: 0 6px 18px #20365233; }
 
 .tree-add-menu button { position: static; width: 100%; height: 27px; padding: 0 8px; border: 0; background: transparent; color: #263d58; text-align: left; }
