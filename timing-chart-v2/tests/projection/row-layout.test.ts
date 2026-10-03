@@ -29,6 +29,37 @@ function linearMountedRowIds(layout: ReturnType<typeof calculateRowLayout>, view
 }
 
 describe("RowLayout and projection invariants", () => {
+  it("filters canonical offscreen Signal rows before Left Tree virtualization and compacts the filtered result", () => {
+    const document = generatePerformanceDocument({ signalCount: 1_000, cycleCount: 100 });
+    const target = document.signals.find((signal) => signal.id === "sig_perf_999")!;
+    const targetGroup = document.signalGroups.find((group) => group.rows.includes(target.id))!;
+    const service = new DefaultProjectionService();
+    const snapshot = { revision: 0, document } as CanonicalSnapshot;
+    const viewport = { viewportStartY: 0, viewportEndY: 180, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] } as const;
+    const before = service.project({ snapshot, changeSet: { fullDocumentReplace: true }, viewport, collapsedGroupIds: [targetGroup.id] });
+    expect(before.leftRowIds).not.toContain(target.id);
+
+    const filtered = service.project({
+      snapshot,
+      changeSet: {},
+      viewport,
+      previous: before,
+      collapsedGroupIds: [targetGroup.id],
+      signalTreeFilter: target.display.name,
+      signalTreeTypeFilter: target.role === "input" ? "input" : "all",
+    });
+
+    expect(filtered.leftRowIds).toEqual([target.id]);
+    expect(filtered.navigationRowLayout.map((row) => row.rowId)).toEqual([target.id]);
+    expect(filtered.leftGroupHeaders).toHaveLength(1);
+    expect(filtered.leftGroupHeaders[0]).toMatchObject({ groupId: targetGroup.id, collapsed: false });
+    expect(filtered.matchingSignalCount).toBe(1);
+    expect(filtered.navigationTotalHeight).toBeLessThan(120);
+    expect(filtered.visibleRowIds).toEqual(before.visibleRowIds);
+    expect(filtered.mountedSignalIds).toEqual(before.mountedSignalIds);
+    expect(filtered.waveSignalIds).toEqual([]);
+  });
+
   it("finds viewport-intersecting rows without scanning the full ordered layout", () => {
     const rows = Array.from({ length: 10_000 }, (_, index) => ({ rowId: `row-${index}`, visible: index !== 5_001, y: index * 20, height: index === 4_999 ? 35 : 18 }));
     let indexedReads = 0;

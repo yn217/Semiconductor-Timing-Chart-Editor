@@ -41,6 +41,7 @@ export class DefaultProjectionService implements ProjectionService {
   #visibleRowIndexById = new Map<RowLayoutEntry["rowId"], number>();
   #navigationRowIndexById = new Map<RowLayoutEntry["rowId"], number>();
   #collapsedGroupKey = "";
+  #treeFilterKey = "";
   #documentEpoch = 0;
   #canonicalSignals: ProjectionRequest["snapshot"]["document"]["signals"] | undefined;
   #canonicalSignalIds: readonly SignalId[] = [];
@@ -67,16 +68,20 @@ export class DefaultProjectionService implements ProjectionService {
     if (request.changeSet.fullDocumentReplace) this.#documentEpoch += 1;
     const collapsedGroupIds = [...new Set(request.collapsedGroupIds ?? [])].sort() as GroupId[];
     const collapsedGroupKey = collapsedGroupIds.join("\u0000");
+    const signalTreeFilter = request.signalTreeFilter ?? "";
+    const signalTreeTypeFilter = request.signalTreeTypeFilter ?? "all";
+    const normalizedTreeFilter = signalTreeFilter.trim().toLocaleLowerCase();
+    const treeFilterKey = `${signalTreeTypeFilter}\u0000${normalizedTreeFilter}`;
     const presentationKeys = Object.keys(request.changeSet);
     const presentationOnlyRows = request.changeSet.rowPresentation !== undefined
       && presentationKeys.every((key) => key === "rowPresentation" || key === "timingDiagnosticsUnchanged" || key === "minimapOverview");
-    if (presentationOnlyRows && request.previous && this.#layout && this.#navigationLayout && this.#collapsedGroupKey === collapsedGroupKey) {
+    if (presentationOnlyRows && request.previous && this.#layout && this.#navigationLayout && this.#collapsedGroupKey === collapsedGroupKey && this.#treeFilterKey === treeFilterKey) {
       const patch = this.#patchRowPresentation(document, request.changeSet.rowPresentation!);
       this.#projectionBuilds += 1;
       return this.#projectPresentationOnly(request, patch);
     }
     const invalidatesLayout = request.changeSet.fullDocumentReplace || request.changeSet.rowOrder !== undefined || request.changeSet.rowPresentation !== undefined || request.changeSet.geometryScreenY !== undefined || request.changeSet.addedSignals !== undefined || request.changeSet.removedSignals !== undefined || request.changeSet.addedGroups !== undefined || request.changeSet.removedGroups !== undefined;
-    if (!this.#layout || !this.#navigationLayout || invalidatesLayout || this.#collapsedGroupKey !== collapsedGroupKey) {
+    if (!this.#layout || !this.#navigationLayout || invalidatesLayout || this.#collapsedGroupKey !== collapsedGroupKey || this.#treeFilterKey !== treeFilterKey) {
       const cachedSourceIndex = this.#rowLayoutSourceIndex;
       if (!cachedSourceIndex || cachedSourceIndex.signals !== document.signals || cachedSourceIndex.signalGroups !== document.signalGroups) {
         const sourceIndex = getRowLayoutSourceIndex(document);
@@ -93,7 +98,11 @@ export class DefaultProjectionService implements ProjectionService {
       // included -- gets its own real slot there.
       const sourceIndex = this.#rowLayoutSourceIndex!;
       const rawLayout = calculateRowLayout(document, new Set(), { includeHidden: true, reserveHiddenSpace: false, sourceIndex, ...(this.#pane === undefined ? {} : { pane: this.#pane }) });
-      const rawNavigationLayout = calculateRowLayout(document, new Set(collapsedGroupIds), { sourceIndex, ...(this.#pane === undefined ? {} : { pane: this.#pane }) });
+      const rawNavigationLayout = calculateRowLayout(document, new Set(collapsedGroupIds), {
+        sourceIndex,
+        ...(this.#pane === undefined ? {} : { pane: this.#pane }),
+        treeFilter: { text: signalTreeFilter, type: signalTreeTypeFilter },
+      });
       // Signal Split View (#200): `calculateRowLayout` keeps a pane-mismatched
       // row in `navigationRows` purely for Y-sequence bookkeeping (see its own
       // `paneExcludedRowIds` doc) -- a pane-fixed instance (this one, when
@@ -104,6 +113,7 @@ export class DefaultProjectionService implements ProjectionService {
       this.#layout = this.#pane === undefined || rawLayout.paneExcludedRowIds.size === 0 ? rawLayout : { ...rawLayout, navigationRows: rawLayout.navigationRows.filter((row) => !rawLayout.paneExcludedRowIds.has(row.rowId)) };
       this.#navigationLayout = this.#pane === undefined || rawNavigationLayout.paneExcludedRowIds.size === 0 ? rawNavigationLayout : { ...rawNavigationLayout, navigationRows: rawNavigationLayout.navigationRows.filter((row) => !rawNavigationLayout.paneExcludedRowIds.has(row.rowId)) };
       this.#collapsedGroupKey = collapsedGroupKey;
+      this.#treeFilterKey = treeFilterKey;
       this.#rowLayoutBuilds += 1;
       this.#visibleRowIds = this.#layout.visibleRows.map((row) => row.rowId);
       this.#signalIndexById = sourceIndex.signalIndexById;
@@ -164,6 +174,9 @@ export class DefaultProjectionService implements ProjectionService {
       waveSignalIds: [...new Set(requestedWaves)],
       totalHeight: layout.totalHeight,
       navigationTotalHeight: navigationLayout.totalHeight,
+      signalTreeFilter,
+      signalTreeTypeFilter,
+      matchingSignalCount: navigationLayout.matchingSignalCount,
       transform: request.previous?.transform ?? defaultTransform,
       collapsedGroupIds,
     };
@@ -279,6 +292,11 @@ export class DefaultProjectionService implements ProjectionService {
       mountedSignalIds,
       rowLayout: pinnedRows.rowLayout,
       navigationRowLayout: pinnedRows.navigationRowLayout,
+      leftGroupHeaders: navigationLayout.groupHeaders,
+      navigationTotalHeight: navigationLayout.totalHeight,
+      signalTreeFilter: request.signalTreeFilter ?? "",
+      signalTreeTypeFilter: request.signalTreeTypeFilter ?? "all",
+      matchingSignalCount: navigationLayout.matchingSignalCount,
       waveSignalIds: [],
       transform: request.previous!.transform,
       collapsedGroupIds: request.previous!.collapsedGroupIds,

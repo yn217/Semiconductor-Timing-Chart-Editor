@@ -3,6 +3,8 @@ import { DefaultProjectionService, type ProjectionRequest, type RenderProjection
 /** Owns projection service lifetime and keeps projection calls outside React UI code. */
 export class ProjectionCoordinator {
   private readonly service: DefaultProjectionService;
+  private signalTreeFilter = "";
+  private signalTreeTypeFilter: RenderProjection["signalTreeTypeFilter"] = "all";
   private documentEpoch = 0;
   private projectionCalls = 0;
   private projectionDurationMs = 0;
@@ -16,7 +18,7 @@ export class ProjectionCoordinator {
 
   project(request: ProjectionRequest): RenderProjection {
     const startedAt = globalThis.performance?.now?.() ?? Date.now();
-    const projection = this.service.project(request);
+    const projection = this.service.project({ ...request, signalTreeFilter: this.signalTreeFilter, signalTreeTypeFilter: this.signalTreeTypeFilter });
     this.projectionCalls += 1;
     this.projectionDurationMs += (globalThis.performance?.now?.() ?? Date.now()) - startedAt;
     if (request.changeSet.fullDocumentReplace) this.fullReplaceCalls += 1;
@@ -24,6 +26,11 @@ export class ProjectionCoordinator {
     else this.changeCalls += 1;
     this.documentEpoch = projection.documentEpoch;
     return projection;
+  }
+
+  setSignalTreeFilter(text: string, type: RenderProjection["signalTreeTypeFilter"]): void {
+    this.signalTreeFilter = text;
+    this.signalTreeTypeFilter = type;
   }
 
   /** Current generation of this projection owner, used to reject results

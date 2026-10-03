@@ -65,14 +65,9 @@
 .surface-host [data-role="left-row"][data-row-kind="spacer"] { grid-template-columns: minmax(0, 1fr) 22px 20px; }
 .surface-host [data-role="tree-spacer-label"] { color: #8a96a8; font-style: italic; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* refreshTreeFilterPresentation (minimal-cycle-view-ui.tsx) sets the native
-   `hidden` attribute on a filtered-out left-row/left-group-header. The
-   author rules above set `display: grid` on these same roles with the
-   exact same specificity as the browser's built-in `[hidden] { display:
-   none }` rule -- author styles apply after the UA stylesheet, so the
-   `display: grid` here was silently winning and hidden rows never
-   actually disappeared. Adding `[hidden]` to the selector raises its
-   specificity just enough to win regardless of source order. */
+/* Preserve native hidden behavior if a row is explicitly hidden by another
+   presentation owner. Signal Tree filtering itself operates on the canonical
+   row model before virtualization and does not hide mounted DOM nodes. */
 .surface-host [data-role="left-row"][hidden],
 .surface-host [data-role="frozen-row"][hidden],
 .editor-shell .surface-host [data-role="left-group-header"][hidden] { display: none; }

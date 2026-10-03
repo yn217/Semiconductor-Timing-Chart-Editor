@@ -422,13 +422,24 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       },
       viewport: { getMetrics: () => { const metrics = viewMetricsOwner.snapshot(); return { width: timelineScrollOwner(viewportElement).clientWidth, leftInset: fixedColumnsOutsideTimeline(viewportElement) ? 0 : metrics.leftPaneWidth + metrics.frozenPaneWidth }; }, getScrollState: () => ({ left: timelineScrollOwner(viewportElement).scrollLeft, top: viewportElement.scrollTop }), setScrollState: (state) => { if (state.left !== undefined) timelineScrollOwner(viewportElement).scrollLeft = state.left; if (state.top !== undefined) viewportElement.scrollTop = state.top; }, getZoom: timelineNavigation.getZoom, setZoom: (zoom) => { timelineNavigation.setZoom(zoom); timelineGeometry.updateZoom(zoom); } },
       document: { getSnapshot: () => sessionController.snapshot().document, getCanonicalRevision: () => sessionController.snapshot().revision, getDocumentEpoch: () => documentEpoch.current() },
-      render: { requestRender: (reason) => timelineRender(reason), requestOverlayRefresh: (reason) => { rendererHost.dataset.overlayRefreshReason = reason; const timeAxisMetrics = timelineGeometry.timeAxisMetrics; const viewport = timelineScrollOwner(viewportElement); const localScale = timeAxisMetrics.presentationScale * timeAxisMetrics.zoom; const viewportQuery = timelineGeometry.viewportForLocalRange(viewport.scrollLeft / localScale, (viewport.scrollLeft + viewport.clientWidth) / localScale, viewportElement.scrollTop, viewportElement.scrollTop + viewportElement.clientHeight, documentEpoch.current(), selectedAnnotationRef.current ? [selectedAnnotationRef.current] : []); refreshRendererForReason(renderer, host, reason, sessionController.snapshot().document, projection, geometryMaps, timeAxisMetrics, timelineRangeRef.current, selectedCycleRef.current, selectedAnnotationRef.current, selectedEdgeRef.current, edgeCounterMetrics, viewportQuery); edgeCounterResolvePasses += 1; }, waitForRendererIdle: () => renderer.whenIdle().then(() => undefined) },
+      render: { requestRender: (reason) => timelineRender(reason), setSignalTreeFilter: (text, type) => projectionCoordinator.setSignalTreeFilter(text, type), requestOverlayRefresh: (reason) => { rendererHost.dataset.overlayRefreshReason = reason; const timeAxisMetrics = timelineGeometry.timeAxisMetrics; const viewport = timelineScrollOwner(viewportElement); const localScale = timeAxisMetrics.presentationScale * timeAxisMetrics.zoom; const viewportQuery = timelineGeometry.viewportForLocalRange(viewport.scrollLeft / localScale, (viewport.scrollLeft + viewport.clientWidth) / localScale, viewportElement.scrollTop, viewportElement.scrollTop + viewportElement.clientHeight, documentEpoch.current(), selectedAnnotationRef.current ? [selectedAnnotationRef.current] : []); refreshRendererForReason(renderer, host, reason, sessionController.snapshot().document, projection, geometryMaps, timeAxisMetrics, timelineRangeRef.current, selectedCycleRef.current, selectedAnnotationRef.current, selectedEdgeRef.current, edgeCounterMetrics, viewportQuery); edgeCounterResolvePasses += 1; }, waitForRendererIdle: () => renderer.whenIdle().then(() => undefined) },
       lifecycle: { isCurrentEpoch: (epoch) => documentEpoch.isCurrent(epoch) },
     });
     timelineRuntimeRef.current = timelineRuntime;
     const scrollOverlayRefresh = createScrollOverlayRefreshOwner({ getDocumentEpoch: () => documentEpoch.current(), isDocumentEpochCurrent: (epoch) => documentEpoch.isCurrent(epoch), isActive: () => active && rendererHost.isConnected, waitForRendererIdle: () => renderer.whenIdle(), refresh: () => timelineRuntime.refreshOverlays("scroll") });
     timelineRender = (reason) => {
       rendererHost.dataset.timelineRefreshReason = reason;
+      if (reason === "tree-filter") {
+        window = buildViewportWindow(viewportElement, sessionController.snapshot().document.timeline.referenceClock, input.presentation.getPinnedSignalIds());
+        projection = projectionCoordinator.project({ snapshot: sessionController.snapshot(), changeSet: {}, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
+        renderer.update(projection);
+        rendererHost.dataset.viewportStartY = String(window.viewportStartY);
+        rendererHost.dataset.treeFilter = projection.signalTreeFilter;
+        rendererHost.dataset.treeTypeFilter = projection.signalTreeTypeFilter;
+        rendererHost.dataset.treeFilterMatches = String(projection.matchingSignalCount);
+        publishState();
+        return;
+      }
       if (reason === "scroll") {
         syncRulerScroll(rulerElement, viewportElement, timelineGeometry.timeAxisMetrics.zoom);
         cancelAnimationFrame(frame);

@@ -175,6 +175,12 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     // scrollable region itself never extended that far.
     layers.root.style.height = `${Math.max(projection.totalHeight, projection.navigationTotalHeight)}px`;
     layers.root.dataset.revision = String(projection.revision);
+    const presentationHost = layers.root.closest<HTMLElement>(".surface-host");
+    if (presentationHost) {
+      presentationHost.dataset.treeFilter = projection.signalTreeFilter;
+      presentationHost.dataset.treeTypeFilter = projection.signalTreeTypeFilter;
+      presentationHost.dataset.treeFilterMatches = String(projection.matchingSignalCount);
+    }
     if (this.#visibleRowIdsSource !== projection.visibleRowIds) {
       this.#visibleRowIdsSource = projection.visibleRowIds;
     }

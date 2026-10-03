@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import type { RefObject } from "react";
 import type { ViewMetricsOwner } from "./view-metrics.js";
 import type { TimelineViewportRuntime } from "./timeline-viewport-runtime.js";
-import { refreshTreeCollapsedMetadata, refreshTreeFilterPresentation, refreshTreeRovingFocus } from "../minimal-cycle-view-ui.js";
+import { refreshTreeCollapsedMetadata, refreshTreeRovingFocus } from "../minimal-cycle-view-ui.js";
 import { refreshRulerRangeSelection } from "./editor-dom-bridge.js";
 import { applyRendererHostSizing } from "./renderer-host-sizing.js";
 
@@ -15,7 +15,7 @@ export function useEditorDomBridgeEffects(input: {
   readonly timelineRuntimeRef: RefObject<TimelineViewportRuntime | null>;
   readonly viewMetricsOwner: ViewMetricsOwner;
   readonly treeFilter: string;
-  readonly treeTypeFilter: string;
+  readonly treeTypeFilter: "all" | "input" | "output" | "wire" | "comment";
   readonly treePresentationRevision: number;
   readonly collapsedGroupIds: ReadonlySet<string>;
   readonly treeFocusRowIdRef: RefObject<string | undefined>;
@@ -31,8 +31,8 @@ export function useEditorDomBridgeEffects(input: {
 }) {
   const previousCyclesPerTcRef = useRef(input.cyclesPerTc);
   useEffect(() => {
-    refreshTreeFilterPresentation(input.host, input.treeFilter, input.treeTypeFilter);
-  }, [input.treePresentationRevision, input.treeFilter, input.treeTypeFilter, input.collapsedGroupIds]);
+    input.timelineRuntimeRef.current?.setSignalTreeFilter(input.treeFilter, input.treeTypeFilter);
+  }, [input.treeFilter, input.treeTypeFilter, input.timelineRuntimeRef]);
   useEffect(() => {
     refreshTreeCollapsedMetadata(input.host, input.collapsedGroupIds);
   }, [input.treePresentationRevision, input.collapsedGroupIds]);

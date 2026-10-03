@@ -35,6 +35,7 @@ export type TimelineViewportRuntimeContext = {
   };
   readonly render: {
     readonly requestRender: (reason: string) => void;
+    readonly setSignalTreeFilter: (text: string, type: "all" | "input" | "output" | "wire" | "comment") => void;
     readonly requestOverlayRefresh: (reason: string) => void;
     readonly waitForRendererIdle: () => Promise<void>;
   };
@@ -63,6 +64,7 @@ export type TimelineViewportRuntime = Readonly<{
   refreshOverlays: (reason?: string) => void;
   onViewportScroll: () => void;
   onViewportResize: () => void;
+  setSignalTreeFilter: (text: string, type: "all" | "input" | "output" | "wire" | "comment") => void;
 }>;
 
 export const MIN_TIMELINE_ZOOM = 0.5;
@@ -79,6 +81,10 @@ export function createTimelineViewportRuntime(context: TimelineViewportRuntimeCo
   let documentEpoch = context.document.getDocumentEpoch();
   let resizeObserver: ResizeObserver | undefined;
   let zoomPresentationApplied = false;
+  let signalTreeFilterActive = false;
+  let savedTreeScrollTop: number | undefined;
+  let currentSignalTreeFilter = "";
+  let currentSignalTreeTypeFilter: "all" | "input" | "output" | "wire" | "comment" = "all";
 
   const assertActive = () => {
     if (disposed) throw new Error("TimelineViewportRuntime is disposed");
@@ -196,5 +202,32 @@ export function createTimelineViewportRuntime(context: TimelineViewportRuntimeCo
     refreshOverlays: (reason = "overlays") => { assertActive(); if (!attached || !context.lifecycle.isCurrentEpoch(documentEpoch)) return; context.render.requestOverlayRefresh(reason); },
     onViewportScroll: () => { assertActive(); if (!attached || !context.lifecycle.isCurrentEpoch(documentEpoch)) return; context.render.requestRender("scroll"); },
     onViewportResize: () => { render("resize"); },
+    setSignalTreeFilter: (text, type) => {
+      assertActive();
+      if (text === currentSignalTreeFilter && type === currentSignalTreeTypeFilter) return;
+      currentSignalTreeFilter = text;
+      currentSignalTreeTypeFilter = type;
+      const active = text.trim().length > 0 || type !== "all";
+      if (active && !signalTreeFilterActive) savedTreeScrollTop = context.viewport.getScrollState().top;
+      signalTreeFilterActive = active;
+      context.render.setSignalTreeFilter(text, type);
+      if (active) {
+        context.viewport.setScrollState({ top: 0 });
+        render("tree-filter");
+        return;
+      }
+      render("tree-filter");
+      const restoreTop = savedTreeScrollTop;
+      savedTreeScrollTop = undefined;
+      if (restoreTop !== undefined) {
+        const restore = () => {
+          if (!attached || disposed || !context.lifecycle.isCurrentEpoch(documentEpoch)) return;
+          context.viewport.setScrollState({ top: restoreTop });
+          render("scroll");
+        };
+        if (typeof globalThis.requestAnimationFrame === "function") globalThis.requestAnimationFrame(restore);
+        else globalThis.setTimeout(restore, 0);
+      }
+    },
   };
 }

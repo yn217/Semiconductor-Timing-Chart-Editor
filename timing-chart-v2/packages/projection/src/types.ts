@@ -57,6 +57,11 @@ export interface RenderProjection {
   readonly waveSignalIds: readonly SignalId[];
   readonly totalHeight: number;
   readonly navigationTotalHeight: number;
+  /** View-only filter state for the virtualized Left Tree, projected from the complete row model. */
+  readonly signalTreeFilter: string;
+  readonly signalTreeTypeFilter: "all" | "input" | "output" | "wire" | "comment";
+  /** Matching non-comment Signal count across the complete canonical tree, not only mounted rows. */
+  readonly matchingSignalCount: number;
   readonly transform: ViewTransform;
   readonly collapsedGroupIds: readonly GroupId[];
 }
@@ -77,6 +82,8 @@ export interface ProjectionRequest {
   readonly viewport: VirtualizationWindow;
   readonly previous?: RenderProjection;
   readonly collapsedGroupIds?: readonly GroupId[];
+  readonly signalTreeFilter?: string;
+  readonly signalTreeTypeFilter?: RenderProjection["signalTreeTypeFilter"];
 }
 
 export interface ProjectionService {

@@ -19,6 +19,12 @@ export interface RowLayoutResult {
    * Left Tree/Frozen/Timing shows only its own Signals. Always empty when
    * `pane` is omitted, so every existing call site is unaffected. */
   readonly paneExcludedRowIds: ReadonlySet<RowId>;
+  readonly matchingSignalCount: number;
+}
+
+export interface SignalTreeFilter {
+  readonly text: string;
+  readonly type: "all" | "input" | "output" | "wire" | "comment";
 }
 
 export interface RowLayoutSourceIndex {
@@ -87,7 +93,7 @@ export function timeGroupOutlineHeight(document: Pick<CanonicalDocument, "timeGr
   return (cachedTimeGroupHierarchy(document.timeGroups).maxDepth + 1) * 20;
 }
 
-export function calculateRowLayout(document: CanonicalDocument, collapsedGroupIds: ReadonlySet<GroupId> = new Set(), options: { readonly includeHidden?: boolean; readonly reserveHiddenSpace?: boolean; readonly pane?: "upper" | "lower"; readonly sourceIndex?: RowLayoutSourceIndex } = {}): RowLayoutResult {
+export function calculateRowLayout(document: CanonicalDocument, collapsedGroupIds: ReadonlySet<GroupId> = new Set(), options: { readonly includeHidden?: boolean; readonly reserveHiddenSpace?: boolean; readonly pane?: "upper" | "lower"; readonly sourceIndex?: RowLayoutSourceIndex; readonly treeFilter?: SignalTreeFilter } = {}): RowLayoutResult {
   const includeHidden = options.includeHidden ?? true;
   // Signal Split is two viewports over the same canonical Signal sequence.
   // The legacy pane option remains accepted by callers during migration, but
@@ -114,17 +120,38 @@ export function calculateRowLayout(document: CanonicalDocument, collapsedGroupId
   const visibleRows: RowLayoutEntry[] = [];
   const groupHeaders: GroupHeaderLayoutEntry[] = [];
   const paneExcludedRowIds = new Set<RowId>();
+  const normalizedQuery = options.treeFilter?.text.trim().toLocaleLowerCase() ?? "";
+  const filterActive = normalizedQuery.length > 0 || (options.treeFilter?.type ?? "all") !== "all";
+  let matchingSignalCount = 0;
   // Rows start below the ruler outline band (the first Group header sits under the 34px tick band, as before).
   let y = timeGroupOutlineHeight(document);
 
   for (const group of document.signalGroups) {
-    const groupRows = group.rows.filter((rowId) => {
+    const eligibleRows = group.rows.filter((rowId) => {
       const signal = signals.get(rowId);
       return (signal !== undefined && (includeHidden || signal.display.visible !== false)) || spacers.has(rowId);
     });
+    const matchesFilter = (rowId: RowId) => {
+      const signal = signals.get(rowId);
+      const spacer = spacers.get(rowId);
+      const kind = signal?.type === "commentRow" ? "comment" : spacer ? "spacer" : "timing";
+      const role = signal?.role;
+      const type = options.treeFilter?.type ?? "all";
+      const typeMatch = !filterActive || type === "all" || (type === "comment" ? kind === "comment" : type === "wire" ? role === "internal" : role === type);
+      if (!typeMatch) return false;
+      const textMatch = !filterActive || normalizedQuery.length === 0 || [signal?.display.name,
+        signal ? [...signal.source.instancePath, signal.source.signalName].join(".") : "",
+        signal?.source.instancePath.join("."), role, group.name].filter(Boolean).join(" ").toLocaleLowerCase().includes(normalizedQuery);
+      if (textMatch && signal && signal.type !== "commentRow") matchingSignalCount += 1;
+      return textMatch;
+    };
+    const groupRows = eligibleRows.filter(matchesFilter);
+    if (filterActive && groupRows.length === 0) continue;
     y += group.spacingBefore ?? 0;
     const headerRowId = `${group.id}:header` as RowLayoutEntry["rowId"];
-    const collapsed = collapsedGroupIds.has(group.id);
+    // A search reveals matches inside collapsed groups without changing the
+    // user's persisted collapse state; clearing the filter restores it.
+    const collapsed = !filterActive && collapsedGroupIds.has(group.id);
     const headerHeight = group.style?.showHeader === false ? 0 : 32;
     groupHeaders.push({ rowId: headerRowId, groupId: group.id, groupName: group.name, ...(group.style === undefined ? {} : { groupStyle: group.style }), collapsed, y, height: headerHeight });
     y += headerHeight;
@@ -165,7 +192,7 @@ export function calculateRowLayout(document: CanonicalDocument, collapsedGroupId
     }
     y += group.spacingAfter ?? 0;
   }
-  return { canonicalRowIds, navigationRows, visibleRows, groupHeaders, totalHeight: y, paneExcludedRowIds };
+  return { canonicalRowIds, navigationRows, visibleRows, groupHeaders, totalHeight: y, paneExcludedRowIds, matchingSignalCount };
 }
 
 export function signalEntry(signal: Signal | undefined, groupId: RowLayoutEntry["groupId"], groupName: string, groupStyle: RowLayoutEntry["groupStyle"], y: number, height: number, rowId: RowId): RowLayoutEntry | undefined {
