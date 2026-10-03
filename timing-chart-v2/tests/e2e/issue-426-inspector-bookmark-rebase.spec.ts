@@ -50,6 +50,7 @@ test("Bottom Bookmark draft rebases unrelated Inspector updates and requires a c
   await page.getByLabel("Timeline range start").fill("3");
   await page.getByLabel("Timeline range end").fill("4");
   await page.getByRole("button", { name: "Add marker" }).click();
+  await page.getByRole("button", { name: "Open Bookmarks panel", exact: true }).click();
   const panel = page.getByTestId("bookmark-editor-panel");
   await panel.getByTestId(/bookmark-row-/).first().click();
   const inspector = page.getByTestId("inspector");
