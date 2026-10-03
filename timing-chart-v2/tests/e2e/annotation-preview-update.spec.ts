@@ -31,6 +31,7 @@ test("Annotation Preview Update reflects draft Label/Color on the live overlay w
 
   await page.getByTestId("annotation-preview-action").click();
   await expect(label).toHaveText("PREVIEW LABEL");
+  await expect(owner).toHaveAttribute("aria-label", "text: PREVIEW LABEL");
   await expect(owner).toHaveCSS("--annotation-color", "#00cc44");
   await expect(page.getByTestId("annotation-preview-status")).toContainText("canonical data unchanged");
   await expect(host).toHaveAttribute("data-canonical-revision", revisionBefore!);
@@ -39,6 +40,7 @@ test("Annotation Preview Update reflects draft Label/Color on the live overlay w
   // Cancel reverts the preview back to the real canonical rendering.
   await page.getByTestId("cancel-inspector-draft").click();
   await expect(label).toHaveText("text 2");
+  await expect(owner).toHaveAttribute("aria-label", "text: text 2");
   await expect(owner).toHaveCSS("--annotation-color", "#d04a36");
 });
 

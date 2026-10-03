@@ -352,6 +352,10 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     }
     for (const primitive of primitives) {
       const signature = JSON.stringify(primitive);
+      // The signature covers the full semantic overlay projection, including
+      // the stable ID, type, label, accessibility text, and kind metadata.
+      // Unchanged owners need no identity/style resynchronization on scroll.
+      if (this.#overlaySignatures.get(primitive.id) === signature) continue;
       let owner = this.#overlayOwners.get(primitive.id);
       if (!owner) {
         owner = element(layers.root.ownerDocument, "div", "annotation-owner");
@@ -361,19 +365,6 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         this.#overlayOwners.set(primitive.id, owner);
         layers.overlays.append(owner);
       }
-      // The Canonical Annotation ID is the sole identity authority. Keep
-      // semantic identity and the accessible root contract synchronized on
-      // every projection pass, before the signature fast-path: an overlay
-      // owner may be recycled by the renderer/DOM without being recreated.
-      owner.dataset.annotationId = primitive.id;
-      owner.setAttribute("role", "button");
-      owner.tabIndex = 0;
-      // Keep all identity-bearing metadata current even when the visual body
-      // is unchanged. Virtualized callers may recycle an owner between
-      // projections, so accessibility and kind metadata must not depend on
-      // the visual signature fast path below.
-      syncOverlayIdentity(owner, primitive);
-      if (this.#overlaySignatures.get(primitive.id) === signature) continue;
       this.#overlaySignatures.set(primitive.id, signature);
       renderOverlay(owner, primitive);
       changes += 1;
