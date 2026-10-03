@@ -6,6 +6,7 @@ import type { CanonicalDocument, EnumDefinition, ValueSignal } from "@timing-cha
 import { DOCUMENT_RESOURCE_BUDGET, parseJsonInput } from "@timing-chart-v2/schema";
 import type { SignalEditorCommandActions } from "./application/editor-surface-command-controller.js";
 import { defaultEventValue, EventRow, QuickValues, ValueEditorControl } from "./event-table-components.js";
+import { canonicalValueFromEditor } from "./runtime/value-editor-policy.js";
 import { buildEventTableIndex } from "./runtime/event-table-index.js";
 import { reorderTransitionBlock, transitionIdentity } from "./runtime/transition-reorder.js";
 import { registerActiveGestureCancel } from "./runtime/active-gesture-cancellation.js";
@@ -99,7 +100,7 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
   };
   const nextStart = indexed.firstFree() ?? Math.max(0, cycleCount - 1);
   const emitValue = (nextValues: readonly ValueSignal["values"][number][]): CommandResult => commands.replaceValues(signal.id, nextValues);
-  const addRow = () => commands.updateValue(signal.id, nextStart, value);
+  const addRow = () => commands.updateValue(signal.id, nextStart, canonicalValueFromEditor(signal, enumDefinition, value));
   // Row Actions compaction follow-up: the toolbar's Duplicate (targets
   // `selected`) and each row's own Duplicate icon (targets that row
   // directly) are the same operation parametrized over which change point
@@ -169,7 +170,7 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
   // `signal.updateValue` command path.
   const previewEnd = indexed.nextEnd(start);
   const addAndContinue = () => {
-    commands.updateValue(signal.id, start, value, comment);
+    commands.updateValue(signal.id, start, canonicalValueFromEditor(signal, enumDefinition, value), comment);
     // Auto-advance Start to the next free cycle (excluding the one just
     // committed) so continuous entry doesn't need manual arithmetic each
     // time -- Value is kept (commonly the next transition reuses it),
@@ -282,7 +283,7 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
     <div className="event-panels">
       <form className="transition-form-panel" onSubmit={(event) => {
         event.preventDefault();
-        commands.updateValue(signal.id, start, value, comment);
+        commands.updateValue(signal.id, start, canonicalValueFromEditor(signal, enumDefinition, value), comment);
       }}>
         <h2 data-testid="transition-form-mode" data-mode={signal.values.some((change) => change.start === start) ? "edit" : "add"}>{signal.values.some((change) => change.start === start) ? `Editing transition at cycle ${start}` : "Add new transition"}</h2>
         {/* Density fix (#402/#426 follow-up): Start/Value/Comment used to

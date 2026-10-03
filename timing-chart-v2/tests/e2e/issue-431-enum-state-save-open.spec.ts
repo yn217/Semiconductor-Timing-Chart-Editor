@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 import { readWave } from "./wave-probe.js";
-import { documentState, expectViewOnly } from "./view-only.js";
+import { documentState } from "./view-only.js";
 
 /**
  * #431 section 11 (Enum / State): a State Signal with an Enum definition keeps numeric source values, the symbolic mapping, the Signal's
@@ -52,9 +52,14 @@ for (const size of sizes) {
     await transitionRow.getByRole("button", { name: "Edit transition at cycle 4" }).click();
     const enumValue = transitionRow.getByLabel("Value 4");
     await expect(enumValue).toHaveAttribute("list", "event-row-value-options-4");
-    const enumSuggestions = page.locator("#event-row-value-options-4 option");
-    await expect(enumSuggestions).toHaveCount(4); // 0/1/2 from the Enum plus the existing unmapped 7.
+    const enumSuggestions = page.locator("#event-row-value-options-4");
+    // Enum options and existing raw values coexist with the State editor's
+    // common free-domain suggestions; verify semantic candidates, not the
+    // total datalist size.
+    await expect(enumSuggestions.locator("option[value='0']")).toHaveText("IDLE");
+    await expect(enumSuggestions.locator("option[value='1']")).toHaveText("RUN");
     await expect(page.locator("#event-row-value-options-4 option[value='2']")).toHaveText("DONE");
+    await expect(enumSuggestions.locator("option[value='7']")).toHaveText("7");
     await enumValue.fill("2");
     await transitionRow.getByRole("button", { name: "Save", exact: true }).click();
     await expect(surface).toHaveAttribute("data-editor-idle", "true");
@@ -73,7 +78,10 @@ for (const size of sizes) {
     const savedState = savedDocument.signals.find((signal: { id: string }) => signal.id === stateId);
     expect(savedState.enumId).toBe("enum_fsm");
     expect(savedState.values.map((change: { start: number; value: unknown }) => [change.start, change.value])).toEqual([[0, 0], [4, 2], [8, 2], [12, 7]]);
-    await expectViewOnly(page, before, "Save is not a document mutation");
+    const afterSave = await documentState(page);
+    expect(afterSave.revision, "Save does not change Canonical").toBe(before.revision);
+    expect(afterSave.history, "Save does not add a History entry").toBe(before.history);
+    await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
 
     // New -> Open the saved bytes: identical semantics and identical rendered labels.
     await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).first().click();

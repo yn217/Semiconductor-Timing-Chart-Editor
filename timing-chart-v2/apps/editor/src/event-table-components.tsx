@@ -3,7 +3,7 @@ import { quickValueLiteral, quickValueOptions, type EnumDefinition, type SignalV
 import { formatBusValueAtCycle, formatSignalValueChange } from "./signal-value-presentation.js";
 import type { SignalEditorCommandActions } from "./application/editor-surface-command-controller.js";
 import { RibbonIcon } from "./ribbon-icon.js";
-import { resolveValueEditorPolicy } from "./runtime/value-editor-policy.js";
+import { canonicalValueFromEditor, resolveValueEditorPolicy } from "./runtime/value-editor-policy.js";
 import { reconcileExternalDraft } from "./runtime/external-draft-reconciliation.js";
 
 // Value Editor Policy pass: the ONE control used everywhere a Signal's
@@ -110,7 +110,7 @@ export function EventRow({ signal, enumDefinition, change, end, index, selected,
   return <form className={`event-row${selected ? " selected" : ""}${editing ? " editing" : ""}`} role="row" data-event-id={change.id ?? `start-${change.start}`} data-event-start={change.start} draggable={false} onDragEnter={onDragOver} onDragOver={onDragOver} onDropCapture={onDrop} onDrop={onDrop} onDragEnd={onDragEnd} onClick={() => onSelect(change.start)} onSubmit={(event) => {
     event.preventDefault();
     if (!hasChanges || externalConflict) return;
-    const result = commands.replaceValue(signal.id, change.start, start, value, comment);
+    const result = commands.replaceValue(signal.id, change.start, start, canonicalValueFromEditor(signal, enumDefinition, value), comment);
     // Only leave edit mode on a command the planner actually accepted --
     // a rejected Draft (e.g. a duplicate change point) stays open and
     // editable so the Problems banner's guidance can be acted on directly,

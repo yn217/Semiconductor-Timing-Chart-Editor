@@ -1,4 +1,4 @@
-import { quickValueOptions, type EnumDefinition, type ValueSignal } from "@timing-chart-v2/schema";
+import { quickValueOptions, type EnumDefinition, type SignalValueChange, type ValueSignal } from "@timing-chart-v2/schema";
 import { signalTypeDefinition } from "./signal-type-registry.js";
 
 // Value Editor Policy (VALUE type-awareness pass): the ONE place that
@@ -93,4 +93,10 @@ export function resolveValueEditorPolicy(signal: ValueSignal, enumDefinition?: E
   // `quickValueLiteral`'s translation, not literal candidate values a
   // datalist should offer as-is).
   return { kind: "combo", options: [{ value: "X", label: "X (High-Z unknown)" }, { value: "Z", label: "Z (High-Z)" }], placeholder: signal.displayFormat === "binary" ? "e.g. 00000000" : signal.displayFormat === "symbolic" ? "e.g. VALUE" : "e.g. 00" };
+}
+
+/** Restore the canonical numeric/string type when an editor draft matches a defined Enum value. */
+export function canonicalValueFromEditor(signal: ValueSignal, enumDefinition: EnumDefinition | undefined, input: string): SignalValueChange["value"] {
+  if (signal.type !== "state" || enumDefinition === undefined) return input;
+  return enumDefinition.entries.find((entry) => String(entry.value) === input)?.value ?? input;
 }
