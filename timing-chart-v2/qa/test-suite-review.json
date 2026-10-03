@@ -109,6 +109,23 @@
       "replacementTest": null
     },
     {
+      "file": "annotation-multiline-and-export-shapes.spec.ts",
+      "domain": "annotation-export",
+      "originIssue": null,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Multi-line Annotation text and export shapes keep their semantic content through render and export.",
+      "duplicateGroup": "annotation-export",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
       "file": "annotation-preview-update.spec.ts",
       "domain": "annotation-preview-apply-lifecycle",
       "originIssue": null,
@@ -123,6 +140,23 @@
       ],
       "decision": "KEEP",
       "reason": "This is the Annotation-specific visible Preview/Cancel/selection-change/Apply boundary; lower-level draft tests do not prove the live overlay and canonical command outcome stay synchronized.",
+      "replacementTest": null
+    },
+    {
+      "file": "annotation-snap.spec.ts",
+      "domain": "annotation-snap",
+      "originIssue": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Annotation drag snaps to semantic cycle boundaries.",
+      "duplicateGroup": "annotation-snap",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
       "replacementTest": null
     },
     {
@@ -433,6 +467,176 @@
       "replacementTest": null
     },
     {
+      "file": "clockless-open-readiness.spec.ts",
+      "domain": "clockless-axis",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A clockless document reaches the ready phase through Open and keeps its time axis.",
+      "duplicateGroup": "clockless-axis",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "full-gui.spec.ts",
+      "domain": "full-gui-journey",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Whole-GUI authoring smoke journey across ribbon, tree, canvas and bottom editor.",
+      "duplicateGroup": "full-gui-journey",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "group-clipboard-parity.spec.ts",
+      "domain": "group-clipboard",
+      "originIssue": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Group copy/paste preserves semantic contents and produces one history step.",
+      "duplicateGroup": "group-clipboard",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-1004-group-hierarchy.spec.ts",
+      "domain": "cycle-tree-group-hierarchy",
+      "originIssue": 1004,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Cycle left-tree Group headers read as sections distinct from Signal rows, view-only.",
+      "duplicateGroup": "cycle-tree-group-hierarchy",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-1007-transaction-add-menu.spec.ts",
+      "domain": "transaction-add-menu",
+      "originIssue": 1007,
+      "type": "ACCESSIBILITY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Transaction Add menu offers Transaction/Group with mouse, keyboard, Esc, outside click and focus return; Cycle Add menu unchanged.",
+      "duplicateGroup": "transaction-add-menu",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-208-open-epoch-coherence.spec.ts",
+      "domain": "open-epoch",
+      "originIssue": 208,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A stale Open epoch never publishes into the current document.",
+      "duplicateGroup": "open-epoch",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-426-event-selection-scope.spec.ts",
+      "domain": "event-selection",
+      "originIssue": 426,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Event selection stays scoped to its Signal.",
+      "duplicateGroup": "event-selection",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-426-inspector-bookmark-rebase.spec.ts",
+      "domain": "inspector-bookmark",
+      "originIssue": 426,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Inspector Bookmark edits rebase onto the current document.",
+      "duplicateGroup": "inspector-bookmark",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-440-mode-context-coherence.spec.ts",
+      "domain": "mode-context",
+      "originIssue": 440,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Mode switches keep Inspector/Bottom context coherent with the selection.",
+      "duplicateGroup": "mode-context",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-440-pinned-bookmark-transaction.spec.ts",
+      "domain": "pinned-bookmark",
+      "originIssue": 440,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Pinned Bookmarks and Transactions stay reachable across scroll.",
+      "duplicateGroup": "pinned-bookmark",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
       "file": "issue-441-ribbon-label-integrity.spec.ts",
       "domain": "ribbon-responsive-label-integrity",
       "originIssue": 441,
@@ -447,6 +651,23 @@
       ],
       "decision": "KEEP",
       "reason": "Viewport width, mode-specific Ribbon composition and actual browser text layout are part of the visual contract. Each viewport case traverses all three modes and all tabs in one app session; the separate mode-launched copies were consolidated without dropping a width or mode combination. The full check takes about 26 seconds per viewport, so it belongs in the visual profile rather than every PR journey.",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-456-sized-bus-literal.spec.ts",
+      "domain": "bus-literal",
+      "originIssue": 456,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "FAST",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Sized bus literals parse to the declared width.",
+      "duplicateGroup": "bus-literal",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
       "replacementTest": null
     },
     {
@@ -486,6 +707,40 @@
       "replacementTest": null
     },
     {
+      "file": "issue-573-combined-single-hscroll.spec.ts",
+      "domain": "combined-hscroll",
+      "originIssue": 573,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Combined has exactly one truthful horizontal scroll owner (known defect, test.fail until fixed).",
+      "duplicateGroup": "combined-hscroll",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-593-inflight-mode-switch.spec.ts",
+      "domain": "mode-workspace-isolation",
+      "originIssue": 593,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Mode switches during in-flight work leave no stale owner, chrome or width inheritance.",
+      "duplicateGroup": "mode-workspace-isolation",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
       "file": "issue-593-mode-layout-isolation.spec.ts",
       "domain": "mode-layout-owner-isolation",
       "originIssue": 593,
@@ -501,6 +756,23 @@
       ],
       "decision": "KEEP",
       "reason": "This directly guards the Issue's mode-owner isolation contract at both accepted viewport sizes using measured region geometry. It is the focused visual guard needed before any broader CSS ownership extraction.",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-593-mode-workspace-acceptance.spec.ts",
+      "domain": "mode-workspace-isolation",
+      "originIssue": 593,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Mode workspaces stay independent across round trips and resize.",
+      "duplicateGroup": "mode-workspace-isolation",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
       "replacementTest": null
     },
     {
@@ -1195,6 +1467,23 @@
       "replacementTest": null
     },
     {
+      "file": "issue-726-transaction-lane-visual-hierarchy.spec.ts",
+      "domain": "transaction-lane-hierarchy",
+      "originIssue": 726,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Transaction lane/group hierarchy is visually distinct.",
+      "duplicateGroup": "transaction-lane-hierarchy",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
       "file": "issue-727-minimap-affordance.spec.ts",
       "domain": "minimap-navigation-affordance",
       "originIssue": 727,
@@ -1246,6 +1535,57 @@
       "replacementTest": null
     },
     {
+      "file": "issue-738-hit-mapping-after-scale-scroll.spec.ts",
+      "domain": "ruler-hit-mapping",
+      "originIssue": 738,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Ruler hit mapping stays correct after scale and scroll.",
+      "duplicateGroup": "ruler-hit-mapping",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-738-native-thumb-ruler-hit.spec.ts",
+      "domain": "ruler-hit-mapping",
+      "originIssue": 738,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Ruler hit mapping stays correct while the native scrollbar thumb is dragged.",
+      "duplicateGroup": "ruler-hit-mapping",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-738-ruler-hit-area.spec.ts",
+      "domain": "ruler-hit-mapping",
+      "originIssue": 738,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Ruler hit area maps pointer X to the source cycle.",
+      "duplicateGroup": "ruler-hit-mapping",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
       "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
       "domain": "ruler-origin-after-rebase-stress",
       "originIssue": 738,
@@ -1294,6 +1634,23 @@
       ],
       "decision": "KEEP",
       "reason": "It complements real-input scroll coverage with deterministic repeatable window and renderer combinations. Twenty rebases per case are stress workload, so keep it in the automated nightly tier; exact runtime is pending measurement.",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-738-zoom-window-coordinate.spec.ts",
+      "domain": "ruler-hit-mapping",
+      "originIssue": 738,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Zoom keeps the ruler coordinate window consistent.",
+      "duplicateGroup": "ruler-hit-mapping",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
       "replacementTest": null
     },
     {
@@ -1803,6 +2160,42 @@
       "replacementTest": null
     },
     {
+      "file": "issue-777-current-samples-interaction.spec.ts",
+      "domain": "current-samples",
+      "originIssue": 777,
+      "type": "USER_JOURNEY",
+      "costClass": "VERY_HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Every current sample survives edit, Save, reopen, target sync and a mode walk at both viewports.",
+      "duplicateGroup": "current-samples",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "profiles": [
+        "integration",
+        "nightly"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-777-current-samples-open-save-roundtrip.spec.ts",
+      "domain": "current-samples",
+      "originIssue": 777,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "VERY_HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Every current sample round-trips Open/Save semantically.",
+      "duplicateGroup": "current-samples",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "profiles": [
+        "integration",
+        "nightly"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
       "file": "issue-777-current-v2-samples-acceptance.spec.ts",
       "domain": "current-v2-sample-pack-acceptance",
       "originIssue": 777,
@@ -1818,6 +2211,771 @@
       ],
       "decision": "KEEP",
       "reason": "The 10 cases intentionally cover a four-fixture production import/persistence matrix, multiple viewports, TC scale, and mode round-trips. This is release/integration acceptance, not a routine PR journey; keep the full Save/Open verification automated rather than replacing it with schema-only tests.",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-787-canvas-lifecycle.spec.ts",
+      "domain": "canvas-lifecycle",
+      "originIssue": 787,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Canvas wave owners are created and released with their rows.",
+      "duplicateGroup": "canvas-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-789-recent-storage-bound.spec.ts",
+      "domain": "recent-documents",
+      "originIssue": 789,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Recent-document storage stays bounded.",
+      "duplicateGroup": "recent-documents",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-797-group-opacity-acceptance.spec.ts",
+      "domain": "group-style",
+      "originIssue": 797,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Group opacity/background semantics render as authored.",
+      "duplicateGroup": "group-style",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-798-menu-exclusivity.spec.ts",
+      "domain": "menu-exclusivity",
+      "originIssue": 798,
+      "type": "ACCESSIBILITY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Only one peer menu surface is open at a time.",
+      "duplicateGroup": "menu-exclusivity",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-799-orphan-divider.spec.ts",
+      "domain": "divider-layout",
+      "originIssue": 799,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "No orphan divider remains in the ribbon/panels.",
+      "duplicateGroup": "divider-layout",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-836-hardware-hierarchy-performance.spec.ts",
+      "domain": "hierarchy-performance",
+      "originIssue": 836,
+      "type": "PERFORMANCE",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Hardware hierarchy fixture opens and scrolls within budget.",
+      "duplicateGroup": "hierarchy-performance",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "profiles": [
+        "performance"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-838-visible-hierarchy-copy-selection.spec.ts",
+      "domain": "hierarchy-copy",
+      "originIssue": 838,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Copy selection over a visible hierarchy copies the visible items.",
+      "duplicateGroup": "hierarchy-copy",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-839-large-showcase-clock-phase.spec.ts",
+      "domain": "large-showcase",
+      "originIssue": 839,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Large showcase clock/phase editing journey.",
+      "duplicateGroup": "large-showcase",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-840-stale-cycle-context.spec.ts",
+      "domain": "mode-context",
+      "originIssue": 840,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Cycle -> Transaction does not keep a stale Cycle context.",
+      "duplicateGroup": "mode-context",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-841-legend-bounds.spec.ts",
+      "domain": "legend-bounds",
+      "originIssue": 841,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Legend stays within the document bounds.",
+      "duplicateGroup": "legend-bounds",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-842-clean-event-row-rebase.spec.ts",
+      "domain": "event-rebase",
+      "originIssue": 842,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Clean Event rows rebase after edits.",
+      "duplicateGroup": "event-rebase",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-847-inflight-mode-switch.spec.ts",
+      "domain": "wave-prefetch-lifecycle",
+      "originIssue": 847,
+      "type": "PERFORMANCE",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "An in-flight Cycle prefetch is abandoned by Transaction and rebuilt on return.",
+      "duplicateGroup": "wave-prefetch-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-847-prefetch-mode-roundtrip.spec.ts",
+      "domain": "wave-prefetch-lifecycle",
+      "originIssue": 847,
+      "type": "PERFORMANCE",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Cycle -> Transaction -> Cycle rebuilds waveform prefetch.",
+      "duplicateGroup": "wave-prefetch-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-847-vertical-scroll-user-input.spec.ts",
+      "domain": "vertical-scroll-ownership",
+      "originIssue": 847,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Real wheel scrolling keeps rows, Annotations and selection coherent.",
+      "duplicateGroup": "vertical-scroll-ownership",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-847-vertical-scroll-wave-ownership.spec.ts",
+      "domain": "vertical-scroll-ownership",
+      "originIssue": 847,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Visible Signal rows keep matching waveform owners during vertical scroll.",
+      "duplicateGroup": "vertical-scroll-ownership",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-856-bottom-annotation-scroll-cost.spec.ts",
+      "domain": "bottom-scroll-cost",
+      "originIssue": 856,
+      "type": "PERFORMANCE",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Bottom Annotation list scroll cost stays bounded.",
+      "duplicateGroup": "bottom-scroll-cost",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "profiles": [
+        "performance"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-856-bottom-event-table-scroll-cost.spec.ts",
+      "domain": "bottom-scroll-cost",
+      "originIssue": 856,
+      "type": "PERFORMANCE",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Bottom Event table scroll cost stays bounded.",
+      "duplicateGroup": "bottom-scroll-cost",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "profiles": [
+        "performance"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-856-bottom-transaction-scroll-cost.spec.ts",
+      "domain": "bottom-scroll-cost",
+      "originIssue": 856,
+      "type": "PERFORMANCE",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Bottom Transaction table scroll cost stays bounded.",
+      "duplicateGroup": "bottom-scroll-cost",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "profiles": [
+        "performance"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-856-event-row-reuse.spec.ts",
+      "domain": "bottom-scroll-cost",
+      "originIssue": 856,
+      "type": "PERFORMANCE",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Event rows are reused while scrolling.",
+      "duplicateGroup": "bottom-scroll-cost",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-863-annotation-scroll-cost.spec.ts",
+      "domain": "annotation-scroll-cost",
+      "originIssue": 863,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "20k Annotation horizontal scroll: bounded mounted owners, frame/Long Task evidence.",
+      "duplicateGroup": "annotation-scroll-cost",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "profiles": [
+        "performance"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-863-viewport-cache-invalidation.spec.ts",
+      "domain": "annotation-scroll-cost",
+      "originIssue": 863,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "VERY_HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Viewport projection reuse never leaves stale Annotation presentation (scroll/zoom/delete/replace/fold/100k).",
+      "duplicateGroup": "annotation-scroll-cost",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-864-bulk-clipboard-one-history.spec.ts",
+      "domain": "bulk-clipboard",
+      "originIssue": 864,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Bulk clipboard operations produce one history step.",
+      "duplicateGroup": "bulk-clipboard",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-869-minimap-single-edit-incremental.spec.ts",
+      "domain": "minimap-incremental",
+      "originIssue": 869,
+      "type": "PERFORMANCE",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A single edit updates the MiniMap incrementally.",
+      "duplicateGroup": "minimap-incremental",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "profiles": [
+        "performance"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-869-minimap-transaction-incremental.spec.ts",
+      "domain": "minimap-incremental",
+      "originIssue": 869,
+      "type": "PERFORMANCE",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A Transaction edit updates the MiniMap incrementally.",
+      "duplicateGroup": "minimap-incremental",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "profiles": [
+        "performance"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-890-annotation-signal-picker-10k.spec.ts",
+      "domain": "annotation-picker",
+      "originIssue": 890,
+      "type": "PERFORMANCE",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Annotation Signal picker stays bounded with 10k Signals.",
+      "duplicateGroup": "annotation-picker",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "profiles": [
+        "performance"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-895-canvas-wave-semantics.spec.ts",
+      "domain": "canvas-wave",
+      "originIssue": 895,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Canvas waves keep the same semantics as SVG waves.",
+      "duplicateGroup": "canvas-wave",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-896-implicit-reference-window.spec.ts",
+      "domain": "reference-window",
+      "originIssue": 896,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Implicit reference clock window is derived correctly.",
+      "duplicateGroup": "reference-window",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-897-context-menu-target.spec.ts",
+      "domain": "context-menu",
+      "originIssue": 897,
+      "type": "ACCESSIBILITY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Context menu acts on the clicked target.",
+      "duplicateGroup": "context-menu",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-898-signal-visibility-overlay.spec.ts",
+      "domain": "signal-visibility",
+      "originIssue": 898,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Hiding a Signal also hides its overlays.",
+      "duplicateGroup": "signal-visibility",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-900-spacer-presentation.spec.ts",
+      "domain": "spacer",
+      "originIssue": 900,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Spacer rows present as authored.",
+      "duplicateGroup": "spacer",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-901-ruler-row-origin.spec.ts",
+      "domain": "ruler-hit-mapping",
+      "originIssue": 901,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Ruler/row origin stays aligned.",
+      "duplicateGroup": "ruler-hit-mapping",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-933-transaction-identity-lifecycle.spec.ts",
+      "domain": "transaction-identity",
+      "originIssue": 933,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Transaction DOM identity survives edits and scroll.",
+      "duplicateGroup": "transaction-identity",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-933-transaction-identity-long-range.spec.ts",
+      "domain": "transaction-identity",
+      "originIssue": 933,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Transaction identity holds over a long range.",
+      "duplicateGroup": "transaction-identity",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-933-transaction-lane-identity.spec.ts",
+      "domain": "transaction-identity",
+      "originIssue": 933,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Transaction lane identity is stable.",
+      "duplicateGroup": "transaction-identity",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-936-folded-windowed-annotation.spec.ts",
+      "domain": "folded-annotation-anchor",
+      "originIssue": 936,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Folded/windowed Annotation anchors land on their Ruler tick.",
+      "duplicateGroup": "folded-annotation-anchor",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-936-multi-fold-anchor-types.spec.ts",
+      "domain": "folded-annotation-anchor",
+      "originIssue": 936,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Multiple folds keep every anchor type aligned.",
+      "duplicateGroup": "folded-annotation-anchor",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-937-remaining-closure.spec.ts",
+      "domain": "time-axis-coordinate-matrix",
+      "originIssue": 937,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Clockless axis, Inspector resize, Phase boundaries and tiny Transaction items stay on the Ruler.",
+      "duplicateGroup": "time-axis-coordinate-matrix",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-937-signal-split-coordinate-matrix.spec.ts",
+      "domain": "time-axis-coordinate-matrix",
+      "originIssue": 937,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Signal Split panes share the Ruler coordinate system.",
+      "duplicateGroup": "time-axis-coordinate-matrix",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-937-time-axis-coordinate-matrix.spec.ts",
+      "domain": "time-axis-coordinate-matrix",
+      "originIssue": 937,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Cycle Ruler/Grid/Wave coordinates agree across zoom, scroll, resize, folds.",
+      "duplicateGroup": "time-axis-coordinate-matrix",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-937-transaction-coordinate-matrix.spec.ts",
+      "domain": "time-axis-coordinate-matrix",
+      "originIssue": 937,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Transaction bars and Bookmarks stay on the Ruler.",
+      "duplicateGroup": "time-axis-coordinate-matrix",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-945-transaction-scrollbar-interactions.spec.ts",
+      "domain": "transaction-scrollbar",
+      "originIssue": 945,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Transaction scrollbar interactions move time.",
+      "duplicateGroup": "transaction-scrollbar",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-945-transaction-scrollbar-stability.spec.ts",
+      "domain": "transaction-scrollbar",
+      "originIssue": 945,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Transaction scrollbar stays stable across edits.",
+      "duplicateGroup": "transaction-scrollbar",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "layout-inspector.spec.ts",
+      "domain": "inspector-layout",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Inspector layout and resize behave.",
+      "duplicateGroup": "inspector-layout",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "minimap-overview-performance.spec.ts",
+      "domain": "minimap-overview",
+      "originIssue": null,
+      "type": "PERFORMANCE",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "MiniMap overview builds within budget.",
+      "duplicateGroup": "minimap-overview",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "profiles": [
+        "performance"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "review-workflow.spec.ts",
+      "domain": "review-workflow",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Review workflow checks refresh.",
+      "duplicateGroup": "review-workflow",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
       "replacementTest": null
     },
     {
@@ -1839,6 +2997,23 @@
       "replacementTest": null
     },
     {
+      "file": "transaction-add-below-selected.spec.ts",
+      "domain": "transaction-add",
+      "originIssue": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Transaction add inserts below the selected one.",
+      "duplicateGroup": "transaction-add",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
       "file": "transaction-bottom-draft.contract.spec.ts",
       "domain": "transaction-bottom-draft-edit-lifecycle",
       "originIssue": 725,
@@ -1854,6 +3029,108 @@
       ],
       "decision": "KEEP",
       "reason": "One production journey protects visible dirty-state feedback and Escape cancellation together: computed styling, Draft marker, original value, selected identity, and unchanged History are independently asserted. Keeping it in both PR and visual profiles removes a duplicate page startup without dropping either gate.",
+      "replacementTest": null
+    },
+    {
+      "file": "transaction-lane-labels-visible.spec.ts",
+      "domain": "transaction-lane",
+      "originIssue": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Lane labels stay visible.",
+      "duplicateGroup": "transaction-lane",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "transaction-lane-scaling.spec.ts",
+      "domain": "transaction-lane",
+      "originIssue": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Lane scaling follows zoom.",
+      "duplicateGroup": "transaction-lane",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "transaction-table-name-column-alignment.spec.ts",
+      "domain": "transaction-table",
+      "originIssue": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Name column stays aligned.",
+      "duplicateGroup": "transaction-table",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "transaction-tree-group-new-transaction.spec.ts",
+      "domain": "transaction-add",
+      "originIssue": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "New Transaction inside a Group lands in that Group.",
+      "duplicateGroup": "transaction-add",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "transaction-tree-more-menu-visible.spec.ts",
+      "domain": "transaction-tree-menu",
+      "originIssue": null,
+      "type": "ACCESSIBILITY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Transaction tree More menu is visible and unclipped.",
+      "duplicateGroup": "transaction-tree-menu",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "wavedrom-shared-definitions.spec.ts",
+      "domain": "wavedrom-definitions",
+      "originIssue": null,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "WaveDrom shared definitions are emitted once.",
+      "duplicateGroup": "wavedrom-definitions",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
       "replacementTest": null
     }
   ],
@@ -14090,7 +15367,7 @@
     },
     {
       "file": "view-ribbon-slot.spec.ts",
-      "title": "View Panels toggle buttons show a selected border/color accent, not a persistent blue-tile fill (#389)",
+      "title": "View Panels toggle buttons look like other ribbon buttons: accent icon only, no tile border/fill/bar (#389)",
       "domain": "view-ribbon-panel-toggle-affordance",
       "originIssue": 389,
       "type": "VISUAL_ACCEPTANCE",
@@ -14429,7 +15706,9 @@
       "primaryContract": "A delayed Annotation import that becomes stale after a Signal edit must not replace that edit or change Canonical revision, History, or Dirty; the user receives a stale-import diagnostic.",
       "duplicateGroup": "async-import-stale-publication",
       "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "profiles": ["pr"],
+      "profiles": [
+        "pr"
+      ],
       "decision": "KEEP",
       "reason": "The controlled delayed read exercises the production file-import journey and the stale completion boundary; unit validation cannot prove current UI/document ownership or visible recovery feedback.",
       "replacementTest": null
@@ -14445,7 +15724,9 @@
       "primaryContract": "A delayed Event import remains bound to its original stable Signal target; changing the active Signal editor cancels the import without changing either Signal's events, Canonical revision, History, or Dirty.",
       "duplicateGroup": "async-import-stale-publication",
       "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "profiles": ["pr"],
+      "profiles": [
+        "pr"
+      ],
       "decision": "KEEP",
       "reason": "This is the target-switch variant of the stale import contract and proves that the visible editor cannot retarget an in-flight file read to another Signal.",
       "replacementTest": null
@@ -14461,7 +15742,9 @@
       "primaryContract": "Completing an Annotation import started in the prior document after File New leaves the new document, Canonical revision, History, Dirty, and Annotation collection unchanged and reports cancellation.",
       "duplicateGroup": "async-import-document-replacement",
       "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "profiles": ["pr"],
+      "profiles": [
+        "pr"
+      ],
       "decision": "KEEP",
       "reason": "This specifically protects document replacement from stale asynchronous publication through the real New command and verifies the user-visible cancellation diagnostic.",
       "replacementTest": null
@@ -14477,7 +15760,9 @@
       "primaryContract": "An import whose starting revision is invalidated by Undo/Redo must not publish stale data or alter the resulting Canonical revision, History, or Dirty state.",
       "duplicateGroup": "async-import-stale-publication",
       "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "profiles": ["pr"],
+      "profiles": [
+        "pr"
+      ],
       "decision": "KEEP",
       "reason": "Undo/Redo is a distinct revision-changing interrupt to an in-flight import; this journey verifies that history navigation does not permit stale completion to overwrite the restored state.",
       "replacementTest": null
@@ -14493,7 +15778,10 @@
       "primaryContract": "A delayed Event import started for a Signal cannot mutate a newly opened document that reuses the same stable Signal ID; Save/Open leaves the replacement events, History, and Dirty state authoritative.",
       "duplicateGroup": "async-import-document-replacement",
       "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
-      "profiles": ["integration", "nightly"],
+      "profiles": [
+        "integration",
+        "nightly"
+      ],
       "decision": "KEEP",
       "reason": "The New/Open identity-reuse case crosses durable document replacement and stable-ID ownership; preserve it in the heavy integration tier rather than duplicating the full persistence cycle in routine PR runs.",
       "replacementTest": null
@@ -14509,7 +15797,9 @@
       "primaryContract": "Unmounting the Annotation collection editor while its import read is pending prevents the completion from changing Canonical, History, or Dirty and surfaces cancellation rather than publishing through a stale component owner.",
       "duplicateGroup": "async-import-stale-publication",
       "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "profiles": ["pr"],
+      "profiles": [
+        "pr"
+      ],
       "decision": "KEEP",
       "reason": "Unmount is a lifecycle interrupt distinct from target/document changes; the user journey checks that a disposed editor cannot publish an asynchronous result.",
       "replacementTest": null
@@ -14525,7 +15815,9 @@
       "primaryContract": "Escape and pointercancel discard Legend drag preview and restore its committed position with zero Canonical revision, History, and Dirty delta.",
       "duplicateGroup": "legend-interrupted-drag-lifecycle",
       "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "profiles": ["pr"],
+      "profiles": [
+        "pr"
+      ],
       "decision": "KEEP",
       "reason": "This production pointer journey protects both keyboard and pointer cancellation at the visible Legend boundary; pure state tests alone cannot prove the rendered position returns exactly to Canonical.",
       "replacementTest": null
@@ -14541,7 +15833,9 @@
       "primaryContract": "A Canvas Legend position commit preserves unrelated dirty Inspector orientation/position fields, exposes a conflict, blocks stale Apply until the user resolves it, and then applies the chosen draft.",
       "duplicateGroup": "legend-inspector-draft-conflict",
       "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "profiles": ["pr"],
+      "profiles": [
+        "pr"
+      ],
       "decision": "KEEP",
       "reason": "The conflict policy is user-visible across Canvas and Inspector owners; this focused journey verifies preservation, explicit resolution, and final Canonical output rather than asserting private draft state.",
       "replacementTest": null
@@ -14557,7 +15851,9 @@
       "primaryContract": "Selecting the Legend announces its selected state to assistive technology without exposing toggle-button pressed semantics.",
       "duplicateGroup": "object-selection-accessibility-semantics",
       "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "profiles": ["pr"],
+      "profiles": [
+        "pr"
+      ],
       "decision": "KEEP",
       "reason": "This is the direct accessibility-tree contract for a selectable canvas object and guards against the distinct regression of representing selection as a toggle.",
       "replacementTest": null
@@ -14573,7 +15869,10 @@
       "primaryContract": "A completed Legend drag creates one history unit; Undo/Redo, Save/Open, and SVG export all use the committed position and preserve semantic geometry.",
       "duplicateGroup": "legend-commit-history-persistence",
       "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
-      "profiles": ["integration", "nightly"],
+      "profiles": [
+        "integration",
+        "nightly"
+      ],
       "decision": "KEEP",
       "reason": "This single case intentionally crosses interaction commit, history, persistence, and export owners. Keep it automatically exercised in the integration/nightly tier rather than ordinary PR E2E.",
       "replacementTest": null
@@ -14589,7 +15888,9 @@
       "primaryContract": "An external Event replacement that conflicts with a dirty Bottom transition draft preserves the local draft, exposes the conflict, disables stale Save, and offers an explicit reload-latest resolution.",
       "duplicateGroup": "bottom-editor-draft-conflict",
       "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "profiles": ["pr"],
+      "profiles": [
+        "pr"
+      ],
       "decision": "KEEP",
       "reason": "The user-visible draft conflict crosses external canonical update and Bottom editor ownership; this journey verifies no silent data loss and explicit recovery through the production UI.",
       "replacementTest": null
@@ -14605,7 +15906,9 @@
       "primaryContract": "Removing a selected transition through an external Event replacement immediately removes its stale ID from Bottom bulk selection and disables bulk delete without changing unrelated canonical state.",
       "duplicateGroup": "bottom-editor-stale-selection-pruning",
       "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "profiles": ["pr"],
+      "profiles": [
+        "pr"
+      ],
       "decision": "KEEP",
       "reason": "The case protects the visible selection count and command availability after stable transition IDs disappear; it is distinct from preserving dirty row drafts.",
       "replacementTest": null
@@ -14621,7 +15924,9 @@
       "primaryContract": "A Canvas Annotation anchor commit preserves a conflicting dirty Inspector anchor draft, makes stale Apply unavailable, and requires explicit user resolution before the draft can be applied.",
       "duplicateGroup": "annotation-anchor-draft-conflict",
       "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "profiles": ["pr"],
+      "profiles": [
+        "pr"
+      ],
       "decision": "KEEP",
       "reason": "This cross-surface draft conflict is the Annotation Anchor residual named by #426 and verifies the visible conflict/recovery route plus resulting history behavior.",
       "replacementTest": null
@@ -14637,7 +15942,9 @@
       "primaryContract": "The production setup guide provides client configuration and safe token handling without rendering the bearer secret into guide content.",
       "duplicateGroup": "external-ai-setup-secret-handling",
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "profiles": ["integration"],
+      "profiles": [
+        "integration"
+      ],
       "decision": "KEEP",
       "reason": "This focused UI contract checks the external-client onboarding security boundary and secret redaction; it does not claim that a vendor-branded client has been independently installed or configured.",
       "replacementTest": null
@@ -14653,7 +15960,9 @@
       "primaryContract": "Creating a new document immediately retires the prior Editor session so stale external clients cannot keep targeting the previous document context.",
       "duplicateGroup": "external-ai-editor-session-lifecycle",
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "profiles": ["integration"],
+      "profiles": [
+        "integration"
+      ],
       "decision": "KEEP",
       "reason": "This checks immediate session invalidation across the real bridge and document lifecycle, a distinct boundary from ordinary bridge reconnect behavior.",
       "replacementTest": null
@@ -14669,7 +15978,9 @@
       "primaryContract": "External read tools expose current Transaction, Annotation, Bookmark, and Problem semantic projections without changing Canonical revision, History, or Dirty state.",
       "duplicateGroup": "external-ai-read-semantic-projections",
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "profiles": ["integration"],
+      "profiles": [
+        "integration"
+      ],
       "decision": "KEEP",
       "reason": "This directly guards read-only semantics across four exposed projection families through the bridge; it is not covered by connection or authentication checks alone.",
       "replacementTest": null
@@ -14685,7 +15996,10 @@
       "primaryContract": "A bridge proposal creating a Transaction, its Phases, and linked Signals remains preview-only until approval, then commits atomically as one Canonical/History unit and is undoable.",
       "duplicateGroup": "external-ai-transaction-atomic-apply",
       "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
-      "profiles": ["integration", "nightly"],
+      "profiles": [
+        "integration",
+        "nightly"
+      ],
       "decision": "KEEP",
       "reason": "This crosses bridge proposal construction, human approval, multiple semantic entity types, atomic history, undo, and rendered projection; retain it in the heavier integration/nightly tier.",
       "replacementTest": null
@@ -14701,7 +16015,9 @@
       "primaryContract": "External rename targets the requested stable Signal ID, remains a non-mutating preview until human validation and application, and cancellation leaves Canonical/History/Dirty unchanged.",
       "duplicateGroup": "external-ai-stable-signal-rename-approval",
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "profiles": ["integration"],
+      "profiles": [
+        "integration"
+      ],
       "decision": "KEEP",
       "reason": "This verifies stable identity and the external proposal approval boundary, including cancellation; generic proposal tests do not prove ID-targeted rename behavior.",
       "replacementTest": null
@@ -14717,7 +16033,9 @@
       "primaryContract": "Switching Bottom tabs preserves the Editor session and pending proposal, while a subsequent Canonical revision change causes validation to reject the stale proposal without applying it.",
       "duplicateGroup": "external-ai-session-tab-and-stale-revision",
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "profiles": ["integration"],
+      "profiles": [
+        "integration"
+      ],
       "decision": "KEEP",
       "reason": "This protects session ownership across UI tab lifetime and stale-base rejection after an independent edit, a state transition not covered by simple proposal approval.",
       "replacementTest": null
@@ -14733,7 +16051,9 @@
       "primaryContract": "External Signal creation uses the supplied stable Group ID and changes no Canonical/History/Dirty state until a human explicitly validates and applies the proposal.",
       "duplicateGroup": "external-ai-create-signal-group-identity-approval",
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "profiles": ["integration"],
+      "profiles": [
+        "integration"
+      ],
       "decision": "KEEP",
       "reason": "The case independently guards stable Group ownership for a new Signal and the preview/approval boundary; these are distinct from stable-ID rename and group-management tools.",
       "replacementTest": null
@@ -14749,7 +16069,9 @@
       "primaryContract": "Signal Group move and delete proposals target stable Group IDs, remain unapplied before approval, and only mutate the intended Group after human validation and application.",
       "duplicateGroup": "external-ai-signal-group-stable-id-approval",
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "profiles": ["integration"],
+      "profiles": [
+        "integration"
+      ],
       "decision": "KEEP",
       "reason": "Move/delete operations have different stable-ID and destructive-approval risks from Signal creation or rename, so this case retains an independent contract.",
       "replacementTest": null
