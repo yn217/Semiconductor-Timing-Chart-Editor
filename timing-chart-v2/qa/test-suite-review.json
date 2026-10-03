@@ -569,6 +569,23 @@
       "replacementTest": null
     },
     {
+      "file": "issue-175-scrollbar-effect-lifecycle.spec.ts",
+      "domain": "timeline-scrollbar",
+      "originIssue": 175,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "An unrelated rerender (Inspector rename) does not reinstall the Timeline scrollbar listeners on a 1k-Signal document.",
+      "duplicateGroup": "timeline-scrollbar",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Listener-lifecycle regression guard (Codex PR #1025); complements the geometry matrix.",
+      "replacementTest": null
+    },
+    {
       "file": "issue-175-scrollbar-geometry-matrix.spec.ts",
       "domain": "timeline-scrollbar",
       "originIssue": 175,

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-03T12:14:39.149Z",
+  "generatedAt": "2026-10-03T12:15:20.100Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,9 +13,9 @@
   },
   "specFileCount": 403,
   "caseCount": 1174,
-  "reviewedCaseCount": 1173,
+  "reviewedCaseCount": 1174,
   "curatedProfileCounts": {
-    "integration": 590,
+    "integration": 591,
     "nightly": 226,
     "performance": 66,
     "pr": 371,
@@ -9876,18 +9876,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "timeline-scrollbar",
+      "originIssue": 175,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "An unrelated rerender (Inspector rename) does not reinstall the Timeline scrollbar listeners on a 1k-Signal document.",
+      "duplicateGroup": "timeline-scrollbar",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "Listener-lifecycle regression guard (Codex PR #1025); complements the geometry matrix.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ],
+      "contractId": "timeline-scrollbar"
     },
     {
       "file": "issue-175-scrollbar-geometry-matrix.spec.ts",
@@ -31874,11 +31878,11 @@
     {
       "file": "issue-175-scrollbar-effect-lifecycle.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": "175",
       "declaredTimeoutMs": 90,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-175-scrollbar-geometry-matrix.spec.ts",
