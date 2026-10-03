@@ -419,9 +419,9 @@ test("the Editor session and pending AI proposal survive Bottom tab switches, th
   const sessionsAfterSwitch = JSON.parse((await callTool("list_editor_sessions")).body.result!.content[0]!.text) as { editorSessionId: string }[];
   expect(sessionsAfterSwitch.map((session) => session.editorSessionId)).toEqual([editorSessionId]);
 
-  await page.getByRole("button", { name: "Add", exact: true }).click();
-  await page.getByLabel("New Transaction name").fill("Stale proposal revision bump");
-  await page.getByRole("button", { name: "Create Transaction", exact: true }).click();
+  // The Bottom table's Add no longer opens a name form; the ribbon Create Transaction command is the one-click authoring path.
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
   await expect(host).toHaveAttribute("data-canonical-revision", String(Number(beforeRevision) + 1));
   const sessionsAfterEdit = JSON.parse((await callTool("list_editor_sessions")).body.result!.content[0]!.text) as { editorSessionId: string }[];
   expect(sessionsAfterEdit.map((session) => session.editorSessionId)).toEqual([editorSessionId]);
@@ -435,7 +435,8 @@ test("the Editor session and pending AI proposal survive Bottom tab switches, th
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 
   await page.locator(".ribbon").getByRole("button", { name: "Undo", exact: true }).click();
-  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+  // Canonical revision is monotonic: Undo advances it (restoring an old number would let a stale AI proposal match different content).
+  await expect(host).toHaveAttribute("data-canonical-revision", String(Number(beforeRevision) + 2));
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
   await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toContainText("REQUEST");
 });
@@ -444,6 +445,7 @@ test("propose_create_signal uses a stable Group ID and remains a Preview until e
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click(); // new Signals are asserted on the Cycle frozen rows
   await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
   await page.getByRole("button", { name: "Ask or edit with the AI Assistant" }).click();
   const ai = page.getByTestId("ai-operation-panel");
@@ -465,7 +467,7 @@ test("propose_create_signal uses a stable Group ID and remains a Preview until e
   await ai.getByTestId("ai-validate").click();
   await ai.getByTestId("ai-apply").click();
   await expect(host).toHaveAttribute("data-canonical-revision", String(Number(before.revision) + 1));
-  await expect(host.locator("[data-role='frozen-row']").filter({ hasText: "READY" })).toBeVisible();
+  await expect(host.locator("[data-role='frozen-row']").filter({ hasText: "READY" }).first()).toBeVisible();
 });
 
 test("Signal Group move and delete tools target stable IDs and apply only after approval", async ({ page }) => {
@@ -563,7 +565,9 @@ test("rejects a request with an invalid token, and rejects any tool outside the 
   await settings.getByLabel("Editor transport token").fill("wrong-token");
   await settings.getByLabel("Enable external agents").uncheck();
   await settings.getByLabel("Enable external agents").check();
-  await expect(ai.getByTestId("ai-bridge-status")).toHaveText(/Disconnected/, { timeout: 10_000 });
+  // A bad token is reported as a rejection (never as Connected).
+  await expect(ai.getByTestId("ai-bridge-status")).toHaveText(/Disconnected|rejected the token/, { timeout: 10_000 });
+  await expect(ai.getByTestId("ai-bridge-status")).not.toHaveText(/Connected/);
 });
 
 // #395 PR5 (real-client E2E/security closure, acceptance item 15):
