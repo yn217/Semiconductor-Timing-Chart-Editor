@@ -637,6 +637,23 @@
       "replacementTest": null
     },
     {
+      "file": "issue-864-bulk-clipboard-scale.spec.ts",
+      "domain": "bulk-clipboard-scale",
+      "originIssue": 864,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Largest legal same-document Signal Paste (1k->2k, 5k->10k; 5 samples p50/p95/max + Long Tasks), one History entry and exact Undo; 10k->20k over-limit Paste rejected atomically with a RESOURCE_LIMIT_EXCEEDED Problem; Cut = immediate atomic bulk delete (Problems on dependents), Paste re-inserts, exact two-step Undo.",
+      "duplicateGroup": "bulk-clipboard-scale",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Browser acceptance requested on #864; no other spec measures bulk clipboard at 1k/10k scale.",
+      "replacementTest": null
+    },
+    {
       "file": "issue-426-event-selection-scope.spec.ts",
       "domain": "event-selection",
       "originIssue": 426,
