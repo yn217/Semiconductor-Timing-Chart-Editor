@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, RefObject } from "react";
 import type { ChangeSet } from "@timing-chart-v2/commands";
-import type { CanonicalDocument } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
 import { buildMiniMapOverview, buildMiniMapTransactionOverview, updateMiniMapOverview, updateMiniMapTransactionOverview } from "@timing-chart-v2/projection";
 import { calculateMiniMapViewportMetrics } from "./runtime/minimap-viewport.js";
 import { timelineScrollOwner } from "./runtime/timeline-scroll-owner.js";
+import { canRetainSignalMiniMapOverview, planSignalMiniMapOverviewUpdate } from "./runtime/minimap-overview-compatibility.js";
 import { MiniMapOverviewRows, MiniMapTransactionOverviewRows } from "./minimap-overview-rows.js";
 
 type MiniMapSource = Pick<CanonicalDocument, "signalGroups" | "signals" | "timeline">;
@@ -16,13 +17,6 @@ type MiniMapOverviewCache = Readonly<{
   overview: MiniMapOverview;
 }>;
 type TransactionOverviewCache = Readonly<{ transactions: CanonicalDocument["transactions"]; groups: CanonicalDocument["transactionGroups"]; cycleCount: number; overview: ReturnType<typeof buildMiniMapTransactionOverview> }>;
-
-function hasSignalOverviewTopologyChange(changeSet: ChangeSet): boolean {
-  return changeSet.fullDocumentReplace === true || changeSet.rowOrder !== undefined
-    || changeSet.addedSignals !== undefined || changeSet.removedSignals !== undefined
-    || changeSet.addedGroups !== undefined || changeSet.removedGroups !== undefined
-    || changeSet.timelineSemantics === true;
-}
 
 export function pointerRatio(client: number, start: number, size: number): number {
   if (!Number.isFinite(size) || size <= 0) return 0;
@@ -67,17 +61,14 @@ export function MiniMap({ document, changeSet, viewport, mode = "signal" }: { re
       if (mode === "signal") {
         const cycleCount = Math.max(1, document.timeline.cycleCount);
         const cached = overviewCache.current;
-        if (cached && cached.signalGroups === document.signalGroups && cached.cycleCount === cycleCount && cached.signalCollection === document.signals) {
+        const updatePlan = planSignalMiniMapOverviewUpdate(cached, { signalGroups: document.signalGroups, signalCollection: document.signals, cycleCount }, changeSet);
+        if (updatePlan.kind === "reuse" && cached) {
           overview = cached.overview;
         } else {
-          const canIncrement = changeSet !== undefined && cached !== undefined && cached.signalGroups === document.signalGroups && cached.cycleCount === cycleCount && !hasSignalOverviewTopologyChange(changeSet);
-          const changedSignalIds = canIncrement ? changeSet.waveSemantics : undefined;
-          if (canIncrement && (changedSignalIds === undefined || changedSignalIds.length === 0)) {
-            overview = cached.overview;
-          } else {
-            overview = cached ? updateMiniMapOverview(cached.overview, document, canIncrement ? changedSignalIds : undefined) : buildMiniMapOverview(document);
-            overviewBuilds.current += 1;
-          }
+          overview = cached
+            ? updateMiniMapOverview(cached.overview, document, updatePlan.kind === "incremental" ? updatePlan.changedSignalIds as readonly SignalId[] : undefined)
+            : buildMiniMapOverview(document);
+          overviewBuilds.current += 1;
           overviewCache.current = { signalGroups: document.signalGroups, signalCollection: document.signals, cycleCount, overview };
         }
       } else {
@@ -134,7 +125,12 @@ export function MiniMap({ document, changeSet, viewport, mode = "signal" }: { re
     };
   }, [document, changeSet, mode, viewport]);
   const currentOverview = overviewState?.document === document && overviewState.mode === mode ? overviewState : undefined;
-  const overview = currentOverview?.overview;
+  const cachedSignalOverview = mode === "signal" && canRetainSignalMiniMapOverview(
+    overviewCache.current,
+    { signalGroups: document.signalGroups, signalCollection: document.signals, cycleCount: Math.max(1, document.timeline.cycleCount) },
+    changeSet,
+  ) ? overviewCache.current?.overview : undefined;
+  const overview = currentOverview?.overview ?? cachedSignalOverview;
   const transactionOverview = currentOverview?.transactionOverview;
   // #625: vertical metrics come from the shared viewport, horizontal metrics from the Timeline scroll owner (Cycle).
   const sync = () => { const element = viewport.current; if (!element) return; const owner = timelineScrollOwner(element); setMetrics(calculateMiniMapViewportMetrics({ scrollTop: element.scrollTop, scrollHeight: element.scrollHeight, clientHeight: element.clientHeight, scrollLeft: owner.scrollLeft, scrollWidth: owner.scrollWidth, clientWidth: owner.clientWidth })); };
@@ -189,5 +185,5 @@ export function MiniMap({ document, changeSet, viewport, mode = "signal" }: { re
   const indicatorWidth = Math.min(1 - metrics.left, Math.max(0.04, metrics.width));
   const indicatorHeight = Math.min(1 - metrics.top, Math.max(0.04, metrics.ratio));
   const fullViewport = metrics.ratio >= 0.999 && metrics.width >= 0.999;
-  return <div ref={documentRef} className="minimap" data-testid="minimap" data-minimap-mode={mode} data-time-policy="full-source-overview" data-transaction-overview-builds={String(transactionOverviewBuilds.current)} data-transaction-overview-full-builds={String(transactionOverviewFullBuilds.current)} data-transaction-overview-incremental-updates={String(transactionOverviewIncrementalUpdates.current)} data-transaction-overview-changed-id-count={String(changeSet?.transactionSemantics?.length ?? 0)} data-transaction-overview-transactions-visited={String(transactionOverview?.transactionsVisited ?? 0)} data-transaction-overview-lane-buckets-rebuilt={String(transactionOverview?.laneBucketsRebuilt ?? 0)} aria-label="MiniMap timeline navigator" aria-busy={!currentOverview} title="Click or drag to navigate the timeline" data-overview-builds={String(overviewBuilds.current)} data-overview-signal-lookups={String(overview?.signalLookups ?? 0)} data-overview-rows-rebuilt={String(overview?.rowsRebuilt ?? 0)} data-overview-rows-reused={String(overview?.rowsReused ?? 0)} data-overview-value-changes-visited={String(overview?.valueChangesVisited ?? 0)} data-overview-reuse-signal-comparisons={String(overviewReuseSignalComparisons.current)} data-viewport-top={String(metrics.top)} data-viewport-ratio={String(metrics.ratio)} data-viewport-left={String(metrics.left)} data-viewport-width={String(metrics.width)} onPointerDown={(event) => { if (event.button !== 0) return; dragging.current = true; event.currentTarget.setPointerCapture(event.pointerId); pan(event.clientX, event.clientY); }} onPointerMove={(event) => { if (dragging.current) pan(event.clientX, event.clientY); }} onPointerUp={(event) => { dragging.current = false; event.currentTarget.releasePointerCapture(event.pointerId); }} onPointerCancel={() => { dragging.current = false; }}><div className="minimap-overview-frame"><div className="minimap-rows">{transactionOverview ? <MiniMapTransactionOverviewRows overview={transactionOverview} /> : overview ? <MiniMapOverviewRows overview={overview} /> : null}<div className="minimap-folds" aria-label="Collapsed time groups">{document.timeGroups.filter((group) => group.presentation?.collapsed).map((group) => <i key={group.id} data-testid={`minimap-fold-${group.id}`} title={`${group.name}: ${group.start}–${group.end}`} style={{ left: `${group.start / document.timeline.cycleCount * 100}%`, width: `${Math.max(0.5, (group.end - group.start) / document.timeline.cycleCount * 100)}%` }} />)}</div><i data-testid="minimap-viewport" data-viewport-full={String(fullViewport)} style={{ "--minimap-left": `${metrics.left * 100}%`, "--minimap-width": `${indicatorWidth * 100}%`, "--minimap-top": `${metrics.top * 100}%`, "--minimap-height": `${indicatorHeight * 100}%` } as CSSProperties} /></div></div></div>;
+  return <div ref={documentRef} className="minimap" data-testid="minimap" data-minimap-mode={mode} data-time-policy="full-source-overview" data-transaction-overview-builds={String(transactionOverviewBuilds.current)} data-transaction-overview-full-builds={String(transactionOverviewFullBuilds.current)} data-transaction-overview-incremental-updates={String(transactionOverviewIncrementalUpdates.current)} data-transaction-overview-changed-id-count={String(changeSet?.transactionSemantics?.length ?? 0)} data-transaction-overview-transactions-visited={String(transactionOverview?.transactionsVisited ?? 0)} data-transaction-overview-lane-buckets-rebuilt={String(transactionOverview?.laneBucketsRebuilt ?? 0)} aria-label="MiniMap timeline navigator" aria-busy={!overview && !transactionOverview} title="Click or drag to navigate the timeline" data-overview-builds={String(overviewBuilds.current)} data-overview-signal-lookups={String(overview?.signalLookups ?? 0)} data-overview-rows-rebuilt={String(overview?.rowsRebuilt ?? 0)} data-overview-rows-reused={String(overview?.rowsReused ?? 0)} data-overview-value-changes-visited={String(overview?.valueChangesVisited ?? 0)} data-overview-reuse-signal-comparisons={String(overviewReuseSignalComparisons.current)} data-viewport-top={String(metrics.top)} data-viewport-ratio={String(metrics.ratio)} data-viewport-left={String(metrics.left)} data-viewport-width={String(metrics.width)} onPointerDown={(event) => { if (event.button !== 0) return; dragging.current = true; event.currentTarget.setPointerCapture(event.pointerId); pan(event.clientX, event.clientY); }} onPointerMove={(event) => { if (dragging.current) pan(event.clientX, event.clientY); }} onPointerUp={(event) => { dragging.current = false; event.currentTarget.releasePointerCapture(event.pointerId); }} onPointerCancel={() => { dragging.current = false; }}><div className="minimap-overview-frame"><div className="minimap-rows">{transactionOverview ? <MiniMapTransactionOverviewRows overview={transactionOverview} /> : overview ? <MiniMapOverviewRows overview={overview} /> : null}<div className="minimap-folds" aria-label="Collapsed time groups">{document.timeGroups.filter((group) => group.presentation?.collapsed).map((group) => <i key={group.id} data-testid={`minimap-fold-${group.id}`} title={`${group.name}: ${group.start}–${group.end}`} style={{ left: `${group.start / document.timeline.cycleCount * 100}%`, width: `${Math.max(0.5, (group.end - group.start) / document.timeline.cycleCount * 100)}%` }} />)}</div><i data-testid="minimap-viewport" data-viewport-full={String(fullViewport)} style={{ "--minimap-left": `${metrics.left * 100}%`, "--minimap-width": `${indicatorWidth * 100}%`, "--minimap-top": `${metrics.top * 100}%`, "--minimap-height": `${indicatorHeight * 100}%` } as CSSProperties} /></div></div></div>;
 }

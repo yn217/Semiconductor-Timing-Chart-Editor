@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bookmarksHiddenInFolds, transactionIntervalsHiddenInFolds, bookmarksForSourceWindowState, bookmarksInSourceWindow, indexTransactionIntervals, INITIAL_TRANSACTION_SOURCE_WINDOW, transactionGeometryGuidesInSourceWindow, transactionIntervalsForSourceWindowState, transactionIntervalsInWindow, transactionRowsInWindow } from "../../apps/editor/src/runtime/transaction-virtual-index.js";
+import { bookmarksOutsideFolds, hiddenBookmarkFoldSummaries, bookmarksForSourceWindowState, bookmarksInSourceWindow, indexTransactionIntervals, INITIAL_TRANSACTION_SOURCE_WINDOW, transactionGeometryGuidesInSourceWindow, transactionIntervalsForSourceWindowState, transactionIntervalsInWindow, transactionIntervalsOutsideFolds, transactionRowsInWindow } from "../../apps/editor/src/runtime/transaction-virtual-index.js";
 
 describe("Transaction horizontal interval window", () => {
   it("keeps the initial unmeasured render empty, then applies a bounded or explicit unwindowed source", () => {
@@ -68,26 +68,35 @@ describe("Transaction vertical row window", () => {
   });
 });
 
-describe("fold-hidden Transactions and Bookmarks stay mountable (#865 regression)", () => {
-  const folds = [[0, 100]] as const;
-  const transactions = [{ id: "inside", start: 25, end: 35 }, { id: "straddle", start: 90, end: 130 }, { id: "after", start: 150, end: 160 }];
-  const index = indexTransactionIntervals(transactions);
-
-  it("adds Transactions fully inside a collapsed fold that touches the window, and only those", () => {
-    const windowed = transactionIntervalsForSourceWindowState(index, { start: 100, end: 200 });
-    expect(windowed.map((item) => item.id)).not.toContain("inside");
-    const withHidden = transactionIntervalsHiddenInFolds(index, folds, { start: 100, end: 200 }, windowed);
-    expect(withHidden.map((item) => item.id).sort()).toEqual(["after", "inside", "straddle"]);
-    // A fold far from the window contributes nothing; unmeasured / unwindowed states pass through unchanged.
-    expect(transactionIntervalsHiddenInFolds(index, folds, { start: 500, end: 600 }, [])).toEqual([]);
-    expect(transactionIntervalsHiddenInFolds(index, folds, null, [])).toEqual([]);
-    expect(transactionIntervalsHiddenInFolds(index, folds, undefined, index.ordered)).toBe(index.ordered);
+describe("fold-hidden Transaction and Bookmark rescue stays bounded (#865 regression)", () => {
+  it("queries visible Transaction intervals around a fold and pins only selected hidden IDs", () => {
+    const transactions = Array.from({ length: 10_000 }, (_, index) => ({ id: `tx-${index}`, start: index * 10, end: index * 10 + 5 }));
+    const index = indexTransactionIntervals(transactions);
+    const folds = [[0, 99_990]] as const;
+    const visible = transactionIntervalsOutsideFolds(index, folds, { start: 0, end: 100_000 });
+    expect(visible.map((item) => item.id)).toEqual(["tx-0", "tx-1", "tx-2", "tx-3", "tx-4", "tx-5", "tx-6", "tx-7", "tx-9999"]);
+    expect(transactionIntervalsOutsideFolds(index, folds, { start: 0, end: 100_000 }, new Set(["tx-5000"])).map((item) => item.id).sort()).toEqual(["tx-0", "tx-1", "tx-2", "tx-3", "tx-4", "tx-5", "tx-5000", "tx-6", "tx-7", "tx-9999"]);
   });
 
-  it("adds Bookmarks inside a touching fold without duplicating windowed ones", () => {
-    const bookmarks = [{ start: 25 }, { start: 120 }];
-    const windowed = bookmarksForSourceWindowState(bookmarks, { start: 100, end: 200 });
-    expect(windowed).toEqual([{ start: 120 }]);
-    expect(bookmarksHiddenInFolds(bookmarks, folds, { start: 100, end: 200 }, windowed).map((bookmark) => bookmark.start)).toEqual([120, 25]);
+  it("caps folded Transaction representatives while preserving an explicitly pinned stable ID", () => {
+    const transactions = Array.from({ length: 100 }, (_, index) => ({ id: `hidden-${index}`, start: index * 10 + 1, end: index * 10 + 2 }));
+    const folds = transactions.map(({ start }) => [start - 1, start + 3] as const);
+    const index = indexTransactionIntervals(transactions);
+    const representatives = transactionIntervalsOutsideFolds(index, folds, { start: 0, end: 1_000 });
+    const withSelection = transactionIntervalsOutsideFolds(index, folds, { start: 0, end: 1_000 }, new Set(["hidden-99"]));
+
+    expect(representatives).toHaveLength(32);
+    expect(withSelection).toHaveLength(33);
+    expect(withSelection.some((item) => item.id === "hidden-99")).toBe(true);
+  });
+
+  it("keeps only visible Bookmarks as individual markers and represents 10k hidden ones with one fold summary", () => {
+    const bookmarks = Array.from({ length: 10_002 }, (_, index) => ({ id: `bookmark-${index}`, start: index }));
+    const folds = [[0, 9_999]] as const;
+    const visible = bookmarksOutsideFolds(bookmarks, folds, { start: 0, end: 10_001 });
+    expect(visible.map((bookmark) => bookmark.start)).toEqual([10_000, 10_001]);
+    expect(hiddenBookmarkFoldSummaries(bookmarks, folds, { start: 0, end: 10_001 })).toEqual([{ start: 0, end: 9_999, count: 10_000 }]);
+    expect(bookmarksOutsideFolds(bookmarks, folds, { start: 0, end: 10_001 }, bookmarks[5])).toEqual([bookmarks[5], bookmarks[10_000], bookmarks[10_001]]);
+    expect(bookmarksOutsideFolds(bookmarks, folds, null)).toEqual([]);
   });
 });

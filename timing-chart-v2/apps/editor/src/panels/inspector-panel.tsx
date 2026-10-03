@@ -190,7 +190,7 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
     };
     onGroupPreview?.(group.id, next);
   };
-  if (Boolean(signal)) return <InspectorSignalRouter signal={signal as Signal} document={document} viewport={viewport} commands={commands} onReveal={onReveal} onCancel={onCancel} onClose={onClose} renderClock={(props) => <InspectorClockEditor {...props} signal={props.signal as ClockSignal} commands={commands} />} renderValue={(props) => <InspectorValueSignalEditor {...props} signal={props.signal as ValueSignal} commands={commands} />} />;
+  if (Boolean(signal)) return <InspectorSignalRouter signal={signal as Signal} document={document} changeSet={changeSet} viewport={viewport} commands={commands} onReveal={onReveal} onCancel={onCancel} onClose={onClose} renderClock={(props) => <InspectorClockEditor {...props} signal={props.signal as ClockSignal} commands={commands} />} renderValue={(props) => <InspectorValueSignalEditor {...props} signal={props.signal as ValueSignal} commands={commands} />} />;
   if (Boolean(annotation)) return <InspectorAnnotationEditor key={(annotation as Annotation).id} annotation={annotation as Annotation} document={document} viewport={viewport} commands={commands} onDelete={() => registry.execute("selection.delete")} onCancel={onCancel} onClose={onClose} {...(onAnnotationPreview ? { onPreview: onAnnotationPreview } : {})} />;
   if (Boolean(bookmark)) return <InspectorBookmarkEditor bookmark={bookmark as Bookmark} document={document} viewport={viewport} commands={commands} onDelete={onDeleteBookmark} onCancel={onCancel} onClose={onClose} />;
   if (legendSelected) return <InspectorLegendEditor document={document} viewport={viewport} commands={commands} onCancel={onCancel} onClose={onClose} />;
@@ -288,7 +288,7 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
   </aside>;
 }
 
-export function InspectorValueSignalEditor({ signal, document, viewport, commands, onReveal, onCancel, onClose }: { readonly signal: ValueSignal; readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null>; readonly commands: EditorSurfaceCommandController; readonly onReveal: () => void; readonly onCancel: () => void; readonly onClose: () => void }) {
+export function InspectorValueSignalEditor({ signal, document, changeSet, viewport, commands, onReveal, onCancel, onClose }: { readonly signal: ValueSignal; readonly document: Readonly<CanonicalDocument>; readonly changeSet: ChangeSet; readonly viewport: RefObject<HTMLDivElement | null>; readonly commands: EditorSurfaceCommandController; readonly onReveal: () => void; readonly onCancel: () => void; readonly onClose: () => void }) {
   const [name, setName] = useState(signal.display.name);
   const [role, setRole] = useState<SignalRole>(signal.role);
   const [signalType, setSignalType] = useState<ValueSignal["type"]>(signal.type);
@@ -546,6 +546,6 @@ export function InspectorValueSignalEditor({ signal, document, viewport, command
       {hasChanges && <output className="draft-unapplied-indicator" data-testid="inspector-signal-unapplied" hidden>● Signal properties: unapplied changes</output>}
       <InspectorFooter changeCount={changeCount} onCancel={onCancel} onApply={apply} applyDisabled={!hasChanges} applyTestId="apply-inspector-signal" />
     </form>
-    <MiniMap document={document} viewport={viewport} />
+    <MiniMap document={document} changeSet={changeSet} viewport={viewport} />
   </aside>;
 }

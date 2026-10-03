@@ -136,6 +136,110 @@ test("10k Transactions, 10k Bookmarks, and 2k collapsed folds stay bounded durin
   expect(await page.getByTestId("dirty-status").textContent()).toBe(before.dirty);
 });
 
+test("10k entities hidden by one collapsed fold use bounded rescue DOM and preserve explicit Transaction selection", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const base = generatePerformanceDocument({ signalCount: 1, cycleCount: 500, profile: "transaction-heavy" });
+  const cycleCount = 10_000;
+  const document = {
+    ...base,
+    timeline: { ...base.timeline, end: cycleCount, cycleCount },
+    transactions: Array.from({ length: 10_000 }, (_, index) => ({ id: `txn_hidden_${index}`, name: `Hidden transaction ${index}`, start: index % 8, end: (index % 8) + 1, laneId: "lane_0" })),
+    bookmarks: Array.from({ length: 10_000 }, (_, index) => ({ id: `bookmark_hidden_${index}`, name: `Hidden bookmark ${index}`, start: index % 8 })),
+    timeGroups: [{ id: "fold_hidden_all", name: "Collapsed long range", start: 0, end: 9_000, presentation: { collapsed: true, foldStyle: "axis-break" as const } }],
+  };
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "transaction-hidden-rescue.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", "10000", { timeout: 60_000 });
+  await page.getByRole("button", { name: "Transaction", exact: true }).click();
+  const lanes = page.getByTestId("transaction-lanes");
+  await expect(lanes).toBeVisible({ timeout: 60_000 });
+  await expect(lanes).toHaveAttribute("data-hidden-bookmark-fold-summaries", "1");
+  const minimap = page.getByTestId("minimap");
+  await expect(minimap).toBeVisible();
+  await expect(minimap).toHaveAttribute("aria-busy", "false", { timeout: 60_000 });
+  const initial = await lanes.evaluate((element) => ({
+    candidates: Number(element.getAttribute("data-horizontal-candidate-transactions")),
+    bars: element.querySelectorAll("[data-transaction-id]").length,
+    bookmarkMarkers: element.querySelectorAll("[data-bookmark-id]").length,
+    foldSummaries: element.querySelectorAll("[data-hidden-bookmark-count]").length,
+    hiddenBookmarkCount: Number(element.querySelector("[data-hidden-bookmark-count]")?.getAttribute("data-hidden-bookmark-count")),
+    transactionMiniMapSegments: document.querySelectorAll(".minimap-segment-transaction").length,
+  }));
+  // Fold-edge representatives preserve discoverability, but the hidden 10k
+  // entities must never be expanded into a per-entity bar list.
+  expect(initial.candidates).toBeLessThanOrEqual(32);
+  expect(initial.bars).toBeLessThanOrEqual(32);
+  expect(initial.bookmarkMarkers).toBe(0);
+  expect(initial.foldSummaries).toBe(1);
+  expect(initial.hiddenBookmarkCount).toBe(10_000);
+
+  const measureScrollFrames = async (label: string) => {
+    const viewport = page.getByTestId("cycle-viewport");
+    const viewportBounds = await page.getByTestId("cycle-viewport").boundingBox();
+    expect(viewportBounds).not.toBeNull();
+    await page.evaluate(() => {
+      const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']");
+      if (!viewport) throw new Error("Transaction viewport missing for #865 scroll attribution");
+      const windowState = window as unknown as Record<string, unknown>;
+      const existing = windowState.__issue865ScrollMetrics as { frameMs: number[]; longTaskMs: number[] } | undefined;
+      const state = existing ?? { frameMs: [], longTaskMs: [] };
+      state.frameMs.length = 0;
+      state.longTaskMs.length = 0;
+      windowState.__issue865ScrollMetrics = state;
+      if (!existing) {
+        viewport.addEventListener("scroll", () => {
+          const started = performance.now();
+          requestAnimationFrame(() => requestAnimationFrame(() => state.frameMs.push(performance.now() - started)));
+        }, { passive: true });
+        if (typeof PerformanceObserver !== "undefined") {
+          const observer = new PerformanceObserver((list) => state.longTaskMs.push(...list.getEntries().map((entry) => entry.duration)));
+          try { observer.observe({ type: "longtask" }); } catch { /* Long Task API is optional; retain frame samples. */ }
+        }
+      }
+    });
+    const samplesBefore = await page.evaluate(() => ((window as unknown as { __issue865ScrollMetrics: { frameMs: number[] } }).__issue865ScrollMetrics.frameMs.length));
+    let previousScrollLeft = await viewport.evaluate((element) => element.scrollLeft);
+    const maxScrollLeft = await viewport.evaluate((element) => element.scrollWidth - element.clientWidth);
+    expect(maxScrollLeft, "Transaction time viewport must have horizontal overflow for scroll attribution").toBeGreaterThan(0);
+    const wheelDelta = previousScrollLeft <= maxScrollLeft / 2 ? 180 : -180;
+    for (let index = 0; index < 8; index += 1) {
+      await page.mouse.move(viewportBounds!.x + viewportBounds!.width / 2, viewportBounds!.y + viewportBounds!.height / 2);
+      // Scroll away from the nearest edge so each native wheel sample has room
+      // to move, even when opening the fixture starts at the far-right edge.
+      await page.mouse.wheel(wheelDelta, 0);
+      await expect.poll(() => viewport.evaluate((element) => element.scrollLeft), { message: `${label} native horizontal wheel step ${index + 1}` }).not.toBe(previousScrollLeft);
+      previousScrollLeft = await viewport.evaluate((element) => element.scrollLeft);
+      await expect.poll(() => page.evaluate(() => ((window as unknown as { __issue865ScrollMetrics: { frameMs: number[] } }).__issue865ScrollMetrics.frameMs.length))).toBeGreaterThan(samplesBefore + index);
+    }
+    return page.evaluate((name) => {
+      const state = (window as unknown as { __issue865ScrollMetrics: { frameMs: number[]; longTaskMs: number[] } }).__issue865ScrollMetrics;
+      const samples = state.frameMs.slice(-8).sort((a, b) => a - b);
+      return { label: name, p50Ms: samples[3] ?? 0, p95Ms: samples[7] ?? 0, longTaskCount: state.longTaskMs.length, maxLongTaskMs: Math.max(0, ...state.longTaskMs) };
+    }, label);
+  };
+  const minimapEnabledScroll = await measureScrollFrames("MiniMap enabled");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "MiniMap", exact: true }).click();
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-minimap-enabled", "false");
+  await expect(page.getByTestId("minimap")).toHaveCSS("display", "none");
+  const miniMapHiddenSegments = await page.locator(".minimap-segment-transaction").count();
+  const miniMapHiddenScroll = await measureScrollFrames("MiniMap hidden attribution");
+  console.log(`[issue-865-fold-rescue] ${JSON.stringify({ initial, miniMapHiddenSegments, minimapEnabledScroll, miniMapHiddenScroll })}`);
+
+  const revision = await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision");
+  const history = await page.getByTestId("history-status").textContent();
+  const dirty = await page.getByTestId("dirty-status").textContent();
+  await page.getByTestId("transaction-left-tree-row-txn_hidden_0").click();
+  await expect(lanes.locator('[data-transaction-id="txn_hidden_0"]')).toHaveAttribute("data-hidden-in-fold", "true");
+  await expect(lanes.locator('[data-transaction-id="txn_hidden_0"]')).toHaveAttribute("data-selected", "true");
+  expect(await lanes.locator("[data-transaction-id]").count()).toBeLessThanOrEqual(33);
+  expect(await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision")).toBe(revision);
+  expect(await page.getByTestId("history-status").textContent()).toBe(history);
+  expect(await page.getByTestId("dirty-status").textContent()).toBe(dirty);
+});
+
 test("standalone Transaction cycle viewport scroll advances the virtualized lane window", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");

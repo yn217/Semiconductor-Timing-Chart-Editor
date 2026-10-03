@@ -569,6 +569,23 @@
       "replacementTest": null
     },
     {
+      "file": "issue-175-scrollbar-effect-lifecycle.spec.ts",
+      "domain": "timeline-scrollbar",
+      "originIssue": 175,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "An unrelated rerender (Inspector rename) does not reinstall the Timeline scrollbar listeners on a 1k-Signal document.",
+      "duplicateGroup": "timeline-scrollbar",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Listener-lifecycle regression guard (Codex PR #1025); complements the geometry matrix.",
+      "replacementTest": null
+    },
+    {
       "file": "issue-175-scrollbar-geometry-matrix.spec.ts",
       "domain": "timeline-scrollbar",
       "originIssue": 175,
@@ -600,6 +617,23 @@
       ],
       "decision": "KEEP",
       "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-219-wave-url-lifetime.spec.ts",
+      "domain": "wave-artifact-lifetime",
+      "originIssue": 219,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Repeated Open/scroll/edit with >64 unique waveform artifacts: no early URL revoke, bounded live URLs, flat heap.",
+      "duplicateGroup": "wave-artifact-lifetime",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Lifetime/leak matrix requested on #219; no other spec observes blob URL create/revoke.",
       "replacementTest": null
     },
     {
@@ -2687,6 +2721,23 @@
       ],
       "decision": "KEEP",
       "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-865-transaction-window-matrix.spec.ts",
+      "domain": "transaction-virtualization",
+      "originIssue": 865,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "10k Transactions over 100k cycles: mounted bars/markers/DOM stay bounded by the horizontal window in Transaction and Combined, reveal-by-ID works and MiniMap states stay bounded.",
+      "duplicateGroup": "transaction-virtualization",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Large-document virtualization acceptance matrix (both viewports, both modes).",
       "replacementTest": null
     },
     {
@@ -9256,25 +9307,6 @@
       ],
       "decision": "KEEP",
       "reason": "This measures overview cache reuse under viewport-only operations with explicit semantic and render no-change checks; its cache counters are architectural evidence and should stay outside generic user-journey PR smoke.",
-      "replacementTest": null
-    },
-    {
-      "file": "minimap-overview-performance.spec.ts",
-      "title": "non-overview Signal property commits reuse the static MiniMap overview",
-      "domain": "minimap-static-overview-invalidation",
-      "originIssue": 174,
-      "type": "PERFORMANCE_INVARIANT",
-      "costClass": "MEDIUM",
-      "measuredRuntimeMs": null,
-      "primaryContract": "Committing a Signal rename updates canonical data/history/dirty state without rebuilding the static MiniMap overview when the changed property does not affect its projection.",
-      "duplicateGroup": "minimap-static-overview-cache",
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "profiles": [
-        "performance",
-        "integration"
-      ],
-      "decision": "KEEP",
-      "reason": "This covers invalidation precision after a real semantic commit, complementary to the viewport-only case; the pair distinguishes correct reuse from simply never rebuilding the overview.",
       "replacementTest": null
     },
     {
@@ -16195,6 +16227,44 @@
       "reason": "Exhaustive sweep (76 heights, ~1 min) moved out of the routine PR tier in #782 B4; a 30 px quick sweep of the same contract stays in the pr tier.",
       "replacementTest": null,
       "title": "Transaction scroll owner geometry is stable while idle at every window height (no scrollbar oscillation)"
+    },
+    {
+      "file": "minimap-overview-performance.spec.ts",
+      "title": "non-overview Signal property commits keep the MiniMap continuously visible at 1280x720",
+      "domain": "minimap-static-overview-invalidation",
+      "originIssue": 174,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Committing a Signal rename updates canonical data/history/dirty state without rebuilding the static MiniMap overview when the changed property does not affect its projection.",
+      "duplicateGroup": "minimap-static-overview-cache",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "performance",
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "This covers invalidation precision after a real semantic commit, complementary to the viewport-only case; the pair distinguishes correct reuse from simply never rebuilding the overview.",
+      "replacementTest": null
+    },
+    {
+      "file": "minimap-overview-performance.spec.ts",
+      "title": "non-overview Signal property commits keep the MiniMap continuously visible at 1672x941",
+      "domain": "minimap-static-overview-invalidation",
+      "originIssue": 174,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Committing a Signal rename updates canonical data/history/dirty state without rebuilding the static MiniMap overview when the changed property does not affect its projection.",
+      "duplicateGroup": "minimap-static-overview-cache",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "performance",
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "This covers invalidation precision after a real semantic commit, complementary to the viewport-only case; the pair distinguishes correct reuse from simply never rebuilding the overview.",
+      "replacementTest": null
     }
   ]
 }

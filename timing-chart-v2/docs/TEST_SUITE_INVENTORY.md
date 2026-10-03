@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 400 spec files and 1163 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 403 spec files and 1174 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1163/1163 cases reviewed.
+Semantic review progress: 1174/1174 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 581 |
+| `integration` | 591 |
 | `nightly` | 226 |
-| `performance` | 65 |
-| `pr` | 370 |
-| `visual` | 178 |
+| `performance` | 66 |
+| `pr` | 371 |
+| `visual` | 180 |
 
 ## Top recorded per-case runtimes
 
@@ -149,8 +149,10 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `interaction-visual-scenarios.spec.ts` | 11 | 11/11 reviewed |
 | `issue-1004-group-hierarchy.spec.ts` | 2 | 2/2 reviewed |
 | `issue-1007-transaction-add-menu.spec.ts` | 4 | 4/4 reviewed |
+| `issue-175-scrollbar-effect-lifecycle.spec.ts` | 1 | 1/1 reviewed |
 | `issue-175-scrollbar-geometry-matrix.spec.ts` | 2 | 2/2 reviewed |
 | `issue-208-open-epoch-coherence.spec.ts` | 1 | 1/1 reviewed |
+| `issue-219-wave-url-lifetime.spec.ts` | 2 | 2/2 reviewed |
 | `issue-426-event-selection-scope.spec.ts` | 1 | 1/1 reviewed |
 | `issue-426-external-bottom-draft-update.spec.ts` | 3 | 3/3 reviewed |
 | `issue-426-inspector-bookmark-rebase.spec.ts` | 2 | 2/2 reviewed |
@@ -167,7 +169,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-573-combined-shared-time-axis.spec.ts` | 3 | 3/3 reviewed |
 | `issue-573-combined-single-hscroll.spec.ts` | 2 | 2/2 reviewed |
 | `issue-593-inflight-mode-switch.spec.ts` | 2 | 2/2 reviewed |
-| `issue-593-mode-layout-isolation.spec.ts` | 6 | 6/6 reviewed |
+| `issue-593-mode-layout-isolation.spec.ts` | 8 | 8/8 reviewed |
 | `issue-593-mode-workspace-acceptance.spec.ts` | 2 | 2/2 reviewed |
 | `issue-621-far-jump-no-rewindow-storm.spec.ts` | 1 | 1/1 reviewed |
 | `issue-623-cycle-entry-settles-once.spec.ts` | 1 | 1/1 reviewed |
@@ -287,6 +289,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-863-annotation-scroll-cost.spec.ts` | 1 | 1/1 reviewed |
 | `issue-863-viewport-cache-invalidation.spec.ts` | 4 | 4/4 reviewed |
 | `issue-864-bulk-clipboard-one-history.spec.ts` | 1 | 1/1 reviewed |
+| `issue-865-transaction-window-matrix.spec.ts` | 4 | 4/4 reviewed |
 | `issue-869-minimap-single-edit-incremental.spec.ts` | 1 | 1/1 reviewed |
 | `issue-869-minimap-transaction-incremental.spec.ts` | 3 | 3/3 reviewed |
 | `issue-890-annotation-signal-picker-10k.spec.ts` | 1 | 1/1 reviewed |
@@ -329,7 +332,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `measurement-top-row-clip.spec.ts` | 2 | 2/2 reviewed |
 | `mechanical-visual-diagnostics.spec.ts` | 1 | 1/1 reviewed |
 | `minimal-cycle-view.spec.ts` | 3 | 3/3 reviewed |
-| `minimap-overview-performance.spec.ts` | 3 | 3/3 reviewed |
+| `minimap-overview-performance.spec.ts` | 4 | 4/4 reviewed |
 | `minimap-viewport-closure.spec.ts` | 1 | 1/1 reviewed |
 | `mode-isolation-journey.spec.ts` | 2 | 2/2 reviewed |
 | `name-draft-identity.spec.ts` | 1 | 1/1 reviewed |
@@ -406,7 +409,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `transaction-inspector-duration-tc.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-inspector-lane-suggestions.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-lane-labels-visible.spec.ts` | 2 | 2/2 reviewed |
-| `transaction-lane-scaling.spec.ts` | 10 | 10/10 reviewed |
+| `transaction-lane-scaling.spec.ts` | 11 | 11/11 reviewed |
 | `transaction-minimap-overview.spec.ts` | 2 | 2/2 reviewed |
 | `transaction-onboarding.spec.ts` | 7 | 7/7 reviewed |
 | `transaction-partial-update-preserves-fields.spec.ts` | 1 | 1/1 reviewed |
@@ -487,6 +490,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `issue-1004-group-hierarchy.spec.ts` | querySelector, getComputedStyle, geometryRead |
 | `issue-175-scrollbar-geometry-matrix.spec.ts` | geometryRead |
 | `issue-208-open-epoch-coherence.spec.ts` | querySelector |
+| `issue-219-wave-url-lifetime.spec.ts` | querySelector, explicitWait |
 | `issue-441-ribbon-label-integrity.spec.ts` | getComputedStyle, geometryRead |
 | `issue-573-combined-shared-time-axis.spec.ts` | geometryRead, explicitWait |
 | `issue-573-combined-single-hscroll.spec.ts` | getComputedStyle, geometryRead, explicitWait |
@@ -559,6 +563,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `issue-856-bottom-transaction-scroll-cost.spec.ts` | querySelector |
 | `issue-863-annotation-scroll-cost.spec.ts` | querySelector, dataset, geometryRead |
 | `issue-863-viewport-cache-invalidation.spec.ts` | dataset, geometryRead, explicitWait |
+| `issue-865-transaction-window-matrix.spec.ts` | querySelector, explicitWait |
 | `issue-895-canvas-wave-semantics.spec.ts` | dataset, styleMutation, directDomMutation |
 | `issue-896-implicit-reference-window.spec.ts` | dataset, explicitWait |
 | `issue-897-context-menu-target.spec.ts` | querySelector, explicitWait |
