@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-03T10:05:55.883Z",
+  "generatedAt": "2026-10-03T11:54:57.555Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,15 +11,15 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 400,
-  "caseCount": 1163,
-  "reviewedCaseCount": 1163,
+  "specFileCount": 402,
+  "caseCount": 1171,
+  "reviewedCaseCount": 1170,
   "curatedProfileCounts": {
-    "integration": 581,
+    "integration": 587,
     "nightly": 226,
     "performance": 65,
-    "pr": 370,
-    "visual": 178
+    "pr": 371,
+    "visual": 180
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -9868,9 +9868,31 @@
       "contractId": "transaction-add-menu"
     },
     {
+      "file": "issue-175-scrollbar-effect-lifecycle.spec.ts",
+      "suitePath": [],
+      "line": 5,
+      "title": "Inspector rename does not reinstall the Timeline scrollbar listener",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": null,
+      "originIssue": null,
+      "type": null,
+      "costClass": null,
+      "measuredRuntimeMs": null,
+      "primaryContract": null,
+      "duplicateGroup": null,
+      "executionTier": null,
+      "decision": "UNREVIEWED",
+      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "replacementTest": null,
+      "reviewStatus": "UNREVIEWED"
+    },
+    {
       "file": "issue-175-scrollbar-geometry-matrix.spec.ts",
       "suitePath": [],
-      "line": 36,
+      "line": 38,
       "title": "Timeline scrollbar follows its owner through panel, zoom, mode and document changes at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -9896,7 +9918,7 @@
     {
       "file": "issue-175-scrollbar-geometry-matrix.spec.ts",
       "suitePath": [],
-      "line": 36,
+      "line": 38,
       "title": "Timeline scrollbar follows its owner through panel, zoom, mode and document changes at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -10732,21 +10754,12 @@
     {
       "file": "issue-573-combined-single-hscroll.spec.ts",
       "suitePath": [],
-      "line": 24,
+      "line": 23,
       "title": "Combined has exactly one horizontal scroll owner across zoom/panels at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
-      "annotations": [
-        {
-          "type": "fail",
-          "location": {
-            "file": "F:\\Cordex_OpenAI\\Timing-Chart-Editor_claude\\timing-chart-v2\\tests\\e2e\\issue-573-combined-single-hscroll.spec.ts",
-            "line": 24,
-            "column": 8
-          }
-        }
-      ],
+      "annotations": [],
       "domain": "combined-hscroll",
       "originIssue": 573,
       "type": "GEOMETRY_CONTRACT",
@@ -10767,21 +10780,12 @@
     {
       "file": "issue-573-combined-single-hscroll.spec.ts",
       "suitePath": [],
-      "line": 24,
+      "line": 23,
       "title": "Combined has exactly one horizontal scroll owner across zoom/panels at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
-      "annotations": [
-        {
-          "type": "fail",
-          "location": {
-            "file": "F:\\Cordex_OpenAI\\Timing-Chart-Editor_claude\\timing-chart-v2\\tests\\e2e\\issue-573-combined-single-hscroll.spec.ts",
-            "line": 24,
-            "column": 8
-          }
-        }
-      ],
+      "annotations": [],
       "domain": "combined-hscroll",
       "originIssue": 573,
       "type": "GEOMETRY_CONTRACT",
@@ -10802,21 +10806,12 @@
     {
       "file": "issue-593-inflight-mode-switch.spec.ts",
       "suitePath": [],
-      "line": 14,
+      "line": 13,
       "title": "mode switch during in-flight work leaves no stale owner/chrome at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
-      "annotations": [
-        {
-          "type": "fail",
-          "location": {
-            "file": "F:\\Cordex_OpenAI\\Timing-Chart-Editor_claude\\timing-chart-v2\\tests\\e2e\\issue-593-inflight-mode-switch.spec.ts",
-            "line": 14,
-            "column": 8
-          }
-        }
-      ],
+      "annotations": [],
       "domain": "mode-workspace-isolation",
       "originIssue": 593,
       "type": "USER_JOURNEY",
@@ -10837,21 +10832,12 @@
     {
       "file": "issue-593-inflight-mode-switch.spec.ts",
       "suitePath": [],
-      "line": 14,
+      "line": 13,
       "title": "mode switch during in-flight work leaves no stale owner/chrome at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
-      "annotations": [
-        {
-          "type": "fail",
-          "location": {
-            "file": "F:\\Cordex_OpenAI\\Timing-Chart-Editor_claude\\timing-chart-v2\\tests\\e2e\\issue-593-inflight-mode-switch.spec.ts",
-            "line": 14,
-            "column": 8
-          }
-        }
-      ],
+      "annotations": [],
       "domain": "mode-workspace-isolation",
       "originIssue": 593,
       "type": "USER_JOURNEY",
@@ -10872,7 +10858,61 @@
     {
       "file": "issue-593-mode-layout-isolation.spec.ts",
       "suitePath": [],
-      "line": 35,
+      "line": 43,
+      "title": "Combined owns an independent shared zoom across standalone mode round trips at 1280x720",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "mode-layout-owner-isolation",
+      "originIssue": 593,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Workspace, Bottom, Inspector and status regions retain stable per-mode geometry through Cycle/Transaction/Combined round trips and remain within viewport bounds.",
+      "duplicateGroup": null,
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This directly guards the Issue's mode-owner isolation contract at both accepted viewport sizes using measured region geometry. It is the focused visual guard needed before any broader CSS ownership extraction.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "visual"
+      ],
+      "contractId": "mode-layout-owner-isolation"
+    },
+    {
+      "file": "issue-593-mode-layout-isolation.spec.ts",
+      "suitePath": [],
+      "line": 43,
+      "title": "Combined owns an independent shared zoom across standalone mode round trips at 1672x941",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "mode-layout-owner-isolation",
+      "originIssue": 593,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Workspace, Bottom, Inspector and status regions retain stable per-mode geometry through Cycle/Transaction/Combined round trips and remain within viewport bounds.",
+      "duplicateGroup": null,
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This directly guards the Issue's mode-owner isolation contract at both accepted viewport sizes using measured region geometry. It is the focused visual guard needed before any broader CSS ownership extraction.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "visual"
+      ],
+      "contractId": "mode-layout-owner-isolation"
+    },
+    {
+      "file": "issue-593-mode-layout-isolation.spec.ts",
+      "suitePath": [],
+      "line": 66,
       "title": "Cycle layout is untouched by Transaction zoom/scroll and back at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -10899,7 +10939,7 @@
     {
       "file": "issue-593-mode-layout-isolation.spec.ts",
       "suitePath": [],
-      "line": 35,
+      "line": 66,
       "title": "Cycle layout is untouched by Transaction zoom/scroll and back at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -10926,7 +10966,7 @@
     {
       "file": "issue-593-mode-layout-isolation.spec.ts",
       "suitePath": [],
-      "line": 56,
+      "line": 87,
       "title": "Transaction layout is untouched by Cycle left-pane resize/zoom and back at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -10953,7 +10993,7 @@
     {
       "file": "issue-593-mode-layout-isolation.spec.ts",
       "suitePath": [],
-      "line": 56,
+      "line": 87,
       "title": "Transaction layout is untouched by Cycle left-pane resize/zoom and back at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -10980,7 +11020,7 @@
     {
       "file": "issue-593-mode-layout-isolation.spec.ts",
       "suitePath": [],
-      "line": 88,
+      "line": 119,
       "title": "Mode switching is view-only and Cycle-only chrome is not mounted in Transaction at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -11007,7 +11047,7 @@
     {
       "file": "issue-593-mode-layout-isolation.spec.ts",
       "suitePath": [],
-      "line": 88,
+      "line": 119,
       "title": "Mode switching is view-only and Cycle-only chrome is not mounted in Transaction at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -18243,6 +18283,110 @@
         "pr"
       ],
       "contractId": "bulk-clipboard"
+    },
+    {
+      "file": "issue-865-transaction-window-matrix.spec.ts",
+      "suitePath": [],
+      "line": 29,
+      "title": "Combined: horizontal window, reveal-by-ID and MiniMap states stay bounded at 1280x720",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "transaction-virtualization",
+      "originIssue": 865,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "10k Transactions over 100k cycles: mounted bars/markers/DOM stay bounded by the horizontal window in Transaction and Combined, reveal-by-ID works and MiniMap states stay bounded.",
+      "duplicateGroup": "transaction-virtualization",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "Large-document virtualization acceptance matrix (both viewports, both modes).",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ],
+      "contractId": "transaction-virtualization"
+    },
+    {
+      "file": "issue-865-transaction-window-matrix.spec.ts",
+      "suitePath": [],
+      "line": 29,
+      "title": "Combined: horizontal window, reveal-by-ID and MiniMap states stay bounded at 1672x941",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "transaction-virtualization",
+      "originIssue": 865,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "10k Transactions over 100k cycles: mounted bars/markers/DOM stay bounded by the horizontal window in Transaction and Combined, reveal-by-ID works and MiniMap states stay bounded.",
+      "duplicateGroup": "transaction-virtualization",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "Large-document virtualization acceptance matrix (both viewports, both modes).",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ],
+      "contractId": "transaction-virtualization"
+    },
+    {
+      "file": "issue-865-transaction-window-matrix.spec.ts",
+      "suitePath": [],
+      "line": 29,
+      "title": "Transaction: horizontal window, reveal-by-ID and MiniMap states stay bounded at 1280x720",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "transaction-virtualization",
+      "originIssue": 865,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "10k Transactions over 100k cycles: mounted bars/markers/DOM stay bounded by the horizontal window in Transaction and Combined, reveal-by-ID works and MiniMap states stay bounded.",
+      "duplicateGroup": "transaction-virtualization",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "Large-document virtualization acceptance matrix (both viewports, both modes).",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ],
+      "contractId": "transaction-virtualization"
+    },
+    {
+      "file": "issue-865-transaction-window-matrix.spec.ts",
+      "suitePath": [],
+      "line": 29,
+      "title": "Transaction: horizontal window, reveal-by-ID and MiniMap states stay bounded at 1672x941",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "transaction-virtualization",
+      "originIssue": 865,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "10k Transactions over 100k cycles: mounted bars/markers/DOM stay bounded by the horizontal window in Transaction and Combined, reveal-by-ID works and MiniMap states stay bounded.",
+      "duplicateGroup": "transaction-virtualization",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "Large-document virtualization acceptance matrix (both viewports, both modes).",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ],
+      "contractId": "transaction-virtualization"
     },
     {
       "file": "issue-869-minimap-single-edit-incremental.spec.ts",
@@ -27591,6 +27735,32 @@
       "file": "transaction-lane-scaling.spec.ts",
       "suitePath": [],
       "line": 139,
+      "title": "10k entities hidden by one collapsed fold use bounded rescue DOM and preserve explicit Transaction selection",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "transaction-lane",
+      "originIssue": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Lane scaling follows zoom.",
+      "duplicateGroup": "transaction-lane",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "transaction-lane"
+    },
+    {
+      "file": "transaction-lane-scaling.spec.ts",
+      "suitePath": [],
+      "line": 243,
       "title": "standalone Transaction cycle viewport scroll advances the virtualized lane window",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -27616,7 +27786,7 @@
     {
       "file": "transaction-lane-scaling.spec.ts",
       "suitePath": [],
-      "line": 157,
+      "line": 261,
       "title": "selected Transaction drag survives a horizontal virtualization window change",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -27642,7 +27812,7 @@
     {
       "file": "transaction-lane-scaling.spec.ts",
       "suitePath": [],
-      "line": 196,
+      "line": 300,
       "title": "Transaction Fit All and Fit Selection remain view-only",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -27668,7 +27838,7 @@
     {
       "file": "transaction-lane-scaling.spec.ts",
       "suitePath": [],
-      "line": 219,
+      "line": 323,
       "title": "Transaction view state survives both mode-switch directions",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -27694,7 +27864,7 @@
     {
       "file": "transaction-lane-scaling.spec.ts",
       "suitePath": [],
-      "line": 241,
+      "line": 345,
       "title": "central Transaction surface remains viewport-bounded across 1k/5k/10k with bounded mode, scroll, and selection work",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -27721,7 +27891,7 @@
     {
       "file": "transaction-lane-scaling.spec.ts",
       "suitePath": [],
-      "line": 330,
+      "line": 434,
       "title": "single-lane Transaction edits remain bounded on a large sequential fixture",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -31623,6 +31793,15 @@
       "semanticReviewStatus": "REVIEWED"
     },
     {
+      "file": "issue-175-scrollbar-effect-lifecycle.spec.ts",
+      "caseCount": 1,
+      "reviewedCaseCount": 0,
+      "originIssue": "175",
+      "declaredTimeoutMs": 90,
+      "candidateSignals": [],
+      "semanticReviewStatus": "UNREVIEWED"
+    },
+    {
       "file": "issue-175-scrollbar-geometry-matrix.spec.ts",
       "caseCount": 2,
       "reviewedCaseCount": 2,
@@ -31806,8 +31985,8 @@
     },
     {
       "file": "issue-593-mode-layout-isolation.spec.ts",
-      "caseCount": 6,
-      "reviewedCaseCount": 6,
+      "caseCount": 8,
+      "reviewedCaseCount": 8,
       "originIssue": "593",
       "declaredTimeoutMs": 150,
       "candidateSignals": [
@@ -33086,6 +33265,18 @@
       "semanticReviewStatus": "REVIEWED"
     },
     {
+      "file": "issue-865-transaction-window-matrix.spec.ts",
+      "caseCount": 4,
+      "reviewedCaseCount": 4,
+      "originIssue": "865",
+      "declaredTimeoutMs": 300,
+      "candidateSignals": [
+        "querySelector",
+        "explicitWait"
+      ],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
       "file": "issue-869-minimap-single-edit-incremental.spec.ts",
       "caseCount": 1,
       "reviewedCaseCount": 1,
@@ -34309,8 +34500,8 @@
     },
     {
       "file": "transaction-lane-scaling.spec.ts",
-      "caseCount": 10,
-      "reviewedCaseCount": 10,
+      "caseCount": 11,
+      "reviewedCaseCount": 11,
       "originIssue": null,
       "declaredTimeoutMs": 180,
       "candidateSignals": [
