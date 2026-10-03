@@ -155,7 +155,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-175-scrollbar-effect-lifecycle.spec.ts` | 1 | 1/1 reviewed |
 | `issue-175-scrollbar-geometry-matrix.spec.ts` | 2 | 2/2 reviewed |
 | `issue-208-open-epoch-coherence.spec.ts` | 1 | 1/1 reviewed |
-| `issue-219-wave-url-lifetime.spec.ts` | 2 | 2/2 reviewed |
+| `issue-219-wave-url-lifetime.spec.ts` | 4 | 4/4 reviewed |
 | `issue-426-event-selection-scope.spec.ts` | 1 | 1/1 reviewed |
 | `issue-426-external-bottom-draft-update.spec.ts` | 3 | 3/3 reviewed |
 | `issue-426-inspector-bookmark-rebase.spec.ts` | 2 | 2/2 reviewed |

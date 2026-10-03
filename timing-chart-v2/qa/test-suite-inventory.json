@@ -10208,6 +10208,58 @@
       "contractId": "wave-artifact-lifetime"
     },
     {
+      "file": "issue-219-wave-url-lifetime.spec.ts",
+      "suitePath": [],
+      "line": 100,
+      "title": "Open A/B/C/A with scroll, edit and mode switch: URL and renderer owner/index state plateau at 1280x720",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "wave-artifact-lifetime",
+      "originIssue": 219,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Repeated Open/scroll/edit with >64 unique waveform artifacts: no early URL revoke, bounded live URLs, flat heap.",
+      "duplicateGroup": "wave-artifact-lifetime",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "Lifetime/leak matrix requested on #219; no other spec observes blob URL create/revoke.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ],
+      "contractId": "wave-artifact-lifetime"
+    },
+    {
+      "file": "issue-219-wave-url-lifetime.spec.ts",
+      "suitePath": [],
+      "line": 100,
+      "title": "Open A/B/C/A with scroll, edit and mode switch: URL and renderer owner/index state plateau at 1672x941",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "wave-artifact-lifetime",
+      "originIssue": 219,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Repeated Open/scroll/edit with >64 unique waveform artifacts: no early URL revoke, bounded live URLs, flat heap.",
+      "duplicateGroup": "wave-artifact-lifetime",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "Lifetime/leak matrix requested on #219; no other spec observes blob URL create/revoke.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ],
+      "contractId": "wave-artifact-lifetime"
+    },
+    {
       "file": "issue-426-event-selection-scope.spec.ts",
       "suitePath": [],
       "line": 7,
@@ -33168,8 +33220,8 @@
     },
     {
       "file": "issue-219-wave-url-lifetime.spec.ts",
-      "caseCount": 2,
-      "reviewedCaseCount": 2,
+      "caseCount": 4,
+      "reviewedCaseCount": 4,
       "originIssue": "219",
       "declaredTimeoutMs": 1500,
       "candidateSignals": [
