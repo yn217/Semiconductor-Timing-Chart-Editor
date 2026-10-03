@@ -643,7 +643,7 @@
       "type": "PERFORMANCE_INVARIANT",
       "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": "Select All -> Copy -> Paste (and Cut/move) of 1k/10k Signals: one History entry, bounded apply-to-idle and Long Tasks, exact Undo. 10k Paste is a known product finding (test.fail).",
+      "primaryContract": "Largest legal same-document Signal Paste (1k->2k, 5k->10k; 5 samples p50/p95/max + Long Tasks), one History entry and exact Undo; 10k->20k over-limit Paste rejected atomically with a RESOURCE_LIMIT_EXCEEDED Problem; Cut = immediate atomic bulk delete (Problems on dependents), Paste re-inserts, exact two-step Undo.",
       "duplicateGroup": "bulk-clipboard-scale",
       "executionTier": "TIER_4_HEAVY_INTEGRATION",
       "profiles": [
