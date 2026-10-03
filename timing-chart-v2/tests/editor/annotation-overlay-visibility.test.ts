@@ -62,6 +62,37 @@ describe("annotation visibility and semantic targets", () => {
     expect(resolveAnchorPoint(anchor, document, projectionFor(signal.id, true), new Map([[signal.id, map]]), mapping)).toEqual({ x: 24, y: 120 });
   });
 
+  it("resolves measurement anchors once for lane allocation and overlay projection", () => {
+    const source = canonicalFixture();
+    const signal = source.signals[1]!;
+    const measurement = {
+      id: "ann_measurement_single_resolution" as never,
+      type: "measurement" as const,
+      label: "Setup",
+      visible: true,
+      start: { signalId: signal.id, cycle: 1, point: "row-center" as const },
+      end: { signalId: signal.id, cycle: 4, point: "row-center" as const },
+    };
+    const document = { ...source, annotations: [measurement] };
+    const geometry = new ImmutableLocalGeometryMap(signal.id, [
+      { cycle: 1, point: "row-center" as const, position: { x: 10, y: 0 } },
+      { cycle: 4, point: "row-center" as const, position: { x: 40, y: 0 } },
+    ]);
+    let geometryOwnerLookups = 0;
+    const maps = new Proxy(new Map([[signal.id, geometry]]), {
+      get(target, property, receiver) {
+        if (property === "get") return (id: SignalId) => { geometryOwnerLookups += 1; return target.get(id); };
+        return Reflect.get(target, property, receiver);
+      },
+    });
+
+    const overlays = projectAnnotationOverlays(document, projectionFor(signal.id, true), maps, buildDisplayTimeMapping(document.timeline, []));
+
+    expect(overlays).toHaveLength(1);
+    expect(overlays[0]?.anchors.map(({ field, x }) => [field, x])).toEqual([["start", 10], ["end", 40]]);
+    expect(geometryOwnerLookups).toBe(2);
+  });
+
   it("omits an annotation whose semantic target is hidden", () => {
     const source = canonicalFixture();
     const signal = source.signals[1]!;
