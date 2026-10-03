@@ -28,8 +28,10 @@ describe("stable-ID selection decoration after presentation remount", () => {
 
     // Model a mode owner replacing the DOM node while canonical selection remains the exact same object.
     const remounted = mountedSignalRow("sig_clock");
-    applySelectionDecorationToHost(hostWithRows(remounted), selection, selection);
+    const remountedHost = hostWithRows(remounted);
+    applySelectionDecorationToHost(remountedHost, selection, selection);
     expect(remounted.row.dataset.selected).toBe("true");
     expect(remounted.attributes.get("aria-selected")).toBe("true");
+    expect(remountedHost.dataset.selectedSignalId).toBe("sig_clock");
   });
 });
