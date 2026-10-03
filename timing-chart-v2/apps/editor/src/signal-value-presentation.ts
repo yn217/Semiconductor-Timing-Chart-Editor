@@ -28,11 +28,11 @@ export function valueChangeAtCycle(signal: Pick<ValueSignal, "values">, cycle: n
 export function formatBusValueAtCycle(
   signal: ValueSignal,
   cycle: number,
-  displayFormat: NonNullable<ValueSignal["displayFormat"]> = signal.displayFormat ?? "hex",
+  displayFormat: ValueSignal["displayFormat"] = signal.displayFormat,
   width = signal.width,
 ): string | undefined {
   if (signal.type !== "bus") return undefined;
   const change = valueChangeAtCycle(signal, cycle);
   if (!change) return undefined;
-  return formatSignalValueChange({ type: "bus", displayFormat, ...(width === undefined ? {} : { width }) }, change);
+  return formatSignalValueChange({ type: "bus", ...(displayFormat === undefined ? {} : { displayFormat }), ...(width === undefined ? {} : { width }) }, change);
 }

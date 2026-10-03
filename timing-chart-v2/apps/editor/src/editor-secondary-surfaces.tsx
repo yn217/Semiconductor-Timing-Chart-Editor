@@ -255,7 +255,7 @@ export function useEditorSecondarySurfaces(
     onCommand: execute,
     onCommandBatch: (commands) =>
       input.command.executeBatch(
-        input.command.nextCommandId("ribbon_annotation_arrange"),
+        input.command.nextCommandId("ai_batch_apply"),
         commands,
       ),
     getZoom: input.ai.getZoom,
