@@ -1,11 +1,11 @@
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 import type { SelectionState } from "./use-selection-owner.js";
 import type { SignalId } from "@timing-chart-v2/schema";
 
 /** Owns editor-only visual toggles and transient selection decoration state.
  * None of these values are canonical document fields or history entries. */
-export function useEditorPresentationState(input: { readonly hostRef: MutableRefObject<HTMLDivElement | null> }) {
+export function useEditorPresentationState(input: { readonly hostRef: MutableRefObject<HTMLDivElement | null>; readonly mode: string; readonly selection: SelectionState; readonly selectionRef: MutableRefObject<SelectionState> }) {
   const [arrowPickStatus, setArrowPickStatus] = useState<"idle" | "from" | "to">("idle");
   const [gridEnabled, setGridEnabled] = useState(true);
   const gridEnabledRef = useRef(true);
@@ -21,7 +21,7 @@ export function useEditorPresentationState(input: { readonly hostRef: MutableRef
   const [showTransactions, setShowTransactions] = useState(true);
   const [showGroupBackground, setShowGroupBackground] = useState(true);
   const previousSelectionDecorationRef = useRef<SelectionState | undefined>(undefined);
-  const applySelectionDecorations = (next: SelectionState): void => {
+  const applySelectionDecorations = useCallback((next: SelectionState): void => {
     const rendererHost = input.hostRef.current;
     if (!rendererHost) return;
     if (next.signalId) rendererHost.dataset.selectedSignalId = next.signalId;
@@ -50,7 +50,14 @@ export function useEditorPresentationState(input: { readonly hostRef: MutableRef
       legend.setAttribute("aria-label", next.legendSelected ? "Legend, selected" : "Legend");
     }
     previousSelectionDecorationRef.current = next;
-  };
+  }, [input.hostRef]);
+  const reapplySelectionRef = useRef<() => void>(() => applySelectionDecorations(input.selectionRef.current));
+  reapplySelectionRef.current = () => applySelectionDecorations(input.selectionRef.current);
+
+  // Mode owners may remove and recreate presentation-only row DOM while the
+  // semantic SelectionState remains unchanged. Reapply decoration after that
+  // remount so stable-ID selection does not depend on a new selection event.
+  useEffect(() => { applySelectionDecorations(input.selection); }, [applySelectionDecorations, input.mode, input.selection]);
 
   return {
     arrowPickStatus, setArrowPickStatus,
@@ -65,5 +72,6 @@ export function useEditorPresentationState(input: { readonly hostRef: MutableRef
     showGroupBackground, setShowGroupBackground,
     previousSelectionDecorationRef,
     applySelectionDecorations,
+    reapplySelectionRef,
   } as const;
 }

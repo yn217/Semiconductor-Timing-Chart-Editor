@@ -20,8 +20,12 @@ const setMode = async (page: Page, mode: "Cycle" | "Transaction" | "Combined") =
   await expect(page.getByTestId("view-mode-status")).toHaveText(mode === "Combined" ? /Mode: (Combined|Split)/ : `Mode: ${mode}`);
   await expect(page.locator(".cycle-panel")).toHaveAttribute("data-workspace-owner", `${mode}Workspace`);
   await expect(page.locator(".cycle-panel[data-workspace-owner]")).toHaveCount(1);
+  await expect(page.locator(".desktop-workspace")).toHaveAttribute("data-workspace-owner", `${mode}Workspace`);
   await expect(page.getByTestId("left-workspace-rail")).toHaveAttribute("data-workspace-owner", `${mode}Workspace`);
   await expect(page.getByTestId("left-workspace-rail")).toHaveCount(1);
+  const viewport = page.getByTestId("cycle-viewport");
+  await expect(viewport).toHaveAttribute("data-time-viewport-owner", mode === "Cycle" ? "cycle-inner" : mode === "Transaction" ? "transaction-viewport" : "combined-viewport");
+  await expect(viewport).toHaveAttribute("data-content-width-owner", mode === "Cycle" ? "cycle-geometry" : mode === "Transaction" ? "transaction-lanes" : "combined-source-time");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true", { timeout: 30_000 });
   await page.waitForTimeout(300);
 };
@@ -35,6 +39,29 @@ const metrics = (page: Page) => page.evaluate(() => {
 });
 
 for (const size of sizes) {
+  test(`Combined owns an independent shared zoom across standalone mode round trips at ${size.width}x${size.height}`, async ({ page }) => {
+    test.setTimeout(150_000);
+    await page.setViewportSize(size);
+    await page.goto("/");
+    await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+    await openDocument(page);
+    await setMode(page, "Cycle");
+    const cycleBefore = await metrics(page);
+
+    await setMode(page, "Combined");
+    await page.getByTestId("ribbon").getByRole("button", { name: "Zoom In", exact: true }).click();
+    await page.waitForTimeout(300);
+    const combinedZoom = await metrics(page);
+    expect(combinedZoom.pitch).not.toBe(cycleBefore.pitch);
+
+    await setMode(page, "Transaction");
+    await page.getByTestId("ribbon").getByRole("button", { name: "Zoom In", exact: true }).click();
+    await setMode(page, "Cycle");
+    expect(await metrics(page)).toEqual(cycleBefore);
+    await setMode(page, "Combined");
+    expect(await metrics(page)).toEqual(combinedZoom);
+  });
+
   test(`Cycle layout is untouched by Transaction zoom/scroll and back at ${size.width}x${size.height}`, async ({ page }) => {
     test.setTimeout(150_000);
     await page.setViewportSize(size);

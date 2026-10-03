@@ -9,6 +9,11 @@ import { buildRuler } from "./build-ruler.js";
 import { displayWindowForSource } from "./display-boundary.js";
 import { waveOwnerPlacement } from "./wave-owner-placement.js";
 
+/** Read the presentation-width authority published by ModeWorkspace, not an outer shell's mode label. */
+function contentWidthOwner(element: HTMLElement): string | undefined {
+  return element.closest<HTMLElement>("[data-content-width-owner]")?.dataset.contentWidthOwner;
+}
+
 /** Reapply ruler-owned boundaries and already-mounted waveform owners from the just-published generation. */
 export function applyPublishedTimeAxisMetrics(ruler: HTMLElement, viewport: HTMLElement | undefined, metrics: TimeAxisMetrics): void {
   for (const boundary of ruler.querySelectorAll<HTMLElement>("[data-geometry-source-cycle]")) {
@@ -67,7 +72,7 @@ export function rebuildRulerPresentation(ruler: HTMLElement, document: Canonical
   const mapping = mappingCache.get(document.timeline, document.timeGroups);
   const referenceViewBoxWidth = referenceSvg?.viewBox.baseVal.width;
   // #750: Transaction presentation labels the ruler in TC; Cycle and Combined keep system cycles (Combined shares one ruler with the Cycle pane).
-  const tcScale = ruler.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction" ? cyclesPerTc : 1;
+  const tcScale = contentWidthOwner(ruler) === "transaction-lanes" ? cyclesPerTc : 1;
   // #750: cyclesPerTC is a horizontal display-time COMPRESSION factor in standalone Transaction Mode (1 TC occupies what 1 cycle does in
   // Cycle Mode). The geometry scale is the single presentation authority, so ruler, grid, bars, Phases, Bookmarks, snap and scroll extent
   // all follow it; Cycle and Combined stay 1:1 with source cycles.
@@ -81,9 +86,9 @@ export function refreshGridPresentation(grid: HTMLElement, document: CanonicalDo
   const timeAxis = sharedMetrics?.timeAxis ?? resolveTimeAxisGeometry(document, geometryMaps);
   // #765: standalone Transaction hides the Cycle signal rows, so their summed height must not size the grid (it made the scroll owner overflow
   // vertically); the grid spans the Transaction lanes instead.
-  const standaloneTransaction = grid.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction";
+  const standaloneTransaction = contentWidthOwner(grid) === "transaction-lanes";
   const gridHeight = standaloneTransaction ? (grid.parentElement?.querySelector<HTMLElement>(".transaction-lanes")?.offsetHeight ?? 0) : totalHeight;
-  renderGeometryGrid(grid, timeAxis.geometry, timeAxis.ownerSignalId, enabled, gridHeight, sharedMetrics?.mapping ?? mappingCache.get(document.timeline, document.timeGroups), Math.max(160, viewportWidth), sharedMetrics?.presentationScale ?? screenGeometryScale, timeAxis.mode, grid.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction" ? cyclesPerTc : 1, sharedMetrics);
+  renderGeometryGrid(grid, timeAxis.geometry, timeAxis.ownerSignalId, enabled, gridHeight, sharedMetrics?.mapping ?? mappingCache.get(document.timeline, document.timeGroups), Math.max(160, viewportWidth), sharedMetrics?.presentationScale ?? screenGeometryScale, timeAxis.mode, standaloneTransaction ? cyclesPerTc : 1, sharedMetrics);
 }
 
 export function refreshRulerAndGridIfNeeded(isInitialized: () => boolean, refreshRuler: () => void, refreshGrid: () => void): void {
@@ -133,7 +138,7 @@ export function refreshTimelinePresentation(context: {
     context.metricsOwner.update({ viewportWidth: context.viewport.clientWidth });
     const metrics = context.metricsOwner.snapshot();
     // Standalone Transaction has no Cycle left/frozen columns inside the timeline area (#750): the presented time domain may use the full width.
-    const inTransaction = context.ruler.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction";
+    const inTransaction = contentWidthOwner(context.ruler) === "transaction-lanes";
     const minimumWaveWidth = Math.max(160, inTransaction ? metrics.viewportWidth : metrics.viewportWidth - metrics.leftPaneWidth - metrics.frozenPaneWidth);
     const currentTimeAxis = resolveTimeAxisGeometry(context.document, context.geometryMaps);
     const rebuilt = rebuildRulerPresentation(context.ruler, context.document, context.geometryMaps, context.mappingCache, rulerInitialized ? screenGeometryScale : undefined, currentTimeAxis.ownerSignalId ? context.geometrySvgs.get(currentTimeAxis.ownerSignalId) : undefined, metrics.zoom, minimumWaveWidth, context.viewport, context.cyclesPerTc);

@@ -23,10 +23,10 @@ function requireDeclaration(selector, property, expected) {
 // Static architecture contract: Cycle's time-domain column owns horizontal overflow,
 // while the fixed columns occupy sibling grid columns and never enter that scroll owner.
 requireDeclaration('.surface-host [data-role="timeline-viewport"]', "display", "contents");
-requireDeclaration('.editor-shell[data-view-mode="Cycle"] .surface-host [data-role="timing-chart-surface"]', "grid-template-columns", "var(--gui-left-width) var(--gui-frozen-width) minmax(0, 1fr)");
-requireDeclaration('.editor-shell[data-view-mode="Cycle"] .surface-host [data-role="timeline-viewport"]', "display", "grid");
-requireDeclaration('.editor-shell[data-view-mode="Cycle"] .surface-host [data-role="timeline-viewport"]', "grid-column", "3");
-requireDeclaration('.editor-shell[data-view-mode="Cycle"] .surface-host [data-role="timeline-viewport"]', "overflow-x", "scroll");
+requireDeclaration('.desktop-workspace[data-workspace-owner="CycleWorkspace"] .surface-host [data-role="timing-chart-surface"]', "grid-template-columns", "var(--gui-left-width) var(--gui-frozen-width) minmax(0, 1fr)");
+requireDeclaration('.desktop-workspace[data-workspace-owner="CycleWorkspace"] .surface-host [data-role="timeline-viewport"]', "display", "grid");
+requireDeclaration('.desktop-workspace[data-workspace-owner="CycleWorkspace"] .surface-host [data-role="timeline-viewport"]', "grid-column", "3");
+requireDeclaration('.desktop-workspace[data-workspace-owner="CycleWorkspace"] .surface-host [data-role="timeline-viewport"]', "overflow-x", "scroll");
 
 if (errors.length) {
   console.error(errors.join("\n"));

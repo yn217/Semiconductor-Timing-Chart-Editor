@@ -165,6 +165,9 @@ function CycleWorkspaceAuxiliary({ viewModel }: EditorWorkspaceViewProps) {
 type WorkspaceOwnerPlan = Readonly<{
   mode: ViewMode;
   name: "CycleWorkspace" | "TransactionWorkspace" | "CombinedWorkspace";
+  /** Explicit presentation authority; semantic time remains the shared source-cycle contract. */
+  timeViewportOwner: "cycle-inner" | "transaction-viewport" | "combined-viewport";
+  contentWidthOwner: "cycle-geometry" | "transaction-lanes" | "combined-source-time";
   headerAbove: ReactNode;
   panelChrome: ReactNode;
   rail: ReactNode;
@@ -180,6 +183,8 @@ function createWorkspaceOwnerPlan(viewModel: EditorWorkspaceViewModel): Workspac
       return {
         mode,
         name: "CycleWorkspace",
+        timeViewportOwner: "cycle-inner",
+        contentWidthOwner: "cycle-geometry",
         headerAbove: null,
         panelChrome: <CycleWorkspace viewModel={viewModel} />,
         rail: <CycleWorkspaceRail content={viewModel.content.leftRail} />,
@@ -191,6 +196,8 @@ function createWorkspaceOwnerPlan(viewModel: EditorWorkspaceViewModel): Workspac
       return {
         mode,
         name: "TransactionWorkspace",
+        timeViewportOwner: "transaction-viewport",
+        contentWidthOwner: "transaction-lanes",
         headerAbove: <TransactionWorkspace viewModel={viewModel} />,
         panelChrome: null,
         rail: <TransactionWorkspaceRail content={viewModel.content.transactionTree} />,
@@ -202,6 +209,8 @@ function createWorkspaceOwnerPlan(viewModel: EditorWorkspaceViewModel): Workspac
       return {
         mode,
         name: "CombinedWorkspace",
+        timeViewportOwner: "combined-viewport",
+        contentWidthOwner: "combined-source-time",
         headerAbove: <CombinedWorkspace viewModel={viewModel} />,
         panelChrome: null,
         rail: <CombinedWorkspaceRail content={viewModel.content.transactionTree} />,
@@ -412,11 +421,11 @@ export function EditorWorkspaceView({
       window.removeEventListener("resize", update);
     };
   }, [ruler, rulerLower, cursor.a, cursor.b, cursorPresentationRevision, zoom, viewport, viewportLower]);
-  return <div className="desktop-workspace">
+  return <div className="desktop-workspace" data-workspace-owner={workspace.name}>
     {workspace.headerAbove}
     <section className={`cycle-panel mode-${workspace.mode.toLowerCase()}`} aria-label={`${workspace.mode === "Split" ? "Combined" : workspace.mode} View`} data-view-mode={workspace.mode} data-workspace-owner={workspace.name} data-signal-split={String(viewModel.view.signalSplitEnabled && workspace.mode === "Cycle")}>
       {workspace.panelChrome}
-      <div className={`cycle-viewport${viewMode === "Split" ? " split-signal-pane" : ""}`} ref={viewport} data-testid="cycle-viewport" data-pane={viewMode === "Split" ? "signal" : undefined} tabIndex={0} aria-label="Timing canvas navigation" onKeyDown={viewModel.interactions.onViewportKeyDown}>
+      <div className={`cycle-viewport${viewMode === "Split" ? " split-signal-pane" : ""}`} ref={viewport} data-testid="cycle-viewport" data-pane={viewMode === "Split" ? "signal" : undefined} data-time-viewport-owner={workspace.timeViewportOwner} data-content-width-owner={workspace.contentWidthOwner} tabIndex={0} aria-label="Timing canvas navigation" onKeyDown={viewModel.interactions.onViewportKeyDown}>
         {workspace.upperPane}
         <TimelinePaneContents gridLayer={gridLayer} ruler={ruler} host={host} gridEnabled={viewModel.view.gridEnabled} rulerEnabled={viewModel.view.rulerEnabled} snapEnabled={viewModel.view.snapEnabled} body={workspace.timelineBody} combined={workspace.mode === "Split"} />
       </div>
