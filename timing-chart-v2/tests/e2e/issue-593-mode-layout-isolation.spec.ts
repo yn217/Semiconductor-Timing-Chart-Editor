@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 /**
  * #593 real-browser acceptance: Cycle and Transaction own separate workspace layout. Changing the other mode's horizontal presentation
@@ -123,9 +124,7 @@ for (const size of sizes) {
     await openDocument(page);
     const host = page.getByTestId("cycle-surface");
     await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
-    const revision = await host.getAttribute("data-canonical-revision");
-    const history = await page.getByTestId("history-status").textContent();
-    const dirty = await page.getByTestId("dirty-status").textContent();
+    const viewOnlyBefore = await documentState(page);
     await setMode(page, "Cycle");
     await expect(page.getByTestId("left-pane-resizer")).toHaveCount(1);
     await expect(host.locator("[data-role='frozen-row']")).not.toHaveCount(0);
@@ -139,8 +138,6 @@ for (const size of sizes) {
     await expect(host.locator("[data-role='frozen-row']")).not.toHaveCount(0);
     await setMode(page, "Cycle");
     await expect(host.locator("[data-role='frozen-row']")).not.toHaveCount(0);
-    expect(await host.getAttribute("data-canonical-revision")).toBe(revision);
-    await expect(page.getByTestId("history-status")).toHaveText(history!);
-    await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
+    await expectViewOnly(page, viewOnlyBefore);
   });
 }

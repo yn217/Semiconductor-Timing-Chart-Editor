@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { resolve } from "node:path";
 import { startInCycleMode } from "./cycle-startup.js";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 startInCycleMode(test);
 
@@ -58,9 +59,7 @@ for (const viewportSize of [{ width: 1280, height: 720 }, { width: 1672, height:
       await page.mouse.click(clickableLabel!.x, clickableLabel!.y);
       await expect(annotation).toHaveAttribute("data-selected", "true");
 
-      const revision = await surface.getAttribute("data-canonical-revision");
-      const history = await page.getByTestId("history-status").textContent();
-      const dirty = await page.getByTestId("dirty-status").textContent();
+      const viewOnlyBefore = await documentState(page);
       const viewport = page.getByTestId("cycle-viewport");
       const before = await viewport.evaluate((element) => ({ top: element.scrollTop, max: element.scrollHeight - element.clientHeight, rect: element.getBoundingClientRect().toJSON() }));
       expect(before.max).toBeGreaterThan(0);
@@ -107,9 +106,7 @@ for (const viewportSize of [{ width: 1280, height: 720 }, { width: 1672, height:
       await expect(rangeStart).toHaveValue(selectedRange.start);
       await expect(rangeEnd).toHaveValue(selectedRange.end);
 
-      await expect(surface).toHaveAttribute("data-canonical-revision", revision!);
-      await expect(page.getByTestId("history-status")).toHaveText(history!);
-      await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
+      await expectViewOnly(page, viewOnlyBefore);
       expect(await rulerTicks.count()).toBeGreaterThan(0);
     });
   });

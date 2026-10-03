@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 /**
  * #726 (presentation only): in standalone Transaction mode a Lane stays identifiable while following it horizontally (sticky Lane chip),
@@ -19,9 +20,7 @@ for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }])
     await expect(lanes.locator("[data-transaction-id='tx_0']")).toHaveCount(1, { timeout: 60_000 });
     const host = page.getByTestId("cycle-surface");
     await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
-    const revision = await host.getAttribute("data-canonical-revision");
-    const history = await page.getByTestId("history-status").textContent();
-    const dirty = await page.getByTestId("dirty-status").textContent();
+    const viewOnlyBefore = await documentState(page);
     const viewport = page.getByTestId("cycle-viewport");
 
     // 1. Follow a Lane horizontally: the Lane chip stays at the scroll owner's left edge instead of scrolling away.
@@ -64,8 +63,6 @@ for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }])
     }
 
     // Presentation only.
-    expect(await host.getAttribute("data-canonical-revision")).toBe(revision);
-    await expect(page.getByTestId("history-status")).toHaveText(history!);
-    await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
+    await expectViewOnly(page, viewOnlyBefore);
   });
 }

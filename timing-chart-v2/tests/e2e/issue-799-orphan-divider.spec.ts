@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const protocolSample = path.resolve(dirname, "../../samples/old/pre-reset-2026-10-02/showcase/24_protocol_transaction_showcase.tcd.json");
@@ -104,8 +105,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
       await assertGripStructure(page);
     }
 
-    const history = await page.getByTestId("history-status").innerText();
-    const dirty = await page.getByTestId("dirty-status").innerText();
+    const viewOnlyBefore = await documentState(page);
     const canonicalRevision = await host.getAttribute("data-canonical-revision");
     const groupCollapse = page.locator("[data-role='left-group-header'] [data-role='tree-collapse']").first();
     await expect(groupCollapse).toBeVisible();
@@ -138,8 +138,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await page.mouse.up();
     await expect.poll(() => bottomResizer.getAttribute("aria-valuenow")).not.toBe(String(initialBottom));
     await assertGripStructure(page);
-    await expect(page.getByTestId("history-status")).toHaveText(history);
-    await expect(page.getByTestId("dirty-status")).toHaveText(dirty);
+    await expectViewOnly(page, viewOnlyBefore);
     await expect(host).toHaveAttribute("data-canonical-revision", canonicalRevision!);
   });
 }
@@ -175,8 +174,7 @@ test("Cycle resize handles remain pointer-operable at their structural header bo
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
-  const history = await page.getByTestId("history-status").innerText();
-  const dirty = await page.getByTestId("dirty-status").innerText();
+  const viewOnlyBefore = await documentState(page);
   const handle = page.getByTestId("left-pane-resizer");
   const initial = await handle.getAttribute("aria-valuenow");
   const handleBox = (await handle.boundingBox())!;
@@ -188,6 +186,5 @@ test("Cycle resize handles remain pointer-operable at their structural header bo
   await page.mouse.move(x + 24, y, { steps: 3 });
   await page.mouse.up();
   await expect(handle).not.toHaveAttribute("aria-valuenow", initial ?? "");
-  await expect(page.getByTestId("history-status")).toHaveText(history);
-  await expect(page.getByTestId("dirty-status")).toHaveText(dirty);
+  await expectViewOnly(page, viewOnlyBefore);
 });

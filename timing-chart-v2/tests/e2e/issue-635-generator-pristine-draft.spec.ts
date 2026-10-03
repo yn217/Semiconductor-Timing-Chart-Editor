@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 test("a pristine binary Signal Generator is not presented as an unapplied user Draft", async ({ page }) => {
   await page.setViewportSize({ width: 1672, height: 941 });
@@ -9,9 +10,7 @@ test("a pristine binary Signal Generator is not presented as an unapplied user D
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.getByRole("tab", { name: "Signal", exact: true }).click();
 
-  const revision = await surface.getAttribute("data-canonical-revision");
-  const history = await page.getByTestId("history-status").innerText();
-  const dirty = await page.getByTestId("dirty-status").innerText();
+  const viewOnlyBefore = await documentState(page);
   await surface.locator("[data-role='frozen-row'][data-row-id='sig_cycle_reset_n']").click();
 
   const generator = page.getByTestId("signal-editor").locator("form[aria-label='Signal Generator']");
@@ -30,9 +29,7 @@ test("a pristine binary Signal Generator is not presented as an unapplied user D
   await expect(status).toBeVisible();
   await expect(cancel).toBeEnabled();
   await expect(generate).toBeEnabled();
-  await expect(surface).toHaveAttribute("data-canonical-revision", revision!);
-  await expect(page.getByTestId("history-status")).toHaveText(history);
-  await expect(page.getByTestId("dirty-status")).toHaveText(dirty);
+  await expectViewOnly(page, viewOnlyBefore);
 
   await cancel.click();
   await expect(start).toHaveValue("0");
@@ -42,7 +39,5 @@ test("a pristine binary Signal Generator is not presented as an unapplied user D
   await expect(generator.getByLabel("Signal generator start")).toHaveValue("0");
   await expect(status).toHaveCount(0);
   await expect(cancel).toBeDisabled();
-  await expect(surface).toHaveAttribute("data-canonical-revision", revision!);
-  await expect(page.getByTestId("history-status")).toHaveText(history);
-  await expect(page.getByTestId("dirty-status")).toHaveText(dirty);
+  await expectViewOnly(page, viewOnlyBefore);
 });

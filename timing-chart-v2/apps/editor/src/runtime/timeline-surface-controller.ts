@@ -38,6 +38,7 @@ import { deriveTransactionExtent } from "./transaction-extent.js";
 import { createTransactionPresentationRefreshRequester, shouldRefreshTransactionPresentation } from "./transaction-presentation-refresh.js";
 import { createTreeKeyboardController } from "./tree-keyboard-controller.js";
 import { TransitionArrowPicker } from "./transition-arrow-picker.js";
+import { createScrollOverlayRefreshOwner } from "./scroll-overlay-refresh-owner.js";
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 type TimelineRange = Readonly<{ start: number; end: number }>;
@@ -403,7 +404,6 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     publishState = () => publishRendererState(rendererHost, sessionController.current(), viewMetricsOwner, adapter, geometryRegistry, projectionCoordinator, renderer, mappingCache, timelineGeometry.snapService, timelineGeometry.snapIndex, rulerBuilds, edgeCounterResolvePasses, timelineNavigation.getZoom(), application.validatorInvocationsRef.current, edgeCounterMetrics);
     publishStateRef.current = () => publishState();
     let frame = 0;
-    let scrollOverlayRefreshGeneration = 0;
     // Definite-assignment: assigned below before the viewport runtime's
     // returned closures can ever be invoked (matches this file's rangeInteractions/
     // treeDrag forward-declaration convention); no dummy body is reachable.
@@ -426,6 +426,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       lifecycle: { isCurrentEpoch: (epoch) => documentEpoch.isCurrent(epoch) },
     });
     timelineRuntimeRef.current = timelineRuntime;
+    const scrollOverlayRefresh = createScrollOverlayRefreshOwner({ getDocumentEpoch: () => documentEpoch.current(), isDocumentEpochCurrent: (epoch) => documentEpoch.isCurrent(epoch), isActive: () => active && rendererHost.isConnected, waitForRendererIdle: () => renderer.whenIdle(), refresh: () => timelineRuntime.refreshOverlays("scroll") });
     timelineRender = (reason) => {
       rendererHost.dataset.timelineRefreshReason = reason;
       if (reason === "scroll") {
@@ -457,12 +458,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
             // requested geometry has settled, and discard superseded scroll
             // continuations so rapid scrolling publishes only the latest
             // viewport's overlays.
-            const refreshGeneration = ++scrollOverlayRefreshGeneration;
-            const refreshEpoch = documentEpoch.current();
-            void renderer.whenIdle().then(() => {
-              if (!active || !rendererHost.isConnected || refreshGeneration !== scrollOverlayRefreshGeneration || !documentEpoch.isCurrent(refreshEpoch)) return;
-              timelineRuntime.refreshOverlays("scroll");
-            });
+            scrollOverlayRefresh.request();
           },
         }));
         return;
@@ -938,6 +934,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     });
     return () => {
       active = false;
+      scrollOverlayRefresh.invalidate();
       applyCollapsedGroupsRef.current = () => undefined;
       refreshPlayhead.current = () => undefined;
       lowerCanvasClickRef.current = () => undefined;

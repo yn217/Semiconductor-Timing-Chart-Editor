@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { canonicalFixture } from "../fixtures/canonical";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 for (const count of [1_000, 5_000, 20_000]) test(`${count} Annotation rows stay virtualized through End navigation`, async ({ page }) => {
   test.setTimeout(120_000);
@@ -16,9 +17,7 @@ for (const count of [1_000, 5_000, 20_000]) test(`${count} Annotation rows stay 
   await page.locator("[data-bottom-tab='Annotation']").click();
   const list = page.getByTestId("annotation-list");
   await expect(list).toBeVisible();
-  const revision = await host.getAttribute("data-canonical-revision");
-  const history = await page.getByTestId("history-status").textContent();
-  const dirty = await page.getByTestId("dirty-status").textContent();
+  const viewOnlyBefore = await documentState(page);
   expect(await list.locator("[data-annotation-list-id]").count()).toBeLessThan(100);
   await list.locator("[data-annotation-list-id]").first().focus();
   const navigationStarted = await page.evaluate(() => performance.now());
@@ -27,7 +26,5 @@ for (const count of [1_000, 5_000, 20_000]) test(`${count} Annotation rows stay 
   const navigationDuration = await page.evaluate((started) => performance.now() - started, navigationStarted);
   expect(navigationDuration).toBeLessThan(5_000);
   expect(await list.locator("[data-annotation-list-id]").count()).toBeLessThan(100);
-  await expect(host).toHaveAttribute("data-canonical-revision", revision!);
-  await expect(page.getByTestId("history-status")).toHaveText(history!);
-  await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
+  await expectViewOnly(page, viewOnlyBefore);
 });

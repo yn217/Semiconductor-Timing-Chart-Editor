@@ -603,6 +603,57 @@
       "replacementTest": null
     },
     {
+      "file": "issue-431-bus-radix.spec.ts",
+      "domain": "bus-radix",
+      "originIssue": 431,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Per-Signal Bus format agrees across waveform labels, Bottom event table and Save/Open.",
+      "duplicateGroup": "bus-radix",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Added in the #431 non-Scenario verification pass; no duplicate coverage of the shared formatter across surfaces.",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-431-enum-state-save-open.spec.ts",
+      "domain": "enum-state-save-open",
+      "originIssue": 431,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "State/Enum values, mapping, binding and symbolic labels survive Save -> Open exactly.",
+      "duplicateGroup": "enum-state-save-open",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Added in the #431 non-Scenario verification pass; protects a user-visible journey with no duplicate coverage.",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-431-protocol-check-toggle.spec.ts",
+      "domain": "check-category-toggle",
+      "originIssue": 431,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Protocol/Stability checks toggle OFF/ON from the Check tab with deterministic, duplicate-free findings.",
+      "duplicateGroup": "check-category-toggle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Added in the #431 non-Scenario verification pass; protects a user-visible journey with no duplicate coverage.",
+      "replacementTest": null
+    },
+    {
       "file": "issue-440-mode-context-coherence.spec.ts",
       "domain": "mode-context",
       "originIssue": 440,
@@ -16075,6 +16126,24 @@
       "decision": "KEEP",
       "reason": "Move/delete operations have different stable-ID and destructive-approval risks from Signal creation or rename, so this case retains an independent contract.",
       "replacementTest": null
+    },
+    {
+      "file": "issue-945-transaction-scrollbar-stability.spec.ts",
+      "domain": "transaction-scrollbar",
+      "originIssue": 945,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Exhaustive 4 px window-height sweep: the Transaction scroll owner geometry never oscillates while idle.",
+      "duplicateGroup": "transaction-scrollbar",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Exhaustive sweep (76 heights, ~1 min) moved out of the routine PR tier in #782 B4; a 30 px quick sweep of the same contract stays in the pr tier.",
+      "replacementTest": null,
+      "title": "Transaction scroll owner geometry is stable while idle at every window height (no scrollbar oscillation)"
     }
   ]
 }

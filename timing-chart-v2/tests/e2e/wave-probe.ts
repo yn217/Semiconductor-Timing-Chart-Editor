@@ -8,7 +8,7 @@ import type { Page } from "@playwright/test";
  * the user can observe — cycle boundaries, transition shapes and value labels — already mapped to SCREEN coordinates (using the image's
  * on-screen box and viewBox), so specs compare them with ruler ticks / bars without depending on how the artifact is delivered.
  */
-export interface WaveLabel { readonly index: number; readonly text: string; readonly x: number; readonly y: number; readonly mode: string | null }
+export interface WaveLabel { readonly index: number; readonly text: string; /** The visible glyph text only (excludes the accessible <title> child that `text` also contains). */ readonly shownText: string; readonly x: number; readonly y: number; readonly mode: string | null }
 /** Artifact-space (unscaled) value-label facts: layout mode, the cycle segment it fits, its anchor X and its accessible name/title. */
 export interface WaveRawLabel { readonly index: number; readonly mode: string | null; readonly segmentStart: number; readonly segmentEnd: number; readonly x: number; readonly ariaLabel: string | null; readonly title: string | null }
 export interface WaveUse { readonly href: string; readonly x: number }
@@ -50,7 +50,7 @@ export async function readWave(page: Page, signalId: string): Promise<WaveSnapsh
     for (const line of source.querySelectorAll("[id^='gmark_'][id$='_0']")) boundaries[Number(line.id.split("_")[1])] = screenX(translateX(line.parentElement) + Number(line.getAttribute("x1")));
     const uses = [...source.querySelectorAll("use")].map((node) => ({ href: node.getAttribute("xlink:href") ?? node.getAttribute("href") ?? "", x: screenX(translateX(node)) }));
     const labels = [...source.querySelectorAll("text[data-value-label-index]")].map((node) => ({
-      index: Number(node.getAttribute("data-value-label-index")), text: node.textContent ?? "", x: screenX(translateX(node.parentElement) + Number(node.getAttribute("x"))), y: rect.top + Number(node.getAttribute("y")) * scale, mode: node.getAttribute("data-value-label-mode"),
+      index: Number(node.getAttribute("data-value-label-index")), text: node.textContent ?? "", shownText: (() => { const title = node.querySelector("title")?.textContent ?? ""; const full = node.textContent ?? ""; return title !== "" && full.endsWith(title) ? full.slice(0, full.length - title.length) : full; })(), x: screenX(translateX(node.parentElement) + Number(node.getAttribute("x"))), y: rect.top + Number(node.getAttribute("y")) * scale, mode: node.getAttribute("data-value-label-mode"),
     }));
     const height = viewBox && viewBox.length === 4 ? viewBox[3]! : Number(source.getAttribute("height"));
     const rawLabels = [...source.querySelectorAll("text[data-value-label-index]")].map((node) => ({

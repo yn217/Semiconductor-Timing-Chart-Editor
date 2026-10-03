@@ -3,6 +3,7 @@ import type { Locator, Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { startInCycleSample } from "./cycle-startup.js";
 import { hoverTimelineArea, timelineOwner } from "./timeline-scroll.js";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 startInCycleSample(test);
 
@@ -124,9 +125,7 @@ test.describe("Legend projection across modes", () => {
     await expect(page.getByTestId("inspector")).toHaveAttribute("data-inspector-entity", "legend");
     const canonicalX = await page.getByLabel("Legend X").inputValue();
     const canonicalY = await page.getByLabel("Legend Y").inputValue();
-    const revision = await surface.getAttribute("data-canonical-revision");
-    const history = await page.getByTestId("history-status").textContent();
-    const dirty = await page.getByTestId("dirty-status").textContent();
+    const viewOnlyBefore = await documentState(page);
 
     await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
     await page.getByLabel("Zoom preset").selectOption("200");
@@ -147,9 +146,7 @@ test.describe("Legend projection across modes", () => {
     await expectLegendInVisibleArea(page, legend);
     await expect(page.getByLabel("Legend X")).toHaveValue(canonicalX);
     await expect(page.getByLabel("Legend Y")).toHaveValue(canonicalY);
-    await expect(surface).toHaveAttribute("data-canonical-revision", revision!);
-    await expect(page.getByTestId("history-status")).toHaveText(history!);
-    await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
+    await expectViewOnly(page, viewOnlyBefore);
   });
 });
 
@@ -175,9 +172,7 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
       const inspectorY = page.getByLabel("Legend Y");
       await expect(inspectorX).toHaveValue("500");
       await expect(inspectorY).toHaveValue("80");
-      const revision = await surface.getAttribute("data-canonical-revision");
-      const history = await page.getByTestId("history-status").textContent();
-      const dirty = await page.getByTestId("dirty-status").textContent();
+      const viewOnlyBefore = await documentState(page);
 
       await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
       await page.getByLabel("Zoom preset").selectOption("800");
@@ -208,9 +203,7 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
       await expectLegendInVisibleArea(page, legend);
       await expect(inspectorX).toHaveValue("500");
       await expect(inspectorY).toHaveValue("80");
-      await expect(surface).toHaveAttribute("data-canonical-revision", revision!);
-      await expect(page.getByTestId("history-status")).toHaveText(history!);
-      await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
+      await expectViewOnly(page, viewOnlyBefore);
 
       const ribbon = page.getByTestId("ribbon");
       await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
@@ -265,9 +258,7 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
       await expect(inspectorX).toHaveValue("18");
       await expect(inspectorY).toHaveValue("18");
 
-      const revision = await surface.getAttribute("data-canonical-revision");
-      const history = await page.getByTestId("history-status").textContent();
-      const dirty = await page.getByTestId("dirty-status").textContent();
+      const viewOnlyBefore = await documentState(page);
       const cycleViewport = page.getByTestId("cycle-viewport");
       expect(await cycleViewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(
         await cycleViewport.evaluate((element) => element.clientHeight),
@@ -303,9 +294,7 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
       await expectLegendInVisibleArea(page, legend);
       await expect(inspectorX).toHaveValue("18");
       await expect(inspectorY).toHaveValue("18");
-      await expect(surface).toHaveAttribute("data-canonical-revision", revision!);
-      await expect(page.getByTestId("history-status")).toHaveText(history!);
-      await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
+      await expectViewOnly(page, viewOnlyBefore);
 
       const ribbon = page.getByTestId("ribbon");
       await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();

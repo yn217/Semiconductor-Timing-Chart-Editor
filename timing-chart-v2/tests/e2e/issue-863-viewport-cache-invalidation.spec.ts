@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 import { startInCycleMode } from "./cycle-startup.js";
+import { documentState } from "./view-only.js";
 
 startInCycleMode(test);
 
@@ -56,7 +57,7 @@ for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] 
     await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
     await expect.poll(() => page.locator("[data-role='annotation-owner']").count(), { timeout: 60_000 }).toBeGreaterThan(0);
     const owner = page.locator("[data-role='timeline-viewport']");
-    const state = () => page.evaluate(() => ({ revision: document.querySelector("[data-testid='cycle-surface']")?.getAttribute("data-canonical-revision"), history: document.querySelector("[data-testid='history-status']")?.textContent, dirty: document.querySelector("[data-testid='dirty-status']")?.textContent }));
+    const state = () => documentState(page);
     const baseline = await state();
     const failures: string[] = [];
     let totalCompared = 0; let skipped = 0;

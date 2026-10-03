@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 394 spec files and 1146 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 397 spec files and 1155 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1146/1146 cases reviewed.
+Semantic review progress: 1155/1155 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,10 +10,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 578 |
+| `integration` | 579 |
 | `nightly` | 226 |
-| `performance` | 63 |
-| `pr` | 358 |
+| `performance` | 65 |
+| `pr` | 364 |
 | `visual` | 178 |
 
 ## Top recorded per-case runtimes
@@ -152,6 +152,9 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-426-event-selection-scope.spec.ts` | 1 | 1/1 reviewed |
 | `issue-426-external-bottom-draft-update.spec.ts` | 3 | 3/3 reviewed |
 | `issue-426-inspector-bookmark-rebase.spec.ts` | 2 | 2/2 reviewed |
+| `issue-431-bus-radix.spec.ts` | 2 | 2/2 reviewed |
+| `issue-431-enum-state-save-open.spec.ts` | 2 | 2/2 reviewed |
+| `issue-431-protocol-check-toggle.spec.ts` | 2 | 2/2 reviewed |
 | `issue-440-mode-context-coherence.spec.ts` | 3 | 3/3 reviewed |
 | `issue-440-pinned-bookmark-transaction.spec.ts` | 2 | 2/2 reviewed |
 | `issue-441-ribbon-label-integrity.spec.ts` | 3 | 3/3 reviewed |
@@ -282,7 +285,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-863-viewport-cache-invalidation.spec.ts` | 4 | 4/4 reviewed |
 | `issue-864-bulk-clipboard-one-history.spec.ts` | 1 | 1/1 reviewed |
 | `issue-869-minimap-single-edit-incremental.spec.ts` | 1 | 1/1 reviewed |
-| `issue-869-minimap-transaction-incremental.spec.ts` | 1 | 1/1 reviewed |
+| `issue-869-minimap-transaction-incremental.spec.ts` | 3 | 3/3 reviewed |
 | `issue-890-annotation-signal-picker-10k.spec.ts` | 1 | 1/1 reviewed |
 | `issue-895-canvas-wave-semantics.spec.ts` | 1 | 1/1 reviewed |
 | `issue-896-implicit-reference-window.spec.ts` | 1 | 1/1 reviewed |
@@ -300,7 +303,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-937-time-axis-coordinate-matrix.spec.ts` | 3 | 3/3 reviewed |
 | `issue-937-transaction-coordinate-matrix.spec.ts` | 4 | 4/4 reviewed |
 | `issue-945-transaction-scrollbar-interactions.spec.ts` | 4 | 4/4 reviewed |
-| `issue-945-transaction-scrollbar-stability.spec.ts` | 1 | 1/1 reviewed |
+| `issue-945-transaction-scrollbar-stability.spec.ts` | 2 | 2/2 reviewed |
 | `keyboard-shortcut-router.spec.ts` | 4 | 4/4 reviewed |
 | `keyboard-tabs-resizers.spec.ts` | 2 | 2/2 reviewed |
 | `label-anchor-source-display.spec.ts` | 1 | 1/1 reviewed |
@@ -459,7 +462,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `bottom-editor-row-contrast.spec.ts` | getComputedStyle |
 | `bottom-panel-cancel-apply-height.spec.ts` | geometryRead |
 | `bottom-panel-full-width.spec.ts` | geometryRead |
-| `bottom-tab-header-visibility.spec.ts` | getComputedStyle, elementContains, dataset, geometryRead |
+| `bottom-tab-header-visibility.spec.ts` | getComputedStyle, dataset, geometryRead |
 | `checkbox-dark-color-scheme.spec.ts` | getComputedStyle |
 | `clockless-time-axis.spec.ts` | dataset, geometryRead |
 | `cycle-default-pitch.spec.ts` | querySelector, getComputedStyle, geometryRead, explicitWait |
@@ -478,7 +481,6 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `insert-timeline-ribbon.spec.ts` | getComputedStyle, dataset, geometryRead |
 | `inspector-hide-compacts-rows.spec.ts` | dataset, geometryRead |
 | `issue-1004-group-hierarchy.spec.ts` | querySelector, getComputedStyle, geometryRead |
-| `issue-1007-transaction-add-menu.spec.ts` | querySelector |
 | `issue-208-open-epoch-coherence.spec.ts` | querySelector |
 | `issue-441-ribbon-label-integrity.spec.ts` | getComputedStyle, geometryRead |
 | `issue-573-combined-shared-time-axis.spec.ts` | geometryRead, explicitWait |
@@ -551,7 +553,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `issue-856-bottom-event-table-scroll-cost.spec.ts` | querySelector |
 | `issue-856-bottom-transaction-scroll-cost.spec.ts` | querySelector |
 | `issue-863-annotation-scroll-cost.spec.ts` | querySelector, dataset, geometryRead |
-| `issue-863-viewport-cache-invalidation.spec.ts` | querySelector, dataset, geometryRead, explicitWait |
+| `issue-863-viewport-cache-invalidation.spec.ts` | dataset, geometryRead, explicitWait |
 | `issue-895-canvas-wave-semantics.spec.ts` | dataset, styleMutation, directDomMutation |
 | `issue-896-implicit-reference-window.spec.ts` | dataset, explicitWait |
 | `issue-897-context-menu-target.spec.ts` | querySelector, explicitWait |
@@ -582,7 +584,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `minimal-cycle-view.spec.ts` | dataset, geometryRead |
 | `minimap-overview-performance.spec.ts` | querySelector, dataset |
 | `minimap-viewport-closure.spec.ts` | dataset, geometryRead |
-| `mode-isolation-journey.spec.ts` | getComputedStyle, geometryRead |
+| `mode-isolation-journey.spec.ts` | getComputedStyle, dataset, geometryRead |
 | `open-progressive-wave-yield.spec.ts` | querySelector, dataset, explicitWait |
 | `perf-755-far-jump-longtask.spec.ts` | querySelector |
 | `performance-closure.spec.ts` | querySelector, dataset, geometryRead, explicitWait |

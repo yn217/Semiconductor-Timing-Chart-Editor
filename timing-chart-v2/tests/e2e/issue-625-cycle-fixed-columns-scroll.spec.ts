@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { timelineOwner } from "./timeline-scroll.js";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 // Classic (non-overlay) scrollbars so the Timeline track exposes a real native thumb to drag.
 test.use({ launchOptions: { ignoreDefaultArgs: ["--hide-scrollbars"] } });
@@ -44,9 +45,7 @@ for (const viewportSize of [{ width: 1672, height: 941 }, { width: 1280, height:
     const endX = startX + trackWidth * 0.76;
     const y = initial.bottom - initial.scrollbarHeight / 2;
     const fixedBefore = await Promise.all([leftHeader, roleHeader, signalHeader, frozenClock].map(async (locator) => (await locator.boundingBox())!.x));
-    const revision = await host.getAttribute("data-canonical-revision");
-    const history = await page.getByTestId("history-status").innerText();
-    const dirty = await page.getByTestId("dirty-status").innerText();
+    const viewOnlyBefore = await documentState(page);
     const samples: Array<{ scrollLeft: number; fixedX: number[]; fixedVisible: boolean[] }> = [];
 
     await page.mouse.move(startX, y);
@@ -73,9 +72,7 @@ for (const viewportSize of [{ width: 1672, height: 941 }, { width: 1280, height:
       expect(sample.fixedVisible).toEqual([true, true, true, true]);
       sample.fixedX.forEach((x, index) => expect(x).toBeCloseTo(fixedBefore[index]!, 0));
     }
-    await expect(host).toHaveAttribute("data-canonical-revision", revision!);
-    await expect(page.getByTestId("history-status")).toHaveText(history);
-    await expect(page.getByTestId("dirty-status")).toHaveText(dirty);
+    await expectViewOnly(page, viewOnlyBefore);
     expect(pageErrors).toEqual([]);
   });
 }

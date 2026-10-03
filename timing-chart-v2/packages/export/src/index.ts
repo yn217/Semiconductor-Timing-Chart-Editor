@@ -1146,14 +1146,23 @@ async function renderExportSvgChunksCooperatively(scene: ExportScene, signal?: A
 
 async function encodeSvgChunksCooperatively(chunks: readonly string[], signal?: AbortSignal, onProgress?: ExportRequest["onProgress"]): Promise<Uint8Array> {
   const encoder = new TextEncoder();
-  const encoded: Uint8Array[] = [];
   let totalBytes = 0;
   let sliceStartedAt = globalThis.performance?.now() ?? Date.now();
   for (const chunk of chunks) {
     throwIfExportAborted(signal);
-    const bytes = encoder.encode(chunk);
-    encoded.push(bytes);
-    totalBytes += bytes.byteLength;
+    // Count UTF-8 bytes without allocating one temporary Uint8Array per
+    // chunk. Large exports otherwise retain the encoded chunks and then
+    // allocate/copy a second full-size output buffer at peak.
+    for (let index = 0; index < chunk.length; index += 1) {
+      const unit = chunk.charCodeAt(index);
+      if (unit <= 0x7f) totalBytes += 1;
+      else if (unit <= 0x7ff) totalBytes += 2;
+      else if (unit >= 0xd800 && unit <= 0xdbff && index + 1 < chunk.length) {
+        const next = chunk.charCodeAt(index + 1);
+        if (next >= 0xdc00 && next <= 0xdfff) { totalBytes += 4; index += 1; }
+        else totalBytes += 3;
+      } else totalBytes += 3;
+    }
     const now = globalThis.performance?.now() ?? Date.now();
     if (now - sliceStartedAt >= 16) {
       onProgress?.({ stage: "encoding" });
@@ -1164,10 +1173,11 @@ async function encodeSvgChunksCooperatively(chunks: readonly string[], signal?: 
 
   const output = new Uint8Array(totalBytes);
   let offset = 0;
-  for (const bytes of encoded) {
+  for (const chunk of chunks) {
     throwIfExportAborted(signal);
-    output.set(bytes, offset);
-    offset += bytes.byteLength;
+    const { read, written } = encoder.encodeInto(chunk, output.subarray(offset));
+    if (read !== chunk.length) throw new Error("SVG export UTF-8 output buffer was undersized.");
+    offset += written;
     const now = globalThis.performance?.now() ?? Date.now();
     if (now - sliceStartedAt >= 16) {
       onProgress?.({ stage: "encoding" });

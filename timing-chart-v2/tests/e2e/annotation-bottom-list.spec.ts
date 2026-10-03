@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 test("Annotation Bottom keeps a stable collection while selection, import, and Save/Open remain canonical", async ({ page }) => {
   await page.goto("/");
@@ -25,9 +26,7 @@ test("Annotation Bottom keeps a stable collection while selection, import, and S
   await expect(visibility).toHaveAttribute("aria-pressed", "false");
   await expect(host).not.toHaveAttribute("data-canonical-revision", visibilityRevision!);
 
-  const revision = await host.getAttribute("data-canonical-revision");
-  const history = await page.getByTestId("history-status").textContent();
-  const dirty = await page.getByTestId("dirty-status").textContent();
+  const viewOnlyBefore = await documentState(page);
   const surface = host.locator("[data-role='timing-chart-surface']");
   const counters = await surface.getAttribute("data-render-counters");
   const selectedRow = list.locator("[data-annotation-list-id]").nth(1);
@@ -35,9 +34,7 @@ test("Annotation Bottom keeps a stable collection while selection, import, and S
   await expect(selectedRow).toHaveAttribute("data-selected", "true");
   await expect(page.getByRole("textbox", { name: "Annotation label", exact: true })).toBeVisible();
   await expect(page.locator("#bottom-context-content").getByTestId("annotation-editor")).toHaveCount(0);
-  await expect(host).toHaveAttribute("data-canonical-revision", revision!);
-  await expect(page.getByTestId("history-status")).toHaveText(history!);
-  await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
+  await expectViewOnly(page, viewOnlyBefore);
   await expect(surface).toHaveAttribute("data-render-counters", counters!);
   const importedId = "annotation_imported";
   await page.getByLabel("Import annotations").setInputFiles({ name: "annotations.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify([{ id: importedId, type: "text", label: "Imported", visible: true, anchor: { signalId: "sig_cycle_request", cycle: 2, point: "cycle-start" } }])) });
