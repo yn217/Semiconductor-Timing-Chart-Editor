@@ -114,4 +114,22 @@ describe("fold-hidden Transaction and Bookmark rescue stays bounded (#865 regres
     expect(bookmarksOutsideFolds(bookmarks, folds, { start: 0, end: 10_001 }, bookmarks[5])).toEqual([bookmarks[5], bookmarks[10_000], bookmarks[10_001]]);
     expect(bookmarksOutsideFolds(bookmarks, folds, null)).toEqual([]);
   });
+
+  it("queries visible fold summaries without scanning all collapsed ranges", () => {
+    const folds = Array.from({ length: 10_000 }, (_, index) => [index * 10, index * 10 + 4] as const);
+    const bookmarks = folds.map(([start]) => ({ start }));
+    let indexedReads = 0;
+    const measuredFolds = new Proxy(folds, {
+      get(target, property, receiver) {
+        if (typeof property === "string" && /^\\d+$/.test(property)) indexedReads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+
+    expect(hiddenBookmarkFoldSummaries(bookmarks, measuredFolds, { start: 50_000, end: 50_019 })).toEqual([
+      { start: 50_000, end: 50_004, count: 1 },
+      { start: 50_010, end: 50_014, count: 1 },
+    ]);
+    expect(indexedReads).toBeLessThan(40);
+  });
 });

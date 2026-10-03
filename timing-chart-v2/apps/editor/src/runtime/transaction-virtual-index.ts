@@ -107,12 +107,25 @@ export function hiddenBookmarkFoldSummaries<T extends Readonly<{ start: number }
 ): readonly HiddenBookmarkFoldSummary[] {
   if (sourceWindow === null) return [];
   const window = sourceWindow ?? (ordered.length === 0 ? { start: 0, end: 0 } : { start: ordered[0]!.start, end: ordered.at(-1)!.start });
-  return folds.flatMap(([start, end]) => {
-    if (end < window.start || start > window.end) return [];
+  // Fold ranges are merged and ordered by source time. Find the first range
+  // that can touch the visible window, then visit only visible summaries;
+  // scrolling must not enumerate every collapsed fold in the document.
+  let low = 0;
+  let high = folds.length;
+  while (low < high) {
+    const middle = low + Math.floor((high - low) / 2);
+    if (folds[middle]![1] < window.start) low = middle + 1;
+    else high = middle;
+  }
+  const summaries: HiddenBookmarkFoldSummary[] = [];
+  for (let index = low; index < folds.length; index += 1) {
+    const [start, end] = folds[index]!;
+    if (start > window.end) break;
     const [first, last] = bookmarkRangeBounds(ordered, start, end, true, true);
     const count = last - first;
-    return count > 0 ? [{ start, end, count }] : [];
-  });
+    if (count > 0) summaries.push({ start, end, count });
+  }
+  return summaries;
 }
 
 /** Resolve bookmark candidates without treating an unmeasured first render as
