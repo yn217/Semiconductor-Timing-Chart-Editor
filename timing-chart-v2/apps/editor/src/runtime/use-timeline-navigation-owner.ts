@@ -4,6 +4,7 @@ import type { ViewMetricsOwner } from "./view-metrics.js";
 import type { TimelineViewportRuntime } from "./timeline-viewport-runtime.js";
 import { createTimelineNavigationController, createTimelineZoomController } from "./viewport-controller.js";
 import { timelineScrollOwner } from "./timeline-scroll-owner.js";
+import { createModePresentationOwner } from "./mode-presentation-owner.js";
 
 type TimelineRange = Readonly<{ start: number; end: number }>;
 
@@ -42,8 +43,7 @@ export type TimelineNavigationOwner = Readonly<{
 export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "Split" = "Cycle", documentEpoch = 0): TimelineNavigationOwner {
   const [zoom, setZoomState] = useState(1);
   const zoomRef = useRef(1);
-  const zoomByModeRef = useRef<Record<"Cycle" | "Transaction", number>>({ Cycle: 1, Transaction: 1 });
-  const scrollLeftByModeRef = useRef<Record<"Cycle" | "Transaction" | "Split", number>>({ Cycle: 0, Transaction: 0, Split: 0 });
+  const modePresentationRef = useRef(createModePresentationOwner());
   const scrollRestorePendingRef = useRef(false);
   const restoreScrollLeftRef = useRef<(scrollLeft: number) => void>(() => undefined);
   const previousModeRef = useRef<"Cycle" | "Transaction" | "Split">(viewMode);
@@ -63,24 +63,22 @@ export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "
   }, []);
 
   useEffect(() => {
-    scrollLeftByModeRef.current = { Cycle: 0, Transaction: 0, Split: 0 };
+    modePresentationRef.current.resetScrollLeft();
   }, [documentEpoch]);
 
   useEffect(() => {
     const previous = previousModeRef.current;
     if (previous !== viewMode) {
-      if (previous === "Cycle" || previous === "Transaction") zoomByModeRef.current[previous] = zoomRef.current;
-      if (viewMode === "Cycle" || viewMode === "Transaction") {
-        const next = zoomByModeRef.current[viewMode];
-        zoomRef.current = next;
-        setZoomState(next);
-        applyZoomRef.current(next);
-      }
+      modePresentationRef.current.setZoom(previous, zoomRef.current);
+      const next = modePresentationRef.current.getZoom(viewMode);
+      zoomRef.current = next;
+      setZoomState(next);
+      applyZoomRef.current(next);
       if (scrollRestoreFrameRef.current !== undefined) cancelAnimationFrame(scrollRestoreFrameRef.current);
       scrollRestorePendingRef.current = true;
       const restore = () => {
         scrollRestoreFrameRef.current = undefined;
-        if (activeModeRef.current === viewMode) restoreScrollLeftRef.current(scrollLeftByModeRef.current[viewMode]);
+        if (activeModeRef.current === viewMode) restoreScrollLeftRef.current(modePresentationRef.current.getScrollLeft(viewMode));
         scrollRestorePendingRef.current = false;
       };
       // Apply after the mode's scroll extent and inner/outer owner are committed;
@@ -107,7 +105,7 @@ export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "
         // A mode's zoom/layout restoration can emit intermediate scroll events.
         // They are presentation artifacts, not the user's saved position.
         if (scrollRestorePendingRef.current || activeModeRef.current !== previousModeRef.current) return;
-        scrollLeftByModeRef.current[activeModeRef.current] = activeScrollOwner().scrollLeft;
+        modePresentationRef.current.setScrollLeft(activeModeRef.current, activeScrollOwner().scrollLeft);
       };
       restoreScrollLeftRef.current = (scrollLeft) => {
         const owner = activeScrollOwner();
@@ -116,9 +114,9 @@ export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "
         // fixed Signal/Role columns even though Cycle's inner owner is restored.
         if (owner !== context.viewport) context.viewport.scrollLeft = 0;
         owner.scrollLeft = Math.max(0, scrollLeft);
-        scrollLeftByModeRef.current[activeModeRef.current] = owner.scrollLeft;
+        modePresentationRef.current.setScrollLeft(activeModeRef.current, owner.scrollLeft);
       };
-      scrollLeftByModeRef.current[activeModeRef.current] = activeScrollOwner().scrollLeft;
+      modePresentationRef.current.setScrollLeft(activeModeRef.current, activeScrollOwner().scrollLeft);
       // Scroll events from Cycle's nested owner are observed in capture phase;
       // the active mode selects which presentation state receives the value.
       context.viewport.addEventListener("scroll", rememberScrollLeft, { capture: true, passive: true });
@@ -143,7 +141,7 @@ export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "
         onZoom: (nextZoom) => {
           zoomRef.current = nextZoom;
           const activeMode = activeModeRef.current;
-          if (activeMode === "Cycle" || activeMode === "Transaction") zoomByModeRef.current[activeMode] = nextZoom;
+          modePresentationRef.current.setZoom(activeMode, nextZoom);
           context.viewMetrics.update({ zoom: nextZoom, viewportWidth: context.viewport.clientWidth });
           // The DOM presentation is already updated synchronously by the
           // zoom controller. Defer the non-critical React status/ribbon state

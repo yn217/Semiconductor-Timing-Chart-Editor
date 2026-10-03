@@ -103,20 +103,6 @@ export function MinimalCycleView() {
   const documentEpoch = application.runtime.documentEpoch.current();
   const { signalId: selectedId, signalIds: selectedSignalIds, groupId: selectedGroupId, annotationId: selectedAnnotationId, transactionId: selectedTransactionId, transactionIds: selectedTransactionIds } = selection.state;
   const { signalId: selectedSignalRef, signalIds: selectedSignalIdsRef, groupId: selectedGroupRef, spacerId: selectedSpacerRef, annotationId: selectedAnnotationRef, transactionId: selectedTransactionRef } = selection.refs;
-  const presentation = useEditorPresentationState({ hostRef: host });
-  const {
-    arrowPickStatus, setArrowPickStatus,
-    gridEnabled, setGridEnabled, gridEnabledRef,
-    snapEnabled, setSnapEnabled, snapEnabledRef,
-    rulerEnabled, setRulerEnabled,
-    minimapEnabled, setMinimapEnabled,
-    showSignalNames, setShowSignalNames,
-    showRoles, setShowRoles,
-    showAnnotations, setShowAnnotations,
-    showTransactions, setShowTransactions,
-    showGroupBackground, setShowGroupBackground,
-    applySelectionDecorations,
-  } = presentation;
   // The normal preview starts on the built-in Transaction sample so a browser
   // refresh immediately shows the populated reference surface. The dedicated
   // visual-reference fixture remains a Cycle-oriented inspection entry point.
@@ -154,6 +140,20 @@ export function MinimalCycleView() {
     cursorA, cursorB, cursorDelta, setCursor, clearCursor, moveCursor, swapCursors,
     activePane, setActivePane,
   } = workspace;
+  const presentation = useEditorPresentationState({ hostRef: host, mode: viewMode, selection: selection.state, selectionRef: selection.refs.state });
+  const {
+    arrowPickStatus, setArrowPickStatus,
+    gridEnabled, setGridEnabled, gridEnabledRef,
+    snapEnabled, setSnapEnabled, snapEnabledRef,
+    rulerEnabled, setRulerEnabled,
+    minimapEnabled, setMinimapEnabled,
+    showSignalNames, setShowSignalNames,
+    showRoles, setShowRoles,
+    showAnnotations, setShowAnnotations,
+    showTransactions, setShowTransactions,
+    showGroupBackground, setShowGroupBackground,
+    applySelectionDecorations,
+  } = presentation;
   const transactionCyclesPerTcRef = useRef(cyclesPerTc);
   transactionCyclesPerTcRef.current = cyclesPerTc;
   // Keep standalone Cycle and Transaction presentation zoom independent while
@@ -416,7 +416,7 @@ export function MinimalCycleView() {
     commandRegistry,
     executeBatch,
     dom: { host, viewport, ruler, gridLayer, viewportLower, rulerLower, hostLower, gridLayerLower, signalSplitRuntimeRef },
-    presentation: { getPinnedSignalIds, collapsedGroupIdsRef, applyCollapsedGroupsRef, forceUpperReprojectRef, lowerCanvasClickRef, timelineRuntimeRef, armArrowPick, snapTransactionCycle, transactionBoundaryX, transactionSourceWindow, refreshPlayhead, refreshRangeSelectionBand, publishStateRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, selectedAnnotationRef, gridEnabledRef, snapEnabledRef, treeFocusRowIdRef, suppressCanvasClickRef, menuOriginRef, transactionCyclesPerTcRef },
+    presentation: { getPinnedSignalIds, collapsedGroupIdsRef, applyCollapsedGroupsRef, forceUpperReprojectRef, reapplySelectionRef: presentation.reapplySelectionRef, lowerCanvasClickRef, timelineRuntimeRef, armArrowPick, snapTransactionCycle, transactionBoundaryX, transactionSourceWindow, refreshPlayhead, refreshRangeSelectionBand, publishStateRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, selectedAnnotationRef, gridEnabledRef, snapEnabledRef, treeFocusRowIdRef, suppressCanvasClickRef, menuOriginRef, transactionCyclesPerTcRef },
     state: { setRuntimeDiagnostics, setProblem, setTreePresentationRevision, setTransactionPresentationRevision, setRangePresentationRevision, setPlayheadPresentationRevision, setTimelineRange, setRangeSelectionActive, setSelectedCycle, setBottomPinned, setPinnedBottomSelection, setPinnedSignalIds, setTreeFilter, setTreeTypeFilter, setTreeAddMenuOpen, setTreeMoreMenuOpen, setContextMenu, setArrowPickStatus, setRenameDialogOpen, setCollapsedGroups, resetCollapsedGroups, resetForDocument, toggleCollapsedGroup, closeContextMenu },
     viewMetricsOwner,
     signalSplitEnabled,
