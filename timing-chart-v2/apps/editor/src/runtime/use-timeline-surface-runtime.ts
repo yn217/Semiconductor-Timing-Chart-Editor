@@ -5,11 +5,11 @@ import { createTimelineSurfaceController, type TimelineSurfaceRuntimeInput, type
 
 export type {
   TimelineSurfaceDomRefs,
-  TimelineSurfacePresentationPort,
   TimelineSurfaceStatePort,
   TimelineSurfaceRuntimeInput,
   TimelineSurfaceRuntimeOutput,
 } from "./timeline-surface-controller.js";
+export type { TimelineSurfacePresentationPort } from "./timeline-surface-presentation-port.js";
 
 export function useTimelineSurfaceRuntime(input: TimelineSurfaceRuntimeInput): TimelineSurfaceRuntimeOutput {
   // The surface controller intentionally mounts once, but viewMode is live

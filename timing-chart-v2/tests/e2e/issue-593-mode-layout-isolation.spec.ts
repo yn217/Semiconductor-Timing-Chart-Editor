@@ -19,6 +19,14 @@ async function openDocument(page: Page): Promise<void> {
 const setMode = async (page: Page, mode: "Cycle" | "Transaction" | "Combined") => {
   await page.locator(".view-mode").getByRole("button", { name: mode, exact: true }).click();
   await expect(page.getByTestId("view-mode-status")).toHaveText(mode === "Combined" ? /Mode: (Combined|Split)/ : `Mode: ${mode}`);
+  await expect(page.locator(".cycle-panel")).toHaveAttribute("data-workspace-owner", `${mode}Workspace`);
+  await expect(page.locator(".cycle-panel[data-workspace-owner]")).toHaveCount(1);
+  await expect(page.locator(".desktop-workspace")).toHaveAttribute("data-workspace-owner", `${mode}Workspace`);
+  await expect(page.getByTestId("left-workspace-rail")).toHaveAttribute("data-workspace-owner", `${mode}Workspace`);
+  await expect(page.getByTestId("left-workspace-rail")).toHaveCount(1);
+  const viewport = page.getByTestId("cycle-viewport");
+  await expect(viewport).toHaveAttribute("data-time-viewport-owner", mode === "Cycle" ? "cycle-inner" : mode === "Transaction" ? "transaction-viewport" : "combined-viewport");
+  await expect(viewport).toHaveAttribute("data-content-width-owner", mode === "Cycle" ? "cycle-geometry" : mode === "Transaction" ? "transaction-lanes" : "combined-source-time");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true", { timeout: 30_000 });
   await page.waitForTimeout(300);
 };
@@ -32,6 +40,29 @@ const metrics = (page: Page) => page.evaluate(() => {
 });
 
 for (const size of sizes) {
+  test(`Combined owns an independent shared zoom across standalone mode round trips at ${size.width}x${size.height}`, async ({ page }) => {
+    test.setTimeout(150_000);
+    await page.setViewportSize(size);
+    await page.goto("/");
+    await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+    await openDocument(page);
+    await setMode(page, "Cycle");
+    const cycleBefore = await metrics(page);
+
+    await setMode(page, "Combined");
+    await page.getByTestId("ribbon").getByRole("button", { name: "Zoom In", exact: true }).click();
+    await page.waitForTimeout(300);
+    const combinedZoom = await metrics(page);
+    expect(combinedZoom.pitch).not.toBe(cycleBefore.pitch);
+
+    await setMode(page, "Transaction");
+    await page.getByTestId("ribbon").getByRole("button", { name: "Zoom In", exact: true }).click();
+    await setMode(page, "Cycle");
+    expect(await metrics(page)).toEqual(cycleBefore);
+    await setMode(page, "Combined");
+    expect(await metrics(page)).toEqual(combinedZoom);
+  });
+
   test(`Cycle layout is untouched by Transaction zoom/scroll and back at ${size.width}x${size.height}`, async ({ page }) => {
     test.setTimeout(150_000);
     await page.setViewportSize(size);
@@ -96,11 +127,17 @@ for (const size of sizes) {
     const viewOnlyBefore = await documentState(page);
     await setMode(page, "Cycle");
     await expect(page.getByTestId("left-pane-resizer")).toHaveCount(1);
+    await expect(host.locator("[data-role='frozen-row']")).not.toHaveCount(0);
     await setMode(page, "Transaction");
     await expect(page.getByTestId("left-pane-resizer"), "Signal/Group left-pane splitter is Cycle-only").toHaveCount(0);
-    // Known gap tracked on #593 (HANDOFF -> CODEX): Cycle frozen Role/Signal rows are still mounted (hidden) in Transaction.
+    await expect(host.locator("[data-role='frozen-label-rows']"), "Cycle frozen-column layer is not mounted in Transaction").toHaveCount(0);
+    await expect(host.locator("[data-role='frozen-row']"), "Cycle frozen Role/Signal rows are not mounted in Transaction").toHaveCount(0);
+    await expect(host.locator("[data-role='frozen-group-header']")).toHaveCount(0);
     await setMode(page, "Combined");
+    await expect(host.locator("[data-role='frozen-label-rows']")).toHaveCount(1);
+    await expect(host.locator("[data-role='frozen-row']")).not.toHaveCount(0);
     await setMode(page, "Cycle");
+    await expect(host.locator("[data-role='frozen-row']")).not.toHaveCount(0);
     await expectViewOnly(page, viewOnlyBefore);
   });
 }

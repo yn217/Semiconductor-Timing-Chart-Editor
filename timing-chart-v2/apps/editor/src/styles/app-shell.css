@@ -153,6 +153,4 @@ button, input, select { font: inherit; font-size: var(--ds-font-size); }
 /* #748: same 27px control height as Cycle's filter select and the search input (the 28px header rows hold both). */
 .editor-shell .column-headings[data-testid="transaction-tree-header"] > .left-column-heading > select { min-width: 0; width: 96px; height: 27px; }
 .editor-shell .column-headings[data-testid="transaction-tree-header"] { z-index: 30; }
-.editor-shell[data-view-mode="Transaction"] { --gui-workspace-header-height: 58px; }
-.editor-shell[data-view-mode="Transaction"] .left-pane-resize-handle { pointer-events: none; }
 .editor-shell .cycle-viewport { height: 100%; }/* Cycle-mode workspace composition lives in mode-cycle.css (owner: data-view-mode="Cycle"). */

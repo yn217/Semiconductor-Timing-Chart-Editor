@@ -10,6 +10,9 @@
   --split-lanes-height: 112px;
   --time-domain-left: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px));
 }
+.desktop-workspace[data-workspace-owner="CombinedWorkspace"] {
+  --gui-workspace-header-height: 58px;
+}
 /* #573: Combined is a stacked Transaction-over-Cycle workspace. The two
    panes share the horizontal time viewport while vertical scrolling stays
    local to each pane. */
