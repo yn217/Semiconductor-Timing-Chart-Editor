@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 /**
  * #753 regression: in the 2026-09-20 recording (12-01-22, 121.7s -> 122.3s) interacting with the Bottom Bookmarks row "Reset Release" in
@@ -17,24 +18,27 @@ for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }, 
     await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
     await expect(page.getByTestId("transaction-left-tree")).toContainText("Read_0");
     const tc = page.locator("select").filter({ has: page.locator("option[value='50']") }).first();
-    if (await tc.count()) await tc.selectOption("50");
+    await expect(tc).toBeVisible();
+    await tc.selectOption("50");
     // Modify the document like the recording (create + select a Transaction).
     await page.locator("[data-transaction-row-id]").last().click();
     await page.getByRole("tab", { name: "Bookmarks", exact: true }).click();
     const rows = page.locator("[data-testid^='bookmark-row-']");
     await expect(rows.first()).toBeVisible();
+    const before = await documentState(page);
     const startUrl = page.url();
     const alive = async (label: string) => {
       await page.waitForTimeout(700);
       const state = await page.evaluate(() => ({ editor: !!document.querySelector(".editor-shell"), bodyText: document.body.innerText.length }));
       expect(state.editor, `${label}: editor still mounted`).toBe(true);
       expect(page.url(), `${label}: no navigation`).toBe(startUrl);
+      await expectViewOnly(page, before, `${label}: Canonical/History/Dirty unchanged`);
     };
     await rows.first().click(); await alive("click row 0");
     await rows.first().dblclick(); await alive("dblclick row 0");
     for (let i = 0; i < 5; i += 1) { await rows.nth(i).click(); await rows.nth(i).dblclick(); }
     await alive("click+dblclick all rows");
-    for (const name of ["Previous", "Next"]) { const b = page.getByRole("button", { name, exact: true }).first(); if (await b.count()) { await b.click(); await alive(name); } }
+    for (const name of ["Previous bookmark", "Next bookmark"]) { const b = page.getByRole("button", { name, exact: true }).first(); await expect(b).toBeVisible(); await b.click(); await alive(name); }
     const marker = page.locator(".transaction-bookmark-markers button").first();
     if (await marker.count()) { await marker.click(); await alive("ruler marker click"); await marker.dblclick(); await alive("ruler marker dblclick"); }
     expect(errors).toEqual([]);
