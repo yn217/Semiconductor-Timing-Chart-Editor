@@ -48,3 +48,34 @@ test("a single Transaction edit updates the MiniMap Transaction overview increme
   expect(after.visited, "Transactions visited are bounded by the affected lane(s), well below the document's 8,000").toBeLessThan(4000);
   expect(latency, "edit-to-idle (loose, machine independent)").toBeLessThan(15_000);
 });
+
+test("10k Transactions in one lane produce pixel-bounded MiniMap DOM", async ({ page }) => {
+  test.setTimeout(240_000);
+  await page.addInitScript(() => { try { window.localStorage.setItem("timing-chart-v2.view-mode", "Transaction"); } catch { /* best effort */ } });
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  const surface = page.getByTestId("cycle-surface");
+  await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
+  const base = generatePerformanceDocument({ signalCount: 1, cycleCount: 10_000, profile: "transaction-heavy" });
+  const document = {
+    ...base,
+    transactions: Array.from({ length: 10_000 }, (_, index) => ({
+      id: `txn_dense_lane_${index}`,
+      name: `Dense lane ${index}`,
+      start: index,
+      end: index + 1,
+      laneId: "lane_dense",
+      color: index % 2 === 0 ? "#112233" : "#aabbcc",
+      linkedSignals: [],
+    })),
+  };
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "issue-869-transaction-minimap-dense.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", "10000", { timeout: 180_000 });
+  const minimap = page.getByTestId("minimap");
+  await expect(minimap).toBeVisible({ timeout: 60_000 });
+  await expect(minimap).toHaveAttribute("aria-busy", "false", { timeout: 60_000 });
+  const segments = await page.locator(".minimap-segment-transaction").count();
+  console.log("E869T-DOM", JSON.stringify({ transactions: 10_000, laneCount: 1, mountedTransactionMiniMapSegments: segments }));
+  expect(segments).toBeGreaterThan(0);
+  expect(segments, "Transaction MiniMap DOM stays bounded per dense lane").toBeLessThanOrEqual(1_024);
+});
