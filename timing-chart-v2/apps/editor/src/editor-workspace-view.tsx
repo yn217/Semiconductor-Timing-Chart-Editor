@@ -219,18 +219,22 @@ export function EditorWorkspaceView({
   const cursorOverlayOwnerRef = useRef<CursorOverlayOwner | null>(null);
   if (cursorOverlayOwnerRef.current === null) cursorOverlayOwnerRef.current = new CursorOverlayOwner();
   const cursorOverlayOwner = cursorOverlayOwnerRef.current;
+  const cursorOverlayInput = {
+    viewport: viewport.current,
+    ruler: ruler.current,
+    viewportLower: viewportLower.current,
+    rulerLower: rulerLower.current,
+    cursorA: cursor.a,
+    cursorB: cursor.b,
+    onSetCursorAtCycle,
+    resolveCursorCycleAtClientX,
+  };
   useEffect(() => {
-    return cursorOverlayOwner.connect({
-      viewport: viewport.current,
-      ruler: ruler.current,
-      viewportLower: viewportLower.current,
-      rulerLower: rulerLower.current,
-      cursorA: cursor.a,
-      cursorB: cursor.b,
-      onSetCursorAtCycle,
-      resolveCursorCycleAtClientX,
-    });
-  }, [ruler, rulerLower, cursor.a, cursor.b, cursorPresentationRevision, zoom, viewport, viewportLower]);
+    return cursorOverlayOwner.connect(cursorOverlayInput);
+  }, [ruler, rulerLower, viewport, viewportLower, cursorPresentationRevision, zoom, cursorOverlayOwner]);
+  useEffect(() => {
+    cursorOverlayOwner.updatePresentation(cursorOverlayInput);
+  }, [cursor.a, cursor.b, onSetCursorAtCycle, resolveCursorCycleAtClientX, cursorOverlayOwner]);
   // Cursor drag handlers survive their own cursor.a/b state updates, but a
   // mode owner change ends the gesture so stale viewport listeners cannot leak.
   useEffect(() => () => cursorOverlayOwner.cancelActiveDrags(), [cursorOverlayOwner, viewMode]);
