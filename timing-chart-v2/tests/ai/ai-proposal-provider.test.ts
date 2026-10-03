@@ -1,11 +1,46 @@
 import { describe, expect, it } from "vitest";
 import { type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
-import { buildTypedAnnotationProposal, buildTypedBookmarkProposal, buildTypedSignalGroupProposal, buildTypedSignalProposal, buildTypedTimeGroupProposal, buildTypedTimelineProposal, buildTypedTransactionGroupProposal, buildTypedTransactionProposal, deterministicMockAIProposalProvider } from "../../apps/editor/src/ai-proposal-provider.js";
+import { buildTypedAnnotationProposal, buildTypedBookmarkProposal, buildTypedProposalBatch, buildTypedSignalGroupProposal, buildTypedSignalProposal, buildTypedTimeGroupProposal, buildTypedTimelineProposal, buildTypedTransactionGroupProposal, buildTypedTransactionProposal, deterministicMockAIProposalProvider } from "../../apps/editor/src/ai-proposal-provider.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import type { AnnotationId, CommandId, GroupId, SignalId, TimeGroupId, TransactionGroupId, TransactionId } from "@timing-chart-v2/schema";
 
 describe("deterministic AI proposal provider", () => {
+  it("builds an ordered multi-operation proposal that applies and undoes as one atomic History action", () => {
+    const document = canonicalFixture();
+    const built = buildTypedProposalBatch(document, 44, [
+      { tool: "propose_rename_signal", arguments: { signalId: "sig_data", name: "DATA_BATCHED" } },
+      { tool: "propose_create_bookmark", arguments: { name: "Checkpoint", cycle: 3 } },
+      { tool: "propose_create_bookmark", arguments: { name: "Second checkpoint", cycle: 4 } },
+    ]);
+    expect(built.ok).toBe(true);
+    if (!built.ok) return;
+    expect(built.proposal.baseRevision).toBe(44);
+    expect(built.proposal.commands.map((item) => item.type)).toEqual(["signal.rename", "bookmark.create", "bookmark.create"]);
+    expect(new Set(built.proposal.commands.filter((item) => item.type === "bookmark.create").map((item) => item.bookmark.id)).size).toBe(2);
+
+    const session = new CommandHistorySession(document);
+    expect(session.executeBatch("cmd_ai_multi_operation" as CommandId, built.proposal.commands).ok).toBe(true);
+    expect(session.historyState()).toMatchObject({ undoDepth: 1, dirty: true });
+    expect(session.getSnapshot().document.signals.find((item) => item.id === "sig_data")?.name).toBe("DATA_BATCHED");
+    expect(session.getSnapshot().document.bookmarks).toHaveLength(document.bookmarks.length + 2);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document).toEqual(document);
+    expect(session.historyState()).toMatchObject({ undoDepth: 0, redoDepth: 1, dirty: false });
+  });
+
+  it("rejects the whole typed proposal when any operation is invalid or outside the tool allowlist", () => {
+    const document = canonicalFixture();
+    expect(buildTypedProposalBatch(document, 4, [
+      { tool: "propose_rename_signal", arguments: { signalId: "sig_data", name: "DATA_OK" } },
+      { tool: "propose_delete_transaction", arguments: { transactionId: "missing" } },
+    ])).toMatchObject({ ok: false, message: expect.stringContaining("operations[1]") });
+    expect(buildTypedProposalBatch(document, 4, [
+      { tool: "arbitrary_json_patch", arguments: { path: "$.signals", value: [] } },
+    ])).toMatchObject({ ok: false, message: expect.stringContaining("unsupported proposal tool") });
+    expect(buildTypedProposalBatch(document, 4, Array.from({ length: 51 }, () => ({ tool: "propose_rename_signal", arguments: { signalId: "sig_data", name: "DATA" } })))).toMatchObject({ ok: false, message: expect.stringContaining("between 1 and 50") });
+  });
+
   it("builds a typed stable-ID rename proposal without mutating the canonical document", () => {
     const document = canonicalFixture();
     const result = buildTypedSignalProposal(document, 12, "propose_rename_signal", { signalId: "sig_data", name: " DATA_RENAMED " });

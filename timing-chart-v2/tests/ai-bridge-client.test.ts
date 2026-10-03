@@ -56,6 +56,28 @@ describe("Agent Bridge workspace view-only operations", () => {
   });
 });
 
+describe("Agent Bridge typed proposal batching", () => {
+  it("routes one revisioned allowlisted operation batch to the preview owner", () => {
+    const onSubmitProposal = vi.fn(() => ({ summary: "2 operations", baseRevision: 8, kind: "semantic-command", requiresApproval: true as const, message: "Review required" }));
+    const context = { revision: 8, onSubmitProposal } as unknown as AIBridgeContext;
+    const operations = [
+      { tool: "propose_rename_signal", arguments: { signalId: "sig_data", name: "DATA" } },
+      { tool: "propose_create_bookmark", arguments: { name: "Start", cycle: 2 } },
+    ];
+    expect(executeAIBridgeTool("submit_proposal", { baseRevision: 8, operations }, context)).toMatchObject({ baseRevision: 8, requiresApproval: true });
+    expect(onSubmitProposal).toHaveBeenCalledWith(8, operations);
+  });
+
+  it("rejects stale revisions, unknown operation tools, and malformed batches before preview", () => {
+    const onSubmitProposal = vi.fn();
+    const context = { revision: 9, onSubmitProposal } as unknown as AIBridgeContext;
+    expect(() => executeAIBridgeTool("submit_proposal", { baseRevision: 8, operations: [{ tool: "propose_create_bookmark", arguments: { name: "B", cycle: 2 } }] }, context)).toThrow("Stale baseRevision");
+    expect(() => executeAIBridgeTool("submit_proposal", { baseRevision: 9, operations: [{ tool: "arbitrary_json_patch", arguments: {} }] }, context)).toThrow("unsupported typed proposal tool");
+    expect(() => executeAIBridgeTool("submit_proposal", { baseRevision: 9, operations: [] }, context)).toThrow("between 1 and 50");
+    expect(onSubmitProposal).not.toHaveBeenCalled();
+  });
+});
+
 describe("Agent Bridge indexed read tools", () => {
   it("derives 10k Signal group ownership with bounded row-membership work", () => {
     const base = canonicalFixture();

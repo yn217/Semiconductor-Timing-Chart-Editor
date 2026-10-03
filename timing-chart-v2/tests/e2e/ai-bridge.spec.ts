@@ -127,7 +127,7 @@ test("a test MCP client can connect, read the live document/selection, and reque
   expect((await initResponse.json()).result.serverInfo.name).toBe("timing-chart-v2-ai-bridge");
   const listResponse = await fetch(`${BASE_URL}/mcp`, { method: "POST", headers: { authorization: `Bearer ${TOKEN}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 0, method: "tools/list" }) });
   const tools = ((await listResponse.json()).result.tools as { name: string }[]).map((tool) => tool.name);
-  const addedTools = ["set_selection", "propose_move_signal_group", "propose_delete_signal_group", "fit_selection", "propose_create_time_group", "propose_update_time_group", "propose_delete_time_group", "switch_mode", "open_panel", "set_visible_time_range"];
+  const addedTools = ["set_selection", "propose_move_signal_group", "propose_delete_signal_group", "fit_selection", "propose_create_time_group", "propose_update_time_group", "propose_delete_time_group", "switch_mode", "open_panel", "set_visible_time_range", "submit_proposal"];
   // The tool SET is the contract; listing order is an implementation detail of the bridge registry.
   expect(tools.filter((tool) => addedTools.includes(tool)).sort()).toEqual([...addedTools].sort());
   const existingTools = tools.filter((tool) => !addedTools.includes(tool));
@@ -305,6 +305,49 @@ test("external Transaction+Phases+Signals proposal validates and applies as one 
   await page.locator(".ribbon").getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
   await expect(lanes.locator('[data-transaction-id][title="MCP_READ"]')).toHaveCount(0);
+});
+
+test("submit_proposal previews an ordered typed batch and applies or undoes it as one History entry", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
+  await page.getByRole("button", { name: "Ask or edit with the AI Assistant" }).click();
+  const ai = page.getByTestId("ai-operation-panel");
+  await ai.getByTestId("ai-settings-toggle").click();
+  const settings = ai.getByTestId("ai-settings");
+  await settings.getByLabel("Editor transport token").fill(EDITOR_TOKEN);
+  await settings.getByLabel("Enable external agents").check();
+  await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+  const beforeDirty = await page.getByTestId("dirty-status").textContent();
+
+  const response = await callTool("submit_proposal", TOKEN, {
+    baseRevision: Number(beforeRevision),
+    operations: [
+      { tool: "propose_rename_signal", arguments: { signalId: "sig_cycle_request", name: "BATCH_REQUEST" } },
+      { tool: "propose_create_bookmark", arguments: { name: "Batch checkpoint", cycle: 10 } },
+    ],
+  });
+  expect(response.body.result!.isError).toBe(false);
+  expect(JSON.parse(response.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ summary: expect.stringContaining("2 operations"), baseRevision: Number(beforeRevision), requiresApproval: true }));
+  const commands = ai.getByTestId("ai-preview-commands");
+  await expect(commands.locator("li")).toHaveCount(2);
+  await expect(commands).toContainText("Rename REQUEST to BATCH_REQUEST");
+  await expect(commands).toContainText("Create Bookmark Batch checkpoint");
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(page.getByTestId("dirty-status")).toHaveText(beforeDirty!);
+
+  await ai.getByTestId("ai-validate").click();
+  await ai.getByTestId("ai-apply").click();
+  await expect(ai.getByTestId("ai-status")).toHaveText("Applied · one atomic SemanticCommand transaction");
+  await expect(host).toHaveAttribute("data-canonical-revision", "1");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.locator(".ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(host).toHaveAttribute("data-canonical-revision", "0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
 });
 
 test("propose_edit builds a Preview only -- it never auto-validates or auto-applies, and a human must still Validate + Apply it themselves", async ({ page }) => {

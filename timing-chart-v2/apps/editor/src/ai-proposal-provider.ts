@@ -1,4 +1,4 @@
-import type { SemanticCommand } from "@timing-chart-v2/commands";
+import { planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
 import { valueSignalValueProblem, type AnnotationId, type AnnotationType, type CanonicalDocument, type GroupId, type SignalId, type SignalRole, type TimeGroup, type TimeGroupId, type TransactionGroupId, type TransactionId, type TransactionPhase, type ValueSignal } from "@timing-chart-v2/schema";
 import { nextCommandId } from "./command-id.js";
 import { nextEntityId } from "./entity-id.js";
@@ -32,6 +32,52 @@ export type AIProposalResult = Readonly<
   | { ok: true; proposal: AIProposal }
   | { ok: false; message: string }
 >;
+
+export const AI_TYPED_PROPOSAL_TOOLS = [
+  "propose_create_signal", "propose_rename_signal", "propose_update_signal", "propose_move_signal",
+  "propose_insert_cycles", "propose_delete_cycles", "propose_move_range", "propose_duplicate_range",
+  "propose_create_signal_group", "propose_rename_signal_group", "propose_move_signal_group", "propose_delete_signal_group",
+  "propose_create_transaction_group", "propose_rename_transaction_group", "propose_delete_transaction_group",
+  "propose_create_time_group", "propose_update_time_group", "propose_delete_time_group",
+  "propose_create_transaction", "propose_update_transaction", "propose_move_transaction", "propose_resize_transaction", "propose_delete_transaction",
+  "propose_create_bookmark", "propose_move_bookmark", "propose_update_bookmark", "propose_delete_bookmark",
+  "propose_create_annotation", "propose_update_annotation", "propose_delete_annotation",
+  "propose_add_phase", "propose_update_phase", "propose_delete_phase", "propose_link_signal", "propose_unlink_signal",
+] as const;
+export type AITypedProposalTool = typeof AI_TYPED_PROPOSAL_TOOLS[number];
+
+export function buildTypedProposal(document: CanonicalDocument, revision: number, tool: string, args: Readonly<Record<string, unknown>>): AIProposalResult {
+  if (tool === "propose_insert_cycles" || tool === "propose_delete_cycles" || tool === "propose_move_range" || tool === "propose_duplicate_range") return buildTypedTimelineProposal(document, revision, tool, args);
+  if (tool === "propose_create_signal_group" || tool === "propose_rename_signal_group" || tool === "propose_move_signal_group" || tool === "propose_delete_signal_group") return buildTypedSignalGroupProposal(document, revision, tool, args);
+  if (tool === "propose_create_transaction_group" || tool === "propose_rename_transaction_group" || tool === "propose_delete_transaction_group") return buildTypedTransactionGroupProposal(document, revision, tool, args);
+  if (tool === "propose_create_time_group" || tool === "propose_update_time_group" || tool === "propose_delete_time_group") return buildTypedTimeGroupProposal(document, revision, tool, args);
+  if (tool === "propose_create_transaction" || tool === "propose_update_transaction" || tool === "propose_move_transaction" || tool === "propose_resize_transaction" || tool === "propose_delete_transaction" || tool === "propose_add_phase" || tool === "propose_update_phase" || tool === "propose_delete_phase" || tool === "propose_link_signal" || tool === "propose_unlink_signal") return buildTypedTransactionProposal(document, revision, tool, args);
+  if (tool === "propose_create_bookmark" || tool === "propose_move_bookmark" || tool === "propose_update_bookmark" || tool === "propose_delete_bookmark") return buildTypedBookmarkProposal(document, revision, tool, args);
+  if (tool === "propose_create_annotation" || tool === "propose_update_annotation" || tool === "propose_delete_annotation") return buildTypedAnnotationProposal(document, revision, tool, args);
+  if ((AI_TYPED_PROPOSAL_TOOLS as readonly string[]).includes(tool)) return buildTypedSignalProposal(document, revision, tool, args);
+  return { ok: false, message: `Unsupported typed proposal operation '${tool}'.` };
+}
+
+export function buildTypedProposalBatch(document: CanonicalDocument, revision: number, operations: readonly Readonly<{ tool: string; arguments: Readonly<Record<string, unknown>> }>[]): AIProposalResult {
+  if (operations.length === 0 || operations.length > 50) return { ok: false, message: "submit_proposal requires between 1 and 50 typed operations." };
+  const proposals: AIProposal[] = [];
+  let candidate = document;
+  for (const [index, operation] of operations.entries()) {
+    if (!operation || typeof operation.tool !== "string" || !operation.arguments || typeof operation.arguments !== "object" || Array.isArray(operation.arguments)) return { ok: false, message: `operations[${index}] must contain a typed tool and an arguments object.` };
+    if (operation.tool === "propose_edit" || !(AI_TYPED_PROPOSAL_TOOLS as readonly string[]).includes(operation.tool)) return { ok: false, message: `operations[${index}] uses unsupported proposal tool '${operation.tool}'.` };
+    const result = buildTypedProposal(candidate, revision, operation.tool, operation.arguments);
+    if (!result.ok) return { ok: false, message: `operations[${index}] (${operation.tool}) rejected: ${result.message}` };
+    if (result.proposal.kind !== "semantic-command" || result.proposal.commands.length === 0) return { ok: false, message: `operations[${index}] must produce document SemanticCommands.` };
+    for (const semanticCommand of result.proposal.commands) {
+      const planned = planCommand(candidate, semanticCommand);
+      if (!planned.ok) return { ok: false, message: `operations[${index}] (${operation.tool}) rejected: ${planned.problems.map((problem) => problem.message).join(" ")}` };
+      candidate = planned.document;
+    }
+    proposals.push(result.proposal);
+  }
+  const commands = proposals.flatMap((item) => item.commands);
+  return { ok: true, proposal: proposal(revision, `External proposal · ${operations.length} operations\n${proposals.map((item, index) => `${index + 1}. ${item.summary}`).join("\n")}`, commands) };
+}
 
 /** Build a narrow typed proposal from stable semantic identifiers. The
  * resulting command still enters the ordinary Preview/Validate/Apply path. */

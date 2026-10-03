@@ -3,7 +3,7 @@ import { useRef, type ReactNode } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import { planCommand } from "@timing-chart-v2/commands";
 import { validateCanonicalDocument, type CanonicalDocument, type DocumentProblem, type GroupId, type SignalId } from "@timing-chart-v2/schema";
-import { buildTypedAnnotationProposal, buildTypedBookmarkProposal, buildTypedSignalGroupProposal, buildTypedSignalProposal, buildTypedTimelineProposal, buildTypedTimeGroupProposal, buildTypedTransactionGroupProposal, buildTypedTransactionProposal, deterministicMockAIProposalProvider, type AIProposal, type AIProposalProvider, type AIViewIntent } from "./ai-proposal-provider.js";
+import { buildTypedProposal, buildTypedProposalBatch, deterministicMockAIProposalProvider, type AIProposal, type AIProposalProvider, type AIViewIntent } from "./ai-proposal-provider.js";
 import { probeAIBridge, useAIBridgeClient, type AIBridgeStatus, type AIBridgeViewOperation, type AISelectionEntityType } from "./ai-bridge-client.js";
 import { buildAIClientConfig, buildAIMcpEndpoint, type AIClientSetup } from "./ai-connection-guide.js";
 
@@ -319,21 +319,7 @@ export function AIOperationPanel({ document, validationDiagnostics, documentEpoc
     return { summary: result.proposal.summary, baseRevision: result.proposal.baseRevision, kind: result.proposal.kind, requiresApproval: true, message: "Proposal ready for review -- open the AI Assistant panel to Validate and Apply it." };
   };
   const onProposeTypedEdit = (tool: string, args: Readonly<Record<string, unknown>>): { readonly error: string } | { readonly summary: string; readonly baseRevision: number; readonly kind: string; readonly requiresApproval: true; readonly message: string } => {
-    let result = tool === "propose_insert_cycles" || tool === "propose_delete_cycles" || tool === "propose_move_range" || tool === "propose_duplicate_range"
-      ? buildTypedTimelineProposal(document, revision, tool, args)
-      : tool === "propose_create_signal_group" || tool === "propose_rename_signal_group" || tool === "propose_move_signal_group" || tool === "propose_delete_signal_group"
-        ? buildTypedSignalGroupProposal(document, revision, tool, args)
-      : tool === "propose_create_transaction_group" || tool === "propose_rename_transaction_group" || tool === "propose_delete_transaction_group"
-        ? buildTypedTransactionGroupProposal(document, revision, tool, args)
-      : tool === "propose_create_time_group" || tool === "propose_update_time_group" || tool === "propose_delete_time_group"
-        ? buildTypedTimeGroupProposal(document, revision, tool, args)
-      : tool === "propose_create_transaction" || tool === "propose_update_transaction" || tool === "propose_move_transaction" || tool === "propose_resize_transaction" || tool === "propose_delete_transaction" || tool === "propose_add_phase" || tool === "propose_update_phase" || tool === "propose_delete_phase" || tool === "propose_link_signal" || tool === "propose_unlink_signal"
-          ? buildTypedTransactionProposal(document, revision, tool, args)
-      : tool === "propose_create_bookmark" || tool === "propose_move_bookmark" || tool === "propose_update_bookmark" || tool === "propose_delete_bookmark"
-            ? buildTypedBookmarkProposal(document, revision, tool, args)
-            : tool === "propose_create_annotation" || tool === "propose_update_annotation" || tool === "propose_delete_annotation"
-              ? buildTypedAnnotationProposal(document, revision, tool, args)
-            : buildTypedSignalProposal(document, revision, tool, args);
+    let result = buildTypedProposal(document, revision, tool, args);
     if (result.ok) {
       const violation = result.proposal.commands.map((proposedCommand) => scopeViolationMessage(scope, document, proposedCommand, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId)).find((message) => message !== undefined);
       if (violation) result = { ok: false, message: violation };
@@ -347,6 +333,21 @@ export function AIOperationPanel({ document, validationDiagnostics, documentEpoc
     setStatus("Proposal ready for review (submitted by external agent) · no document mutation yet");
     logActivity("proposal", result.proposal.summary, `Preview ready · base revision ${result.proposal.baseRevision}`, "external-agent");
     return { summary: result.proposal.summary, baseRevision: result.proposal.baseRevision, kind: result.proposal.kind, requiresApproval: true, message: "Proposal ready for review -- open the AI Assistant panel to Validate and Apply it." };
+  };
+  const onSubmitProposal = (baseRevision: number, operations: readonly Readonly<{ tool: string; arguments: Readonly<Record<string, unknown>> }>[]): { readonly error: string } | { readonly summary: string; readonly baseRevision: number; readonly kind: string; readonly requiresApproval: true; readonly message: string } => {
+    if (baseRevision !== revision) return { error: `Stale proposal baseRevision ${baseRevision}; current document revision is ${revision}. Regenerate the proposal from the current document.` };
+    const result = buildTypedProposalBatch(document, revision, operations);
+    if (!result.ok) return { error: result.message };
+    const violation = result.proposal.commands.map((proposedCommand) => scopeViolationMessage(scope, document, proposedCommand, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId)).find((message) => message !== undefined);
+    if (violation) return { error: violation };
+    onDiagnostic?.(undefined);
+    setPreview(result.proposal);
+    setValidatedRevision(undefined);
+    setPreviewDocumentEpoch(documentEpoch);
+    setValidatedDocumentEpoch(undefined);
+    setStatus("Multi-operation proposal ready for review · no document mutation yet");
+    logActivity("proposal", result.proposal.summary, `Preview ready · base revision ${result.proposal.baseRevision}`, "external-agent");
+    return { summary: result.proposal.summary, baseRevision: result.proposal.baseRevision, kind: result.proposal.kind, requiresApproval: true, message: "Atomic multi-operation proposal ready for review -- open the AI Assistant panel to Validate and Apply it." };
   };
   // #395 PR5: get_viewport_snapshot() is read-only, exactly like
   // get_document_summary/get_selection -- it never mutates anything. It
@@ -380,7 +381,7 @@ export function AIOperationPanel({ document, validationDiagnostics, documentEpoc
     };
   };
   const onGetViewContext = () => ({ mode, range, zoom: getZoom?.(), selection: { selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId } });
-  const bridgeStatus = useAIBridgeClient(bridgeEnabled, bridgeHost, bridgePort, bridgeToken, { document, validationDiagnostics, documentEpoch, revision, mode, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, onViewIntent, onViewOperation, onSetSelection, onProposeEdit, onProposeTypedEdit, onGetViewportSnapshot, onGetViewContext });
+  const bridgeStatus = useAIBridgeClient(bridgeEnabled, bridgeHost, bridgePort, bridgeToken, { document, validationDiagnostics, documentEpoch, revision, mode, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, onViewIntent, onViewOperation, onSetSelection, onProposeEdit, onProposeTypedEdit, onSubmitProposal, onGetViewportSnapshot, onGetViewContext });
   useEffect(() => { onBridgeStatusChange?.(bridgeStatus); }, [bridgeStatus, onBridgeStatusChange]);
 
   return <section className="ai-operation-panel" data-testid="ai-operation-panel">

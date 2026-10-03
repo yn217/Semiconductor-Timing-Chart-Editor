@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { CanonicalDocument, DocumentProblem, GroupId, SignalId, SignalGroup } from "@timing-chart-v2/schema";
-import type { AIViewIntent } from "./ai-proposal-provider.js";
+import { AI_TYPED_PROPOSAL_TOOLS, type AIViewIntent } from "./ai-proposal-provider.js";
 
 // #395 PR3: the browser-side half of the local Agent Bridge
 // (scripts/ai-bridge-server.mjs). This only ever executes the exact
@@ -40,6 +40,7 @@ export type AIBridgeContext = {
   // Assistant panel and click Validate + Apply themselves.
   readonly onProposeEdit: ((query: string) => { readonly error: string } | { readonly summary: string; readonly baseRevision: number; readonly kind: string; readonly requiresApproval: true; readonly message: string }) | undefined;
   readonly onProposeTypedEdit: ((tool: string, args: Readonly<Record<string, unknown>>) => { readonly error: string } | { readonly summary: string; readonly baseRevision: number; readonly kind: string; readonly requiresApproval: true; readonly message: string }) | undefined;
+  readonly onSubmitProposal: ((baseRevision: number, operations: readonly Readonly<{ tool: string; arguments: Readonly<Record<string, unknown>> }>[]) => { readonly error: string } | { readonly summary: string; readonly baseRevision: number; readonly kind: string; readonly requiresApproval: true; readonly message: string }) | undefined;
   // #395 PR5: get_viewport_snapshot is read-only -- see the comment on
   // its implementation in ai-operation-panel.tsx for exactly what it
   // returns and why it deliberately omits a raw pixel image.
@@ -228,6 +229,23 @@ function executeAIBridgeToolCore(tool: string, args: Record<string, unknown>, co
     const query = args.query;
     if (typeof query !== "string" || !query.trim()) throw new Error("propose_edit requires a non-empty 'query' string argument.");
     return context.onProposeEdit(query);
+  }
+  if (tool === "submit_proposal") {
+    if (!context.onSubmitProposal) throw new Error("submit_proposal is not available in the current surface.");
+    const baseRevision = args.baseRevision;
+    const rawOperations = args.operations;
+    if (!Number.isSafeInteger(baseRevision) || (baseRevision as number) < 0) throw new Error("submit_proposal requires a non-negative integer baseRevision.");
+    if (baseRevision !== context.revision) throw new Error(`Stale baseRevision ${String(baseRevision)}; current Editor revision is ${context.revision}.`);
+    if (!Array.isArray(rawOperations) || rawOperations.length < 1 || rawOperations.length > 50) throw new Error("submit_proposal requires between 1 and 50 typed operations.");
+    const operations: { tool: string; arguments: Readonly<Record<string, unknown>> }[] = [];
+    for (const [index, item] of rawOperations.entries()) {
+      if (!item || typeof item !== "object" || Array.isArray(item)) throw new Error(`operations[${index}] must be an object.`);
+      const operation = item as Record<string, unknown>;
+      if (typeof operation.tool !== "string" || !(AI_TYPED_PROPOSAL_TOOLS as readonly string[]).includes(operation.tool)) throw new Error(`operations[${index}] uses an unsupported typed proposal tool.`);
+      if (!operation.arguments || typeof operation.arguments !== "object" || Array.isArray(operation.arguments)) throw new Error(`operations[${index}].arguments must be an object.`);
+      operations.push({ tool: operation.tool, arguments: operation.arguments as Readonly<Record<string, unknown>> });
+    }
+    return context.onSubmitProposal(baseRevision as number, operations);
   }
   if (tool === "propose_create_signal" || tool === "propose_rename_signal" || tool === "propose_update_signal" || tool === "propose_move_signal" || tool === "propose_insert_cycles" || tool === "propose_delete_cycles" || tool === "propose_move_range" || tool === "propose_duplicate_range" || tool === "propose_create_signal_group" || tool === "propose_rename_signal_group" || tool === "propose_move_signal_group" || tool === "propose_delete_signal_group" || tool === "propose_create_transaction_group" || tool === "propose_rename_transaction_group" || tool === "propose_delete_transaction_group" || tool === "propose_create_time_group" || tool === "propose_update_time_group" || tool === "propose_delete_time_group" || tool === "propose_create_transaction" || tool === "propose_update_transaction" || tool === "propose_move_transaction" || tool === "propose_resize_transaction" || tool === "propose_delete_transaction" || tool === "propose_create_bookmark" || tool === "propose_move_bookmark" || tool === "propose_update_bookmark" || tool === "propose_delete_bookmark" || tool === "propose_create_annotation" || tool === "propose_update_annotation" || tool === "propose_delete_annotation" || tool === "propose_add_phase" || tool === "propose_update_phase" || tool === "propose_delete_phase" || tool === "propose_link_signal" || tool === "propose_unlink_signal") {
     if (!context.onProposeTypedEdit) throw new Error(`${tool} is not available in the current surface.`);
