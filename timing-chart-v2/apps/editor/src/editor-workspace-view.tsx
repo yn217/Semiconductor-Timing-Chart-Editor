@@ -54,7 +54,7 @@ function TimelineHorizontalScrollbar({ viewport }: { readonly viewport: RefObjec
     window.addEventListener("resize", layout);
     view.addEventListener("timeline-viewport-resize", layout);
     return () => { view.removeEventListener("scroll", onViewScroll, true); bar.removeEventListener("scroll", onBarScroll); observer.disconnect(); window.removeEventListener("resize", layout); view.removeEventListener("timeline-viewport-resize", layout); delete view.dataset.ownHscroll; };
-  });
+  }, [viewport]);
   return <div className="timeline-hscroll" ref={track} data-testid="timeline-hscroll" role="scrollbar" aria-orientation="horizontal" aria-label="Timeline horizontal scroll" hidden><div ref={inner} style={{ height: 1 }} /></div>;
 }
 
