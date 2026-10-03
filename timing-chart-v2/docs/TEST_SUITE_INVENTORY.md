@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 394 spec files and 1147 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 396 spec files and 1153 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1147/1147 cases reviewed.
+Semantic review progress: 1153/1153 cases reviewed.
 
 ## Curated profile membership
 
@@ -12,8 +12,8 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | --- | ---: |
 | `integration` | 579 |
 | `nightly` | 226 |
-| `performance` | 63 |
-| `pr` | 358 |
+| `performance` | 65 |
+| `pr` | 362 |
 | `visual` | 178 |
 
 ## Top recorded per-case runtimes
@@ -152,6 +152,8 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-426-event-selection-scope.spec.ts` | 1 | 1/1 reviewed |
 | `issue-426-external-bottom-draft-update.spec.ts` | 3 | 3/3 reviewed |
 | `issue-426-inspector-bookmark-rebase.spec.ts` | 2 | 2/2 reviewed |
+| `issue-431-enum-state-save-open.spec.ts` | 2 | 2/2 reviewed |
+| `issue-431-protocol-check-toggle.spec.ts` | 2 | 2/2 reviewed |
 | `issue-440-mode-context-coherence.spec.ts` | 3 | 3/3 reviewed |
 | `issue-440-pinned-bookmark-transaction.spec.ts` | 2 | 2/2 reviewed |
 | `issue-441-ribbon-label-integrity.spec.ts` | 3 | 3/3 reviewed |
@@ -282,7 +284,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-863-viewport-cache-invalidation.spec.ts` | 4 | 4/4 reviewed |
 | `issue-864-bulk-clipboard-one-history.spec.ts` | 1 | 1/1 reviewed |
 | `issue-869-minimap-single-edit-incremental.spec.ts` | 1 | 1/1 reviewed |
-| `issue-869-minimap-transaction-incremental.spec.ts` | 1 | 1/1 reviewed |
+| `issue-869-minimap-transaction-incremental.spec.ts` | 3 | 3/3 reviewed |
 | `issue-890-annotation-signal-picker-10k.spec.ts` | 1 | 1/1 reviewed |
 | `issue-895-canvas-wave-semantics.spec.ts` | 1 | 1/1 reviewed |
 | `issue-896-implicit-reference-window.spec.ts` | 1 | 1/1 reviewed |
