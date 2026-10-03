@@ -272,7 +272,7 @@ test("keeps right-aligned frozen labels inset during horizontal scroll and zoom"
   const horizontalScrollbar = page.getByTestId("timeline-hscroll");
   const scrollRange = await viewport.evaluate((element) => element.scrollWidth - element.clientWidth);
   expect(scrollRange).toBeGreaterThan(0);
-  await horizontalScrollbar.evaluate((element) => { element.scrollLeft = element.scrollWidth; element.dispatchEvent(new Event("scroll")); });
+  await horizontalScrollbar.evaluate(async (element) => { element.scrollLeft = element.scrollWidth; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
   await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
   await page.getByTestId("ribbon").getByRole("button", { name: "Zoom In", exact: true }).click();
   const scrolledGeometry = await longLabel.evaluate((element) => {

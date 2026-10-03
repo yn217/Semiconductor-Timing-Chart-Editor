@@ -116,7 +116,7 @@ test("10k Transaction Bottom table mounts only a bounded viewport slice", async 
   await page.getByLabel("Workspace preset").selectOption("transaction");
   const list = page.getByTestId("transaction-editor").locator(".transaction-list");
   await expect.poll(() => list.locator(".transaction-list-row").count()).toBeLessThan(100);
-  await list.evaluate((element) => { element.scrollTop = element.scrollHeight; element.dispatchEvent(new Event("scroll", { bubbles: true })); });
+  await list.evaluate(async (element) => { element.scrollTop = element.scrollHeight; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
   await expect.poll(() => list.locator(".transaction-list-row").count()).toBeLessThan(100);
 });
 

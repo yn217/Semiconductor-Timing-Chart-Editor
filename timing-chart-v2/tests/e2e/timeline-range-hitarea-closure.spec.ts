@@ -113,7 +113,7 @@ test("keeps direct range interaction geometry-backed after scroll and zoom", asy
   const host = page.getByTestId("cycle-surface");
   const viewport = page.getByTestId("cycle-viewport");
   const before = await viewState(page);
-  await viewport.evaluate((element) => { element.scrollLeft = Math.min(180, element.scrollWidth); element.dispatchEvent(new Event("scroll")); });
+  await viewport.evaluate(async (element) => { element.scrollLeft = Math.min(180, element.scrollWidth); await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
   const scrolledStart = await cyclePoint(page, 5);
   const scrolledEnd = await cyclePoint(page, 9);
   const scrolledWave = await host.locator("[data-role='stable-waveform-surface']").boundingBox();

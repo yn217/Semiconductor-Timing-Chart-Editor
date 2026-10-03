@@ -98,7 +98,7 @@ for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] 
     const label = target.locator("[data-role='annotation-label']");
     await expect(label).toBeVisible();
     // Centre the label in the VISIBLE part of the viewport (the Bottom panel overlays its lower edge), as the #847 journey does.
-    await label.evaluate((el) => { const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']")!; const box = el.getBoundingClientRect(); const view = viewport.getBoundingClientRect(); const bottom = document.querySelector<HTMLElement>(".bottom-resize-track")?.getBoundingClientRect().top ?? view.bottom; viewport.scrollTop += box.top - (view.top + (bottom - view.top) / 2); viewport.dispatchEvent(new Event("scroll")); });
+    await label.evaluate(async (el) => { const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']")!; const box = el.getBoundingClientRect(); const view = viewport.getBoundingClientRect(); const bottom = document.querySelector<HTMLElement>(".bottom-resize-track")?.getBoundingClientRect().top ?? view.bottom; viewport.scrollTop += box.top - (view.top + (bottom - view.top) / 2); await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
     await page.waitForTimeout(400);
     const labelBox = (await label.boundingBox())!;
     const hit = { id: targetId, x: labelBox.x + labelBox.width / 2, y: labelBox.y + labelBox.height / 2 };
@@ -155,7 +155,7 @@ for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] 
     await openDocument(page, makeDocument(100_000, 10), "far863.tcd");
     await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 120_000 });
     for (const fraction of [0.5, 0.97, 0.2, 0.999]) {
-      await owner.evaluate((el, f) => { el.scrollLeft = Math.floor((el.scrollWidth - el.clientWidth) * f); el.dispatchEvent(new Event("scroll", { bubbles: true })); }, fraction);
+      await owner.evaluate(async (el, f) => { el.scrollLeft = Math.floor((el.scrollWidth - el.clientWidth) * f); await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); }, fraction);
       await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 120_000 });
       await expect.poll(async () => (await drift(page, true)).compared, { timeout: 30_000, message: `far re-window ${fraction}: owners missing` }).toBeGreaterThan(0);
       const result = await drift(page, true);
