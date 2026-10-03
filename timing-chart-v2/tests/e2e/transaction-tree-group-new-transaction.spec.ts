@@ -9,13 +9,14 @@ test("Group row menu New Transaction creates the Transaction in that Group", asy
   await page.addInitScript(() => { try { window.localStorage.setItem("timing-chart-v2.view-mode", "Transaction"); } catch { /* best effort */ } });
   await page.setViewportSize({ width: 1672, height: 941 });
   await page.goto("/");
-  await expect(page.getByTestId("add-transaction-group-tree-visible")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId("add-transaction-tree")).toBeVisible({ timeout: 30_000 });
   const history = page.getByTestId("history-status");
   const before = (await history.textContent())!;
   const lanes = page.getByTestId("transaction-lanes");
   const groupIds = () => lanes.locator("[data-testid='transaction-group-header']:not([data-ungrouped='true'])").evaluateAll((nodes) => nodes.map((node) => (node as HTMLElement).dataset.transactionGroupId!));
   const groupsBefore = new Set(await groupIds());
-  await page.getByTestId("add-transaction-group-tree-visible").click();
+  await page.getByTestId("add-transaction-tree").click();
+  await page.getByTestId("add-transaction-group-menu-item").click();
   const groupName = "Group 4";
   await expect(page.getByRole("button", { name: `More actions for ${groupName}` })).toBeVisible();
 

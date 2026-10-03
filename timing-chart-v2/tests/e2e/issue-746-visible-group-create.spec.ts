@@ -11,7 +11,8 @@ test("Tree and Bottom expose visible Group creation at both supported viewports"
 
   for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
     await page.setViewportSize(viewport);
-    const tree = page.getByTestId("add-transaction-group-tree-visible");
+    await expect(page.getByTestId("add-transaction-group-tree-visible"), "#1007: standalone + Group is removed").toHaveCount(0);
+    const tree = page.getByTestId("add-transaction-tree");
     await expect(tree).toBeVisible();
     const box = (await tree.boundingBox())!;
     expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
@@ -21,6 +22,7 @@ test("Tree and Bottom expose visible Group creation at both supported viewports"
     const before = await status();
     const groups = await groupCount();
     await tree.click();
+    await page.getByTestId("add-transaction-group-menu-item").click();
     await expect.poll(status).not.toEqual(before);
     await expect.poll(groupCount).toBeGreaterThan(groups);
     await page.getByTestId("bottom-transaction-add-group").click();

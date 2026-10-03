@@ -28,7 +28,7 @@ test("Transaction Tree menu behaviour and Cycle parity at both supported viewpor
     expect(transaction.filter!.h).toBe(cycle.filter!.h);
 
     // Accessible names from the Issue.
-    await expect(header.getByRole("button", { name: "Add transaction", exact: true })).toBeVisible();
+    await expect(header.getByRole("button", { name: "Add transaction or group", exact: true })).toBeVisible();
     await expect(header.getByRole("button", { name: "Transaction tree actions", exact: true })).toBeVisible();
     await expect(header.getByRole("textbox", { name: "Search transactions" })).toHaveAttribute("placeholder", "Search transactions…");
     await expect(header.getByRole("combobox", { name: "Filter transactions" })).toBeVisible();

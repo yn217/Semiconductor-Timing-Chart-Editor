@@ -7,7 +7,7 @@ test("Transaction left-pane header has title, + Add, ⋮ More menu, search + fil
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   const header = page.getByTestId("transaction-tree-header");
   await expect(page.getByTestId("transaction-tree-title")).toHaveText("Transactions");
-  await expect(header.getByRole("button", { name: "Add transaction", exact: true })).toBeVisible();
+  await expect(header.getByRole("button", { name: "Add transaction or group", exact: true })).toBeVisible();
   await expect(header.getByRole("button", { name: "Transaction tree actions", exact: true })).toBeVisible();
   await expect(header.getByRole("textbox", { name: "Search transactions" })).toBeVisible();
   await expect(header.getByRole("combobox", { name: "Filter transactions" })).toBeVisible();
