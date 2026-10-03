@@ -325,6 +325,7 @@ describe("deterministic document export", () => {
     const base = canonicalFixture();
     const document = {
       ...base,
+      document: { ...base.document, title: "Cycle 🧭 日本語" },
       timeline: { ...base.timeline, end: 4096, cycleCount: 4096 },
       signals: [],
       signalGroups: [],
