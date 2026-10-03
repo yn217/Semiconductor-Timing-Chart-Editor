@@ -117,6 +117,8 @@ export function describeAIProposalCommands(document: CanonicalDocument, commands
         return { title: "Move source-cycle range", detail: `${command.start}–${command.end} to ${command.to}` };
       case "timeline.duplicateRange":
         return { title: "Duplicate source-cycle range", detail: `${command.start}–${command.end} at ${command.at}` };
+      case "bookmark.create":
+        return { title: `Create Bookmark ${command.bookmark.name}`, detail: `At source cycle ${command.bookmark.start} · Bookmark ID ${command.bookmark.id}` };
       default:
         return { title: command.type.replaceAll(".", " "), detail: `Command ID ${command.id}` };
     }

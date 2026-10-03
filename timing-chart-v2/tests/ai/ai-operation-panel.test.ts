@@ -18,6 +18,13 @@ describe("AI document-scoped freshness", () => {
 });
 
 describe("AI proposal review details", () => {
+  it("shows a proposed Bookmark name, source cycle and stable identity before Apply", () => {
+    const details = describeAIProposalCommands(canonicalFixture(), [{
+      id: "cmd_bookmark_review", type: "bookmark.create",
+      bookmark: { id: "bookmark_review", name: "Batch checkpoint", start: 3 },
+    }]);
+    expect(details).toEqual([{ title: "Create Bookmark Batch checkpoint", detail: "At source cycle 3 · Bookmark ID bookmark_review" }]);
+  });
   it("lists compound Transaction, Phase, and Signal-link commands with source ranges and stable IDs", () => {
     const base = canonicalFixture();
     const document = { ...base, timeline: { ...base.timeline, end: 24, cycleCount: 24 } };

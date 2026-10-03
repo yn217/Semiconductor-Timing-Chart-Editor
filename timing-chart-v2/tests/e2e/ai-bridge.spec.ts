@@ -333,7 +333,7 @@ test("submit_proposal previews an ordered typed batch and applies or undoes it a
   expect(JSON.parse(response.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ summary: expect.stringContaining("2 operations"), baseRevision: Number(beforeRevision), requiresApproval: true }));
   const commands = ai.getByTestId("ai-preview-commands");
   await expect(commands.locator("li")).toHaveCount(2);
-  await expect(commands).toContainText("Rename REQUEST to BATCH_REQUEST");
+  await expect(commands).toContainText("Rename Signal REQUEST to BATCH_REQUEST");
   await expect(commands).toContainText("Create Bookmark Batch checkpoint");
   await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
@@ -346,8 +346,13 @@ test("submit_proposal previews an ordered typed batch and applies or undoes it a
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   await page.locator(".ribbon").getByRole("button", { name: "Undo", exact: true }).click();
-  await expect(host).toHaveAttribute("data-canonical-revision", "0");
+  await expect(host).toHaveAttribute("data-canonical-revision", "2");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+  const restoredSignal = await callTool("get_signal", TOKEN, { signalId: "sig_cycle_request" });
+  expect(JSON.parse(restoredSignal.body.result!.content[0]!.text).signal).toEqual(expect.objectContaining({ id: "sig_cycle_request", name: "REQUEST" }));
+  const restoredBookmarks = await callTool("get_bookmarks");
+  expect(JSON.parse(restoredBookmarks.body.result!.content[0]!.text).bookmarks).not.toEqual(expect.arrayContaining([expect.objectContaining({ name: "Batch checkpoint" })]));
+  await expect(page.getByTestId("dirty-status")).toHaveText(beforeDirty!);
 });
 
 test("propose_edit builds a Preview only -- it never auto-validates or auto-applies, and a human must still Validate + Apply it themselves", async ({ page }) => {
