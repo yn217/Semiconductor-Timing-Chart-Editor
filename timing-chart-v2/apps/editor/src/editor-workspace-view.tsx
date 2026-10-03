@@ -1,6 +1,7 @@
 import { useEffect, useRef, type KeyboardEventHandler, type PointerEventHandler, type ReactNode, type RefObject } from "react";
 import { LEFT_PANE_MAX_WIDTH, LEFT_PANE_MIN_WIDTH, type ViewMode } from "./workspace/use-workspace-ui-state.js";
-import { timelineScrollOwner } from "./runtime/timeline-scroll-owner.js";
+import { CursorOverlayOwner } from "./runtime/cursor-overlay-owner.js";
+import { mountTimelineHorizontalScrollbar } from "./runtime/timeline-horizontal-scrollbar-owner.js";
 
 /**
  * #625: the horizontal scroll track belongs to the Timeline only. The viewport's native horizontal scrollbar is hidden and this
@@ -15,44 +16,7 @@ function TimelineHorizontalScrollbar({ viewport, viewMode, leftPaneWidth }: { re
     const bar = track.current;
     const filler = inner.current;
     if (!view || !bar || !filler) return undefined;
-    view.dataset.ownHscroll = "true";
-    let syncing = false;
-    const layout = () => {
-      const panel = bar.parentElement;
-      if (!panel) return;
-      const viewRect = view.getBoundingClientRect();
-      const panelRect = panel.getBoundingClientRect();
-      const ruler = view.querySelector<HTMLElement>(".cycle-ruler");
-      const originLeft = ruler && !ruler.hidden ? ruler.getBoundingClientRect().left : viewRect.left;
-      const owner = timelineScrollOwner(view);
-      const offset = owner === view ? Math.max(0, originLeft - viewRect.left) : 0;
-      bar.style.left = `${(owner === view ? viewRect.left : owner.getBoundingClientRect().left) - panelRect.left + offset}px`;
-      // The Cycle panel spans Main + Bottom (#756); the Timeline track sits at the bottom of the visible Main area, above Bottom.
-      const bottomTrack = panel.parentElement?.querySelector<HTMLElement>(".bottom-resize-track");
-      const cover = bottomTrack && owner !== view ? Math.max(0, viewRect.bottom - bottomTrack.getBoundingClientRect().top) : 0; // Bottom + splitter only (not the rail footer)
-      view.style.setProperty("--cycle-fill", `${Math.max(0, view.clientHeight - 34)}px`);
-      bar.style.top = `${viewRect.bottom - panelRect.top - 15 - cover}px`; // overlays the strip the native bar used to occupy
-      bar.style.width = `${Math.max(0, owner.clientWidth - offset)}px`;
-      filler.style.width = `${Math.max(0, owner.scrollWidth - offset)}px`;
-      bar.dataset.timelineLeft = String(Math.round(originLeft));
-      bar.hidden = owner.scrollWidth <= owner.clientWidth;
-      if (!syncing) bar.scrollLeft = owner.scrollLeft;
-    };
-    const onViewScroll = () => { if (syncing) return; syncing = true; bar.scrollLeft = timelineScrollOwner(view).scrollLeft; syncing = false; };
-    const onBarScroll = () => { if (syncing) return; syncing = true; timelineScrollOwner(view).scrollLeft = bar.scrollLeft; syncing = false; };
-    layout();
-    view.addEventListener("scroll", onViewScroll, { passive: true, capture: true });
-    bar.addEventListener("scroll", onBarScroll, { passive: true });
-    // Size changes of the viewport, its content, the Timeline owner and its layers (zoom / --wave-width) re-lay the track out;
-    // zoom also announces itself through `timeline-viewport-resize`.
-    const observer = new ResizeObserver(layout);
-    observer.observe(view);
-    if (view.firstElementChild) observer.observe(view.firstElementChild);
-    const owner = timelineScrollOwner(view);
-    if (owner !== view) { observer.observe(owner); for (const child of owner.children) observer.observe(child); }
-    window.addEventListener("resize", layout);
-    view.addEventListener("timeline-viewport-resize", layout);
-    return () => { view.removeEventListener("scroll", onViewScroll, true); bar.removeEventListener("scroll", onBarScroll); observer.disconnect(); window.removeEventListener("resize", layout); view.removeEventListener("timeline-viewport-resize", layout); delete view.dataset.ownHscroll; };
+    return mountTimelineHorizontalScrollbar(view, bar, filler);
   }, [viewport, viewMode, leftPaneWidth]);
   return <div className="timeline-hscroll" ref={track} data-testid="timeline-hscroll" role="scrollbar" aria-orientation="horizontal" aria-label="Timeline horizontal scroll" hidden><div ref={inner} style={{ height: 1 }} /></div>;
 }
@@ -253,136 +217,23 @@ export function EditorWorkspaceView({
   const { viewport, gridLayer, ruler, host, viewportLower, gridLayerLower, rulerLower, hostLower } = viewModel.refs;
   const { bottom, inspector } = viewModel.content;
   const { onBottomReset, onInspectorReset, onBottomKeyDown, onBottomPointerDown, onBottomPointerMove, onBottomPointerUp, onInspectorKeyDown, onInspectorPointerDown, onInspectorPointerMove, onInspectorPointerUp, onSetCursorAtCycle, resolveCursorCycleAtClientX, resolveCursorViewportXForCycle } = viewModel.interactions;
-  const activeDragCleanupsRef = useRef(new Set<() => void>());
+  const cursorOverlayOwnerRef = useRef<CursorOverlayOwner | null>(null);
+  if (cursorOverlayOwnerRef.current === null) cursorOverlayOwnerRef.current = new CursorOverlayOwner();
+  const cursorOverlayOwner = cursorOverlayOwnerRef.current;
   const cursorInputRef = useRef({ cursorA: cursor.a, cursorB: cursor.b, onSetCursorAtCycle, resolveCursorCycleAtClientX, resolveCursorViewportXForCycle });
   cursorInputRef.current = { cursorA: cursor.a, cursorB: cursor.b, onSetCursorAtCycle, resolveCursorCycleAtClientX, resolveCursorViewportXForCycle };
-  const refreshCursorPresentationRef = useRef<() => void>(() => undefined);
   useEffect(() => {
-    // Cursor A/B are workspace-only source-cycle markers. Resolve their
-    // presentation through shared time geometry; never enumerate ruler ticks
-    // as an alternate cycle-to-X authority.
-    const viewports = [[viewport.current, ruler.current], [viewportLower.current, rulerLower.current]] as const;
-    const update = () => {
-      const current = cursorInputRef.current;
-      for (const [viewportElement, rulerContent] of viewports) {
-        if (!viewportElement || !rulerContent) continue;
-        let overlay = viewportElement.querySelector<HTMLElement>("[data-role='cursor-overlay']");
-        if (!overlay) {
-          overlay = viewportElement.ownerDocument.createElement("div");
-          overlay.dataset.role = "cursor-overlay";
-          overlay.setAttribute("aria-hidden", "true");
-          viewportElement.append(overlay);
-        }
-        overlay.style.position = "absolute";
-        overlay.style.inset = "0";
-        overlay.style.pointerEvents = "none";
-        const viewportRect = viewportElement.getBoundingClientRect();
-        for (const [key, cycle, label] of [["a", current.cursorA, "Cursor A"], ["b", current.cursorB, "Cursor B"]] as const) {
-          let line = overlay.querySelector<HTMLElement>(`[data-cursor='${key}']`);
-          if (cycle === undefined) { line?.remove(); continue; }
-          if (!line) {
-            line = viewportElement.ownerDocument.createElement("div");
-            line.dataset.cursor = key;
-            line.dataset.role = "cursor-line";
-            line.setAttribute("aria-label", label);
-            overlay.append(line);
-          }
-          const x = current.resolveCursorViewportXForCycle?.(cycle, viewportElement, rulerContent);
-          if (x === undefined || !Number.isFinite(x)) { line.hidden = true; continue; }
-          line.hidden = false;
-          // Keep the dynamically-created guide independently hit-testable even
-          // before the stylesheet/layout pass has assigned the overlay rule.
-          line.style.position = "absolute";
-          line.style.top = "0";
-          line.style.width = "2px";
-          // #756: the Cycle viewport spans Main + Bottom; the guide ends at the Bottom splitter so it stays grabbable (not under Bottom).
-          const splitterTop = viewportElement.closest(".cycle-panel")?.parentElement?.querySelector(".bottom-resize-track")?.getBoundingClientRect().top;
-          const visibleHeight = splitterTop !== undefined && splitterTop > viewportRect.top && splitterTop < viewportRect.bottom ? splitterTop - viewportRect.top : viewportElement.clientHeight;
-          line.style.height = `${Math.max(visibleHeight, 250)}px`;
-          line.style.pointerEvents = "auto";
-          line.style.left = `${x}px`;
-          line.dataset.cycle = String(cycle);
-        }
-      }
-    };
-    refreshCursorPresentationRef.current = update;
-    update();
-    return () => { if (refreshCursorPresentationRef.current === update) refreshCursorPresentationRef.current = () => undefined; };
-  }, [ruler, rulerLower, cursor.a, cursor.b, cursorPresentationRevision, zoom, viewport, viewportLower, resolveCursorViewportXForCycle]);
-  useEffect(() => {
-    const viewports = [[viewport.current, ruler.current], [viewportLower.current, rulerLower.current]] as const;
-    const scrollTargets = [viewport.current, viewportLower.current].filter((item): item is HTMLDivElement => item !== null);
-    const refresh = () => refreshCursorPresentationRef.current();
-    // Keep the one post-mount refresh for late layout, without tying it to
-    // cursor preview renders.
-    const deferredUpdate = requestAnimationFrame(refresh);
-    const rulerResizeObserver = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(refresh);
-    for (const target of [ruler.current, rulerLower.current].filter((item): item is HTMLDivElement => item !== null)) rulerResizeObserver?.observe(target);
-    const dragHandlers: Array<[HTMLDivElement, (event: PointerEvent) => void]> = [];
-    // This lifecycle effect is intentionally independent of cursor values;
-    // preview renders update the presentation ref without replacing listeners.
-    // The active gesture is still cleared on unmount / mode change below.
-    const activeDragCleanups = activeDragCleanupsRef.current;
-    for (const [viewportElement, rulerContent] of viewports) {
-      if (!viewportElement || !rulerContent) continue;
-      const onPointerDown = (event: PointerEvent) => {
-        // Cursor A/B has one workspace-wide drag owner. A second pointer
-        // must not install another window-level move/up handler while the
-        // first drag is still resolving source-time coordinates.
-        if (activeDragCleanups.size > 0) return;
-        const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='cursor-line']") : null;
-        const which = target?.dataset.cursor as "a" | "b" | undefined;
-        if (!which) return;
-        event.preventDefault();
-        let pendingFrame: number | undefined;
-        let pendingClientX = event.clientX;
-        let pointerMoves = 0;
-        let previewFrames = 0;
-        const trace = () => {
-          viewportElement.dataset.cursorDragPointerMoves = String(pointerMoves);
-          viewportElement.dataset.cursorDragPreviewFrames = String(previewFrames);
-        };
-        trace();
-        const applyCursorAt = (clientX: number) => {
-          const current = cursorInputRef.current;
-          const resolved = current.resolveCursorCycleAtClientX?.(clientX, viewportElement);
-          if (resolved !== undefined) current.onSetCursorAtCycle?.(which, resolved);
-        };
-        const move = (moveEvent: PointerEvent) => {
-          pendingClientX = moveEvent.clientX;
-          if (pendingFrame !== undefined) return;
-          pendingFrame = requestAnimationFrame(() => {
-            pendingFrame = undefined;
-            previewFrames += 1;
-            trace();
-            applyCursorAt(pendingClientX);
-          });
-        };
-        const cleanupDrag = () => { window.removeEventListener("pointermove", moveWithTrace); if (pendingFrame !== undefined) cancelAnimationFrame(pendingFrame); pendingFrame = undefined; trace(); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", cancel); activeDragCleanups.delete(cleanupDrag); };
-        const up = () => { applyCursorAt(pendingClientX); cleanupDrag(); };
-        const cancel = () => cleanupDrag();
-        const moveWithTrace = (moveEvent: PointerEvent) => { pointerMoves += 1; trace(); move(moveEvent); };
-        window.addEventListener("pointermove", moveWithTrace);
-        window.addEventListener("pointerup", up, { once: true });
-        window.addEventListener("pointercancel", cancel, { once: true });
-        activeDragCleanups.add(cleanupDrag);
-      };
-      viewportElement.addEventListener("pointerdown", onPointerDown, true);
-      dragHandlers.push([viewportElement, onPointerDown]);
-    }
-    for (const target of scrollTargets) target.addEventListener("scroll", refresh, { passive: true, capture: true });
-    window.addEventListener("resize", refresh);
-    return () => {
-      for (const target of scrollTargets) target.removeEventListener("scroll", refresh, true);
-      cancelAnimationFrame(deferredUpdate);
-      rulerResizeObserver?.disconnect();
-      for (const [target, handler] of dragHandlers) target.removeEventListener("pointerdown", handler, true);
-      window.removeEventListener("resize", refresh);
-    };
-  }, [ruler, rulerLower, viewport, viewportLower]);
-  // Cursor drag handlers survive their own cursor.a/b state updates, but a
-  // mode owner change ends the gesture so stale viewport listeners cannot leak.
-  useEffect(() => () => { for (const cleanupDrag of [...activeDragCleanupsRef.current]) cleanupDrag(); }, [viewMode]);
+    return cursorOverlayOwner.connect({
+      viewport: viewport.current,
+      ruler: ruler.current,
+      viewportLower: viewportLower.current,
+      rulerLower: rulerLower.current,
+      getPresentation: () => cursorInputRef.current,
+    });
+  }, [cursorOverlayOwner, ruler, rulerLower, viewport, viewportLower]);
+  useEffect(() => { cursorOverlayOwner.refresh(); }, [cursorOverlayOwner, cursor.a, cursor.b, cursorPresentationRevision, zoom, resolveCursorViewportXForCycle]);
+  // A mode owner change ends an active gesture so stale viewport listeners cannot leak.
+  useEffect(() => () => cursorOverlayOwner.cancelActiveDrags(), [cursorOverlayOwner, viewMode]);
   return <div className="desktop-workspace" data-workspace-owner={workspace.name}>
     {workspace.headerAbove}
     <section className={`cycle-panel mode-${workspace.mode.toLowerCase()}`} aria-label={`${workspace.mode === "Split" ? "Combined" : workspace.mode} View`} data-view-mode={workspace.mode} data-workspace-owner={workspace.name} data-signal-split={String(viewModel.view.signalSplitEnabled && workspace.mode === "Cycle")}>

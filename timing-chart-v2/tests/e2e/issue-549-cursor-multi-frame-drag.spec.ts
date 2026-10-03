@@ -123,3 +123,41 @@ test("pointercancel ends a Cursor drag without another cursor update", async ({ 
   expect(Number(await line.getAttribute("data-cycle")), "no update after pointercancel").toBe(startCycle + 2);
   await page.mouse.up();
 });
+
+test("switching mode cancels an active Cursor drag owner", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("cursor-set-a").click();
+  const line = page.locator("[data-role='cursor-line'][data-cursor='a']:visible").first();
+  await expect(line).toBeVisible();
+  const startCycle = Number(await line.getAttribute("data-cycle"));
+  const box = (await line.boundingBox())!;
+  const y = box.y + Math.max(1, box.height / 2);
+  const frame = () => page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  const tick = (cycle: number) => page.locator(`.cycle-ruler [data-cycle][data-source-cycle='${cycle}']`).first();
+  const viewport = page.getByTestId("cycle-viewport");
+  await page.mouse.move(box.x + box.width / 2, y);
+  await page.mouse.down();
+  const firstTarget = startCycle + 2;
+  const firstTargetBox = (await tick(firstTarget).boundingBox())!;
+  await page.mouse.move(firstTargetBox.x + 1, y);
+  await frame();
+  await expect.poll(async () => Number(await line.getAttribute("data-cycle"))).toBe(firstTarget);
+  const laterTargetBox = (await tick(startCycle + 5).boundingBox())!;
+
+  const pointerMovesBeforeModeChange = Number(await viewport.getAttribute("data-cursor-drag-pointer-moves"));
+  const previewFramesBeforeModeChange = Number(await viewport.getAttribute("data-cursor-drag-preview-frames"));
+  const transactionMode = page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true });
+  await transactionMode.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".cycle-panel")).toHaveAttribute("data-view-mode", "Transaction");
+
+  await page.mouse.move(laterTargetBox.x + 1, y);
+  await frame();
+  expect(Number(await line.getAttribute("data-cycle")), "mode teardown stops the in-flight gesture before another preview").toBe(firstTarget);
+  expect(Number(await viewport.getAttribute("data-cursor-drag-pointer-moves"))).toBe(pointerMovesBeforeModeChange);
+  expect(Number(await viewport.getAttribute("data-cursor-drag-preview-frames"))).toBe(previewFramesBeforeModeChange);
+  await page.mouse.up();
+});

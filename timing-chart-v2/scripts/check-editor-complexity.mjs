@@ -187,7 +187,7 @@ for (const [ratchetFile, ceiling] of Object.entries(ratchet)) {
   const ratchetLines = (await readFile(resolve(root, ratchetFile), "utf8")).split("\n").length;
   if (ratchetLines > ceiling) violations.push(`${ratchetFile} grew past its ratchet ceiling ${ceiling} (${ratchetLines}); extract an owner or lower the ceiling with the refactor`);
 }
-// #258 lifecycle ratchet: EditorWorkspaceView currently owns Cursor/scrollbar listener + ResizeObserver lifecycles; they may not regrow.
+// #258 lifecycle ratchet: imperative Cursor and scrollbar lifecycles belong to typed runtime owners, not EditorWorkspaceView.
 const lifecycleRatchet = JSON.parse(await readFile(resolve(root, "architecture/lifecycle-ratchet.json"), "utf8"));
 for (const [lifecycleFile, ceilings] of Object.entries(lifecycleRatchet)) {
   if (lifecycleFile.startsWith("_")) continue;
