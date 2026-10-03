@@ -79,8 +79,8 @@ test("Sample A: create/rename/move/resize/delete, phase add/edit/delete, link/un
   await expect(bottomEditor.locator("[data-transaction-row-id='txn_read0'] input[aria-label='Bottom Transaction name']")).toHaveValue("Read_0");
   // #703: the Bottom row is editable and carries its own Apply, disabled while the draft equals Canonical.
   await expect(bottomEditor.getByTestId("apply-transaction-properties")).toBeDisabled();
-  await expect(inspector.getByLabel("Transaction start")).toHaveValue("6");
-  await expect(inspector.getByLabel("Transaction end")).toHaveValue("12");
+  await expect(inspector.getByLabel("Transaction start")).toHaveValue("0.6"); // Inspector fields are in TC (1 TC = 10 cycles)
+  await expect(inspector.getByLabel("Transaction end")).toHaveValue("1.2");
 
   // Rename through the Inspector; the Bottom row reflects it immediately.
   await inspector.getByLabel("Transaction name").fill("Read_0_renamed");
@@ -93,8 +93,8 @@ test("Sample A: create/rename/move/resize/delete, phase add/edit/delete, link/un
   // Widen rather than shift so the existing 6-12 phase range stays inside
   // Start..End (the Inspector's own Apply validation correctly rejects a
   // range that would put an existing phase outside the new bounds).
-  await inspector.getByLabel("Transaction start").fill("5");
-  await inspector.getByLabel("Transaction end").fill("14");
+  await inspector.getByLabel("Transaction start").fill("0.5");
+  await inspector.getByLabel("Transaction end").fill("1.4");
   await inspector.getByLabel("Transaction lane").fill("lane_2");
   await inspector.getByTestId("apply-inspector-transaction").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
@@ -135,7 +135,7 @@ test("Sample A: create/rename/move/resize/delete, phase add/edit/delete, link/un
   // Undo/Redo exact back through the whole sequence.
   for (let i = 0; i < 7; i++) await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 7");
-  await expect(lanes.locator("[data-transaction-id='txn_read0']")).toContainText("Read_0");
+  await expect(page.getByTestId("transaction-left-tree")).toContainText("Read_0"); // names live in the left Tree
   for (let i = 0; i < 7; i++) await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 7 / Redo 0");
   await expect(lanes.locator("[data-transaction-id]")).toHaveCount(4);
@@ -160,6 +160,7 @@ test("Sample A survives Save/Open exactly", async ({ page }) => {
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
-  await expect(lanes.locator("[data-transaction-id]")).toHaveCount(4);
-  await expect(lanes).toContainText("Read_0");
+  // Names live in the left Tree (lane plane is Lane-only); bars are horizontally virtualized, so assert the Tree rows.
+  await expect(page.getByTestId("transaction-left-tree").locator("[data-transaction-tree-id]")).toHaveCount(4);
+  await expect(page.getByTestId("transaction-left-tree")).toContainText("Read_0");
 });
