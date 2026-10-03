@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-03T08:23:30.825Z",
+  "generatedAt": "2026-10-03T09:27:51.426Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,11 +11,11 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 397,
-  "caseCount": 1155,
-  "reviewedCaseCount": 1155,
+  "specFileCount": 398,
+  "caseCount": 1157,
+  "reviewedCaseCount": 1157,
   "curatedProfileCounts": {
-    "integration": 579,
+    "integration": 581,
     "nightly": 226,
     "performance": 65,
     "pr": 364,
@@ -9788,6 +9788,58 @@
         "pr"
       ],
       "contractId": "transaction-add-menu"
+    },
+    {
+      "file": "issue-175-scrollbar-geometry-matrix.spec.ts",
+      "suitePath": [],
+      "line": 36,
+      "title": "Timeline scrollbar follows its owner through panel, zoom, mode and document changes at 1280x720",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "timeline-scrollbar",
+      "originIssue": 175,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "The Timeline horizontal scrollbar keeps following its current scroll owner through panel, resize, zoom, mode and document changes.",
+      "duplicateGroup": "timeline-scrollbar",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Regression guard for effect-lifecycle optimisations of TimelineHorizontalScrollbar (#175 / PR #1025 regressed it).",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ],
+      "contractId": "timeline-scrollbar"
+    },
+    {
+      "file": "issue-175-scrollbar-geometry-matrix.spec.ts",
+      "suitePath": [],
+      "line": 36,
+      "title": "Timeline scrollbar follows its owner through panel, zoom, mode and document changes at 1672x941",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "timeline-scrollbar",
+      "originIssue": 175,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "The Timeline horizontal scrollbar keeps following its current scroll owner through panel, resize, zoom, mode and document changes.",
+      "duplicateGroup": "timeline-scrollbar",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Regression guard for effect-lifecycle optimisations of TimelineHorizontalScrollbar (#175 / PR #1025 regressed it).",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ],
+      "contractId": "timeline-scrollbar"
     },
     {
       "file": "issue-208-open-epoch-coherence.spec.ts",
@@ -31401,6 +31453,17 @@
       "originIssue": "1007",
       "declaredTimeoutMs": 120,
       "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "issue-175-scrollbar-geometry-matrix.spec.ts",
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
+      "originIssue": "175",
+      "declaredTimeoutMs": 240,
+      "candidateSignals": [
+        "geometryRead"
+      ],
       "semanticReviewStatus": "REVIEWED"
     },
     {
