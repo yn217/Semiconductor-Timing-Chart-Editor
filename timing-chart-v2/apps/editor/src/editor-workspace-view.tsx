@@ -434,7 +434,7 @@ export function EditorWorkspaceView({
         {workspace.upperPane}
         <TimelinePaneContents gridLayer={gridLayer} ruler={ruler} host={host} gridEnabled={viewModel.view.gridEnabled} rulerEnabled={viewModel.view.rulerEnabled} snapEnabled={viewModel.view.snapEnabled} body={workspace.timelineBody} combined={workspace.mode === "Split"} />
       </div>
-      {workspace.timeViewportOwner === "cycle-inner" && <TimelineHorizontalScrollbar viewport={viewport} viewMode={viewMode} leftPaneWidth={leftPaneWidth} />}
+      {workspace.timeViewportOwner === "cycle-inner" && <TimelineHorizontalScrollbar viewport={viewport} viewMode={viewMode} leftPaneWidth={viewModel.layout.leftPaneWidth} />}
       {workspace.auxiliary}
     </section>
     {workspace.rail}
