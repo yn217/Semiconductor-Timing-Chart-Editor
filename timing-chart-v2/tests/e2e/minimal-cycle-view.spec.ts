@@ -11,6 +11,7 @@ test("projects canonical rows into aligned tree, frozen labels, and waveform sur
 
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const surface = host.locator("[data-role='timing-chart-surface']");
   const expected = [
     "sig_cycle_clock", "sig_cycle_reset_n", "sig_cycle_request", "sig_cycle_ready",
@@ -35,6 +36,7 @@ test("derives the ruler from local geometry and keeps selection view-only", asyn
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const surface = host.locator("[data-role='timing-chart-surface']");
   const ruler = page.getByTestId("cycle-ruler");
   await expect(ruler).toHaveAttribute("data-source", "local-geometry");
@@ -60,6 +62,7 @@ test("synchronizes scrolling through one viewport without regenerating waveforms
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const surface = host.locator("[data-role='timing-chart-surface']");
   const viewport = page.getByTestId("cycle-viewport");
   const countersBefore = await surface.getAttribute("data-render-counters");
