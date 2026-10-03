@@ -174,6 +174,7 @@ test("10k entities hidden by one collapsed fold use bounded rescue DOM and prese
   expect(initial.hiddenBookmarkCount).toBe(10_000);
 
   const measureScrollFrames = async (label: string) => {
+    const viewport = page.getByTestId("cycle-viewport");
     const viewportBounds = await page.getByTestId("cycle-viewport").boundingBox();
     expect(viewportBounds).not.toBeNull();
     await page.evaluate(() => {
@@ -192,15 +193,20 @@ test("10k entities hidden by one collapsed fold use bounded rescue DOM and prese
         }, { passive: true });
         if (typeof PerformanceObserver !== "undefined") {
           const observer = new PerformanceObserver((list) => state.longTaskMs.push(...list.getEntries().map((entry) => entry.duration)));
-          try { observer.observe({ type: "longtask", buffered: true }); } catch { /* Long Task API is optional; retain frame samples. */ }
+          try { observer.observe({ type: "longtask" }); } catch { /* Long Task API is optional; retain frame samples. */ }
         }
       }
     });
     const samplesBefore = await page.evaluate(() => ((window as unknown as { __issue865ScrollMetrics: { frameMs: number[] } }).__issue865ScrollMetrics.frameMs.length));
     let previousScrollLeft = await viewport.evaluate((element) => element.scrollLeft);
+    const maxScrollLeft = await viewport.evaluate((element) => element.scrollWidth - element.clientWidth);
+    expect(maxScrollLeft, "Transaction time viewport must have horizontal overflow for scroll attribution").toBeGreaterThan(0);
+    const wheelDelta = previousScrollLeft <= maxScrollLeft / 2 ? 180 : -180;
     for (let index = 0; index < 8; index += 1) {
       await page.mouse.move(viewportBounds!.x + viewportBounds!.width / 2, viewportBounds!.y + viewportBounds!.height / 2);
-      await page.mouse.wheel(index % 2 === 0 ? 180 : -180, 0);
+      // Scroll away from the nearest edge so each native wheel sample has room
+      // to move, even when opening the fixture starts at the far-right edge.
+      await page.mouse.wheel(wheelDelta, 0);
       await expect.poll(() => viewport.evaluate((element) => element.scrollLeft), { message: `${label} native horizontal wheel step ${index + 1}` }).not.toBe(previousScrollLeft);
       previousScrollLeft = await viewport.evaluate((element) => element.scrollLeft);
       await expect.poll(() => page.evaluate(() => ((window as unknown as { __issue865ScrollMetrics: { frameMs: number[] } }).__issue865ScrollMetrics.frameMs.length))).toBeGreaterThan(samplesBefore + index);
@@ -214,7 +220,8 @@ test("10k entities hidden by one collapsed fold use bounded rescue DOM and prese
   const minimapEnabledScroll = await measureScrollFrames("MiniMap enabled");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "MiniMap", exact: true }).click();
-  await expect(page.getByTestId("minimap")).toHaveCount(0);
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-minimap-enabled", "false");
+  await expect(page.getByTestId("minimap")).toHaveCSS("display", "none");
   const miniMapHiddenSegments = await page.locator(".minimap-segment-transaction").count();
   const miniMapHiddenScroll = await measureScrollFrames("MiniMap hidden attribution");
   console.log(`[issue-865-fold-rescue] ${JSON.stringify({ initial, miniMapHiddenSegments, minimapEnabledScroll, miniMapHiddenScroll })}`);
