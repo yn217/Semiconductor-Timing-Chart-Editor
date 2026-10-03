@@ -36,6 +36,7 @@ export interface EditorWorkspaceViewModel {
     readonly onViewportKeyDown?: KeyboardEventHandler<HTMLDivElement>;
     readonly onSetCursorAtCycle?: (which: "a" | "b", cycle: number) => void;
     readonly resolveCursorCycleAtClientX?: (clientX: number, viewport: HTMLDivElement) => number | undefined;
+    readonly resolveCursorOverlayLeftAtCycle?: (cycle: number, viewport: HTMLDivElement) => number | undefined;
   };
 }
 
@@ -215,20 +216,19 @@ export function EditorWorkspaceView({
   const { bottomVisible, bottomHeight, inspectorVisible, inspectorWidth } = viewModel.layout;
   const { viewport, gridLayer, ruler, host, viewportLower, gridLayerLower, rulerLower, hostLower } = viewModel.refs;
   const { bottom, inspector } = viewModel.content;
-  const { onBottomReset, onInspectorReset, onBottomKeyDown, onBottomPointerDown, onBottomPointerMove, onBottomPointerUp, onInspectorKeyDown, onInspectorPointerDown, onInspectorPointerMove, onInspectorPointerUp, onSetCursorAtCycle, resolveCursorCycleAtClientX } = viewModel.interactions;
+  const { onBottomReset, onInspectorReset, onBottomKeyDown, onBottomPointerDown, onBottomPointerMove, onBottomPointerUp, onInspectorKeyDown, onInspectorPointerDown, onInspectorPointerMove, onInspectorPointerUp, onSetCursorAtCycle, resolveCursorCycleAtClientX, resolveCursorOverlayLeftAtCycle } = viewModel.interactions;
   const cursorOverlayOwnerRef = useRef<CursorOverlayOwner | null>(null);
   if (cursorOverlayOwnerRef.current === null) cursorOverlayOwnerRef.current = new CursorOverlayOwner();
   const cursorOverlayOwner = cursorOverlayOwnerRef.current;
   useEffect(() => {
     return cursorOverlayOwner.connect({
       viewport: viewport.current,
-      ruler: ruler.current,
       viewportLower: viewportLower.current,
-      rulerLower: rulerLower.current,
       cursorA: cursor.a,
       cursorB: cursor.b,
       onSetCursorAtCycle,
       resolveCursorCycleAtClientX,
+      resolveCursorOverlayLeftAtCycle,
     });
   }, [ruler, rulerLower, cursor.a, cursor.b, cursorPresentationRevision, zoom, viewport, viewportLower]);
   // Cursor drag handlers survive their own cursor.a/b state updates, but a
