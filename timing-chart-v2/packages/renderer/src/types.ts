@@ -200,6 +200,8 @@ export interface EdgeCounterOverlayPrimitive {
 export interface TimingChartRenderer {
   mount(host: HTMLElement): void;
   update(projection: RenderProjection): void;
+  /** Refresh only bounded waveform windows when the row projection is unchanged. */
+  updateViewport(projection: RenderProjection): void;
   /** Apply row/presentation changes without rebuilding waveform semantics. */
   updatePresentation(projection: RenderProjection): void;
   updateOverlays(primitives: readonly AnnotationOverlayPrimitive[]): void;

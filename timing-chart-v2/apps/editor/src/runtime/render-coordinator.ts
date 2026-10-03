@@ -2,11 +2,43 @@ import { StableTimingChartRenderer, type TimingChartRenderer, type WaveformSurfa
 import type { RefObject } from "react";
 import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
 import { projectAnnotationOverlays } from "./annotation-overlays.js";
-import type { DisplayTimeViewport } from "@timing-chart-v2/projection";
+import { createDisplayTimeViewport, type DisplayTimeMapping, type DisplayTimeViewport } from "@timing-chart-v2/projection";
 import { projectEdgeCounters, type EdgeCounterProjectionMetrics, type SelectedClockEdge } from "./edge-counter-projection.js";
 import type { LocalGeometryMap } from "@timing-chart-v2/geometry";
 import type { RenderProjection } from "@timing-chart-v2/projection";
 import type { TimeAxisMetrics } from "./timeline-geometry-owner.js";
+
+interface AnnotationViewportProjectionCache {
+  readonly document: CanonicalDocument;
+  readonly projection: RenderProjection;
+  readonly geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>;
+  readonly mapping: DisplayTimeMapping;
+  readonly presentationScale: number;
+  readonly selectedAnnotationId: string | undefined;
+  readonly viewport: DisplayTimeViewport;
+  readonly overlays: ReturnType<typeof projectAnnotationOverlays>;
+  readonly publishedCacheHits: number;
+  cacheHits: number;
+}
+
+const annotationViewportProjectionCaches = new WeakMap<HTMLElement, AnnotationViewportProjectionCache>();
+
+function viewportContains(container: DisplayTimeViewport, requested: DisplayTimeViewport): boolean {
+  return container.displayStart <= requested.displayStart
+    && container.displayEnd >= requested.displayEnd
+    && container.rowStart === requested.rowStart
+    && container.rowEnd === requested.rowEnd
+    && container.pinnedIds.length === requested.pinnedIds.length
+    && container.pinnedIds.every((id, index) => id === requested.pinnedIds[index]);
+}
+
+function annotationProjectionWindow(viewport: DisplayTimeViewport, mapping: DisplayTimeMapping): DisplayTimeViewport {
+  const visibleStart = Math.min(viewport.displayEnd, viewport.displayStart + viewport.overscanCycles);
+  const visibleEnd = Math.max(visibleStart, viewport.displayEnd - viewport.overscanCycles);
+  const visibleSpan = Math.max(1, visibleEnd - visibleStart);
+  const overscan = Math.ceil(visibleSpan / 2);
+  return createDisplayTimeViewport(mapping, visibleStart, visibleEnd, overscan, viewport.rowStart, viewport.rowEnd, viewport.generation, viewport.pinnedIds);
+}
 
 /** Owns the imperative renderer's DOM lifecycle outside React composition. */
 export class RenderCoordinator {
@@ -27,6 +59,57 @@ export class RenderCoordinator {
 
 export function refreshRendererEdgeCounters(renderer: Pick<TimingChartRenderer, "updateEdgeCounters">, document: CanonicalDocument, projection: RenderProjection, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, timeAxisMetrics: TimeAxisMetrics, range: { readonly start: number; readonly end: number }, selectedCycle: number, screenGeometryScale: number, selectedEdge?: SelectedClockEdge, metrics?: EdgeCounterProjectionMetrics): void { renderer.updateEdgeCounters(projectEdgeCounters(document, projection, geometryMaps, timeAxisMetrics.mapping, range, selectedCycle, screenGeometryScale, selectedEdge, metrics)); }
 
-export function refreshRendererOverlays(renderer: Pick<TimingChartRenderer, "updateOverlays" | "updateEdgeCounters">, host: RefObject<HTMLDivElement | null>, document: CanonicalDocument, projection: RenderProjection, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, timeAxisMetrics: TimeAxisMetrics, range: { readonly start: number; readonly end: number }, selectedCycle: number, selectedAnnotationId: string | undefined, selectedEdge?: SelectedClockEdge, metrics?: EdgeCounterProjectionMetrics, viewport?: DisplayTimeViewport): void { const overlays = projectAnnotationOverlays(document, projection, geometryMaps, timeAxisMetrics.mapping, timeAxisMetrics.presentationScale, viewport, (stats) => { const target = host.current; if (target) { target.dataset.annotationCanonicalCount = String(stats.canonicalCount); target.dataset.annotationCandidateCount = String(stats.candidateCount); target.dataset.annotationResolvedCount = String(stats.resolvedCount); target.dataset.annotationProjectionDurationMs = stats.durationMs.toFixed(2); target.dataset.annotationIndexEntriesVisited = String(stats.indexEntriesVisited); target.dataset.annotationPinnedInjectedCount = String(stats.pinnedInjectedCount); } }, timeAxisMetrics); renderer.updateOverlays(overlays); refreshRendererEdgeCounters(renderer, document, projection, geometryMaps, timeAxisMetrics, range, selectedCycle, timeAxisMetrics.presentationScale, selectedEdge, metrics); for (const owner of host.current?.querySelectorAll<HTMLElement>("[data-annotation-id]") ?? []) { const selected = String(owner.dataset.annotationId === selectedAnnotationId); if (owner.dataset.selected !== selected) owner.dataset.selected = selected; } }
+export function refreshRendererOverlays(renderer: Pick<TimingChartRenderer, "updateOverlays" | "updateEdgeCounters">, host: RefObject<HTMLDivElement | null>, document: CanonicalDocument, projection: RenderProjection, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, timeAxisMetrics: TimeAxisMetrics, range: { readonly start: number; readonly end: number }, selectedCycle: number, selectedAnnotationId: string | undefined, selectedEdge?: SelectedClockEdge, metrics?: EdgeCounterProjectionMetrics, viewport?: DisplayTimeViewport, reason?: string): void {
+  const target = host.current;
+  const mapping = timeAxisMetrics.mapping;
+  const presentationScale = timeAxisMetrics.presentationScale;
+  let cache = target ? annotationViewportProjectionCaches.get(target) : undefined;
+  const reusable = reason === "scroll" && viewport !== undefined && cache !== undefined
+    && cache.document === document
+    && cache.projection === projection
+    && cache.geometryMaps === geometryMaps
+    && cache.mapping === mapping
+    && cache.presentationScale === presentationScale
+    && cache.selectedAnnotationId === selectedAnnotationId
+    && viewportContains(cache.viewport, viewport);
+  let overlays: ReturnType<typeof projectAnnotationOverlays>;
+  if (reusable && cache) {
+    overlays = cache.overlays;
+    cache.cacheHits += 1;
+  } else {
+    const projectionViewport = reason === "scroll" && viewport !== undefined ? annotationProjectionWindow(viewport, mapping) : viewport;
+    overlays = projectAnnotationOverlays(document, projection, geometryMaps, mapping, presentationScale, projectionViewport, (stats) => {
+      if (!target) return;
+      target.dataset.annotationCanonicalCount = String(stats.canonicalCount);
+      target.dataset.annotationCandidateCount = String(stats.candidateCount);
+      target.dataset.annotationResolvedCount = String(stats.resolvedCount);
+      target.dataset.annotationProjectionDurationMs = stats.durationMs.toFixed(2);
+      target.dataset.annotationIndexEntriesVisited = String(stats.indexEntriesVisited);
+      target.dataset.annotationPinnedInjectedCount = String(stats.pinnedInjectedCount);
+    }, timeAxisMetrics);
+    const nextCache: AnnotationViewportProjectionCache | undefined = target && projectionViewport ? {
+      document,
+      projection,
+      geometryMaps,
+      mapping,
+      presentationScale,
+      selectedAnnotationId,
+      viewport: projectionViewport,
+      overlays,
+      publishedCacheHits: (cache?.publishedCacheHits ?? 0) + (cache?.cacheHits ?? 0),
+      cacheHits: 0,
+    } : undefined;
+    if (target && nextCache) {
+      annotationViewportProjectionCaches.set(target, nextCache);
+      target.dataset.annotationProjectionViewportCacheHits = String(nextCache.publishedCacheHits);
+    } else if (target) annotationViewportProjectionCaches.delete(target);
+  }
+  if (!reusable) renderer.updateOverlays(overlays);
+  refreshRendererEdgeCounters(renderer, document, projection, geometryMaps, timeAxisMetrics, range, selectedCycle, presentationScale, selectedEdge, metrics);
+  for (const owner of target?.querySelectorAll<HTMLElement>("[data-annotation-id]") ?? []) {
+    const selected = String(owner.dataset.annotationId === selectedAnnotationId);
+    if (owner.dataset.selected !== selected) owner.dataset.selected = selected;
+  }
+}
 
-export function refreshRendererForReason(renderer: Pick<TimingChartRenderer, "updateOverlays" | "updateEdgeCounters">, host: RefObject<HTMLDivElement | null>, reason: string, document: CanonicalDocument, projection: RenderProjection, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, timeAxisMetrics: TimeAxisMetrics, range: { readonly start: number; readonly end: number }, selectedCycle: number, selectedAnnotationId: string | undefined, selectedEdge?: SelectedClockEdge, metrics?: EdgeCounterProjectionMetrics, viewport?: DisplayTimeViewport): void { if (reason === "range") refreshRendererEdgeCounters(renderer, document, projection, geometryMaps, timeAxisMetrics, range, selectedCycle, timeAxisMetrics.presentationScale, selectedEdge, metrics); else refreshRendererOverlays(renderer, host, document, projection, geometryMaps, timeAxisMetrics, range, selectedCycle, selectedAnnotationId, selectedEdge, metrics, viewport); }
+export function refreshRendererForReason(renderer: Pick<TimingChartRenderer, "updateOverlays" | "updateEdgeCounters">, host: RefObject<HTMLDivElement | null>, reason: string, document: CanonicalDocument, projection: RenderProjection, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, timeAxisMetrics: TimeAxisMetrics, range: { readonly start: number; readonly end: number }, selectedCycle: number, selectedAnnotationId: string | undefined, selectedEdge?: SelectedClockEdge, metrics?: EdgeCounterProjectionMetrics, viewport?: DisplayTimeViewport): void { if (reason === "range") refreshRendererEdgeCounters(renderer, document, projection, geometryMaps, timeAxisMetrics, range, selectedCycle, timeAxisMetrics.presentationScale, selectedEdge, metrics); else refreshRendererOverlays(renderer, host, document, projection, geometryMaps, timeAxisMetrics, range, selectedCycle, selectedAnnotationId, selectedEdge, metrics, viewport, reason); }
