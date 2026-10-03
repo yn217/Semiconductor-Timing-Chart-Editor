@@ -924,6 +924,40 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document.signals).toHaveLength(2);
   });
 
+  it("deletes the full 10,000-Signal limit atomically when no semantic dependents remain", () => {
+    const source = canonicalFixture();
+    const signals = Array.from({ length: 10_000 }, (_, index) => extraSignal(`sig_delete_limit_${index}`));
+    const document = {
+      ...source,
+      timeline: (() => { const { referenceClock: _referenceClock, ...timeline } = source.timeline; return timeline; })(),
+      signals,
+      signalGroups: [{ ...source.signalGroups[0]!, rows: signals.map((signal) => signal.id) }],
+      annotations: [],
+      transactions: [],
+    };
+    const session = new CommandHistorySession(document);
+
+    const result = session.execute({ id: commandId("cmd_delete_all_product_limit"), type: "signal.bulkDelete", signalIds: signals.map((signal) => signal.id) });
+
+    expect(result.ok).toBe(true);
+    expect(session.getSnapshot().document.signals).toHaveLength(0);
+    expect(session.getSnapshot().document.signalGroups[0]!.rows).toHaveLength(0);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.signals).toHaveLength(10_000);
+
+    const dependentDocument = {
+      ...document,
+      annotations: [{ id: "ann_delete_limit" as AnnotationId, type: "marker" as const, label: "Keep source", visible: true, anchor: { signalId: signals[0]!.id, cycle: 1, point: "cycle-start" as const } }],
+    };
+    const dependentSession = new CommandHistorySession(dependentDocument);
+    const rejected = dependentSession.execute({ id: commandId("cmd_delete_all_product_limit_dependent"), type: "signal.bulkDelete", signalIds: signals.map((signal) => signal.id) });
+
+    expect(rejected).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "SIGNAL_HAS_DEPENDENTS" }] });
+    expect(dependentSession.getSnapshot().document).toEqual(dependentDocument);
+    expect(dependentSession.historyState()).toMatchObject({ undoDepth: 0, dirty: false });
+  });
+
   it("bulk-creates, duplicates, and deletes Transactions with one planner/history action each", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const items = [
