@@ -59,7 +59,7 @@ function CombinedModePanes({ transactionContent, signalSplitRatio, onKeyDown: on
 function CycleSignalSplitPane({ signalSplitRatio, gridEnabled, rulerEnabled, viewportLower, gridLayerLower, rulerLower, hostLower, onViewportKeyDown, onKeyDown: onSignalSplitKeyDown, onPointerDown: onSignalSplitPointerDown, onPointerMove: onSignalSplitPointerMove, onPointerUp: onSignalSplitPointerUp }: SplitDividerHandlers & Readonly<{ gridEnabled: boolean; rulerEnabled: boolean; viewportLower: RefObject<HTMLDivElement | null>; gridLayerLower: RefObject<HTMLDivElement | null>; rulerLower: RefObject<HTMLDivElement | null>; hostLower: RefObject<HTMLDivElement | null>; onViewportKeyDown: KeyboardEventHandler<HTMLDivElement> | undefined }>) {
   return <>
     <div className="signal-split-divider" data-testid="signal-split-divider" role="separator" aria-label="Signal Split divider" aria-orientation="horizontal" aria-valuemin={15} aria-valuemax={85} aria-valuenow={Math.round(signalSplitRatio * 100)} tabIndex={0} onKeyDown={onSignalSplitKeyDown} onPointerDown={onSignalSplitPointerDown} onPointerMove={onSignalSplitPointerMove} onPointerUp={onSignalSplitPointerUp} onPointerCancel={onSignalSplitPointerUp} />
-    <div className="cycle-viewport signal-split-lower" ref={viewportLower} data-testid="cycle-viewport-lower" data-pane="lower" tabIndex={0} aria-label="Lower pane timing canvas navigation" onKeyDown={onViewportKeyDown}>
+    <div className="cycle-viewport signal-split-lower" ref={viewportLower} data-testid="cycle-viewport-lower" data-pane="lower" data-time-viewport-owner="cycle-inner" tabIndex={0} aria-label="Lower pane timing canvas navigation" onKeyDown={onViewportKeyDown}>
       <div className="geometry-grid" ref={gridLayerLower} data-testid="geometry-grid-lower" data-grid-enabled={String(gridEnabled)} aria-hidden="true" />
       <div className="cycle-ruler" data-testid="cycle-ruler-lower" aria-label="Lower pane cycle ruler" hidden={!rulerEnabled}><div className="cycle-ruler-content" ref={rulerLower} /></div>
       <div className="range-selection-band" data-role="range-selection-band" data-testid="range-selection-band-lower" aria-hidden="true" hidden />
@@ -211,7 +211,7 @@ function FrozenPaneResizer({ width, minWidth, interactions }: Readonly<{ width: 
 export function EditorWorkspaceView({
   viewModel,
 }: EditorWorkspaceViewProps) {
-  const { viewMode, zoom, cursorPresentationRevision, cursor } = viewModel.view;
+  const { viewMode, zoom, cursorPresentationRevision, cursor, signalSplitEnabled } = viewModel.view;
   const workspace = createWorkspaceOwnerPlan(viewModel);
   const { bottomVisible, bottomHeight, inspectorVisible, inspectorWidth } = viewModel.layout;
   const { viewport, gridLayer, ruler, host, viewportLower, gridLayerLower, rulerLower, hostLower } = viewModel.refs;
@@ -230,7 +230,9 @@ export function EditorWorkspaceView({
       rulerLower: rulerLower.current,
       getPresentation: () => cursorInputRef.current,
     });
-  }, [cursorOverlayOwner, ruler, rulerLower, viewport, viewportLower]);
+    // The ref objects are stable, but the Signal Split Lower pane mounts/unmounts with `signalSplitEnabled` and the mode owner can swap the
+    // viewport element: re-attach the owner to the panes that currently exist.
+  }, [cursorOverlayOwner, ruler, rulerLower, viewport, viewportLower, signalSplitEnabled, viewMode]);
   useEffect(() => { cursorOverlayOwner.refresh(); }, [cursorOverlayOwner, cursor.a, cursor.b, cursorPresentationRevision, zoom, resolveCursorViewportXForCycle]);
   // A mode owner change ends an active gesture so stale viewport listeners cannot leak.
   useEffect(() => () => cursorOverlayOwner.cancelActiveDrags(), [cursorOverlayOwner, viewMode]);
