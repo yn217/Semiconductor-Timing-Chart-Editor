@@ -187,7 +187,7 @@ export function createEditorSurfaceCommandController(input: {
     createTransaction: (transaction, afterTransactionId) => dispatch<"transaction.create">("home_transaction_create", { type: "transaction.create", transaction, ...(afterTransactionId === undefined ? {} : { afterTransactionId }) }),
     duplicateTransaction: (transaction) => dispatch<"transaction.create">("home_transaction_duplicate", { type: "transaction.create", transaction }),
     createTransactionGroup: (group) => dispatch<"transactionGroup.create">("home_transaction_group_create", { type: "transactionGroup.create", group }),
-    renameSignals: (items) => dispatchBatch<"signal.rename">("find_replace_rename", items.map(({ signalId, name }) => ({ type: "signal.rename", signalId, name }))),
+    renameSignals: (items) => dispatch<"signal.bulkRename">("find_replace_rename", { type: "signal.bulkRename", updates: items.map(({ signalId, name }) => ({ signalId, name })) }),
     renameTransactions: (items) => dispatchBatch<"transaction.rename">("find_replace_transaction_rename", items.map(({ transactionId, name }) => ({ type: "transaction.rename", transactionId, name }))),
     setTransactionTimeScale: (scale) => dispatch<"transaction.setTimeScale">("transaction_time_scale_set", { type: "transaction.setTimeScale", scale }),
     moveSpacer: (spacerId, targetGroupId, index) => dispatch<"spacer.move">("spacer_move", { type: "spacer.move", spacerId, targetGroupId, index }),
