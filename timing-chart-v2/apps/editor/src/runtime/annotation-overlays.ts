@@ -103,6 +103,7 @@ function measurementAnchorLabel(annotation: Pick<Annotation, "label" | "measurem
 }
 
 export type AnnotationOverlayProjectionMetrics = Readonly<{ canonicalCount: number; candidateCount: number; resolvedCount: number; durationMs: number; indexEntriesVisited: number; pinnedInjectedCount: number }>;
+type ResolvedOverlayAnchor = Readonly<{ field: typeof annotationFields[number]; x: number; y: number; threshold?: number; transitionKind?: "threshold" | "ratio" }>;
 
 export function projectAnnotationOverlays(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, xScale = 1, viewport?: DisplayTimeViewport, onMetrics?: (metrics: AnnotationOverlayProjectionMetrics) => void, timeAxisMetrics?: TimeAxisMetrics): AnnotationOverlayPrimitive[] {
   mapping = timeAxisMetrics?.mapping ?? mapping;
@@ -142,20 +143,32 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
   // Resolve once for this projection, not once per anchor (a document-wide
   // Signal lookup here used to multiply by the number of visible Annotations).
   const axisOwnerSignalId = needsAxisOwner ? annotationAxisOwnerSignalId(document, maps) ?? null : null;
+  const measurementAnchorsById = new Map<string, readonly ResolvedOverlayAnchor[]>();
   const measurementSpans = candidates.flatMap((annotation) => {
     if (annotation.type !== "measurement" || !annotation.start || !annotation.end) return [];
     const continuous = annotation.positionMode === "free";
-    const first = resolveAnchorPoint(annotation.start, document, projection, maps, mapping, xScale, continuous, axisOwnerSignalId, timeAxisMetrics);
-    const second = resolveAnchorPoint(annotation.end, document, projection, maps, mapping, xScale, continuous, axisOwnerSignalId, timeAxisMetrics);
+    const anchors = annotationFields.flatMap((field): ResolvedOverlayAnchor[] => {
+      const anchor = annotation[field];
+      const point = resolveAnchorPoint(anchor, document, projection, maps, mapping, xScale, continuous, axisOwnerSignalId, timeAxisMetrics);
+      if (!point) return [];
+      const fraction = anchorTransitionFraction(anchor);
+      const kind = anchorTransitionKind(anchor);
+      return [{ field, ...point, ...(fraction === undefined ? {} : { threshold: fraction }), ...(kind === undefined ? {} : { transitionKind: kind }) }];
+    });
+    measurementAnchorsById.set(annotation.id, anchors);
+    const first = anchors.find((anchor) => anchor.field === "start");
+    const second = anchors.find((anchor) => anchor.field === "end");
     return first && second ? [{ id: annotation.id, firstX: first.x, secondX: second.x, ...(annotation.measurementLayout?.lane === undefined ? {} : { explicitLane: annotation.measurementLayout.lane }) }] : [];
   });
   const measurementLaneById = allocateMeasurementLanes(measurementSpans);
   const overlays = candidates.flatMap((annotation) => {
-    const anchors = annotationFields.flatMap((field) => {
-      const point = resolveAnchorPoint(annotation[field], document, projection, maps, mapping, xScale, annotation.positionMode === "free", axisOwnerSignalId, timeAxisMetrics);
-      const fraction = anchorTransitionFraction(annotation[field]);
-      const kind = anchorTransitionKind(annotation[field]);
-      return point ? [{ field, ...point, ...(fraction === undefined ? {} : { threshold: fraction }), ...(kind === undefined ? {} : { transitionKind: kind }) }] : [];
+    const anchors = annotation.type === "measurement" ? measurementAnchorsById.get(annotation.id) ?? [] : annotationFields.flatMap((field): ResolvedOverlayAnchor[] => {
+      const anchor = annotation[field];
+      const point = resolveAnchorPoint(anchor, document, projection, maps, mapping, xScale, annotation.positionMode === "free", axisOwnerSignalId, timeAxisMetrics);
+      if (!point) return [];
+      const fraction = anchorTransitionFraction(anchor);
+      const kind = anchorTransitionKind(anchor);
+      return [{ field, ...point, ...(fraction === undefined ? {} : { threshold: fraction }), ...(kind === undefined ? {} : { transitionKind: kind }) }];
     });
     if (anchors.length === 0) return [];
     const firstAnchor = annotation.start ?? annotation.anchor;

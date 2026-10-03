@@ -385,7 +385,12 @@ function anchorPoint(annotation: Annotation, field: "anchor" | "start" | "end" |
   const anchor = annotation[field];
   if (!anchor) return undefined;
   const signalId = anchor.signalId ?? document.timeline.referenceClock;
-  const displayCycle = toDisplayCycle(mapping, anchor.cycle, "floor");
+  // #444: the same hidden-source policy as the live projection (resolveAnchorPoint): an ordinary semantic anchor inside a collapsed fold is
+  // omitted, a free (continuous) one interpolates, and the terminal boundary maps to the display end. cycle-start/center/end offsets apply only
+  // AFTER the canonical source position resolved (no floor-then-offset into a neighbouring visible cycle).
+  const continuous = annotation.positionMode === "free";
+  const displayCycle = anchor.cycle === document.timeline.cycleCount ? mapping.displayCycleCount : resolveSourcePosition(mapping, anchor.cycle, continuous ? "interpolate" : "omit");
+  if (displayCycle === undefined) return undefined;
   const fraction = anchorTransitionFraction(anchor);
   // Semantic cycle points resolve to the same boundary the live geometry map reports: start = 0, center = 1/2, end = 1 cycle.
   const cyclePointOffset = anchor.point === "cycle-center" ? 0.5 : anchor.point === "cycle-end" ? 1 : 0;
