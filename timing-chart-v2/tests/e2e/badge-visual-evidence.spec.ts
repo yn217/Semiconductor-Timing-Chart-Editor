@@ -4,11 +4,12 @@ import { execFileSync } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { PNG } from "pngjs";
+import { visualArtifactRoot } from "./artifact-output.js";
 
 const viewport = { width: 1672, height: 941 } as const;
 const appRoot = process.cwd();
 const repositoryRoot = resolve(appRoot, "..");
-const outputRoot = resolve(appRoot, "artifacts/gui-visual-acceptance/badge-parity");
+const outputRoot = resolve(visualArtifactRoot(appRoot), "gui-visual-acceptance/badge-parity");
 const referencePath = resolve(appRoot, "references/v2-gui-reference-v8/golden-home-cycle-1672x941.png");
 const testedCommit = execFileSync("git", ["rev-parse", "HEAD"], { cwd: repositoryRoot, encoding: "utf8" }).trim();
 const sourceFingerprint = JSON.parse(execFileSync("node", [resolve(appRoot, "scripts/lib/source-fingerprint.mjs"), repositoryRoot], { cwd: repositoryRoot, encoding: "utf8" })).sourceFingerprint;

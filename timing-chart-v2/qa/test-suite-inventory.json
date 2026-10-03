@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-03T06:13:42.151Z",
+  "generatedAt": "2026-10-03T06:16:12.331Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -3579,7 +3579,7 @@
     {
       "file": "badge-visual-evidence.spec.ts",
       "suitePath": [],
-      "line": 39,
+      "line": 40,
       "title": "records approved badge visual evidence",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -7683,7 +7683,7 @@
     {
       "file": "gui-split-view-visual.spec.ts",
       "suitePath": [],
-      "line": 5,
+      "line": 6,
       "title": "captures the stacked Combined composition with both contexts and zero view mutation",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -7787,7 +7787,7 @@
     {
       "file": "gui-visual-acceptance.spec.ts",
       "suitePath": [],
-      "line": 116,
+      "line": 117,
       "title": "generates V1 reference vs V2 production visual evidence at the locked viewport",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -22181,7 +22181,7 @@
     {
       "file": "ribbon-caption-layout.spec.ts",
       "suitePath": [],
-      "line": 3,
+      "line": 5,
       "title": "Ribbon caption layout survives mode changes at 1280",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -22207,7 +22207,7 @@
     {
       "file": "ribbon-caption-layout.spec.ts",
       "suitePath": [],
-      "line": 3,
+      "line": 5,
       "title": "Ribbon caption layout survives mode changes at 1672",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -27548,7 +27548,7 @@
     {
       "file": "transaction-phase-bars.spec.ts",
       "suitePath": [],
-      "line": 11,
+      "line": 13,
       "title": "Transaction mode keeps the inspection sample available after reload",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -27574,7 +27574,7 @@
     {
       "file": "transaction-phase-bars.spec.ts",
       "suitePath": [],
-      "line": 24,
+      "line": 26,
       "title": "Transaction phases follow semantic durations at 1280",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -27600,7 +27600,7 @@
     {
       "file": "transaction-phase-bars.spec.ts",
       "suitePath": [],
-      "line": 24,
+      "line": 26,
       "title": "Transaction phases follow semantic durations at 1672",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -27626,7 +27626,7 @@
     {
       "file": "transaction-phase-bars.spec.ts",
       "suitePath": [],
-      "line": 38,
+      "line": 40,
       "title": "Phase-protected Transaction edge resize is rejected without a canonical change",
       "project": "chromium",
       "timeoutMs": 30000,

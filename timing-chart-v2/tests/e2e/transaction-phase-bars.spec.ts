@@ -1,4 +1,6 @@
+import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
+import { visualArtifactRoot } from "./artifact-output.js";
 
 // Transaction Mode opens with the approved six-transaction sample so the
 // phase projection can be verified directly in the production surface.
@@ -32,7 +34,7 @@ for (const width of [1280, 1672]) test(`Transaction phases follow semantic durat
   expect(Math.abs(boxes[0]!.width / 10 - boxes[1]!.width / 30)).toBeLessThan(1);
   expect(Math.abs(boxes[0]!.right - boxes[1]!.left)).toBeLessThan(1);
   expect(Math.abs(boxes[1]!.right - boxes[2]!.left)).toBeLessThan(1);
-  await page.screenshot({ path: `artifacts/transaction-phases-${width}.png` });
+  await page.screenshot({ path: resolve(visualArtifactRoot(), `transaction-phases-${width}.png`) });
 });
 
 test("Phase-protected Transaction edge resize is rejected without a canonical change", async ({ page }) => {
