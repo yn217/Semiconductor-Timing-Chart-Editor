@@ -1,5 +1,5 @@
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
-import type { Annotation, AnnotationGroup, AnnotationGroupId, AnnotationId, Bookmark, BookmarkId, CanonicalDocument, CheckSettings, ClockGenerator, CommentRow, EdgeCounterSettings, EnumDefinition, GroupId, JsonObject, LabelAnchorId, ResetSemantics, SemanticAnchor, Signal, SignalGroup, SignalId, SpacerId, SpacerRow, TimeGroup, TimeGroupId, TimelineLabelAnchor, Transaction, TransactionGroup, TransactionId, CommandId, TransactionTimeScale, ValueSignal } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationGroup, AnnotationGroupId, AnnotationId, Bookmark, BookmarkId, CanonicalDocument, CheckSettings, ClockGenerator, CommentRow, ConstraintId, EdgeCounterSettings, EnumDefinition, GroupId, JsonObject, LabelAnchorId, ResetSemantics, SemanticAnchor, Signal, SignalGroup, SignalId, SpacerId, SpacerRow, TimeGroup, TimeGroupId, TimelineLabelAnchor, Transaction, TransactionGroup, TransactionId, CommandId, TransactionTimeScale, ValueSignal } from "@timing-chart-v2/schema";
 
 type CommandOf<T extends SemanticCommand["type"]> = Extract<SemanticCommand, { readonly type: T }>;
 type CommandPayload<T extends SemanticCommand["type"]> = Omit<CommandOf<T>, "id" | "type">;
@@ -75,6 +75,8 @@ export interface DocumentPropertiesCommandActions {
 export interface LegendCommandActions {
   readonly updateLegend: (legend: CanonicalDocument["legend"]) => CommandResult;
   readonly updateCheckSettings: (checkSettings: CheckSettings) => CommandResult;
+  readonly createLatencyConstraint: (constraintId: ConstraintId, triggerSignalId: SignalId, triggerEdge: "rising" | "falling", responseSignalId: SignalId, responseEdge: "rising" | "falling", minCycles: number, maxCycles: number) => CommandResult;
+  readonly deleteConstraint: (constraintId: ConstraintId) => CommandResult;
 }
 
 export interface RibbonCommandActions {
@@ -204,6 +206,8 @@ export function createEditorSurfaceCommandController(input: {
     updateDocumentProperties,
     updateLegend: (legend) => dispatch<"legend.update">("legend_update", { type: "legend.update", legend }),
     updateCheckSettings: (checkSettings) => dispatch<"document.updateCheckSettings">("check_settings_update", { type: "document.updateCheckSettings", checkSettings }),
+    createLatencyConstraint: (constraintId, triggerSignalId, triggerEdge, responseSignalId, responseEdge, minCycles, maxCycles) => dispatch<"constraint.createLatency">("constraint_create_latency", { type: "constraint.createLatency", constraintId, triggerSignalId, triggerEdge, responseSignalId, responseEdge, minCycles, maxCycles }),
+    deleteConstraint: (constraintId) => dispatch<"constraint.delete">("constraint_delete", { type: "constraint.delete", constraintId }),
     createSignal: (signal, targetGroupId, index) => dispatch<"signal.create">("insert_signal", { type: "signal.create", signal, targetGroupId, index }),
     createCommentRow: (commentRow, targetGroupId, index) => dispatch<"commentRow.create">("insert_comment_row", { type: "commentRow.create", commentRow, targetGroupId, index }),
     createGroup: (group, index) => dispatch<"group.create">("insert_group", { type: "group.create", group, index }),

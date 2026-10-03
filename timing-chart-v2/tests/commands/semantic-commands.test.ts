@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { commandPlannerMetrics, commandPolicyCodes, commandPolicyDescriptors, planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
 import { deriveTimingDiagnostics, TIMING_DIAGNOSTIC_CATEGORIES } from "@timing-chart-v2/core";
-import { DEFAULT_MEASUREMENT_LAYOUT, MAX_MEASUREMENT_LANE, canonicalReferenceMetrics, parseDocument, serializeValidatedCanonicalDocument, type Annotation, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type GroupId, type Signal, type SignalId, type SpacerId, type TransactionGroupId, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
+import { DEFAULT_MEASUREMENT_LAYOUT, MAX_MEASUREMENT_LANE, canonicalReferenceMetrics, parseDocument, serializeValidatedCanonicalDocument, type Annotation, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type ConstraintId, type GroupId, type Signal, type SignalId, type SpacerId, type TransactionGroupId, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import { valueChangeIdAllocator } from "../../packages/commands/src/value-change-id-allocator.js";
 import { generatePerformanceDocument } from "../../packages/testing/src/index.js";
@@ -73,6 +73,35 @@ describe("pure Semantic Command planning", () => {
     if (valid.ok) expect(valid.changeSet.timingDiagnosticsUnchanged).toBe(true);
     const invalid = planCommand(document, { id: commandId("cmd_delayed_suppression_invalid"), type: "signal.updateClockGenerator", signalId: clock.id, generator: { ...clock.generator, start: 4, period: 2, suppressedPeriods: [3] } });
     expect(invalid).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_SUPPRESSED_PERIODS" }] });
+  });
+  it("creates a typed latency constraint through History and evaluates its edge range", () => {
+    const source = canonicalFixture();
+    const request: ValueSignal = { id: "sig_req" as SignalId, name: "REQ", type: "binary", role: "input", source: { instancePath: [], signalName: "REQ" }, display: { name: "REQ" }, values: [{ start: 0, value: 0 }, { start: 2, value: 1 }] };
+    const acknowledge: ValueSignal = { id: "sig_ack" as SignalId, name: "ACK", type: "binary", role: "output", source: { instancePath: [], signalName: "ACK" }, display: { name: "ACK" }, values: [{ start: 0, value: 0 }, { start: 4, value: 1 }] };
+    const document = { ...source, signals: [...source.signals, request, acknowledge], signalGroups: [{ ...source.signalGroups[0]!, rows: [...source.signalGroups[0]!.rows, request.id, acknowledge.id] }] };
+    const session = new CommandHistorySession(document);
+    const constraintId = "constraint_latency_gui" as ConstraintId;
+    const created = session.execute({ id: commandId("cmd_latency_gui_create"), type: "constraint.createLatency", constraintId, triggerSignalId: request.id, triggerEdge: "rising", responseSignalId: acknowledge.id, responseEdge: "rising", minCycles: 1, maxCycles: 3 });
+    expect(created.ok).toBe(true);
+    expect(session.getSnapshot().document.constraints).toEqual([{ id: constraintId, type: "latency", data: { triggerSignalId: request.id, triggerEdge: "rising", responseSignalId: acknowledge.id, responseEdge: "rising", minCycles: 1, maxCycles: 3 } }]);
+    expect(deriveTimingDiagnostics(session.getSnapshot().document).filter((problem) => problem.objectId === constraintId)).toEqual([]);
+    expect(parseDocument(serializeValidatedCanonicalDocument(session.getSnapshot().document)).document.constraints).toEqual(session.getSnapshot().document.constraints);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.constraints).toEqual([]);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.constraints).toHaveLength(1);
+
+    const outOfRangeDocument = { ...document, signals: document.signals.map((signal) => signal.id === acknowledge.id ? { ...acknowledge, values: [{ start: 0, value: 0 }, { start: 7, value: 1 }] } : signal) };
+    const outOfRange = deriveTimingDiagnostics({ ...outOfRangeDocument, constraints: session.getSnapshot().document.constraints });
+    expect(outOfRange).toEqual(expect.arrayContaining([expect.objectContaining({ code: "LATENCY_OUT_OF_RANGE", objectId: constraintId, sourceCycle: 7 })]));
+    expect(session.execute({ id: commandId("cmd_latency_gui_delete"), type: "constraint.delete", constraintId }).ok).toBe(true);
+    expect(session.getSnapshot().document.constraints).toEqual([]);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.constraints).toHaveLength(1);
+    expect(session.execute({ id: commandId("cmd_latency_gui_bad_range"), type: "constraint.createLatency", constraintId: "constraint_bad_range" as ConstraintId, triggerSignalId: request.id, triggerEdge: "rising", responseSignalId: acknowledge.id, responseEdge: "rising", minCycles: 4, maxCycles: 2 })).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_LATENCY_RANGE" }] });
+    expect(session.execute({ id: commandId("cmd_latency_gui_bad_edge"), type: "constraint.createLatency", constraintId: "constraint_bad_edge" as ConstraintId, triggerSignalId: request.id, triggerEdge: "both" as never, responseSignalId: acknowledge.id, responseEdge: "rising", minCycles: 0, maxCycles: 3 })).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_LATENCY_RANGE" }] });
+    expect(session.historyState().undoDepth).toBe(1);
   });
 
   it("exposes an exhaustive, typed command-policy code inventory", () => {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import type { CanonicalDocument, DocumentProblem, GroupId, SignalId } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, ConstraintId, DocumentProblem, GroupId, SignalId } from "@timing-chart-v2/schema";
 import { TIMING_DIAGNOSTIC_CATEGORIES, type TimingDiagnosticCategory } from "@timing-chart-v2/core";
 import { DsRibbonButton, DsRibbonSelect } from "./design-system.js";
 import { RibbonIcon } from "./ribbon-icon.js";
@@ -18,7 +18,7 @@ function diagnosticMatchesIds(item: DocumentProblem, ids: ReadonlySet<string>): 
   return directIds.some((id) => ids.has(id)) || [...ids].some((id) => item.path.includes(id));
 }
 
-export function ReviewWorkflow({ diagnostics, document, selectedSignalId, selectedGroupId, onNavigate, onShowProblems, onRefreshChecks, onToggleCheckCategory, problemsIcon }: {
+export function ReviewWorkflow({ diagnostics, document, selectedSignalId, selectedGroupId, onNavigate, onShowProblems, onRefreshChecks, onToggleCheckCategory, onCreateLatencyConstraint, onDeleteConstraint, problemsIcon }: {
   readonly diagnostics: readonly DocumentProblem[];
   readonly document: CanonicalDocument;
   readonly selectedSignalId: SignalId | undefined;
@@ -27,11 +27,23 @@ export function ReviewWorkflow({ diagnostics, document, selectedSignalId, select
   readonly onShowProblems: () => void;
   readonly onRefreshChecks: () => void;
   readonly onToggleCheckCategory?: (category: TimingDiagnosticCategory, enabled: boolean) => void;
+  readonly onCreateLatencyConstraint?: (input: Readonly<{ triggerSignalId: SignalId; triggerEdge: "rising" | "falling"; responseSignalId: SignalId; responseEdge: "rising" | "falling"; minCycles: number; maxCycles: number }>) => boolean;
+  readonly onDeleteConstraint?: (constraintId: ConstraintId) => boolean;
   readonly problemsIcon?: ReactNode;
 }) {
   const [severity, setSeverity] = useState<ReviewSeverity>("all");
   const [scope, setScope] = useState<ReviewScope>("all");
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [triggerSignalId, setTriggerSignalId] = useState<SignalId | "">("");
+  const [responseSignalId, setResponseSignalId] = useState<SignalId | "">("");
+  const [triggerEdge, setTriggerEdge] = useState<"rising" | "falling">("rising");
+  const [responseEdge, setResponseEdge] = useState<"rising" | "falling">("rising");
+  const [minCycles, setMinCycles] = useState("1");
+  const [maxCycles, setMaxCycles] = useState("3");
+  const [constraintStatus, setConstraintStatus] = useState("");
+  const edgeSignals = useMemo(() => document.signals.filter((signal) => signal.type === "binary" || signal.type === "logic" || signal.type === "bus" || signal.type === "pulse"), [document.signals]);
+  const triggerId = edgeSignals.some((signal) => signal.id === triggerSignalId) ? triggerSignalId : edgeSignals[0]?.id ?? "";
+  const responseId = edgeSignals.some((signal) => signal.id === responseSignalId) ? responseSignalId : edgeSignals[1]?.id ?? edgeSignals[0]?.id ?? "";
   const scopedDiagnostics = useMemo(() => {
     if (scope === "all") return diagnostics;
     const ids = new Set<string>();
@@ -87,6 +99,26 @@ export function ReviewWorkflow({ diagnostics, document, selectedSignalId, select
         </label>;
       })}
     </fieldset>}
+    {onCreateLatencyConstraint && <details className="review-constraint-editor" data-testid="review-constraint-editor">
+      <summary>Latency constraints ({document.constraints.length})</summary>
+      <form onSubmit={(event) => {
+        event.preventDefault();
+        const minimum = Number(minCycles); const maximum = Number(maxCycles);
+        if (!triggerId || !responseId || !Number.isSafeInteger(minimum) || !Number.isSafeInteger(maximum) || minimum < 0 || maximum < minimum) { setConstraintStatus("Choose Signals and valid integer cycle bounds (0 ≤ min ≤ max)."); return; }
+        const created = onCreateLatencyConstraint({ triggerSignalId: triggerId, triggerEdge, responseSignalId: responseId, responseEdge, minCycles: minimum, maxCycles: maximum });
+        setConstraintStatus(created ? "Latency constraint added." : "Constraint was rejected; review the Problems panel.");
+      }}>
+        <label>Trigger Signal<select aria-label="Constraint trigger signal" value={triggerId} onChange={(event) => setTriggerSignalId(event.target.value as SignalId)} required>{edgeSignals.map((signal) => <option key={signal.id} value={signal.id}>{signal.display.name}</option>)}</select></label>
+        <label>Trigger edge<select aria-label="Constraint trigger edge" value={triggerEdge} onChange={(event) => setTriggerEdge(event.target.value as typeof triggerEdge)}><option value="rising">Rising</option><option value="falling">Falling</option></select></label>
+        <label>Response Signal<select aria-label="Constraint response signal" value={responseId} onChange={(event) => setResponseSignalId(event.target.value as SignalId)} required>{edgeSignals.map((signal) => <option key={signal.id} value={signal.id}>{signal.display.name}</option>)}</select></label>
+        <label>Response edge<select aria-label="Constraint response edge" value={responseEdge} onChange={(event) => setResponseEdge(event.target.value as typeof responseEdge)}><option value="rising">Rising</option><option value="falling">Falling</option></select></label>
+        <label>Minimum cycles<input aria-label="Constraint minimum cycles" type="number" min="0" step="1" value={minCycles} onChange={(event) => setMinCycles(event.target.value)} required /></label>
+        <label>Maximum cycles<input aria-label="Constraint maximum cycles" type="number" min="0" step="1" value={maxCycles} onChange={(event) => setMaxCycles(event.target.value)} required /></label>
+        <button type="submit" disabled={edgeSignals.length === 0}>Add latency constraint</button>
+      </form>
+      {document.constraints.length > 0 && <ul aria-label="Timing constraints">{document.constraints.map((constraint) => <li key={constraint.id} data-constraint-id={constraint.id}><code>{constraint.type}</code> <span>{constraint.id}</span>{onDeleteConstraint && <button type="button" aria-label={`Delete constraint ${constraint.id}`} onClick={() => setConstraintStatus(onDeleteConstraint(constraint.id) ? "Constraint deleted." : "Constraint could not be deleted.")}>Delete</button>}</li>)}</ul>}
+      {constraintStatus && <output role="status" data-testid="constraint-status">{constraintStatus}</output>}
+    </details>}
     <div className="review-nav-group" aria-label="Navigation">
       <DsRibbonButton ariaLabel="Previous" dataTestId="review-previous" icon={<RibbonIcon name="i-chevron-left" />} onClick={() => navigate(-1)} disabled={visible.length === 0}>Previous</DsRibbonButton>
       <DsRibbonButton ariaLabel="Next" dataTestId="review-next" icon={<RibbonIcon name="i-chevron-right" />} onClick={() => navigate(1)} disabled={visible.length === 0}>Next</DsRibbonButton>

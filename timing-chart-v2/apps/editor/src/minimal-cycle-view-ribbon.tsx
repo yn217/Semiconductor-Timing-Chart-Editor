@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { Annotation, AnnotationGroup, AnnotationGroupId, AnnotationId, AnnotationType, BookmarkId, CanonicalDocument, ClockSignal, CommentRow, DocumentProblem, GroupId, JsonObject, SignalId, SignalRole, SpacerId, TimeGroupId, Transaction, TransactionGroup, TransactionId, ValueSignal } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationGroup, AnnotationGroupId, AnnotationId, AnnotationType, BookmarkId, CanonicalDocument, ClockSignal, CommentRow, ConstraintId, DocumentProblem, GroupId, JsonObject, SignalId, SignalRole, SpacerId, TimeGroupId, Transaction, TransactionGroup, TransactionId, ValueSignal } from "@timing-chart-v2/schema";
 import type { AIBridgeStatus } from "./ai-bridge-client.js";
 import { TIMING_DIAGNOSTIC_CATEGORIES } from "@timing-chart-v2/core";
 import { FontStyleToolbar } from "./font-style-toolbar.js";
@@ -319,7 +319,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, cyclesPerTc, on
       </div>
     </>}
     {tab === "View" && viewGroups.map((group) => <RibbonGroup key={group.id} spec={group} available={density === "compact" ? "small" : "large"} />)}
-    {tab === "Review" && <div className="ribbon-group review-group"><ReviewWorkflow diagnostics={diagnostics} document={document} selectedSignalId={selectedSignalId} selectedGroupId={selectedGroupId} onNavigate={onNavigateProblem} onShowProblems={onShowProblems} onRefreshChecks={onRefreshChecks} onToggleCheckCategory={(category, enabled) => {
+    {tab === "Review" && <div className="ribbon-group review-group"><ReviewWorkflow diagnostics={diagnostics} document={document} selectedSignalId={selectedSignalId} selectedGroupId={selectedGroupId} onNavigate={onNavigateProblem} onShowProblems={onShowProblems} onRefreshChecks={onRefreshChecks} onCreateLatencyConstraint={(input) => commands.createLatencyConstraint(nextEntityId("constraint", document) as ConstraintId, input.triggerSignalId, input.triggerEdge, input.responseSignalId, input.responseEdge, input.minCycles, input.maxCycles).ok} onDeleteConstraint={(constraintId) => commands.deleteConstraint(constraintId).ok} onToggleCheckCategory={(category, enabled) => {
       const currentlyEnabled = document.checkSettings.enabledCategories ?? TIMING_DIAGNOSTIC_CATEGORIES;
       const next = enabled ? [...currentlyEnabled, category] : currentlyEnabled.filter((item) => item !== category);
       commands.updateCheckSettings({ enabledCategories: TIMING_DIAGNOSTIC_CATEGORIES.filter((item) => next.includes(item)) });

@@ -4,6 +4,7 @@ import type {
   AnnotationId,
   CanonicalDocument,
   CommandId,
+  Constraint,
   CommentRow,
   Layout,
   GroupId,
@@ -679,6 +680,21 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       const checkSettings = enabled.length === TIMING_DIAGNOSTIC_CATEGORIES.length ? {} : { enabledCategories: enabled };
       if (semanticEqual(document.checkSettings, checkSettings)) return fail("no-op", "NO_OP", "$.checkSettings", "Check settings are unchanged.");
       return { ok: true, document: { ...document, checkSettings }, changeSet: {}, inverseChangeSet: {} };
+    }
+    case "constraint.createLatency": {
+      if (!isStableId(command.constraintId)) return fail("invalid", "INVALID_STABLE_ID", "$.constraintId", "Constraint ID must be stable.");
+      if (canonicalEntityIds(document).has(command.constraintId)) return fail("invalid", "DUPLICATE_ID", "$.constraintId", `Constraint ID '${command.constraintId}' already exists.`);
+      const edgeSignal = (signalId: SignalId) => document.signals.find((signal) => signal.id === signalId && (signal.type === "binary" || signal.type === "logic" || signal.type === "bus" || signal.type === "pulse"));
+      if (!edgeSignal(command.triggerSignalId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.triggerSignalId", "Trigger must reference an existing edge-capable value Signal.");
+      if (!edgeSignal(command.responseSignalId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.responseSignalId", "Response must reference an existing edge-capable value Signal.");
+      if ((command.triggerEdge !== "rising" && command.triggerEdge !== "falling") || (command.responseEdge !== "rising" && command.responseEdge !== "falling")) return fail("invalid", "INVALID_LATENCY_RANGE", "$.triggerEdge", "Constraint edges must be rising or falling.");
+      if (!Number.isSafeInteger(command.minCycles) || command.minCycles < 0 || !Number.isSafeInteger(command.maxCycles) || command.maxCycles < command.minCycles) return fail("invalid", "INVALID_LATENCY_RANGE", "$.minCycles", "Latency bounds must be non-negative safe integers with minCycles <= maxCycles.");
+      const constraint: Constraint = { id: command.constraintId, type: "latency", data: { triggerSignalId: command.triggerSignalId, triggerEdge: command.triggerEdge, responseSignalId: command.responseSignalId, responseEdge: command.responseEdge, minCycles: command.minCycles, maxCycles: command.maxCycles } };
+      return { ok: true, document: { ...document, constraints: [...document.constraints, constraint] }, changeSet: {}, inverseChangeSet: {} };
+    }
+    case "constraint.delete": {
+      if (!document.constraints.some((constraint) => constraint.id === command.constraintId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.constraintId", `Constraint '${command.constraintId}' does not exist.`);
+      return { ok: true, document: { ...document, constraints: document.constraints.filter((constraint) => constraint.id !== command.constraintId) }, changeSet: {}, inverseChangeSet: {} };
     }
     case "legend.update": {
       if (semanticEqual(document.legend, command.legend)) return fail("no-op", "NO_OP", "$.legend", "Legend is unchanged.");
