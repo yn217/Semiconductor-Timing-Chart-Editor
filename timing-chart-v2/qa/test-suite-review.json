@@ -9293,25 +9293,6 @@
       "replacementTest": null
     },
     {
-      "file": "minimap-overview-performance.spec.ts",
-      "title": "non-overview Signal property commits reuse the static MiniMap overview",
-      "domain": "minimap-static-overview-invalidation",
-      "originIssue": 174,
-      "type": "PERFORMANCE_INVARIANT",
-      "costClass": "MEDIUM",
-      "measuredRuntimeMs": null,
-      "primaryContract": "Committing a Signal rename updates canonical data/history/dirty state without rebuilding the static MiniMap overview when the changed property does not affect its projection.",
-      "duplicateGroup": "minimap-static-overview-cache",
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "profiles": [
-        "performance",
-        "integration"
-      ],
-      "decision": "KEEP",
-      "reason": "This covers invalidation precision after a real semantic commit, complementary to the viewport-only case; the pair distinguishes correct reuse from simply never rebuilding the overview.",
-      "replacementTest": null
-    },
-    {
       "file": "minimap-viewport-closure.spec.ts",
       "title": "MiniMap viewport indicator follows live scroll, resize, pan and remount state",
       "domain": "minimap-viewport-indicator-geometry-lifecycle",
@@ -16229,6 +16210,44 @@
       "reason": "Exhaustive sweep (76 heights, ~1 min) moved out of the routine PR tier in #782 B4; a 30 px quick sweep of the same contract stays in the pr tier.",
       "replacementTest": null,
       "title": "Transaction scroll owner geometry is stable while idle at every window height (no scrollbar oscillation)"
+    },
+    {
+      "file": "minimap-overview-performance.spec.ts",
+      "title": "non-overview Signal property commits keep the MiniMap continuously visible at 1280x720",
+      "domain": "minimap-static-overview-invalidation",
+      "originIssue": 174,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Committing a Signal rename updates canonical data/history/dirty state without rebuilding the static MiniMap overview when the changed property does not affect its projection.",
+      "duplicateGroup": "minimap-static-overview-cache",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "performance",
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "This covers invalidation precision after a real semantic commit, complementary to the viewport-only case; the pair distinguishes correct reuse from simply never rebuilding the overview.",
+      "replacementTest": null
+    },
+    {
+      "file": "minimap-overview-performance.spec.ts",
+      "title": "non-overview Signal property commits keep the MiniMap continuously visible at 1672x941",
+      "domain": "minimap-static-overview-invalidation",
+      "originIssue": 174,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Committing a Signal rename updates canonical data/history/dirty state without rebuilding the static MiniMap overview when the changed property does not affect its projection.",
+      "duplicateGroup": "minimap-static-overview-cache",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "performance",
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "This covers invalidation precision after a real semantic commit, complementary to the viewport-only case; the pair distinguishes correct reuse from simply never rebuilding the overview.",
+      "replacementTest": null
     }
   ]
 }
