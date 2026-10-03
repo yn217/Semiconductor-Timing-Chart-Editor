@@ -77,12 +77,55 @@ function cloneValue<T>(value: T): T {
   return value;
 }
 
+const deeplyFrozenObjects = new WeakSet<object>();
+
 function deepFreeze<T>(value: T): Readonly<T> {
-  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
-    Object.freeze(value);
+  if (value !== null && typeof value === "object") {
+    if (deeplyFrozenObjects.has(value)) return value;
     for (const entry of Object.values(value)) deepFreeze(entry);
+    Object.freeze(value);
+    deeplyFrozenObjects.add(value);
   }
   return value;
+}
+
+function sameOwnKeys(left: object, right: object): boolean {
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  return leftKeys.length === rightKeys.length && leftKeys.every((key) => Object.hasOwn(right, key));
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+/** Only permits a structural-sharing-preserving Signal name change. */
+function isSignalRenameOnly(previous: CanonicalDocument, next: CanonicalDocument, signalId: string): boolean {
+  if (!isRecord(next) || !sameOwnKeys(previous, next) || !Array.isArray(previous.signals) || !Array.isArray(next.signals)) return false;
+  for (const key of Object.keys(previous)) {
+    if (key !== "signals" && !Object.is(previous[key as keyof CanonicalDocument], next[key as keyof CanonicalDocument])) return false;
+  }
+  if (previous.signals.length !== next.signals.length) return false;
+
+  let targetCount = 0;
+  let changedCount = 0;
+  for (let index = 0; index < previous.signals.length; index += 1) {
+    const before = previous.signals[index]!;
+    const after = next.signals[index]!;
+    if (before.id === signalId) targetCount += 1;
+    if (before === after) continue;
+    changedCount += 1;
+    if (!isRecord(after) || before.id !== signalId || after.id !== signalId || !sameOwnKeys(before, after)) return false;
+    if (typeof after.name !== "string" || after.name.trim() !== after.name || after.name.length === 0 || after.name === before.name) return false;
+    for (const key of Object.keys(before)) {
+      if (key !== "name" && key !== "display" && !Object.is(before[key as keyof typeof before], after[key as keyof typeof after])) return false;
+    }
+    if (!isRecord(before.display) || !isRecord(after.display) || !sameOwnKeys(before.display, after.display) || after.display.name !== after.name || after.display.name === before.display.name) return false;
+    for (const key of Object.keys(before.display)) {
+      if (key !== "name" && !Object.is(before.display[key], after.display[key])) return false;
+    }
+  }
+  return targetCount === 1 && changedCount === 1;
 }
 
 function isParsedCanonicalDocument(value: CanonicalDocument | ParsedCanonicalDocument): value is ParsedCanonicalDocument {
@@ -139,6 +182,21 @@ export class DocumentSession implements CanonicalStore, CanonicalMutationPort {
     if (problems.length > 0) throw new CanonicalCommitError("validation", `Rejected invalid canonical commit: ${problems.map((item) => item.code).join(", ")}`, problems);
     // Command planning already uses structural sharing. Preserve those shared,
     // frozen branches instead of cloning the complete document per edit.
+    this.#snapshot = deepFreeze({ revision: this.#snapshot.revision + 1, document: next }) as CanonicalSnapshot;
+    this.#commits += 1;
+    return this.#snapshot;
+  }
+
+  commitSignalRename(next: Readonly<CanonicalDocument>, expectedRevision: number, signalId: string): CanonicalSnapshot {
+    if (expectedRevision !== this.#snapshot.revision) throw new CanonicalCommitError("stale", `Stale canonical revision ${expectedRevision}; current revision is ${this.#snapshot.revision}.`);
+    this.#validationRuns += 1;
+    if (!isSignalRenameOnly(this.#snapshot.document, next as CanonicalDocument, signalId)) {
+      const problem: DocumentProblem = { code: "INVALID_INCREMENTAL_SIGNAL_RENAME", path: "$.signals", message: "Incremental rename commit changed fields outside the target Signal name." };
+      throw new CanonicalCommitError("validation", problem.message, [problem]);
+    }
+    // This scoped proof is the single validation for this planner-generated
+    // operation. Every unmodified canonical branch is the prior validated,
+    // deeply frozen branch; the changed fields are checked above.
     this.#snapshot = deepFreeze({ revision: this.#snapshot.revision + 1, document: next }) as CanonicalSnapshot;
     this.#commits += 1;
     return this.#snapshot;

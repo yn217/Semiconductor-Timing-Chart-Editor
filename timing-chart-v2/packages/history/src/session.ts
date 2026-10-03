@@ -115,7 +115,7 @@ export class CommandHistorySession implements CanonicalStore, SemanticCommandDis
     const before = this.getSnapshot();
     const plan = planCommand(before.document, command);
     if (!plan.ok) return { ok: false, reason: plan.reason, problems: plan.problems };
-    return this.#commit(command, before, plan.document, plan.changeSet, plan.inverseChangeSet);
+    return this.#commit(command, before, plan.document, plan.changeSet, plan.inverseChangeSet, command.type === "signal.rename" ? command.signalId : undefined);
   }
 
   executeBatch(id: CommandId, commands: readonly SemanticCommand[]): CommandResult {
@@ -148,9 +148,11 @@ export class CommandHistorySession implements CanonicalStore, SemanticCommandDis
     return this.#commit(action, before, candidate, mergeChangeSets(forward), mergeChangeSets(inverse));
   }
 
-  #commit(action: RecordedAction, before: CanonicalSnapshot, candidate: CanonicalDocument, changeSet: ChangeSet, inverseChangeSet: ChangeSet): CommandResult {
+  #commit(action: RecordedAction, before: CanonicalSnapshot, candidate: CanonicalDocument, changeSet: ChangeSet, inverseChangeSet: ChangeSet, renamedSignalId?: string): CommandResult {
     try {
-      const after = this.#documents.commit(candidate, before.revision);
+      const after = renamedSignalId === undefined
+        ? this.#documents.commit(candidate, before.revision)
+        : this.#documents.commitSignalRename(candidate, before.revision, renamedSignalId);
       const entry: HistoryEntry = {
         commandId: action.id,
         action,

@@ -770,6 +770,20 @@ describe("command execution and atomic history", () => {
     expect(session.historyState()).toMatchObject({ undoDepth: 0, redoDepth: 1, dirty: false });
   });
 
+  it("commits a Signal rename through one scoped validation and preserves Undo/Redo semantics", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const beforeDocument = session.getSnapshot().document;
+    const beforeMetrics = session.metrics();
+    const result = session.execute({ id: commandId("cmd_scoped_rename"), type: "signal.rename", signalId: "sig_data" as SignalId, name: "RENAMED" });
+    expect(result.ok).toBe(true);
+    expect(session.metrics()).toEqual({ validationRuns: beforeMetrics.validationRuns + 1, commits: beforeMetrics.commits + 1 });
+    expect(session.getSnapshot().document.signals.find((signal) => signal.id === "sig_data")?.display.name).toBe("RENAMED");
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.signals.find((signal) => signal.id === "sig_data")?.display.name).toBe(beforeDocument.signals.find((signal) => signal.id === "sig_data")?.display.name);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.signals.find((signal) => signal.id === "sig_data")?.display.name).toBe("RENAMED");
+  });
+
   it("atomically rejects sized bus literals that exceed the Signal width", () => {
     const source = canonicalFixture();
     const bus = source.signals.find((signal) => signal.id === "sig_data");

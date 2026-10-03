@@ -25,17 +25,31 @@ test("production Inspector rename on perf_1000x1000 measures idle latency and un
   await host.locator("[data-role='frozen-row']:not([data-kind='comment'])").first().click();
   const name = page.getByTestId("inspector").getByLabel("Inspector signal name", { exact: true });
   await expect(name).toBeVisible();
-  await page.evaluate(() => { (window as unknown as { __lt: number[] }).__lt = []; new PerformanceObserver((list) => { for (const entry of list.getEntries()) (window as unknown as { __lt: number[] }).__lt.push(entry.duration); }).observe({ entryTypes: ["longtask"] }); });
+  await page.evaluate(() => {
+    type InteractionState = { __lt: Array<{ startTime: number; duration: number }>; __rafSamples: Array<{ startTime: number; duration: number }> };
+    const state = window as typeof window & InteractionState;
+    state.__lt = [];
+    state.__rafSamples = [];
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" || !(event.target instanceof HTMLInputElement) || event.target.getAttribute("aria-label") !== "Inspector signal name") return;
+      const startTime = performance.now();
+      requestAnimationFrame(() => state.__rafSamples.push({ startTime, duration: performance.now() - startTime }));
+    }, true);
+    new PerformanceObserver((list) => {
+      state.__lt.push(...list.getEntries().map((entry) => ({ startTime: entry.startTime, duration: entry.duration })));
+    }).observe({ entryTypes: ["longtask"] });
+  });
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Performance.enable");
-  const samples: { elapsedMs: number; applyToIdleMs: number; diagnosticsMs: number; styleMs: number; layoutMs: number; scriptMs: number; taskMs: number; longTasks: number[] }[] = [];
+  const samples: { elapsedMs: number; inputToNextRafMs: number; applyToIdleMs: number; diagnosticsMs: number; styleMs: number; layoutMs: number; scriptMs: number; taskMs: number; longTasks: Array<{ startTime: number; duration: number }> }[] = [];
   for (let run = 0; run < 5; run += 1) {
     const revision = await host.getAttribute("data-canonical-revision");
     await name.fill(`RENAMED_${run}`);
     const browserBefore = await cdpMetrics(cdp);
-    const longTaskStart = await page.evaluate(() => (window as unknown as { __lt: number[] }).__lt.length);
+    const interactionBefore = await page.evaluate(() => (window as unknown as { __rafSamples: unknown[] }).__rafSamples.length);
     const started = await page.evaluate(() => performance.now());
     await name.press("Enter");
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __rafSamples: unknown[] }).__rafSamples.length)).toBe(interactionBefore + 1);
     await expect(host).not.toHaveAttribute("data-canonical-revision", revision!);
     await expect(host).toHaveAttribute("data-editor-idle", "true");
     const ended = await page.evaluate(() => performance.now());
@@ -44,16 +58,22 @@ test("production Inspector rename on perf_1000x1000 measures idle latency and un
       applyToIdleMs: Number((element as HTMLElement).dataset.lastApplyToIdleMs),
       diagnosticsMs: Number((element as HTMLElement).dataset.lastDiagnosticsDurationMs),
     }));
-    const longTasks = await page.evaluate((start) => (window as unknown as { __lt: number[] }).__lt.slice(start), longTaskStart);
+    const interaction = await page.evaluate((index) => {
+      const samples = (window as unknown as { __rafSamples: Array<{ startTime: number; duration: number }> }).__rafSamples;
+      const sample = samples[index];
+      const longTasks = (window as unknown as { __lt: Array<{ startTime: number; duration: number }> }).__lt;
+      return { inputToNextRafMs: sample?.duration ?? 0, longTasks: longTasks.filter((task) => sample !== undefined && task.startTime < sample.startTime + sample.duration && task.startTime + task.duration > sample.startTime) };
+    }, interactionBefore);
     samples.push({
       elapsedMs: Math.round(ended - started),
+      inputToNextRafMs: interaction.inputToNextRafMs,
       applyToIdleMs: internal.applyToIdleMs,
       diagnosticsMs: internal.diagnosticsMs,
       styleMs: Math.round(((browserAfter.RecalcStyleDuration ?? 0) - (browserBefore.RecalcStyleDuration ?? 0)) * 1000),
       layoutMs: Math.round(((browserAfter.LayoutDuration ?? 0) - (browserBefore.LayoutDuration ?? 0)) * 1000),
       scriptMs: Math.round(((browserAfter.ScriptDuration ?? 0) - (browserBefore.ScriptDuration ?? 0)) * 1000),
       taskMs: Math.round(((browserAfter.TaskDuration ?? 0) - (browserBefore.TaskDuration ?? 0)) * 1000),
-      longTasks,
+      longTasks: interaction.longTasks,
     });
   }
   // Capture one separate diagnostic CPU profile after the five unprofiled timing samples. This profile is for attribution only and is
@@ -77,6 +97,9 @@ test("production Inspector rename on perf_1000x1000 measures idle latency and un
   // and Long Task aggregates; profiler overhead is not product evidence.
   const longTasks = samples.flatMap((sample) => sample.longTasks);
   const sorted = [...samples.map((sample) => sample.elapsedMs)].sort((left, right) => left - right);
-  console.log(`[commit-latency-production] ${JSON.stringify({ workload: "perf_1000x1000_virtualized", command: "Inspector rename", samples, medianMs: sorted[2], p95Ms: sorted[Math.ceil(sorted.length * 0.95) - 1], longTasks: { count: longTasks.length, maxMs: Math.round(Math.max(0, ...longTasks)) }, separateDiagnosticProfile: { excludedFromTimingSamples: true, hottestJs } })}`);
+  const internalSorted = [...samples.map((sample) => sample.inputToNextRafMs)].sort((left, right) => left - right);
+  console.log(`[commit-latency-production] ${JSON.stringify({ workload: "perf_1000x1000_virtualized", command: "Inspector rename", samples, medianMs: sorted[2], p95Ms: sorted[Math.ceil(sorted.length * 0.95) - 1], internalInputToNextRaf: { medianMs: internalSorted[2], p95Ms: internalSorted[Math.ceil(internalSorted.length * 0.95) - 1] }, longTasks: { count: longTasks.length, maxMs: Math.max(0, ...longTasks.map((task) => task.duration)) }, separateDiagnosticProfile: { excludedFromTimingSamples: true, hottestJs } })}`);
   expect(sorted[2]!, "median press-Enter -> editor-idle").toBeLessThan(1_000);
+  expect(internalSorted.at(-1)!, "worst browser-internal Enter -> next requestAnimationFrame").toBeLessThan(50);
+  expect(longTasks, "ordinary Inspector commits must not create an interaction Long Task").toHaveLength(0);
 });

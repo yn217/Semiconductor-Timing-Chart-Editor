@@ -16,6 +16,38 @@ describe("DocumentSession atomic Open/Save", () => {
     expect(Object.isFrozen(after.document.document)).toBe(true);
   });
 
+  it("accepts only a structurally isolated signal rename through the incremental commit boundary", () => {
+    const session = new DocumentSession(canonicalFixture());
+    const before = session.getSnapshot();
+    const beforeMetrics = session.metrics();
+    const original = before.document.signals[1]!;
+    const renamed = { ...original, name: "RENAMED", display: { ...original.display, name: "RENAMED" } };
+    const signals = [...before.document.signals];
+    signals[1] = renamed;
+    const after = session.commitSignalRename({ ...before.document, signals }, before.revision, original.id);
+
+    expect(after.document.signals[1]?.name).toBe("RENAMED");
+    expect(after.document.signals[0]).toBe(before.document.signals[0]);
+    expect(after.document.signalGroups).toBe(before.document.signalGroups);
+    expect(session.metrics()).toEqual({ validationRuns: beforeMetrics.validationRuns + 1, commits: beforeMetrics.commits + 1 });
+    expect(Object.isFrozen(renamed)).toBe(true);
+    expect(Object.isFrozen(renamed.display)).toBe(true);
+  });
+
+  it("rejects incremental rename candidates that also alter canonical semantics", () => {
+    const session = new DocumentSession(canonicalFixture());
+    const before = session.getSnapshot();
+    const beforeMetrics = session.metrics();
+    const original = before.document.signals[1]!;
+    const renamed = { ...original, name: "RENAMED", display: { ...original.display, name: "RENAMED" }, values: [] };
+    const signals = [...before.document.signals];
+    signals[1] = renamed;
+
+    expect(() => session.commitSignalRename({ ...before.document, signals }, before.revision, original.id)).toThrow(/changed fields outside/);
+    expect(session.getSnapshot()).toBe(before);
+    expect(session.metrics()).toEqual({ validationRuns: beforeMetrics.validationRuns + 1, commits: beforeMetrics.commits });
+  });
+
   it("accepts a validated parse handoff without a second validation or deep clone", () => {
     const parsed = parseDocument(JSON.stringify(canonicalFixture()));
     expect(parsed.ok).toBe(true);
