@@ -29,7 +29,7 @@ export interface TimelineSurfaceInteractionInput {
   readonly viewportElement: HTMLElement;
   readonly rulerElement: HTMLElement;
   readonly rulerViewportElement: HTMLElement;
-  readonly renderer: Pick<TimingChartRenderer, "updateSnapGuide" | "updateOverlays">;
+  readonly renderer: Pick<TimingChartRenderer, "updateSnapGuide" | "patchOverlays">;
   readonly timelineGeometry: TimelineGeometryOwner;
   readonly documentEpoch: Pick<DocumentEpoch, "current" | "isCurrent">;
   /** Read the replaceable document session at event time, never a mount-time session object. */

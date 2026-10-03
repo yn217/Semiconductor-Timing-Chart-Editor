@@ -205,6 +205,9 @@ export interface TimingChartRenderer {
   /** Apply row/presentation changes without rebuilding waveform semantics. */
   updatePresentation(projection: RenderProjection): void;
   updateOverlays(primitives: readonly AnnotationOverlayPrimitive[]): void;
+  /** Upsert only the given overlay owners (by id); every other owner, and DOM order, is left untouched. Used by drag Preview so a
+   * per-pointermove update costs O(dragged) instead of re-signing every rendered Annotation. */
+  patchOverlays(primitives: readonly AnnotationOverlayPrimitive[]): void;
   updateSnapGuide(guide?: SnapGuidePrimitive): void;
   updateEdgeCounters(primitives: readonly EdgeCounterOverlayPrimitive[]): void;
   counters(): Readonly<RenderCounters>;
