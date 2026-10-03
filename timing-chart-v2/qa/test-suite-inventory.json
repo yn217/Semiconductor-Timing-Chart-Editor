@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-03T12:15:20.100Z",
+  "generatedAt": "2026-10-03T13:02:16.697Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,11 +11,11 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 403,
-  "caseCount": 1174,
-  "reviewedCaseCount": 1174,
+  "specFileCount": 404,
+  "caseCount": 1177,
+  "reviewedCaseCount": 1177,
   "curatedProfileCounts": {
-    "integration": 591,
+    "integration": 594,
     "nightly": 226,
     "performance": 66,
     "pr": 371,
@@ -18341,6 +18341,84 @@
       "contractId": "bulk-clipboard"
     },
     {
+      "file": "issue-864-bulk-clipboard-scale.spec.ts",
+      "suitePath": [],
+      "line": 26,
+      "title": "Signals x1000: Select All -> Copy -> Paste, Cut, Delete are single bounded History steps at 1280x720",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "bulk-clipboard-scale",
+      "originIssue": 864,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Select All -> Copy -> Paste (and Cut/move) of 1k/10k Signals: one History entry, bounded apply-to-idle and Long Tasks, exact Undo. 10k Paste is a known product finding (test.fail).",
+      "duplicateGroup": "bulk-clipboard-scale",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "Browser acceptance requested on #864; no other spec measures bulk clipboard at 1k/10k scale.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ],
+      "contractId": "bulk-clipboard-scale"
+    },
+    {
+      "file": "issue-864-bulk-clipboard-scale.spec.ts",
+      "suitePath": [],
+      "line": 26,
+      "title": "Signals x1000: Select All -> Copy -> Paste, Cut, Delete are single bounded History steps at 1672x941",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "bulk-clipboard-scale",
+      "originIssue": 864,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Select All -> Copy -> Paste (and Cut/move) of 1k/10k Signals: one History entry, bounded apply-to-idle and Long Tasks, exact Undo. 10k Paste is a known product finding (test.fail).",
+      "duplicateGroup": "bulk-clipboard-scale",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "Browser acceptance requested on #864; no other spec measures bulk clipboard at 1k/10k scale.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ],
+      "contractId": "bulk-clipboard-scale"
+    },
+    {
+      "file": "issue-864-bulk-clipboard-scale.spec.ts",
+      "suitePath": [],
+      "line": 26,
+      "title": "Signals x10000: Select All -> Copy -> Paste, Cut, Delete are single bounded History steps at 1672x941",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "bulk-clipboard-scale",
+      "originIssue": 864,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Select All -> Copy -> Paste (and Cut/move) of 1k/10k Signals: one History entry, bounded apply-to-idle and Long Tasks, exact Undo. 10k Paste is a known product finding (test.fail).",
+      "duplicateGroup": "bulk-clipboard-scale",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "Browser acceptance requested on #864; no other spec measures bulk clipboard at 1k/10k scale.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ],
+      "contractId": "bulk-clipboard-scale"
+    },
+    {
       "file": "issue-865-transaction-window-matrix.spec.ts",
       "suitePath": [],
       "line": 29,
@@ -33356,6 +33434,15 @@
       "reviewedCaseCount": 1,
       "originIssue": "864",
       "declaredTimeoutMs": 120,
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "issue-864-bulk-clipboard-scale.spec.ts",
+      "caseCount": 3,
+      "reviewedCaseCount": 3,
+      "originIssue": "864",
+      "declaredTimeoutMs": 600,
       "candidateSignals": [],
       "semanticReviewStatus": "REVIEWED"
     },

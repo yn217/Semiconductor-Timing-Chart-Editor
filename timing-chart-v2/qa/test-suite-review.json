@@ -637,6 +637,23 @@
       "replacementTest": null
     },
     {
+      "file": "issue-864-bulk-clipboard-scale.spec.ts",
+      "domain": "bulk-clipboard-scale",
+      "originIssue": 864,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Select All -> Copy -> Paste (and Cut/move) of 1k/10k Signals: one History entry, bounded apply-to-idle and Long Tasks, exact Undo. 10k Paste is a known product finding (test.fail).",
+      "duplicateGroup": "bulk-clipboard-scale",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Browser acceptance requested on #864; no other spec measures bulk clipboard at 1k/10k scale.",
+      "replacementTest": null
+    },
+    {
       "file": "issue-426-event-selection-scope.spec.ts",
       "domain": "event-selection",
       "originIssue": 426,
