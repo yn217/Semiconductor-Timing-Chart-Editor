@@ -9,7 +9,7 @@ const readTabState = async (page: import("@playwright/test").Page) => page.getBy
   return {
     id: element.dataset.bottomTab,
     selected: element.getAttribute("aria-selected"),
-    active: element.classList.contains("active"),
+    active: element.getAttribute("aria-selected") === "true",
     x: rect.x,
     width: rect.width,
   };
@@ -95,7 +95,7 @@ test("keeps inactive/hover/active Bottom tabs legible under both color schemes (
   const readStates = () => tabList.locator("[data-bottom-tab]").evaluateAll((tabs) => tabs.map((tab) => {
     const el = tab as HTMLElement;
     const cs = getComputedStyle(el);
-    return { id: el.dataset.bottomTab, active: el.classList.contains("active"), color: cs.color, background: cs.backgroundColor };
+    return { id: el.dataset.bottomTab, active: el.getAttribute("aria-selected") === "true", color: cs.color, background: cs.backgroundColor };
   }));
 
   const inactiveStates = (await readStates()).filter((state) => !state.active);

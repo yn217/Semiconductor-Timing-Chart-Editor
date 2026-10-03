@@ -44,7 +44,7 @@ test("10,000 Transactions across 100 small Groups still keeps mounted rows bound
   const scrollEvidence = await page.evaluate(async () => {
     const tree = document.querySelector<HTMLElement>(".transaction-left-tree")!;
     tree.scrollTop = 900;
-    tree.dispatchEvent(new Event("scroll"));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     return { scrollTop: tree.scrollTop, reads: (window as typeof window & { __issue771GeometryReads: { group: number; window: number; groupsRoot: number; header: number } }).__issue771GeometryReads };
   });

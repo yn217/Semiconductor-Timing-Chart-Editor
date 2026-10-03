@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
   test(`Annotation Bottom stays list-first at ${viewport.width}x${viewport.height}`, async ({ page }) => {
@@ -44,9 +45,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     const firstId = await firstRow.getAttribute("data-annotation-list-id");
     const firstLabel = await firstRow.locator(".annotation-list-label").innerText();
     const host = page.getByTestId("cycle-surface");
-    const revision = await host.getAttribute("data-canonical-revision");
-    const history = await page.getByTestId("history-status").innerText();
-    const dirty = await page.getByTestId("dirty-status").innerText();
+    const viewOnlyBefore = await documentState(page);
     await firstRow.click();
     await expect(firstRow).toHaveAttribute("data-selected", "true");
     await expect(page.getByRole("textbox", { name: "Annotation label", exact: true })).toHaveValue(firstLabel);
@@ -69,9 +68,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
       const box = element.getBoundingClientRect();
       return { x: box.x, width: box.width, height: box.height };
     })).toEqual(before);
-    await expect(host).toHaveAttribute("data-canonical-revision", revision!);
-    await expect(page.getByTestId("history-status")).toHaveText(history);
-    await expect(page.getByTestId("dirty-status")).toHaveText(dirty);
+    await expectViewOnly(page, viewOnlyBefore);
 
     await firstRow.click();
     await page.getByRole("textbox", { name: "Annotation label", exact: true }).fill("Inspector-applied label");

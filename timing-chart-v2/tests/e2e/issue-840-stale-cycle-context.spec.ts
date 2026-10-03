@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
 test(`Cycle range and cursor status remain truthful after switching to the Transaction time axis at ${viewport.width}x${viewport.height}`, async ({ page }) => {
@@ -23,9 +24,7 @@ test(`Cycle range and cursor status remain truthful after switching to the Trans
   await expect(page.getByTestId("range-status")).toHaveText("Range: [4, 7)");
   await expect(page.getByTestId("cycle-status")).toHaveText("Cycle 6");
 
-  const revision = await host.getAttribute("data-canonical-revision");
-  const history = await page.getByTestId("history-status").textContent();
-  const dirty = await page.getByTestId("dirty-status").textContent();
+  const viewOnlyBefore = await documentState(page);
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Transaction");
 
@@ -41,8 +40,6 @@ test(`Cycle range and cursor status remain truthful after switching to the Trans
     const box = await bar.boundingBox();
     expect(box?.width ?? 0).toBeGreaterThan(0);
   }
-  expect(await host.getAttribute("data-canonical-revision")).toBe(revision);
-  expect(await page.getByTestId("history-status").textContent()).toBe(history);
-  expect(await page.getByTestId("dirty-status").textContent()).toBe(dirty);
+  await expectViewOnly(page, viewOnlyBefore);
 });
 }

@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { startInCycleSample } from "./cycle-startup.js";
 import { readFile } from "node:fs/promises";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 startInCycleSample(test);
 
@@ -22,9 +23,7 @@ async function showLegend(page: import("@playwright/test").Page) {
 test("Legend Escape and pointer cancellation restore the committed position without a mutation", async ({ page }) => {
   const { surface, legend } = await showLegend(page);
   const original = { x: await legend.getAttribute("data-legend-position-x"), y: await legend.getAttribute("data-legend-position-y") };
-  const revision = await surface.getAttribute("data-canonical-revision");
-  const history = await page.getByTestId("history-status").textContent();
-  const dirty = await page.getByTestId("dirty-status").textContent();
+  const viewOnlyBefore = await documentState(page);
   const box = (await legend.boundingBox())!;
 
   await page.mouse.move(box.x + 16, box.y + 12);
@@ -34,9 +33,7 @@ test("Legend Escape and pointer cancellation restore the committed position with
   await page.mouse.up();
   await expect(legend).toHaveAttribute("data-legend-position-x", original.x!);
   await expect(legend).toHaveAttribute("data-legend-position-y", original.y!);
-  await expect(surface).toHaveAttribute("data-canonical-revision", revision!);
-  await expect(page.getByTestId("history-status")).toHaveText(history!);
-  await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
+  await expectViewOnly(page, viewOnlyBefore);
 
   const resetBox = (await legend.boundingBox())!;
   await page.mouse.move(resetBox.x + 16, resetBox.y + 12);
@@ -46,9 +43,7 @@ test("Legend Escape and pointer cancellation restore the committed position with
   await page.mouse.up();
   await expect(legend).toHaveAttribute("data-legend-position-x", original.x!);
   await expect(legend).toHaveAttribute("data-legend-position-y", original.y!);
-  await expect(surface).toHaveAttribute("data-canonical-revision", revision!);
-  await expect(page.getByTestId("history-status")).toHaveText(history!);
-  await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
+  await expectViewOnly(page, viewOnlyBefore);
 });
 
 test("external Legend drag does not erase dirty Inspector fields or apply stale position", async ({ page }) => {
