@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 import { startInCycleSample } from "./cycle-startup.js";
+import { readWave } from "./wave-probe.js";
 
 startInCycleSample(test);
 
@@ -27,18 +28,10 @@ test("fits long value labels to WaveDrom segments across adjacent values, zoom, 
   await json.getByTestId("apply-advanced-json").click();
   await expect(json.locator("output")).toHaveText("Applied");
 
-  const dataSvg = surface.locator(`[data-signal-id='${bus!.id}'] > svg`);
-  const gridBeforeZoom = await dataSvg.locator("[id^='gmark_']").evaluateAll((lines) => lines.map((line) => line.getAttribute("x1")));
-  const labels = dataSvg.locator("[data-value-label-index]");
-  await expect(labels).toHaveCount(3);
-  const evidence = await labels.evaluateAll((items) => items.map((item) => ({
-    mode: item.getAttribute("data-value-label-mode"),
-    start: Number(item.getAttribute("data-value-label-segment-start")),
-    end: Number(item.getAttribute("data-value-label-segment-end")),
-    x: Number(item.getAttribute("x")),
-    semantic: item.getAttribute("aria-label"),
-    title: item.querySelector("title")?.textContent,
-  })));
+  // Value labels live in the blob wave artifact; read them through the semantic wave probe.
+  await expect.poll(async () => (await readWave(page, bus!.id)).rawLabels.length).toBe(3);
+  const gridBeforeZoom = (await readWave(page, bus!.id)).gridX1;
+  const evidence = (await readWave(page, bus!.id)).rawLabels.map((item) => ({ mode: item.mode, start: item.segmentStart, end: item.segmentEnd, x: item.x, semantic: item.ariaLabel, title: item.title }));
   expect(evidence[0]).toMatchObject({ mode: "ellipsis", start: 0, end: 40, x: 20, semantic: "0xDEADBEEF", title: "0xDEADBEEF" });
   expect(evidence[1]).toMatchObject({ mode: "ellipsis", start: 40, end: 80, x: 60, semantic: "LONG_SYMBOLIC_STATE", title: "LONG_SYMBOLIC_STATE" });
   expect(evidence[2]).toMatchObject({ mode: "normal", start: 80, end: 960, x: 520, semantic: "NEXT", title: "NEXT" });
@@ -50,8 +43,8 @@ test("fits long value labels to WaveDrom segments across adjacent values, zoom, 
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Zoom In" }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Zoom In" }).click();
-  await expect(dataSvg.locator("[data-value-label-index='0']")).toHaveAttribute("data-value-label-mode", "ellipsis");
-  expect(await dataSvg.locator("[id^='gmark_']").evaluateAll((lines) => lines.map((line) => line.getAttribute("x1")))).toEqual(gridBeforeZoom);
+  await expect.poll(async () => (await readWave(page, bus!.id)).rawLabels[0]?.mode).toBe("ellipsis");
+  expect((await readWave(page, bus!.id)).gridX1).toEqual(gridBeforeZoom);
 
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Export", exact: true }).click();

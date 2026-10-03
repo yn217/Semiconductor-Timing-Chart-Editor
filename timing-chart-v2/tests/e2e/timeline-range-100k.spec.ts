@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { timelineOwner } from "./timeline-scroll.js";
 import { startInCycleSample } from "./cycle-startup.js";
+import { readWave } from "./wave-probe.js";
 
 startInCycleSample(test);
 
@@ -64,8 +65,6 @@ test("selects an unsampled 100k-cycle boundary through shared geometry", async (
   const geometry = await page.evaluate(() => {
     const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']");
     const wave = document.querySelector<HTMLElement>("[data-role='wave-owner'][data-signal-id]");
-    const svg = wave?.querySelector("svg");
-    const marks = svg ? [...svg.querySelectorAll<SVGLineElement>("[id^='gmark_']")] : [];
     const requestPositions = (wave as (HTMLElement & { requestCycleBoundaryPositions?: (cycles: readonly number[]) => Readonly<Record<number, number>> }) | null)?.requestCycleBoundaryPositions;
     const boundaries = requestPositions?.([980, 1000]) ?? {};
     const viewportBox = viewport?.getBoundingClientRect();
@@ -79,7 +78,6 @@ test("selects an unsampled 100k-cycle boundary through shared geometry", async (
     return {
       rulerTicks: ruler?.querySelectorAll("[data-cycle]").length ?? 0,
       hasUnsampledTick: Boolean(ruler?.querySelector("[data-cycle='1000']")),
-      marks: marks.length,
       startX: scrolledWaveBox.x + (boundaries["980"] ?? NaN),
       endX: scrolledWaveBox.x + (boundaries["1000"] ?? NaN),
       y: scrolledWaveBox.y + scrolledWaveBox.height / 2,
@@ -89,8 +87,10 @@ test("selects an unsampled 100k-cycle boundary through shared geometry", async (
   expect(geometry.hasUnsampledTick).toBe(false);
   // The production path must render only the bootstrap/viewport window, not
   // one WaveDrom grid mark per canonical cycle.
-  expect(geometry.marks).toBeGreaterThan(0);
-  expect(geometry.marks).toBeLessThan(10_000);
+  // Grid marks live in the blob wave artifact: count them through the semantic wave probe.
+  const waveMarks = Object.keys((await readWave(page, (await clockOwner.getAttribute("data-signal-id"))!)).boundaries).length;
+  expect(waveMarks).toBeGreaterThan(0);
+  expect(waveMarks).toBeLessThan(10_000);
 
   await page.mouse.move(geometry.startX + 1, geometry.y);
   await page.mouse.down();
@@ -136,6 +136,11 @@ test("reveals offscreen 50k and 99k cycles through the production bookmark path"
     });
   }, { timeout: 30_000 }).toBeGreaterThan(0);
   await host.locator("[data-role='left-row'][data-row-id='sig_range_scale']").click();
+  // Bookmark navigation made Bottom an explicit Fixed target (#440): selecting a Signal does not retarget it until Follow Selection is restored.
+  await expect(page.getByTestId("bottom-target-mode")).toContainText("Fixed target: Bookmark");
+  await page.getByTestId("bottom-settings").click();
+  await page.getByTestId("follow-selection").check();
+  await page.getByTestId("bottom-settings").click();
   await expect(page.getByRole("table", { name: "Signal events" })).toBeVisible({ timeout: 30_000 });
 });
 
