@@ -16,15 +16,17 @@ type CachedTick = { readonly x: number; readonly cycle: number };
 type RulerTicks = { readonly ticks: readonly CachedTick[]; readonly byCycle: ReadonlyMap<number, HTMLElement>; readonly scrollLeft: number };
 
 /** Long-lived owner for cursor overlay geometry and A/B gesture lifecycles.
- * `connect()` may be refreshed by cursor presentation renders without canceling an in-flight drag; mode/unmount calls `cancelActiveDrags()`. */
+ * `updatePresentation()` changes cursor values without reconnecting observers/listeners; mode/unmount calls `cancelActiveDrags()`. */
 export class CursorOverlayOwner {
   #presentationCleanup: (() => void) | undefined;
+  #presentationRefresh: (() => void) | undefined;
+  #input: CursorOverlayInput | undefined;
   #activeDragCleanups = new Set<CursorDragCleanup>();
 
   connect(input: CursorOverlayInput): () => void {
     this.#presentationCleanup?.();
+    this.#input = input;
     const viewports = [[input.viewport, input.ruler], [input.viewportLower, input.rulerLower]] as const;
-    const cursors = [["a", input.cursorA, "Cursor A"], ["b", input.cursorB, "Cursor B"]] as const;
     const rulerElements = () => [input.ruler, input.rulerLower].filter((element): element is HTMLDivElement => element !== null);
     const tickCache = new WeakMap<HTMLDivElement, RulerTicks>();
     const cacheTicks = (ruler: HTMLDivElement, scrollOwner: HTMLDivElement = ruler): readonly CachedTick[] => {
@@ -66,6 +68,8 @@ export class CursorOverlayOwner {
       return undefined;
     };
     const update = () => {
+      const current = this.#input;
+      if (!current) return;
       for (const [viewport, ruler] of viewports) {
         if (!viewport || !ruler) continue;
         shiftCachedTicks(ruler, timelineScrollOwner(viewport) as HTMLDivElement);
@@ -80,7 +84,7 @@ export class CursorOverlayOwner {
         overlay.style.inset = "0";
         overlay.style.pointerEvents = "none";
         const viewportRect = viewport.getBoundingClientRect();
-        for (const [key, cycle, label] of cursors) {
+        for (const [key, cycle, label] of [["a", current.cursorA, "Cursor A"], ["b", current.cursorB, "Cursor B"]] as const) {
           let line = overlay.querySelector<HTMLElement>(`[data-cursor='${key}']`);
           if (cycle === undefined) { line?.remove(); continue; }
           if (!line) {
@@ -106,6 +110,7 @@ export class CursorOverlayOwner {
         }
       }
     };
+    this.#presentationRefresh = update;
     update();
     const scrollTargets = [input.viewport, input.viewportLower].filter((element): element is HTMLDivElement => element !== null);
     const deferredUpdate = requestAnimationFrame(update);
@@ -113,7 +118,7 @@ export class CursorOverlayOwner {
     for (const ruler of [input.ruler, input.rulerLower].filter((element): element is HTMLDivElement => element !== null)) rulerResizeObserver?.observe(ruler);
     const dragHandlers: Array<[HTMLDivElement, (event: PointerEvent) => void]> = [];
     for (const [viewport, ruler] of viewports) {
-      if (!viewport || !ruler || !input.onSetCursorAtCycle) continue;
+      if (!viewport || !ruler) continue;
       const onPointerDown = (event: PointerEvent) => {
         if (this.#activeDragCleanups.size > 0) return;
         const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='cursor-line']") : null;
@@ -130,11 +135,12 @@ export class CursorOverlayOwner {
         };
         trace();
         const applyCursorAt = (clientX: number) => {
-          const resolved = input.resolveCursorCycleAtClientX?.(clientX, viewport);
-          if (resolved !== undefined) input.onSetCursorAtCycle?.(which, resolved);
+          const current = this.#input;
+          const resolved = current?.resolveCursorCycleAtClientX?.(clientX, viewport);
+          if (resolved !== undefined) current?.onSetCursorAtCycle?.(which, resolved);
           else {
             const nearest = nearestCachedTick(ruler, clientX);
-            if (nearest) input.onSetCursorAtCycle?.(which, nearest.cycle);
+            if (nearest) current?.onSetCursorAtCycle?.(which, nearest.cycle);
           }
         };
         const move = (moveEvent: PointerEvent) => {
@@ -176,10 +182,21 @@ export class CursorOverlayOwner {
       rulerResizeObserver?.disconnect();
       for (const [target, handler] of dragHandlers) target.removeEventListener("pointerdown", handler, true);
       window.removeEventListener("resize", update);
-      if (this.#presentationCleanup === disconnect) this.#presentationCleanup = undefined;
+      if (this.#presentationCleanup === disconnect) {
+        this.#presentationCleanup = undefined;
+        this.#presentationRefresh = undefined;
+        this.#input = undefined;
+      }
     };
     this.#presentationCleanup = disconnect;
     return disconnect;
+  }
+
+  /** Update cursor values/callbacks without rebuilding gesture and observer lifecycles. */
+  updatePresentation(input: CursorOverlayInput): void {
+    if (!this.#presentationRefresh) return;
+    this.#input = input;
+    this.#presentationRefresh();
   }
 
   cancelActiveDrags(): void {
