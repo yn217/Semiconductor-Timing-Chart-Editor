@@ -66,9 +66,9 @@ test("MiniMap viewport updates do not rebuild the static overview", async ({ pag
   expect(before.overviewRows).toBeGreaterThan(0);
   await expect(minimap.locator(".minimap-rows > span").first()).toBeVisible();
 
-  await page.getByTestId("cycle-viewport").evaluate((element) => {
+  await page.getByTestId("cycle-viewport").evaluate(async (element) => {
     element.scrollTop = Math.max(1, element.scrollHeight - element.clientHeight);
-    element.dispatchEvent(new Event("scroll"));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   });
   await setTimelineScrollLeft(page, 10_000_000);
   await expect.poll(() => minimap.getAttribute("data-viewport-left")).not.toBe(before.viewportLeft);

@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 /**
  * #440 scenario C: Bottom is fixed on a Bookmark; selecting a Transaction on the canvas moves the Inspector to the Transaction
@@ -15,9 +16,7 @@ for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }])
     await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "05.tcd.json", mimeType: "application/json", buffer: await readFile(new URL("../../samples/current/05_combined_protocol.tcd.json", import.meta.url)) });
     await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]").first()).toBeVisible({ timeout: 60_000 });
     await expect(surface).toHaveAttribute("data-canonical-revision", /^\d+$/);
-    const revision = await surface.getAttribute("data-canonical-revision");
-    const history = await page.getByTestId("history-status").textContent();
-    const dirty = await page.getByTestId("dirty-status").textContent();
+    const viewOnlyBefore = await documentState(page);
 
     await page.getByRole("tab", { name: "Bookmarks", exact: true }).click();
     const row = page.getByTestId("bookmark-editor-panel").getByTestId(/bookmark-row-/).first();
@@ -37,8 +36,6 @@ for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }])
     await expect(page.getByTestId("status-context")).toContainText("Target: Bookmark");
     expect(transactionId).toBeTruthy();
 
-    expect(await surface.getAttribute("data-canonical-revision")).toBe(revision);
-    await expect(page.getByTestId("history-status")).toHaveText(history!);
-    await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
+    await expectViewOnly(page, viewOnlyBefore);
   });
 }

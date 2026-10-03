@@ -104,9 +104,9 @@ test("retargets the SnapIndex after a vertical viewport jump", async ({ page }) 
   const builtBeforeJump = (await sessionCounters(page)).snapIndexBuilds;
   expect(builtBeforeJump).toBeGreaterThan(0);
 
-  await viewport.evaluate((element) => {
+  await viewport.evaluate(async (element) => {
     element.scrollTop = element.scrollHeight - element.clientHeight;
-    element.dispatchEvent(new Event("scroll"));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   });
   await page.waitForTimeout(300);
   const afterJump = await sessionCounters(page);
@@ -121,9 +121,9 @@ test("retargets the SnapIndex after a vertical viewport jump", async ({ page }) 
   expect(afterBottomQuery.snapIndexBuilds).toBeGreaterThan(builtBeforeJump);
   expect(afterBottomQuery.snapCandidateCount).toBeGreaterThan(0);
 
-  await viewport.evaluate((element) => {
+  await viewport.evaluate(async (element) => {
     element.scrollTop = 0;
-    element.dispatchEvent(new Event("scroll"));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   });
   await page.waitForTimeout(300);
   await page.getByRole("button", { name: "Pick arrow endpoints", exact: true }).click();

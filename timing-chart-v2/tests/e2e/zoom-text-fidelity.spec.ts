@@ -122,11 +122,11 @@ test("keeps the cycle ruler sticky and clipped to the time domain during vertica
   });
   expect(initial.maxTop).toBeGreaterThan(0);
   expect(initial.maxLeft).toBeGreaterThan(0);
-  const scroll = await viewport.evaluate((element) => {
+  const scroll = await viewport.evaluate(async (element) => {
     const owner = (document.querySelector<HTMLElement>(".editor-shell[data-view-mode='Cycle'] [data-role='timeline-viewport']") ?? element);
     owner.scrollLeft = Math.min(120, owner.scrollWidth - owner.clientWidth);
     element.scrollTop = Math.min(120, element.scrollHeight - element.clientHeight);
-    element.dispatchEvent(new Event("scroll"));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     return { left: owner.scrollLeft, top: element.scrollTop };
   });
   await page.waitForTimeout(100);
@@ -167,13 +167,13 @@ test("keeps ruler clipping and frozen-column ownership through scroll positions 
   for (const zoom of ["50", "100", "150", "200"]) {
     await page.getByLabel("Zoom preset").selectOption(zoom);
     for (const fraction of [0, 0.5, 1]) {
-      await viewport.evaluate((element, position) => {
+      await viewport.evaluate(async (element, position) => {
         const owner = (document.querySelector<HTMLElement>(".editor-shell[data-view-mode='Cycle'] [data-role='timeline-viewport']") ?? element);
         const maxLeft = Math.max(0, owner.scrollWidth - owner.clientWidth);
         const maxTop = Math.max(0, element.scrollHeight - element.clientHeight);
         owner.scrollLeft = Math.round(maxLeft * position);
         element.scrollTop = Math.round(maxTop * position);
-        element.dispatchEvent(new Event("scroll"));
+        await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
         return { left: owner.scrollLeft, top: element.scrollTop };
       }, fraction);
       await page.waitForTimeout(50);

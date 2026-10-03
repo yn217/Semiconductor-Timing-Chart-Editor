@@ -320,9 +320,9 @@ test("persists a valid Transaction resize and its Phases through Save/Open", asy
   const targetLocator = page.getByTestId("cycle-ruler").locator("[data-cycle='70']");
   const targetBeforeScroll = (await targetLocator.boundingBox())!;
   const viewport = page.getByTestId("cycle-viewport");
-  await viewport.evaluate((element, targetX) => {
+  await viewport.evaluate(async (element, targetX) => {
     element.scrollLeft += targetX - (element.getBoundingClientRect().left + element.clientWidth * 0.75);
-    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   }, targetBeforeScroll.x);
   const target = (await targetLocator.boundingBox())!;
   await transaction.locator("[data-edge='end']").hover();

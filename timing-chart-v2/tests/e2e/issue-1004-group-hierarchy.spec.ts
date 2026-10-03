@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
+import { documentState } from "./view-only.js";
 
 /**
  * #1004: in the Cycle left Tree a Group header is visually a section (separator + dedicated background + stronger label), a Signal row is
@@ -21,7 +22,7 @@ for (const size of sizes) {
     await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
     const headers = surface.locator("[data-role='left-group-header']:not([hidden])");
     await expect(headers.first()).toBeVisible();
-    const baseline = async () => page.evaluate(() => ({ revision: document.querySelector("[data-testid='cycle-surface']")?.getAttribute("data-canonical-revision"), history: document.querySelector("[data-testid='history-status']")?.textContent, dirty: document.querySelector("[data-testid='dirty-status']")?.textContent }));
+    const baseline = () => documentState(page);
     const before = await baseline();
 
     const styles = await page.evaluate(() => {

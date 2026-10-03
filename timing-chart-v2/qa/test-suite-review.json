@@ -16075,6 +16075,24 @@
       "decision": "KEEP",
       "reason": "Move/delete operations have different stable-ID and destructive-approval risks from Signal creation or rename, so this case retains an independent contract.",
       "replacementTest": null
+    },
+    {
+      "file": "issue-945-transaction-scrollbar-stability.spec.ts",
+      "domain": "transaction-scrollbar",
+      "originIssue": 945,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Exhaustive 4 px window-height sweep: the Transaction scroll owner geometry never oscillates while idle.",
+      "duplicateGroup": "transaction-scrollbar",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Exhaustive sweep (76 heights, ~1 min) moved out of the routine PR tier in #782 B4; a 30 px quick sweep of the same contract stays in the pr tier.",
+      "replacementTest": null,
+      "title": "Transaction scroll owner geometry is stable while idle at every window height (no scrollbar oscillation)"
     }
   ]
 }
