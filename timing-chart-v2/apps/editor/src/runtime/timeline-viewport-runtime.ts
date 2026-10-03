@@ -194,7 +194,7 @@ export function createTimelineViewportRuntime(context: TimelineViewportRuntimeCo
       void context.render.waitForRendererIdle().then(move);
     },
     sourceBoundaryToLocalX: (document, cycle) => { assertActive(); return context.geometry.sourceBoundaryToLocalX(document, cycle); },
-    screenXToSourceCycle: (screenX) => { assertActive(); const metrics = context.geometry.getTimeAxisMetrics(); if (!Number.isFinite(metrics.zoom) || metrics.zoom <= 0) return undefined; return metrics.localXToSourceBoundary(screenX / metrics.zoom); },
+    screenXToSourceCycle: (screenX) => { assertActive(); const metrics = context.geometry.getTimeAxisMetrics(); if (!Number.isFinite(metrics.zoom) || metrics.zoom <= 0) return undefined; return metrics.localXToSourceBoundary(screenX / metrics.zoom, { clamp: true }); },
     refreshRuler: () => { render("ruler"); },
     refreshGrid: () => { render("grid"); },
     refreshPlayhead: () => { render("playhead"); },
