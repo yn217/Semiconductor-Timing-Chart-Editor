@@ -17,6 +17,18 @@ import { pruneExternalSelection } from "./runtime/external-draft-reconciliation.
 // make React reuse the wrong virtualized row/editor state.
 const EVENT_ROW_HEIGHT = 30;
 const EVENT_OVERSCAN = 8;
+const EMPTY_EDITING_KEYS: ReadonlySet<string> = new Set();
+
+function retainVisibleIdentities(current: ReadonlySet<string>, indexByIdentity: ReadonlyMap<string, number>, first: number, last: number): ReadonlySet<string> {
+  let next: Set<string> | undefined;
+  for (const identity of current) {
+    const index = indexByIdentity.get(identity);
+    if (index === undefined || index < first || index >= last) {
+      (next ??= new Set(current)).delete(identity);
+    }
+  }
+  return next ?? current;
+}
 
 // #426: Value Helper's own label/hint were hardcoded to "(Signal)" / the
 // binary 0-1-X-Z blurb regardless of the actually-selected Signal's real
@@ -47,6 +59,8 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
   // bulk actions below.
   const [storedCheckedKeys, setCheckedKeys] = useState<ReadonlySet<string>>(new Set());
   const [eventScrollTop, setEventScrollTop] = useState(0);
+  const [editingEventState, setEditingEventState] = useState(() => ({ signalId: signal.id, keys: new Set<string>() as ReadonlySet<string> }));
+  const editingEventKeys = editingEventState.signalId === signal.id ? editingEventState.keys : EMPTY_EDITING_KEYS;
   const [eventViewportHeight, setEventViewportHeight] = useState(300);
   const eventViewportRef = useRef<HTMLDivElement>(null);
   const [importStatus, setImportStatus] = useState("Import signal events");
@@ -228,6 +242,26 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
   const eventFirst = Math.max(0, Math.floor(eventScrollTop / EVENT_ROW_HEIGHT) - EVENT_OVERSCAN);
   const eventLast = Math.min(indexed.ordered.length, Math.ceil((eventScrollTop + eventViewportHeight) / EVENT_ROW_HEIGHT) + EVENT_OVERSCAN);
   const renderedEvents = indexed.ordered.slice(eventFirst, eventLast);
+  const updateEventScroll = (scrollTop: number) => {
+    const first = Math.max(0, Math.floor(scrollTop / EVENT_ROW_HEIGHT) - EVENT_OVERSCAN);
+    const last = Math.min(indexed.ordered.length, Math.ceil((scrollTop + eventViewportHeight) / EVENT_ROW_HEIGHT) + EVENT_OVERSCAN);
+    setEditingEventState((current) => {
+      const keys = current.signalId === signal.id ? current.keys : EMPTY_EDITING_KEYS;
+      const retained = retainVisibleIdentities(keys, indexed.indexByIdentity, first, last);
+      return current.signalId === signal.id && retained === keys ? current : { signalId: signal.id, keys: retained };
+    });
+    setEventScrollTop(scrollTop);
+  };
+  // A viewport resize can evict an edited row just like scrolling it out of
+  // the virtual window. Match the prior row-unmount lifecycle instead of
+  // reopening that local draft if the user later scrolls back.
+  useEffect(() => {
+    setEditingEventState((current) => {
+      const keys = current.signalId === signal.id ? current.keys : EMPTY_EDITING_KEYS;
+      const retained = retainVisibleIdentities(keys, indexed.indexByIdentity, eventFirst, eventLast);
+      return current.signalId === signal.id && retained === keys ? current : { signalId: signal.id, keys: retained };
+    });
+  }, [eventFirst, eventLast, indexed.indexByIdentity, signal.id]);
   useEffect(() => {
     if (selectedKey === undefined || !eventViewportRef.current) return;
     const index = indexed.indexByIdentity.get(selectedKey);
@@ -305,7 +339,7 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
       <button type="button" onClick={addRow} data-testid="event-add-row">Add Row</button>
       <button type="button" className="danger" onClick={() => selected && commands.removeValue(signal.id, selected.start)} disabled={!selected || signal.values.length === 1} data-testid="event-delete-row">Delete</button>
     </div>
-    <div ref={eventViewportRef} className="event-table-scroll" onScroll={(event) => setEventScrollTop(event.currentTarget.scrollTop)}>
+    <div ref={eventViewportRef} className="event-table-scroll" onScroll={(event) => updateEventScroll(event.currentTarget.scrollTop)}>
       <div className="event-table" role="table" aria-label="Signal events">
         {/* Visual Quality Closure pass, Section 4: Select All is a real
             tri-state checkbox (checked/indeterminate/unchecked) driving the
@@ -313,7 +347,7 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
             not a decorative header cell. */}
         <div className="event-row event-columns" role="row"><input ref={selectAllRef} type="checkbox" aria-label="Select all transitions" checked={allChecked} onChange={toggleAll} /><span>#</span><span>Start</span><span className="event-derived-column" data-derived="true" title="Derived: End is the next transition's Start (or the last cycle). Edit Start to change it.">End</span><span className="event-derived-column" data-derived="true" title="Derived: End minus Start. Not directly editable.">Duration</span><span>Value</span><span>Comment</span><span>Actions</span></div>
         <div aria-hidden="true" style={{ height: eventFirst * EVENT_ROW_HEIGHT }} />
-        {renderedEvents.map((change, offset) => { const index = eventFirst + offset; const key = transitionIdentity(change); return <EventRow key={key} index={index + 1} signal={signal} enumDefinition={enumDefinition} change={change} end={indexed.ordered[index + 1]?.start ?? cycleCount} selected={key === selectedKey} checked={checkedKeys.has(key)} canDuplicate={canDuplicate} onToggleChecked={() => toggleChecked(change)} onSelect={selectTransition} onDuplicate={() => duplicateChange(change)} commands={commands} draggable onDragStart={() => setActiveDragStarts(new Set(checkedKeys.has(key) && checkedCount > 1 ? checkedKeys : [key]))} onDragOver={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); }} onDrop={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); reorderDrop(change.start); }} onDragEnd={() => setActiveDragStarts(undefined)} />; })}
+        {renderedEvents.map((change, offset) => { const index = eventFirst + offset; const key = transitionIdentity(change); const editing = editingEventKeys.has(key); return <EventRow key={editing ? `event:${signal.id}:${key}` : `slot:${offset}`} index={index + 1} signal={signal} enumDefinition={enumDefinition} change={change} end={indexed.ordered[index + 1]?.start ?? cycleCount} selected={key === selectedKey} checked={checkedKeys.has(key)} editing={editing} canDuplicate={canDuplicate} onToggleChecked={() => toggleChecked(change)} onSelect={selectTransition} onEditingChange={(next) => setEditingEventState((current) => { const keys = current.signalId === signal.id ? current.keys : EMPTY_EDITING_KEYS; if (keys.has(key) === next && current.signalId === signal.id) return current; const updated = new Set(keys); if (next) updated.add(key); else updated.delete(key); return { signalId: signal.id, keys: updated }; })} onDuplicate={() => duplicateChange(change)} commands={commands} draggable onDragStart={() => setActiveDragStarts(new Set(checkedKeys.has(key) && checkedCount > 1 ? checkedKeys : [key]))} onDragOver={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); }} onDrop={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); reorderDrop(change.start); }} onDragEnd={() => setActiveDragStarts(undefined)} />; })}
         <div aria-hidden="true" style={{ height: Math.max(0, indexed.ordered.length - eventLast) * EVENT_ROW_HEIGHT }} />
       </div>
     </div>

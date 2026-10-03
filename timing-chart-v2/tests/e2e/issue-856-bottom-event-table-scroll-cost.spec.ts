@@ -27,6 +27,8 @@ test("Bottom Event Table scroll over 20,000 transitions keeps its extent, bounde
   await page.locator(`[data-role='frozen-row'][data-row-id='${target.id}']`).first().click({ force: true });
   const table = page.locator(".event-table-scroll");
   await expect(table).toBeVisible({ timeout: 60_000 });
+  const originalFirstTransition = table.locator("form.event-row[data-event-start='0']");
+  const recycledSlot = await originalFirstTransition.evaluateHandle((row) => row);
 
   const result = await table.evaluate(async (element) => {
     const rowsMounted = () => element.querySelectorAll("[role='row'], tr, [data-event-row]").length;
@@ -50,6 +52,11 @@ test("Bottom Event Table scroll over 20,000 transitions keeps its extent, bounde
     return { scrollHeight: element.scrollHeight, clientHeight: element.clientHeight, maxRows, steps, p50: pick(0.5), p95: pick(0.95), max: sorted.at(-1)!, longTasks: longTasks.length, longTaskMax: Math.max(0, ...longTasks) };
   });
   console.log("E856E", JSON.stringify(result));
+  const recycledStart = await recycledSlot.evaluate((row) => row.getAttribute("data-event-start"));
+  expect(recycledStart, "the original visible row node should be reassigned to another semantic transition during scrolling").not.toBe("0");
+  const rowForRecycledIdentity = table.locator(`form.event-row[data-event-start='${recycledStart}']`);
+  await expect(rowForRecycledIdentity).toHaveCount(1);
+  expect(await rowForRecycledIdentity.evaluate((row, original) => row === original, recycledSlot)).toBe(true);
   expect(result.scrollHeight, "the table really holds the large collection").toBeGreaterThan(result.clientHeight * 20);
   expect(result.maxRows, "DOM rows stay bounded by the virtual window").toBeLessThan(300);
   expect(result.p95, "p95 frame time of a whole-window-replacing scroll step (loose, machine independent)").toBeLessThan(500);
