@@ -766,7 +766,7 @@ export function MinimalCycleView() {
     moveCursor(target, delta);
   };
   const shellWorkspace = {
-    view: { viewMode, signalSplitEnabled, signalSplitRatio, gridEnabled, snapEnabled, rulerEnabled, zoom, cursorPresentationRevision: treePresentationRevision + playheadPresentationRevision, cursor: { ...(cursorA === undefined ? {} : { a: cursorA }), ...(cursorB === undefined ? {} : { b: cursorB }), ...(cursorDelta.cycles === undefined ? {} : { deltaCycles: cursorDelta.cycles }) } },
+    view: { documentEpoch, viewMode, signalSplitEnabled, signalSplitRatio, gridEnabled, snapEnabled, rulerEnabled, zoom, cursorPresentationRevision: treePresentationRevision + playheadPresentationRevision, cursor: { ...(cursorA === undefined ? {} : { a: cursorA }), ...(cursorB === undefined ? {} : { b: cursorB }), ...(cursorDelta.cycles === undefined ? {} : { deltaCycles: cursorDelta.cycles }) } },
     layout: { leftPaneWidth, frozenPaneMinWidth, frozenPaneWidth, bottomVisible, bottomHeight, inspectorVisible, inspectorWidth },
     refs: { viewport, gridLayer, ruler, host, viewportLower, rulerLower, hostLower, gridLayerLower },
     content: { header: secondarySurfaces.workspaceHeader, transactionTree: secondarySurfaces.workspaceTransactionTree, viewportContent: secondarySurfaces.workspaceViewportContent, viewportLegend: secondarySurfaces.workspaceViewportLegend, leftRail: secondarySurfaces.workspaceLeftRail, bottom: secondarySurfaces.workspaceBottom, inspector: secondarySurfaces.workspaceInspector },

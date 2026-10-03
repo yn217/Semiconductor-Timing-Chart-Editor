@@ -22,7 +22,7 @@ function TimelineHorizontalScrollbar({ viewport, viewMode, leftPaneWidth }: { re
 }
 
 export interface EditorWorkspaceViewModel {
-  readonly view: { readonly viewMode: string; readonly signalSplitEnabled: boolean; readonly signalSplitRatio: number; readonly gridEnabled: boolean; readonly snapEnabled: boolean; readonly rulerEnabled: boolean; readonly zoom?: number; readonly cursorPresentationRevision?: number; readonly cursor: { readonly a?: number; readonly b?: number; readonly deltaCycles?: number } };
+  readonly view: { readonly documentEpoch: number; readonly viewMode: string; readonly signalSplitEnabled: boolean; readonly signalSplitRatio: number; readonly gridEnabled: boolean; readonly snapEnabled: boolean; readonly rulerEnabled: boolean; readonly zoom?: number; readonly cursorPresentationRevision?: number; readonly cursor: { readonly a?: number; readonly b?: number; readonly deltaCycles?: number } };
   readonly layout: { readonly leftPaneWidth: number; readonly frozenPaneMinWidth: number; readonly frozenPaneWidth: number; readonly bottomVisible: boolean; readonly bottomHeight: number; readonly inspectorVisible: boolean; readonly inspectorWidth: number };
   readonly refs: { readonly viewport: RefObject<HTMLDivElement | null>; readonly gridLayer: RefObject<HTMLDivElement | null>; readonly ruler: RefObject<HTMLDivElement | null>; readonly host: RefObject<HTMLDivElement | null>; readonly viewportLower: RefObject<HTMLDivElement | null>; readonly rulerLower: RefObject<HTMLDivElement | null>; readonly hostLower: RefObject<HTMLDivElement | null>; readonly gridLayerLower: RefObject<HTMLDivElement | null> };
   readonly content: { readonly header: ReactNode; readonly transactionTree: ReactNode; readonly viewportContent: ReactNode; readonly viewportLegend: ReactNode; readonly leftRail?: ReactNode; readonly bottom: ReactNode; readonly inspector: ReactNode };
@@ -211,7 +211,7 @@ function FrozenPaneResizer({ width, minWidth, interactions }: Readonly<{ width: 
 export function EditorWorkspaceView({
   viewModel,
 }: EditorWorkspaceViewProps) {
-  const { viewMode, zoom, cursorPresentationRevision, cursor, signalSplitEnabled } = viewModel.view;
+  const { documentEpoch, viewMode, zoom, cursorPresentationRevision, cursor, signalSplitEnabled } = viewModel.view;
   const workspace = createWorkspaceOwnerPlan(viewModel);
   const { bottomVisible, bottomHeight, inspectorVisible, inspectorWidth } = viewModel.layout;
   const { viewport, gridLayer, ruler, host, viewportLower, gridLayerLower, rulerLower, hostLower } = viewModel.refs;
@@ -234,8 +234,8 @@ export function EditorWorkspaceView({
     // viewport element: re-attach the owner to the panes that currently exist.
   }, [cursorOverlayOwner, ruler, rulerLower, viewport, viewportLower, signalSplitEnabled, viewMode]);
   useEffect(() => { cursorOverlayOwner.refresh(); }, [cursorOverlayOwner, cursor.a, cursor.b, cursorPresentationRevision, zoom, resolveCursorViewportXForCycle]);
-  // A mode owner change ends an active gesture so stale viewport listeners cannot leak.
-  useEffect(() => () => cursorOverlayOwner.cancelActiveDrags(), [cursorOverlayOwner, viewMode]);
+  // Workspace/document replacement ends gestures captured by the old owner.
+  useEffect(() => () => cursorOverlayOwner.cancelActiveDrags(), [cursorOverlayOwner, viewMode, documentEpoch]);
   return <div className="desktop-workspace" data-workspace-owner={workspace.name}>
     {workspace.headerAbove}
     <section className={`cycle-panel mode-${workspace.mode.toLowerCase()}`} aria-label={`${workspace.mode === "Split" ? "Combined" : workspace.mode} View`} data-view-mode={workspace.mode} data-workspace-owner={workspace.name} data-signal-split={String(viewModel.view.signalSplitEnabled && workspace.mode === "Cycle")}>

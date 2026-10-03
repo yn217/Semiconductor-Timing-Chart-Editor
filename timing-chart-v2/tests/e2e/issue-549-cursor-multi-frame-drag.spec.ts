@@ -1,8 +1,94 @@
 import { expect, test } from "@playwright/test";
 import { startInCycleMode } from "./cycle-startup.js";
 import { documentState, expectViewOnly } from "./view-only.js";
+import { canonicalFixture } from "../fixtures/canonical.js";
+import type { TimeGroupId } from "@timing-chart-v2/schema";
 
 startInCycleMode(test);
+
+test("opening another document cancels an active Cursor drag", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("cursor-set-a").click();
+  const line = page.getByTestId("cycle-viewport").locator("[data-role='cursor-line'][data-cursor='a']");
+  const box = (await line.boundingBox())!;
+  await page.mouse.move(box.x + 1, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "cursor-replacement.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(canonicalFixture())) });
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("cursor-status")).toHaveCount(0);
+  const before = await documentState(page);
+  await page.mouse.move(box.x + 150, box.y + box.height / 2);
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await page.mouse.up();
+  await expect(page.getByTestId("cursor-status")).toHaveCount(0);
+  await expect(line).toHaveCount(0);
+  await expectViewOnly(page, before);
+});
+
+test("Cursor keyboard and drag stay source-bounded through a collapsed fold", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const document = { ...canonicalFixture(), timeGroups: [{ id: "cursor_fold" as TimeGroupId, name: "Fold", start: 2, end: 5, presentation: { collapsed: true } }] };
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "cursor-fold.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("cursor-set-a").click();
+  const before = await documentState(page);
+  const viewport = page.getByTestId("cycle-viewport");
+  const line = viewport.locator("[data-role='cursor-line'][data-cursor='a']");
+  for (let index = 0; index < 12; index += 1) await viewport.press("Shift+ArrowRight");
+  await expect(line).toHaveAttribute("data-cycle", "7");
+  await expect.poll(async () => Math.abs((await line.boundingBox())!.x - (await page.locator(".cycle-ruler [data-source-cycle='7']").first().boundingBox())!.x)).toBeLessThanOrEqual(1);
+  for (let index = 0; index < 12; index += 1) await viewport.press("Shift+ArrowLeft");
+  await expect(line).toHaveAttribute("data-cycle", "0");
+  const box = (await line.boundingBox())!;
+  const viewportBox = (await viewport.boundingBox())!;
+  const y = box.y + box.height / 2;
+  const hit = await page.evaluate(([x, y]) => {
+    const hit = document.elementFromPoint(x!, y!);
+    return { role: (hit as HTMLElement | null)?.dataset.role, className: hit?.className, tag: hit?.tagName };
+  }, [box.x + 1, y]);
+  expect(hit, JSON.stringify({ hit, box, viewportBox, y })).toMatchObject({ role: "cursor-line" });
+  await page.mouse.move(box.x + 1, y);
+  await page.mouse.down();
+  await page.mouse.move(viewportBox.x + viewportBox.width - 5, y);
+  await page.mouse.up();
+  await expect(line).toHaveAttribute("data-cycle", "7");
+  await expectViewOnly(page, before);
+});
+
+test("Cursor preserves source-cycle alignment at 50%, 100%, 150% and 200% zoom", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("cursor-set-a").click();
+  const before = await documentState(page);
+  const line = page.getByTestId("cycle-viewport").locator("[data-role='cursor-line'][data-cursor='a']");
+  const cycle = (await line.getAttribute("data-cycle"))!;
+  await page.getByRole("button", { name: "Zoom Out", exact: true }).click();
+  await page.getByRole("button", { name: "Zoom Out", exact: true }).click();
+  for (const zoom of [0.5, 1, 1.5, 2]) {
+    await expect(host).toHaveAttribute("data-zoom", String(zoom));
+    await expect.poll(async () => {
+      const lineBox = (await line.boundingBox())!;
+      const tickBox = (await page.locator(`.cycle-ruler [data-source-cycle='${cycle}']`).first().boundingBox())!;
+      return Math.abs(lineBox.x - tickBox.x);
+    }).toBeLessThanOrEqual(1);
+    await expect(line).toHaveAttribute("data-cycle", cycle);
+    if (zoom < 2) {
+      await page.getByRole("button", { name: "Zoom In", exact: true }).click();
+      await page.getByRole("button", { name: "Zoom In", exact: true }).click();
+    }
+  }
+  await expectViewOnly(page, before);
+});
 
 /**
  * #549: a Cursor A drag is a multi-frame gesture. The first committed preview changes `cursor.a`; that must not tear the drag down, so the
