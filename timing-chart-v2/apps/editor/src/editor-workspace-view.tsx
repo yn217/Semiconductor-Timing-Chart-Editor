@@ -113,6 +113,7 @@ export function EditorWorkspaceView({
   const { viewport, gridLayer, ruler, host, viewportLower, rulerLower, hostLower, gridLayerLower } = viewModel.refs;
   const { header, transactionTree, viewportContent, viewportLegend, leftRail, bottom, inspector } = viewModel.content;
   const { onBottomReset, onInspectorReset, onInspectorKeyDown, onInspectorPointerDown, onInspectorPointerMove, onInspectorPointerUp, onLeftPaneKeyDown, onLeftPanePointerDown, onLeftPanePointerMove, onLeftPanePointerUp, onFrozenPaneKeyDown, onFrozenPanePointerDown, onFrozenPanePointerMove, onFrozenPanePointerUp, onBottomKeyDown, onBottomPointerDown, onBottomPointerMove, onBottomPointerUp, onSignalSplitKeyDown, onSignalSplitPointerDown, onSignalSplitPointerMove, onSignalSplitPointerUp, onViewportKeyDown, onSetCursorAtCycle, resolveCursorCycleAtClientX } = viewModel.interactions;
+  const activeDragCleanupsRef = useRef(new Set<() => void>());
   useEffect(() => {
     // Cursor A/B are workspace-only source-cycle markers. The ruler is the
     // shared display-time owner, so resolve each marker from the rendered
@@ -220,7 +221,9 @@ export function EditorWorkspaceView({
     const rulerResizeObserver = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(update);
     for (const target of [ruler.current, rulerLower.current].filter((item): item is HTMLDivElement => item !== null)) rulerResizeObserver?.observe(target);
     const dragHandlers: Array<[HTMLDivElement, (event: PointerEvent) => void]> = [];
-    const activeDragCleanups = new Set<() => void>();
+    // The active drag owner outlives this effect: its own output (cursor.a/b) is in the dependency list, so an effect re-run must not tear the
+    // gesture down (#549). The set is owned by a ref and cleared on unmount / mode change below.
+    const activeDragCleanups = activeDragCleanupsRef.current;
     for (const [viewportElement, rulerElement] of viewports) {
       if (!viewportElement || !rulerElement || !onSetCursorAtCycle) continue;
       const onPointerDown = (event: PointerEvent) => {
@@ -278,10 +281,11 @@ export function EditorWorkspaceView({
       cancelAnimationFrame(deferredUpdate);
       rulerResizeObserver?.disconnect();
       for (const [target, handler] of dragHandlers) target.removeEventListener("pointerdown", handler, true);
-      for (const cleanupDrag of activeDragCleanups) cleanupDrag();
       window.removeEventListener("resize", update);
     };
   }, [ruler, rulerLower, cursor.a, cursor.b, cursorPresentationRevision, zoom, viewport, viewportLower]);
+  // Gesture lifetime: a mode switch (different viewport/ruler owners) or unmount ends any active Cursor drag.
+  useEffect(() => () => { for (const cleanupDrag of [...activeDragCleanupsRef.current]) cleanupDrag(); }, [viewMode]);
   return <div className="desktop-workspace">
     {composition.headerPlacement === "above" && <div className="workspace-header">{header}</div>}
     <section className={`cycle-panel mode-${viewMode.toLowerCase()}`} aria-label={`${viewMode === "Split" ? "Combined" : viewMode} View`} data-view-mode={viewMode} data-signal-split={String(signalSplitEnabled && viewMode === "Cycle")}>

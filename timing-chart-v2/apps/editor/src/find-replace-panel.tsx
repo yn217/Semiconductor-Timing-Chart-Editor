@@ -21,7 +21,9 @@ export function FindReplacePanel({ document, mode = "signals", onRenameSignals, 
   const [position, setPosition] = useState<{ readonly left: number; readonly top: number; readonly maxHeight: number }>();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  useDialogFocusLoop(panelRef, triggerRef, open);
+  // Do not pass triggerRef as the restore ref: the hook clears a restore ref on close, which detached the persistent trigger button and
+  // left the reopened panel unpositioned (invisible). Focus returns to the element that was active when the panel opened (the trigger).
+  useDialogFocusLoop(panelRef, undefined, open);
 
   useLayoutEffect(() => {
     if (!open) { setPosition(undefined); return; }
