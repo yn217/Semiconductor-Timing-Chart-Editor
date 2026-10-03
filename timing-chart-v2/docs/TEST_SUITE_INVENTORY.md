@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 398 spec files and 1157 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 399 spec files and 1160 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1157/1157 cases reviewed.
+Semantic review progress: 1160/1160 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 581 |
 | `nightly` | 226 |
 | `performance` | 65 |
-| `pr` | 364 |
+| `pr` | 367 |
 | `visual` | 178 |
 
 ## Top recorded per-case runtimes
@@ -114,6 +114,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `feature-showcase-startup.spec.ts` | 3 | 3/3 reviewed |
 | `file-beforeunload-dirty-guard.spec.ts` | 1 | 1/1 reviewed |
 | `file-ribbon-blank-controls.spec.ts` | 1 | 1/1 reviewed |
+| `find-replace-journey.spec.ts` | 3 | 3/3 reviewed |
 | `font-style-commit-contract.spec.ts` | 1 | 1/1 reviewed |
 | `full-gui.spec.ts` | 42 | 42/42 reviewed |
 | `ghost-trace-delete.spec.ts` | 1 | 1/1 reviewed |
@@ -473,6 +474,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `empty-group-tree-projection.spec.ts` | dataset, explicitWait |
 | `feature-showcase-startup.spec.ts` | geometryRead |
 | `file-ribbon-blank-controls.spec.ts` | getComputedStyle, geometryRead |
+| `find-replace-journey.spec.ts` | dataset |
 | `gui-density-tokens.spec.ts` | getComputedStyle |
 | `gui-left-pane-resize.spec.ts` | getComputedStyle, geometryRead |
 | `gui-reference-v8.spec.ts` | getComputedStyle, dataset, geometryRead |

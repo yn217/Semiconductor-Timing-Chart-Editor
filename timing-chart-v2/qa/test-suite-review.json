@@ -484,6 +484,23 @@
       "replacementTest": null
     },
     {
+      "file": "find-replace-journey.spec.ts",
+      "domain": "find-replace",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Find & Replace previews view-only, renames all matches in one History entry, Undo restores them, and ribbon floating panels reopen visibly.",
+      "duplicateGroup": "find-replace",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Acceptance journey for the Find & Replace plan plus the reopen regression; no other spec exercises Replace All/Undo.",
+      "replacementTest": null
+    },
+    {
       "file": "full-gui.spec.ts",
       "domain": "full-gui-journey",
       "originIssue": null,
