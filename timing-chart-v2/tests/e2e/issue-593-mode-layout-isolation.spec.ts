@@ -97,11 +97,17 @@ for (const size of sizes) {
     const dirty = await page.getByTestId("dirty-status").textContent();
     await setMode(page, "Cycle");
     await expect(page.getByTestId("left-pane-resizer")).toHaveCount(1);
+    await expect(host.locator("[data-role='frozen-row']")).not.toHaveCount(0);
     await setMode(page, "Transaction");
     await expect(page.getByTestId("left-pane-resizer"), "Signal/Group left-pane splitter is Cycle-only").toHaveCount(0);
-    // Known gap tracked on #593 (HANDOFF -> CODEX): Cycle frozen Role/Signal rows are still mounted (hidden) in Transaction.
+    await expect(host.locator("[data-role='frozen-label-rows']"), "Cycle frozen-column layer is not mounted in Transaction").toHaveCount(0);
+    await expect(host.locator("[data-role='frozen-row']"), "Cycle frozen Role/Signal rows are not mounted in Transaction").toHaveCount(0);
+    await expect(host.locator("[data-role='frozen-group-header']")).toHaveCount(0);
     await setMode(page, "Combined");
+    await expect(host.locator("[data-role='frozen-label-rows']")).toHaveCount(1);
+    await expect(host.locator("[data-role='frozen-row']")).not.toHaveCount(0);
     await setMode(page, "Cycle");
+    await expect(host.locator("[data-role='frozen-row']")).not.toHaveCount(0);
     expect(await host.getAttribute("data-canonical-revision")).toBe(revision);
     await expect(page.getByTestId("history-status")).toHaveText(history!);
     await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
