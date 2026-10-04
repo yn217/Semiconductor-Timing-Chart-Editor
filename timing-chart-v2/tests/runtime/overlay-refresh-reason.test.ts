@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { resolveTimeAxisGeometry, type LocalGeometryMap } from "@timing-chart-v2/geometry";
 import { buildDisplayTimeMapping, type RenderProjection } from "@timing-chart-v2/projection";
-import { refreshRendererForReason } from "../../apps/editor/src/runtime/render-coordinator.js";
+import { refreshRendererAnnotationStyles, refreshRendererForReason } from "../../apps/editor/src/runtime/render-coordinator.js";
+import { annotationStylePatchIds } from "../../apps/editor/src/runtime/render-invalidation.js";
 import type { TimeAxisMetrics } from "../../apps/editor/src/runtime/timeline-geometry-owner.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
@@ -14,6 +15,12 @@ function clockGeometry(): LocalGeometryMap {
 }
 
 describe("renderer overlay refresh reasons", () => {
+  it("limits target styling patches to pure annotationStyle ChangeSets", () => {
+    expect(annotationStylePatchIds({ annotationStyle: ["ann_a" as never], minimapOverview: true })).toEqual(["ann_a"]);
+    expect(annotationStylePatchIds({ annotationStyle: ["ann_a" as never], annotationPosition: ["ann_a" as never] })).toBeUndefined();
+    expect(annotationStylePatchIds({ annotationStyle: ["ann_a" as never], annotationOrder: ["ann_a" as never] })).toBeUndefined();
+  });
+
   it("keeps a range-only refresh on the edge-counter path", () => {
     const base = canonicalFixture();
     const document = { ...base, signals: [{ ...base.signals[0]!, edgeCounter: { ...base.signals[0]!.edgeCounter, show: true, mode: "rising" as const } }, base.signals[1]!] };
@@ -64,6 +71,54 @@ describe("renderer overlay refresh reasons", () => {
     refreshRendererForReason(renderer, host, "selection", document, projection(), new Map([[signal.id, geometry]]), timeAxisMetrics, { start: 0, end: 8 }, 0, undefined);
 
     expect(renderer.updateOverlays.mock.lastCall?.[0]).toMatchObject([{ id: "ann", anchors: [{ x: 40 }] }]);
+  });
+
+  it("patches only the requested geometry-stable Annotation owner", () => {
+    const base = canonicalFixture();
+    const signal = base.signals[0]!;
+    const annotations = [
+      { id: "ann_target" as never, type: "text" as const, label: "Before", visible: true, anchor: { signalId: signal.id, cycle: 2, point: "cycle-start" as const } },
+      { id: "ann_other" as never, type: "text" as const, label: "Unchanged", visible: true, anchor: { signalId: signal.id, cycle: 4, point: "cycle-start" as const } },
+    ];
+    const document = { ...base, annotations };
+    const geometry: LocalGeometryMap = { signalId: signal.id, find(anchor) { return anchor.signalId === signal.id ? { signalId: signal.id, anchor, point: { x: anchor.cycle * 10, y: 0 } } : undefined; } };
+    const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
+    const timeAxisMetrics = Object.freeze({ generation: 1, timeAxis: resolveTimeAxisGeometry(document, new Map([[signal.id, geometry]])), mapping, presentationScale: 1, displayCycleCount: mapping.displayCycleCount, sourceBoundaryToContentX: (cycle: number) => cycle * 10 }) satisfies TimeAxisMetrics;
+    const patchOverlays = vi.fn((primitives: readonly { id: string }[]) => primitives.length);
+    const renderer = { patchOverlays };
+
+    expect(refreshRendererAnnotationStyles(renderer, document, projection(), new Map([[signal.id, geometry]]), timeAxisMetrics, ["ann_target"])).toBe(true);
+    expect(patchOverlays).toHaveBeenCalledOnce();
+    expect(patchOverlays.mock.lastCall?.[0]).toHaveLength(1);
+    expect(patchOverlays.mock.lastCall?.[0]?.[0]?.id).toBe("ann_target");
+  });
+
+  it("rejects target patching when the Annotation changes visibility or needs measurement-wide layout", () => {
+    const base = canonicalFixture();
+    const signal = base.signals[0]!;
+    const hidden = { id: "ann_hidden" as never, type: "text" as const, label: "Hidden", visible: false, anchor: { signalId: signal.id, cycle: 2, point: "cycle-start" as const } };
+    const geometry: LocalGeometryMap = { signalId: signal.id, find(anchor) { return { signalId: signal.id, anchor, point: { x: anchor.cycle * 10, y: 0 } }; } };
+    const mapping = buildDisplayTimeMapping(base.timeline, base.timeGroups);
+    const metrics = Object.freeze({ generation: 1, timeAxis: resolveTimeAxisGeometry(base, new Map([[signal.id, geometry]])), mapping, presentationScale: 1, displayCycleCount: mapping.displayCycleCount }) satisfies TimeAxisMetrics;
+    const renderer = { patchOverlays: vi.fn(() => 0) };
+    expect(refreshRendererAnnotationStyles(renderer, { ...base, annotations: [hidden] }, projection(), new Map([[signal.id, geometry]]), metrics, ["ann_hidden"])).toBe(false);
+    expect(renderer.patchOverlays).not.toHaveBeenCalled();
+  });
+
+  it("falls back to full reconciliation when a stable-ID overlay owner is not mounted", () => {
+    const base = canonicalFixture();
+    const signal = base.signals[0]!;
+    const document = { ...base, annotations: [{ id: "ann_unmounted" as never, type: "text" as const, label: "Target", visible: true, anchor: { signalId: signal.id, cycle: 2, point: "cycle-start" as const } }] };
+    const geometry: LocalGeometryMap = { signalId: signal.id, find(anchor) { return { signalId: signal.id, anchor, point: { x: anchor.cycle * 10, y: 0 } }; } };
+    const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
+    const metrics = Object.freeze({ generation: 1, timeAxis: resolveTimeAxisGeometry(document, new Map([[signal.id, geometry]])), mapping, presentationScale: 1, displayCycleCount: mapping.displayCycleCount, sourceBoundaryToContentX: (cycle: number) => cycle * 10 }) satisfies TimeAxisMetrics;
+    const renderer = { patchOverlays: vi.fn(() => 0), updateOverlays: vi.fn(), updateEdgeCounters: vi.fn() };
+
+    refreshRendererForReason(renderer, { current: null }, "annotation-style-patch", document, projection(), new Map([[signal.id, geometry]]), metrics, { start: 0, end: 8 }, 0, undefined, undefined, undefined, undefined, ["ann_unmounted"]);
+
+    expect(renderer.patchOverlays).toHaveBeenCalledOnce();
+    expect(renderer.updateOverlays).toHaveBeenCalledOnce();
+    expect(renderer.updateEdgeCounters).toHaveBeenCalledOnce();
   });
 
   it("writes selection state only when an Annotation selection actually changes", () => {

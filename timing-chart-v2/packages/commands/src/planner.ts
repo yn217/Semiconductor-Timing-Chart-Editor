@@ -1822,7 +1822,11 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       } as Annotation;
       if (semanticEqual(annotation, next)) return fail("no-op", "NO_OP", "$", "Annotation properties are unchanged.");
       const annotations = [...document.annotations]; annotations[index] = next;
-      const changeSet: ChangeSet = { annotationStyle: [annotation.id], minimapOverview: true };
+      const positionChanged = annotation.visible !== next.visible
+        || annotation.sourceSignalId !== next.sourceSignalId
+        || annotation.traceOffsetCycles !== next.traceOffsetCycles
+        || annotation.measurement !== next.measurement;
+      const changeSet: ChangeSet = { annotationStyle: [annotation.id], minimapOverview: true, ...(positionChanged ? { annotationPosition: [annotation.id] } : {}) };
       return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
     }
     case "annotation.updateVerticalSpan": {

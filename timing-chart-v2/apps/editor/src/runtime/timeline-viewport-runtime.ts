@@ -36,7 +36,7 @@ export type TimelineViewportRuntimeContext = {
   readonly render: {
     readonly requestRender: (reason: string) => void;
     readonly setSignalTreeFilter: (text: string, type: "all" | "input" | "output" | "wire" | "comment") => void;
-    readonly requestOverlayRefresh: (reason: string) => void;
+    readonly requestOverlayRefresh: (reason: string, annotationStyleIds?: readonly string[]) => void;
     readonly waitForRendererIdle: () => Promise<void>;
   };
   readonly lifecycle: {
@@ -62,6 +62,7 @@ export type TimelineViewportRuntime = Readonly<{
   refreshPlayhead: () => void;
   refreshRange: (start: number, end: number) => void;
   refreshOverlays: (reason?: string) => void;
+  refreshAnnotationStyles: (annotationIds: readonly string[]) => void;
   onViewportScroll: () => void;
   onViewportResize: () => void;
   setSignalTreeFilter: (text: string, type: "all" | "input" | "output" | "wire" | "comment") => void;
@@ -200,6 +201,7 @@ export function createTimelineViewportRuntime(context: TimelineViewportRuntimeCo
     refreshPlayhead: () => { render("playhead"); },
     refreshRange: () => { render("range"); if (attached && context.lifecycle.isCurrentEpoch(documentEpoch)) context.render.requestOverlayRefresh("range"); },
     refreshOverlays: (reason = "overlays") => { assertActive(); if (!attached || !context.lifecycle.isCurrentEpoch(documentEpoch)) return; context.render.requestOverlayRefresh(reason); },
+    refreshAnnotationStyles: (annotationIds) => { assertActive(); if (!attached || !context.lifecycle.isCurrentEpoch(documentEpoch) || annotationIds.length === 0) return; context.render.requestOverlayRefresh("annotation-style-patch", annotationIds); },
     onViewportScroll: () => { assertActive(); if (!attached || !context.lifecycle.isCurrentEpoch(documentEpoch)) return; context.render.requestRender("scroll"); },
     onViewportResize: () => { render("resize"); },
     setSignalTreeFilter: (text, type) => {

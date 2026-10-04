@@ -1,6 +1,6 @@
 import { StableTimingChartRenderer, type TimingChartRenderer, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import type { RefObject } from "react";
-import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
+import type { Annotation, CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
 import { projectAnnotationOverlays } from "./annotation-overlays.js";
 import { createDisplayTimeViewport, type DisplayTimeMapping, type DisplayTimeViewport } from "@timing-chart-v2/projection";
 import { projectEdgeCounters, type EdgeCounterProjectionMetrics, type SelectedClockEdge } from "./edge-counter-projection.js";
@@ -59,7 +59,19 @@ export class RenderCoordinator {
 
 export function refreshRendererEdgeCounters(renderer: Pick<TimingChartRenderer, "updateEdgeCounters">, document: CanonicalDocument, projection: RenderProjection, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, timeAxisMetrics: TimeAxisMetrics, range: { readonly start: number; readonly end: number }, selectedCycle: number, screenGeometryScale: number, selectedEdge?: SelectedClockEdge, metrics?: EdgeCounterProjectionMetrics): void { renderer.updateEdgeCounters(projectEdgeCounters(document, projection, geometryMaps, timeAxisMetrics.mapping, range, selectedCycle, screenGeometryScale, selectedEdge, metrics)); }
 
-export function refreshRendererOverlays(renderer: Pick<TimingChartRenderer, "updateOverlays" | "updateEdgeCounters">, host: RefObject<HTMLDivElement | null>, document: CanonicalDocument, projection: RenderProjection, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, timeAxisMetrics: TimeAxisMetrics, range: { readonly start: number; readonly end: number }, selectedCycle: number, selectedAnnotationId: string | undefined, selectedEdge?: SelectedClockEdge, metrics?: EdgeCounterProjectionMetrics, viewport?: DisplayTimeViewport, reason?: string): void {
+/** Update only existing, geometry-stable Annotation owners; return false when a full reconciliation is required. */
+export function refreshRendererAnnotationStyles(renderer: Pick<TimingChartRenderer, "patchOverlays">, document: CanonicalDocument, projection: RenderProjection, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, timeAxisMetrics: TimeAxisMetrics, annotationIds: readonly string[]): boolean {
+  const requested = new Set(annotationIds);
+  if (requested.size !== annotationIds.length) return false;
+  const annotations = document.annotations.filter((annotation) => requested.has(annotation.id));
+  if (annotations.length !== requested.size || annotations.some((annotation) => !annotation.visible || annotation.measurement !== undefined || annotation.type === "ghostTrace")) return false;
+  const primitives = annotations.flatMap((annotation) => projectAnnotationOverlays({ ...document, annotations: [annotation] }, projection, geometryMaps, timeAxisMetrics.mapping, timeAxisMetrics.presentationScale, undefined, undefined, timeAxisMetrics));
+  if (primitives.length !== annotations.length || primitives.some((primitive, index) => primitive.id !== annotations[index]?.id)) return false;
+  return renderer.patchOverlays(primitives) === primitives.length;
+}
+
+export function refreshRendererOverlays(renderer: Pick<TimingChartRenderer, "updateOverlays" | "updateEdgeCounters"> & Partial<Pick<TimingChartRenderer, "patchOverlays">>, host: RefObject<HTMLDivElement | null>, document: CanonicalDocument, projection: RenderProjection, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, timeAxisMetrics: TimeAxisMetrics, range: { readonly start: number; readonly end: number }, selectedCycle: number, selectedAnnotationId: string | undefined, selectedEdge?: SelectedClockEdge, metrics?: EdgeCounterProjectionMetrics, viewport?: DisplayTimeViewport, reason?: string, annotationStyleIds?: readonly string[]): void {
+  if (annotationStyleIds?.length && renderer.patchOverlays && refreshRendererAnnotationStyles(renderer as Pick<TimingChartRenderer, "patchOverlays">, document, projection, geometryMaps, timeAxisMetrics, annotationStyleIds)) return;
   const target = host.current;
   const mapping = timeAxisMetrics.mapping;
   const presentationScale = timeAxisMetrics.presentationScale;
@@ -112,4 +124,4 @@ export function refreshRendererOverlays(renderer: Pick<TimingChartRenderer, "upd
   }
 }
 
-export function refreshRendererForReason(renderer: Pick<TimingChartRenderer, "updateOverlays" | "updateEdgeCounters">, host: RefObject<HTMLDivElement | null>, reason: string, document: CanonicalDocument, projection: RenderProjection, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, timeAxisMetrics: TimeAxisMetrics, range: { readonly start: number; readonly end: number }, selectedCycle: number, selectedAnnotationId: string | undefined, selectedEdge?: SelectedClockEdge, metrics?: EdgeCounterProjectionMetrics, viewport?: DisplayTimeViewport): void { if (reason === "range") refreshRendererEdgeCounters(renderer, document, projection, geometryMaps, timeAxisMetrics, range, selectedCycle, timeAxisMetrics.presentationScale, selectedEdge, metrics); else refreshRendererOverlays(renderer, host, document, projection, geometryMaps, timeAxisMetrics, range, selectedCycle, selectedAnnotationId, selectedEdge, metrics, viewport, reason); }
+export function refreshRendererForReason(renderer: Pick<TimingChartRenderer, "updateOverlays" | "updateEdgeCounters"> & Partial<Pick<TimingChartRenderer, "patchOverlays">>, host: RefObject<HTMLDivElement | null>, reason: string, document: CanonicalDocument, projection: RenderProjection, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, timeAxisMetrics: TimeAxisMetrics, range: { readonly start: number; readonly end: number }, selectedCycle: number, selectedAnnotationId: string | undefined, selectedEdge?: SelectedClockEdge, metrics?: EdgeCounterProjectionMetrics, viewport?: DisplayTimeViewport, annotationStyleIds?: readonly string[]): void { if (reason === "range") refreshRendererEdgeCounters(renderer, document, projection, geometryMaps, timeAxisMetrics, range, selectedCycle, timeAxisMetrics.presentationScale, selectedEdge, metrics); else refreshRendererOverlays(renderer, host, document, projection, geometryMaps, timeAxisMetrics, range, selectedCycle, selectedAnnotationId, selectedEdge, metrics, viewport, reason, annotationStyleIds); }

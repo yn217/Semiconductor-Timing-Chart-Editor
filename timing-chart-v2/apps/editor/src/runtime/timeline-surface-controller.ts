@@ -19,7 +19,8 @@ import { deriveRenderInvalidation } from "./render-invalidation.js";
 import { createTimelineViewportRuntime } from "./timeline-viewport-runtime.js";
 import { resolveTransactionSnapCycle } from "./interaction-controller.js";
 import { scheduleInitialTimelineRefresh } from "./document-lifecycle-controller.js";
-import { refreshRendererForReason } from "./render-coordinator.js";
+import { refreshRendererAnnotationStyles, refreshRendererForReason } from "./render-coordinator.js";
+import { annotationStylePatchIds } from "./render-invalidation.js";
 import { createWaveformSurfaceProvider } from "./waveform-surface-provider.js";
 import { refreshWaveCanvasViewport } from "./canvas-wave-painter.js";
 import { initialWaveSignalIds, mountInitialTimelineProjection, projectViewportWindow, projectionForInitialWaveBootstrap } from "./viewport-projection.js";
@@ -422,7 +423,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       },
       viewport: { getMetrics: () => { const metrics = viewMetricsOwner.snapshot(); return { width: timelineScrollOwner(viewportElement).clientWidth, leftInset: fixedColumnsOutsideTimeline(viewportElement) ? 0 : metrics.leftPaneWidth + metrics.frozenPaneWidth }; }, getScrollState: () => ({ left: timelineScrollOwner(viewportElement).scrollLeft, top: viewportElement.scrollTop }), setScrollState: (state) => { if (state.left !== undefined) timelineScrollOwner(viewportElement).scrollLeft = state.left; if (state.top !== undefined) viewportElement.scrollTop = state.top; }, getZoom: timelineNavigation.getZoom, setZoom: (zoom) => { timelineNavigation.setZoom(zoom); timelineGeometry.updateZoom(zoom); } },
       document: { getSnapshot: () => sessionController.snapshot().document, getCanonicalRevision: () => sessionController.snapshot().revision, getDocumentEpoch: () => documentEpoch.current() },
-      render: { requestRender: (reason) => timelineRender(reason), setSignalTreeFilter: (text, type) => projectionCoordinator.setSignalTreeFilter(text, type), requestOverlayRefresh: (reason) => { rendererHost.dataset.overlayRefreshReason = reason; const timeAxisMetrics = timelineGeometry.timeAxisMetrics; const viewport = timelineScrollOwner(viewportElement); const localScale = timeAxisMetrics.presentationScale * timeAxisMetrics.zoom; const viewportQuery = timelineGeometry.viewportForLocalRange(viewport.scrollLeft / localScale, (viewport.scrollLeft + viewport.clientWidth) / localScale, viewportElement.scrollTop, viewportElement.scrollTop + viewportElement.clientHeight, documentEpoch.current(), selectedAnnotationRef.current ? [selectedAnnotationRef.current] : []); refreshRendererForReason(renderer, host, reason, sessionController.snapshot().document, projection, geometryMaps, timeAxisMetrics, timelineRangeRef.current, selectedCycleRef.current, selectedAnnotationRef.current, selectedEdgeRef.current, edgeCounterMetrics, viewportQuery); edgeCounterResolvePasses += 1; }, waitForRendererIdle: () => renderer.whenIdle().then(() => undefined) },
+      render: { requestRender: (reason) => timelineRender(reason), setSignalTreeFilter: (text, type) => projectionCoordinator.setSignalTreeFilter(text, type), requestOverlayRefresh: (reason, annotationStyleIds) => { rendererHost.dataset.overlayRefreshReason = reason; const document = sessionController.snapshot().document; const timeAxisMetrics = timelineGeometry.timeAxisMetrics; if (annotationStyleIds && refreshRendererAnnotationStyles(renderer, document, projection, geometryMaps, timeAxisMetrics, annotationStyleIds)) return; const viewport = timelineScrollOwner(viewportElement); const localScale = timeAxisMetrics.presentationScale * timeAxisMetrics.zoom; const viewportQuery = timelineGeometry.viewportForLocalRange(viewport.scrollLeft / localScale, (viewport.scrollLeft + viewport.clientWidth) / localScale, viewportElement.scrollTop, viewportElement.scrollTop + viewportElement.clientHeight, documentEpoch.current(), selectedAnnotationRef.current ? [selectedAnnotationRef.current] : []); refreshRendererForReason(renderer, host, reason, document, projection, geometryMaps, timeAxisMetrics, timelineRangeRef.current, selectedCycleRef.current, selectedAnnotationRef.current, selectedEdgeRef.current, edgeCounterMetrics, viewportQuery); edgeCounterResolvePasses += 1; }, waitForRendererIdle: () => renderer.whenIdle().then(() => undefined) },
       lifecycle: { isCurrentEpoch: (epoch) => documentEpoch.isCurrent(epoch) },
     });
     timelineRuntimeRef.current = timelineRuntime;
@@ -640,6 +641,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       const refreshRuler = invalidation.refreshRuler;
       const refreshGridNow = invalidation.refreshGrid;
       const refreshOverlaysNow = invalidation.refreshOverlays;
+      const stylePatchIds = annotationStylePatchIds(changed);
       const rangePresentationAffected = refreshRuler
         || changed.geometryScreenX === true
         || changed.geometryScreenY !== undefined
@@ -682,7 +684,10 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         if (refreshPlayheadNow) timelineRuntime.refreshPlayhead();
         if (refreshGridNow) timelineRuntime.refreshGrid();
         timelineRuntime.setZoom(timelineNavigation.getZoom());
-        if (refreshOverlaysNow) timelineRuntime.refreshOverlays();
+        if (refreshOverlaysNow) {
+          if (stylePatchIds) timelineRuntime.refreshAnnotationStyles(stylePatchIds);
+          else timelineRuntime.refreshOverlays();
+        }
         markOpenPhase("visible-waveforms-ready");
         markOpenPhase("all-visible-idle");
         if (openingGenerationForCompletion !== undefined && primaryPresentationGeneration === openingGenerationForCompletion) primaryPresentationOpening = false;

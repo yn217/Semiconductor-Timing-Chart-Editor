@@ -443,14 +443,16 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#publishCounters();
   }
 
-  patchOverlays(primitives: readonly AnnotationOverlayPrimitive[]): void {
+  patchOverlays(primitives: readonly AnnotationOverlayPrimitive[]): number {
     const layers = this.#layers;
     if (!layers) throw new Error("Timing chart renderer must be mounted before overlay update.");
     this.#diagnostics = { ...this.#diagnostics, annotationResolvePasses: this.#diagnostics.annotationResolvePasses + 1, resolvedAnnotations: this.#diagnostics.resolvedAnnotations + primitives.length };
     let changes = 0;
+    let matched = 0;
     for (const primitive of primitives) {
       const owner = this.#overlayOwners.get(primitive.id);
       if (!owner) continue;
+      matched += 1;
       const signature = JSON.stringify(primitive);
       if (this.#overlaySignatures.get(primitive.id) === signature) continue;
       this.#overlaySignatures.set(primitive.id, signature);
@@ -459,6 +461,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     }
     if (changes > 0) this.#counters = { ...this.#counters, overlayUpdates: this.#counters.overlayUpdates + changes };
     this.#publishCounters();
+    return matched;
   }
 
   updateSnapGuide(guide?: SnapGuidePrimitive): void {

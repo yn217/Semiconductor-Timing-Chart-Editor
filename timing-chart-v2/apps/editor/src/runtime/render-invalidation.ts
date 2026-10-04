@@ -21,3 +21,12 @@ export function deriveRenderInvalidation(changeSet: ChangeSet, referenceSignalId
   const refreshOverlays = refreshRuler || changeSet.rowOrder !== undefined || changeSet.geometryScreenY !== undefined || changeSet.edgeCounter !== undefined || (changeSet.annotationPosition?.length ?? 0) > 0 || (changeSet.annotationStyle?.length ?? 0) > 0 || (changeSet.annotationOrder?.length ?? 0) > 0 || (changeSet.annotationGroups?.length ?? 0) > 0 || (changeSet.addedSignals?.length ?? 0) > 0 || (changeSet.removedSignals?.length ?? 0) > 0;
   return { snapDependenciesChanged, referenceWaveChanged, refreshRuler, refreshGrid, refreshOverlays };
 }
+
+/** The renderer may patch these stable-ID owners without reconciling the full overlay set. */
+export function annotationStylePatchIds(changeSet: ChangeSet): readonly string[] | undefined {
+  const ids = changeSet.annotationStyle;
+  if (!ids?.length || changeSet.annotationPosition !== undefined) return undefined;
+  return Object.keys(changeSet).every((key) => key === "annotationStyle" || key === "minimapOverview" || key === "timingDiagnosticsUnchanged")
+    ? ids
+    : undefined;
+}

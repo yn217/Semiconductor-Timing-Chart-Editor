@@ -1565,6 +1565,13 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document.annotations).toEqual([]);
   });
 
+  it("marks visibility changes as both position and style invalidations", () => {
+    const annotation: Annotation = { id: "ann_visibility_invalidation" as AnnotationId, type: "text", label: "Visible", visible: true, anchor: { signalId: "sig_data" as SignalId, cycle: 2, point: "cycle-start" } };
+    const session = new CommandHistorySession({ ...canonicalFixture(), annotations: [annotation] });
+    const result = session.execute({ id: commandId("ann_visibility_invalidation_hide"), type: "annotation.updateProperties", annotationId: annotation.id, label: annotation.label, visible: false });
+    expect(result).toMatchObject({ ok: true, changeSet: { annotationPosition: [annotation.id], annotationStyle: [annotation.id], minimapOverview: true } });
+  });
+
   it("validates and persists annotation label layout through one undoable semantic update", () => {
     const annotation: Annotation = { id: "ann_label_layout" as AnnotationId, type: "callout", label: "A long callout label", visible: true, anchor: { cycle: 2, point: "cycle-center" } };
     const session = new CommandHistorySession({ ...canonicalFixture(), annotations: [annotation] });
