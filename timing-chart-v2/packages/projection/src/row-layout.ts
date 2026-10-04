@@ -1,4 +1,4 @@
-import { cachedTimeGroupHierarchy, type CanonicalDocument, type GroupId, type RowId, type Signal, type SpacerRow } from "@timing-chart-v2/schema";
+import { cachedTimeGroupHierarchy, type CanonicalDocument, type GroupId, type RowId, type Signal, type SignalGroupStyle, type SpacerRow } from "@timing-chart-v2/schema";
 import type { GroupHeaderLayoutEntry, RowLayoutEntry } from "./types.js";
 
 export interface RowLayoutResult {
@@ -93,7 +93,7 @@ export function timeGroupOutlineHeight(document: Pick<CanonicalDocument, "timeGr
   return (cachedTimeGroupHierarchy(document.timeGroups).maxDepth + 1) * 20;
 }
 
-export function calculateRowLayout(document: CanonicalDocument, collapsedGroupIds: ReadonlySet<GroupId> = new Set(), options: { readonly includeHidden?: boolean; readonly reserveHiddenSpace?: boolean; readonly pane?: "upper" | "lower"; readonly sourceIndex?: RowLayoutSourceIndex; readonly treeFilter?: SignalTreeFilter } = {}): RowLayoutResult {
+export function calculateRowLayout(document: CanonicalDocument, collapsedGroupIds: ReadonlySet<GroupId> = new Set(), options: { readonly includeHidden?: boolean; readonly reserveHiddenSpace?: boolean; readonly pane?: "upper" | "lower"; readonly sourceIndex?: RowLayoutSourceIndex; readonly treeFilter?: SignalTreeFilter; readonly groupStylePreview?: Readonly<{ groupId: GroupId; style: SignalGroupStyle }> } = {}): RowLayoutResult {
   const includeHidden = options.includeHidden ?? true;
   // Signal Split is two viewports over the same canonical Signal sequence.
   // The legacy pane option remains accepted by callers during migration, but
@@ -127,6 +127,7 @@ export function calculateRowLayout(document: CanonicalDocument, collapsedGroupId
   let y = timeGroupOutlineHeight(document);
 
   for (const group of document.signalGroups) {
+    const groupStyle = options.groupStylePreview?.groupId === group.id ? options.groupStylePreview.style : group.style;
     const eligibleRows = group.rows.filter((rowId) => {
       const signal = signals.get(rowId);
       return (signal !== undefined && (includeHidden || signal.display.visible !== false)) || spacers.has(rowId);
@@ -152,8 +153,8 @@ export function calculateRowLayout(document: CanonicalDocument, collapsedGroupId
     // A search reveals matches inside collapsed groups without changing the
     // user's persisted collapse state; clearing the filter restores it.
     const collapsed = !filterActive && collapsedGroupIds.has(group.id);
-    const headerHeight = group.style?.showHeader === false ? 0 : group.style?.headerHeight ?? 32;
-    groupHeaders.push({ rowId: headerRowId, groupId: group.id, groupName: group.name, ...(group.style === undefined ? {} : { groupStyle: group.style }), collapsed, y, height: headerHeight });
+    const headerHeight = groupStyle?.showHeader === false ? 0 : groupStyle?.headerHeight ?? 32;
+    groupHeaders.push({ rowId: headerRowId, groupId: group.id, groupName: group.name, ...(groupStyle === undefined ? {} : { groupStyle }), collapsed, y, height: headerHeight });
     y += headerHeight;
     if (collapsed) {
       y += group.spacingAfter ?? 0;
@@ -171,13 +172,13 @@ export function calculateRowLayout(document: CanonicalDocument, collapsedGroupId
         // findable/orderable by rowId, but consumes no space of its own --
         // the next space-reserving entry starts exactly where this one
         // would have, with no dead gap left behind.
-        const entry = signalEntry(signal, group.id, group.name, group.style, y, document.layout.rowHeight, rowId);
+        const entry = signalEntry(signal, group.id, group.name, groupStyle, y, document.layout.rowHeight, rowId);
         if (entry) navigationRows.push(entry);
         continue;
       }
       if (visibleInGroup > 0) y += document.layout.signalSpacing;
       if (signal) y += signal.spacingBefore ?? 0;
-      const entry = signalEntry(signal, group.id, group.name, group.style, y, document.layout.rowHeight, rowId);
+      const entry = signalEntry(signal, group.id, group.name, groupStyle, y, document.layout.rowHeight, rowId);
       if (entry) {
         navigationRows.push(entry);
         if (entry.visible && (signal === undefined || matchesPane(signal))) visibleRows.push(entry);

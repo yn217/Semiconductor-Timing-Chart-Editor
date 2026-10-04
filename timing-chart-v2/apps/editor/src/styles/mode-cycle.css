@@ -46,10 +46,11 @@
 .desktop-workspace[data-workspace-owner="CycleWorkspace"] .surface-host [data-role="timeline-viewport"] {
   display: grid !important; position: relative !important; grid-column: 3; grid-row: 1; min-width: 0;
   grid-template-columns: var(--timeline-min-width, var(--wave-width, 640px)); overflow-x: scroll; overflow-y: hidden; scrollbar-width: none;
-  transform: translateY(-35px);
+  transform: none;
 }
 .desktop-workspace[data-workspace-owner="CycleWorkspace"] .surface-host [data-role="timeline-viewport"]::-webkit-scrollbar { display: none; }
-.desktop-workspace[data-workspace-owner="CycleWorkspace"] .surface-host [data-role="timeline-viewport"] > [data-role] { grid-column: 1; grid-row: 1; transform: none; }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .surface-host [data-role="timeline-viewport"] > [data-role] { grid-column: 1; grid-row: 1; transform: translateY(var(--cycle-row-origin-y, 9px)); }
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] .surface-host [data-role="frozen-label-rows"] { transform: translateY(var(--cycle-row-origin-y, 9px)); }
 .desktop-workspace[data-workspace-owner="CycleWorkspace"] .cycle-viewport { overflow-x: hidden; }
 /* The grid follows the Timeline owner's scroll and is clipped to the visible Timeline column (clip bounds are in the grid's own,
    pre-scale coordinates: scroll/zoom and scroll+width/zoom, published with --timeline-scroll-left). */

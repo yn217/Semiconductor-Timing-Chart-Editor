@@ -1,5 +1,5 @@
 import type { MutableRefObject } from "react";
-import type { AnnotationId, GroupId, SignalId } from "@timing-chart-v2/schema";
+import type { AnnotationId, GroupId, SignalGroupStyle, SignalId } from "@timing-chart-v2/schema";
 import type { TimelineViewportRuntime } from "./timeline-viewport-runtime.js";
 import type { SelectedClockEdge } from "./edge-counter-projection.js";
 
@@ -32,4 +32,5 @@ export interface TimelineSurfacePresentationPort {
   readonly suppressCanvasClickRef: MutableRefObject<boolean>;
   readonly menuOriginRef: MutableRefObject<HTMLElement | null>;
   readonly transactionCyclesPerTcRef: MutableRefObject<number>;
+  readonly groupStylePreviewRef: MutableRefObject<(groupId: GroupId, style: SignalGroupStyle | undefined) => void>;
 }

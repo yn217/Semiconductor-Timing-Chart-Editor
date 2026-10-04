@@ -3,7 +3,7 @@ import { flushSync } from "react-dom";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import { getRowLayoutSourceIndex, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
-import type { AnnotationId, CanonicalDocument, DocumentProblem, GroupId, SignalId, SpacerId, TransactionId } from "@timing-chart-v2/schema";
+import type { AnnotationId, CanonicalDocument, DocumentProblem, GroupId, SignalGroupStyle, SignalId, SpacerId, TransactionId } from "@timing-chart-v2/schema";
 import { UiCommandRegistry } from "@timing-chart-v2/ui";
 import type { EditorApplicationOwner } from "../application/use-editor-application-owner.js";
 import { useDocumentLifecycle } from "../application/use-document-lifecycle.js";
@@ -39,6 +39,7 @@ import { createTransactionPresentationRefreshRequester, shouldRefreshTransaction
 import { createTreeKeyboardController } from "./tree-keyboard-controller.js";
 import { TransitionArrowPicker } from "./transition-arrow-picker.js";
 import { createScrollOverlayRefreshOwner } from "./scroll-overlay-refresh-owner.js";
+import { refreshGroupStylePreview } from "./presentation-preview.js";
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 type TimelineRange = Readonly<{ start: number; end: number }>;
@@ -147,6 +148,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     const geometryRegistry = runtime.geometry;
     const geometrySvgs = geometryRegistry.svgs;
     const geometryMaps = geometryRegistry.maps;
+    let groupStylePreviewGroupId: GroupId | undefined;
     let markOpenPhase: (phase: string, timestamp?: number) => void = () => undefined;
     const openPhaseTracker = createOpenPhaseTracker(rendererHost, undefined, () => {
       input.application.runPendingTimingDiagnostics(() => markOpenPhase("diagnostics-ready"));
@@ -429,6 +431,15 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     const scrollOverlayRefresh = createScrollOverlayRefreshOwner({ getDocumentEpoch: () => documentEpoch.current(), isDocumentEpochCurrent: (epoch) => documentEpoch.isCurrent(epoch), isActive: () => active && rendererHost.isConnected, waitForRendererIdle: () => renderer.whenIdle(), refresh: () => timelineRuntime.refreshOverlays("scroll") });
     timelineRender = (reason) => {
       rendererHost.dataset.timelineRefreshReason = reason;
+      if (reason === "group-style-preview") {
+        window = buildViewportWindow(viewportElement, sessionController.snapshot().document.timeline.referenceClock, input.presentation.getPinnedSignalIds());
+        projection = projectionCoordinator.project({ snapshot: sessionController.snapshot(), changeSet: {}, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
+        renderer.update(projection);
+        timelineRuntime.refreshRange(timelineRangeRef.current.start, timelineRangeRef.current.end);
+        timelineRuntime.refreshOverlays("group-style-preview");
+        publishState();
+        return;
+      }
       if (reason === "tree-filter") {
         window = buildViewportWindow(viewportElement, sessionController.snapshot().document.timeline.referenceClock, input.presentation.getPinnedSignalIds());
         projection = projectionCoordinator.project({ snapshot: sessionController.snapshot(), changeSet: {}, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
@@ -524,6 +535,12 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         gridLayerLower.current.style.transformOrigin = "0 0"; gridLayerLower.current.style.scale = `${timelineNavigation.getZoom()} 1`; // same CSS zoom as Upper's grid
       }
     };
+    input.presentation.groupStylePreviewRef.current = (groupId: GroupId, style: SignalGroupStyle | undefined) => {
+      if (!active) return;
+      groupStylePreviewGroupId = style === undefined ? undefined : groupId;
+      projectionCoordinator.setGroupStylePreview(groupId, style);
+      timelineRender("group-style-preview");
+    };
     timelineRuntime.attach();
     transactionBoundaryX.current = (cycle) => timelineGeometry.sourceBoundaryToLocalX(sessionController.snapshot().document, cycle);
     transactionSourceWindow.current = (sourceViewport) => {
@@ -613,6 +630,11 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     let acceptedCommandGeneration = 0;
     const detachApplicationHandler = application.attachAcceptedHandler((result, context) => {
       const commandGeneration = ++acceptedCommandGeneration;
+      const completedGroupStylePreview = groupStylePreviewGroupId;
+      if (completedGroupStylePreview !== undefined) {
+        projectionCoordinator.setGroupStylePreview(completedGroupStylePreview, undefined);
+        groupStylePreviewGroupId = undefined;
+      }
       delete rendererHost.dataset.editorIdle;
       delete rendererHost.dataset.cycleViewReady;
       let openingGenerationForCompletion: number | undefined;
@@ -661,6 +683,9 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       const annotationOnlyChange = isAnnotationOnlyChangeSet(changed);
       if (presentationOnlyChange) renderer.updatePresentation(projection);
       else if (!transactionOnlyChange && !annotationOnlyChange) renderer.update(projection);
+      if (completedGroupStylePreview !== undefined) {
+        refreshGroupStylePreview(rendererHost, completedGroupStylePreview, result.snapshot.document.signalGroups.find((group) => group.id === completedGroupStylePreview)?.style, false);
+      }
       signalSplitRuntimeRef.current?.onDocumentChanged(result);
       setTimelineRange((range) => {
         const start = Math.min(range.start, result.snapshot.document.timeline.cycleCount - 1);
@@ -950,6 +975,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     });
     return () => {
       active = false;
+      input.presentation.groupStylePreviewRef.current = () => undefined;
       scrollOverlayRefresh.invalidate();
       applyCollapsedGroupsRef.current = () => undefined;
       refreshPlayhead.current = () => undefined;

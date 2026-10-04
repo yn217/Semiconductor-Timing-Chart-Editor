@@ -84,6 +84,8 @@ export interface ProjectionRequest {
   readonly collapsedGroupIds?: readonly GroupId[];
   readonly signalTreeFilter?: string;
   readonly signalTreeTypeFilter?: RenderProjection["signalTreeTypeFilter"];
+  /** View-only Inspector draft. Never mutates the canonical document. */
+  readonly groupStylePreview?: Readonly<{ groupId: GroupId; style: SignalGroupStyle }>;
 }
 
 export interface ProjectionService {

@@ -292,7 +292,7 @@ export function MinimalCycleView() {
     setRangeSelectionActive,
     setSelectedCycle,
   } = timelinePresentation;
-  const { collapsedGroupIdsRef, applyCollapsedGroupsRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef } = timelinePresentation.refs;
+  const { collapsedGroupIdsRef, applyCollapsedGroupsRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, groupStylePreviewRef } = timelinePresentation.refs;
   const treeFocusRowIdRef = useRef<string | undefined>(undefined);
   const menuOriginRef = useRef<HTMLElement | null>(null);
   const suppressCanvasClickRef = useRef(false);
@@ -416,7 +416,7 @@ export function MinimalCycleView() {
     commandRegistry,
     executeBatch,
     dom: { host, viewport, ruler, gridLayer, viewportLower, rulerLower, hostLower, gridLayerLower, signalSplitRuntimeRef },
-    presentation: { getPinnedSignalIds, collapsedGroupIdsRef, applyCollapsedGroupsRef, forceUpperReprojectRef, reapplySelectionRef: presentation.reapplySelectionRef, lowerCanvasClickRef, timelineRuntimeRef, armArrowPick, snapTransactionCycle, transactionBoundaryX, transactionSourceWindow, refreshPlayhead, refreshRangeSelectionBand, publishStateRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, selectedAnnotationRef, gridEnabledRef, snapEnabledRef, treeFocusRowIdRef, suppressCanvasClickRef, menuOriginRef, transactionCyclesPerTcRef },
+    presentation: { getPinnedSignalIds, collapsedGroupIdsRef, applyCollapsedGroupsRef, forceUpperReprojectRef, reapplySelectionRef: presentation.reapplySelectionRef, lowerCanvasClickRef, timelineRuntimeRef, armArrowPick, snapTransactionCycle, transactionBoundaryX, transactionSourceWindow, refreshPlayhead, refreshRangeSelectionBand, publishStateRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, selectedAnnotationRef, gridEnabledRef, snapEnabledRef, treeFocusRowIdRef, suppressCanvasClickRef, menuOriginRef, transactionCyclesPerTcRef, groupStylePreviewRef },
     state: { setRuntimeDiagnostics, setProblem, setTreePresentationRevision, setTransactionPresentationRevision, setRangePresentationRevision, setPlayheadPresentationRevision, setTimelineRange, setRangeSelectionActive, setSelectedCycle, setBottomPinned, setPinnedBottomSelection, setPinnedSignalIds, setTreeFilter, setTreeTypeFilter, setTreeAddMenuOpen, setTreeMoreMenuOpen, setContextMenu, setArrowPickStatus, setRenameDialogOpen, setCollapsedGroups, resetCollapsedGroups, resetForDocument, toggleCollapsedGroup, closeContextMenu },
     viewMetricsOwner,
     signalSplitEnabled,
@@ -593,7 +593,7 @@ export function MinimalCycleView() {
     history,
     problem,
     diagnostics,
-    refs: { host, viewport, menuOriginRef, transactionBoundaryX, transactionSourceWindow, snapTransactionCycle },
+    refs: { host, viewport, menuOriginRef, transactionBoundaryX, transactionSourceWindow, snapTransactionCycle, groupStylePreviewRef },
     command: {
       registry: commandRegistry,
       execute: (command) => commandRegistry.current.execute("semantic.execute", command),

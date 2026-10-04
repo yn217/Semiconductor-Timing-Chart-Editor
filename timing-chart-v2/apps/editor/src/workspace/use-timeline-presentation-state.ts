@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
-import type { GroupId } from "@timing-chart-v2/schema";
+import type { GroupId, SignalGroupStyle } from "@timing-chart-v2/schema";
 import type { SelectedClockEdge } from "../runtime/edge-counter-projection.js";
 
 export type TimelineRange = Readonly<{ start: number; end: number }>;
@@ -35,6 +35,7 @@ export interface TimelinePresentationState {
     readonly rangeSelectionActiveRef: MutableRefObject<boolean>;
     readonly selectedCycleRef: MutableRefObject<number>;
     readonly selectedEdgeRef: MutableRefObject<SelectedClockEdge | undefined>;
+    readonly groupStylePreviewRef: MutableRefObject<(groupId: GroupId, style: SignalGroupStyle | undefined) => void>;
   };
 }
 
@@ -53,6 +54,7 @@ export function useTimelinePresentationState(input: { readonly visualReference: 
   const rangeSelectionActiveRef = useRef(rangeSelectionActiveState);
   const selectedCycleRef = useRef(selectedCycleState);
   const selectedEdgeRef = useRef<SelectedClockEdge | undefined>(undefined);
+  const groupStylePreviewRef = useRef<(groupId: GroupId, style: SignalGroupStyle | undefined) => void>(() => undefined);
   const setCollapsedGroups = useCallback((next: ReadonlySet<GroupId>) => {
     const stable = new Set(next);
     collapsedGroupIdsRef.current = stable;
@@ -132,6 +134,6 @@ export function useTimelinePresentationState(input: { readonly visualReference: 
     setTimelineRange,
     setRangeSelectionActive,
     setSelectedCycle,
-    refs: { collapsedGroupIdsRef, applyCollapsedGroupsRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef },
+    refs: { collapsedGroupIdsRef, applyCollapsedGroupsRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, groupStylePreviewRef },
   };
 }

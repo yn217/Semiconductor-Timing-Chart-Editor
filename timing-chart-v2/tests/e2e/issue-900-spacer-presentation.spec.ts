@@ -32,4 +32,27 @@ test("Spacer rows are presented as spacing, not blank Signal rows", async ({ pag
   await expect(timing).toHaveCSS("border-top-style", "dashed");
   // Real Signals keep their role badge.
   await expect(surface.locator("[data-role='frozen-row'][data-row-id='s.clk'] [data-role='signal-role']")).toHaveCount(1);
+
+  // The showcase is tall enough to exercise the virtualized row surfaces.
+  // Scroll the stable Spacer out of the mounted window and back; identity and
+  // ownership must come from its canonical row ID, not a recycled DOM node.
+  const viewport = page.getByTestId("cycle-viewport");
+  const scrollGeometry = await viewport.evaluate((element) => ({
+    clientHeight: element.clientHeight,
+    scrollHeight: element.scrollHeight,
+  }));
+  expect(scrollGeometry.scrollHeight).toBeGreaterThan(scrollGeometry.clientHeight);
+  const spacerGroupId = await left.getAttribute("data-group-id");
+  await viewport.hover();
+  await page.mouse.wheel(0, scrollGeometry.scrollHeight);
+  await expect(left).toHaveCount(0);
+  await expect(frozen).toHaveCount(0);
+  await expect(timing).toHaveCount(0);
+  await page.mouse.wheel(0, -scrollGeometry.scrollHeight);
+  await expect(left).toHaveAttribute("data-row-id", "sp.clk");
+  await expect(frozen).toHaveAttribute("data-row-kind", "spacer");
+  await expect(timing).toHaveAttribute("data-row-kind", "spacer");
+  await expect(left).toHaveAttribute("data-group-id", spacerGroupId!);
+  await expect(frozen).toHaveAttribute("data-group-id", spacerGroupId!);
+  await expect(timing).toHaveAttribute("data-group-id", spacerGroupId!);
 });

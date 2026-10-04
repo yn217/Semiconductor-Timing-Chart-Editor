@@ -355,6 +355,40 @@ describe("RowLayout and projection invariants", () => {
     expect(result.groupHeaders[1]?.y).toBe(defaultResult.groupHeaders[1]!.y + 16);
     expect(result.visibleRows[0]?.y).toBe(48);
   });
+  it("reprojects a Group style draft across shared row geometry and restores canonical layout when cleared", () => {
+    const document = canonicalFixture();
+    const service = new DefaultProjectionService();
+    const viewport = { viewportStartY: 0, viewportEndY: 400, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] } as const;
+    const snapshot = { revision: 0, document } as CanonicalSnapshot;
+    const firstGroup = document.signalGroups[0]!;
+    const previewStyle = { ...firstGroup.style, showHeader: false, headerHeight: 48 };
+    const canonical = service.project({ snapshot, changeSet: { fullDocumentReplace: true }, viewport });
+    const preview = service.project({
+      snapshot,
+      changeSet: {},
+      viewport,
+      previous: canonical,
+      groupStylePreview: { groupId: firstGroup.id, style: previewStyle },
+    });
+    expect(preview.groupHeaders[0]).toMatchObject({ groupId: firstGroup.id, height: 0 });
+    expect(preview.rowLayout.find((row) => row.groupId === firstGroup.id)?.y).toBe(canonical.rowLayout.find((row) => row.groupId === firstGroup.id)?.y - (firstGroup.style?.headerHeight ?? 32));
+    expect(snapshot.document).toBe(document);
+    expect(preview.revision).toBe(canonical.revision);
+
+    const scrolledPreview = service.project({
+      snapshot,
+      changeSet: {},
+      viewport: { ...viewport, viewportStartY: 80, viewportEndY: 480 },
+      previous: preview,
+      groupStylePreview: { groupId: firstGroup.id, style: previewStyle },
+    });
+    expect(scrolledPreview.groupHeaders[0]).toMatchObject({ groupId: firstGroup.id, height: 0 });
+
+    const restored = service.project({ snapshot, changeSet: {}, viewport, previous: scrolledPreview });
+    expect(restored.groupHeaders).toEqual(canonical.groupHeaders);
+    expect(restored.rowLayout).toEqual(canonical.rowLayout);
+    expect(restored.revision).toBe(canonical.revision);
+  });
   it("derives collapsed groups as compact layout without changing canonical row IDs", () => {
     const document = layoutFixture();
     const expanded = calculateRowLayout(document);

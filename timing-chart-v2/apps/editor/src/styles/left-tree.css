@@ -150,12 +150,14 @@
    timing lane and waveform without changing Canonical row order. */
 .editor-shell .surface-host [data-pinned-row="true"] { z-index: 14; background-color: #edf5ff; box-shadow: inset 3px 0 #2d78c7, inset 0 -1px #b8cde2; }
 
+.desktop-workspace[data-workspace-owner="CycleWorkspace"] { --cycle-row-origin-y: 9px; }
+
 .editor-shell .surface-host [data-role="left-tree-rows"],
 .editor-shell .surface-host [data-role="frozen-label-rows"],
 .editor-shell .surface-host [data-role="timing-semantic-rows"],
 .editor-shell .surface-host [data-role="stable-waveform-surface"],
 .editor-shell .surface-host [data-role="annotation-overlay-surface"],
-.editor-shell .surface-host [data-role="interactive-overlay-surface"] { transform: translateY(9px); }
+.editor-shell .surface-host [data-role="interactive-overlay-surface"] { transform: translateY(var(--cycle-row-origin-y, 9px)); }
 
 .editor-shell .surface-host [data-role="left-row"] { grid-template-columns: 44px minmax(0, 1fr) 27px 22px 0; gap: 5px; padding: 0 4px 0 8px; }
 

@@ -102,4 +102,6 @@ function place(element: HTMLElement, row: Pick<GroupHeaderLayoutEntry, "y" | "he
   const height = `${row.height}px`;
   if (element.style.transform !== transform) element.style.transform = transform;
   if (element.style.height !== height) element.style.height = height;
+  const borderBottomWidth = row.height === 0 ? "0px" : "";
+  if (element.style.borderBottomWidth !== borderBottomWidth) element.style.borderBottomWidth = borderBottomWidth;
 }

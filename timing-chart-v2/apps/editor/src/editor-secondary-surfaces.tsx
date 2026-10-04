@@ -22,6 +22,7 @@ import type {
   GroupId,
   Signal,
   SignalGroup,
+  SignalGroupStyle,
   SignalId,
   Transaction,
   TransactionGroup,
@@ -88,6 +89,7 @@ export interface EditorSecondarySurfacesInput {
   readonly refs: {
     readonly host: Ref<HTMLDivElement>;
     readonly viewport: Ref<HTMLDivElement>;
+    readonly groupStylePreviewRef: MutableRefObject<(groupId: GroupId, style: SignalGroupStyle | undefined) => void>;
     readonly menuOriginRef: MutableRefObject<HTMLElement | null>;
     readonly transactionBoundaryX: MutableRefObject<
       (cycle: number) => number | undefined
@@ -667,26 +669,24 @@ export function useEditorSecondarySurfaces(
       commands={surfaceCommands}
       onReveal={input.actions.revealSelectedInHierarchy}
       onCancel={() => {
-        if (inspectorGroup)
+        if (inspectorGroup) {
+          refs.groupStylePreviewRef.current(inspectorGroup.id, undefined);
           refreshGroupStylePreview(
             refs.host.current!,
             inspectorGroup.id,
             inspectorGroup.style,
+            false,
           );
+        }
         dialog.setInspectorResetToken((value) => value + 1);
       }}
       onClose={() => dialog.setInspectorVisible(false)}
       onDeleteBookmark={input.actions.deleteBottomBookmark}
       onToggleTransactionSignal={input.actions.toggleTransactionSignal}
-      onGroupPreview={(groupId, style) =>
-        refreshGroupStylePreview(
-          refs.host.current!,
-          groupId,
-          style ??
-            input.document.signalGroups.find((group) => group.id === groupId)
-              ?.style,
-        )
-      }
+      onGroupPreview={(groupId, style) => {
+        refs.groupStylePreviewRef.current(groupId, style);
+        refreshGroupStylePreview(refs.host.current!, groupId, style);
+      }}
       onAnnotationPreview={previewAnnotationDraft}
       minimapMode={inspectorContext === "Transaction" ? "transaction" : "signal"}
     />

@@ -8,7 +8,7 @@ function groupStyleAppliesToSurface(style: SignalGroupStyle | undefined, surface
   return scope === "both" || (scope === "waveform" ? surface === "timing" : surface !== "timing");
 }
 
-export function refreshGroupStylePreview(host: HTMLElement, groupId: GroupId, style: SignalGroupStyle | undefined): void {
+export function refreshGroupStylePreview(host: HTMLElement, groupId: GroupId, style: SignalGroupStyle | undefined, isPreview = true): void {
   const surfaces = [["left", "left-row", "left-group-header"], ["frozen", "frozen-row", "frozen-group-header"], ["timing", "timing-row", "timing-group-header"]] as const;
   for (const [surface, rowRole, headerRole] of surfaces) {
     const applies = groupStyleAppliesToSurface(style, surface);
@@ -19,7 +19,7 @@ export function refreshGroupStylePreview(host: HTMLElement, groupId: GroupId, st
       if (background) element.style.setProperty("--group-background", background); else element.style.removeProperty("--group-background");
       element.style.removeProperty("opacity");
       if (applies && style?.border) element.style.setProperty("--group-border", style.border); else element.style.removeProperty("--group-border");
-      element.dataset.groupStylePreview = style === undefined ? "false" : "true";
+      element.dataset.groupStylePreview = String(isPreview);
     }
   }
 }

@@ -967,6 +967,9 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
         }
       }
     }
+    // Update semantic kind even when this stable DOM node's content signature
+    // is unchanged; virtualized rows can be reused across view projections.
+    shell.dataset.rowKind = row.kind;
     place(shell, row);
     ordered.push(shell);
     previousGroupId = row.groupId;
