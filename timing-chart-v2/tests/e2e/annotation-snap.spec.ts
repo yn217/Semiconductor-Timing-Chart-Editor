@@ -659,4 +659,12 @@ test("creates an edge-to-edge Measurement from two snapped Signal transitions as
   await expect(measurement).toHaveAttribute("aria-label", /Δ 2 cycles/);
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(host).toHaveAttribute("data-canonical-revision", "1");
+  const measurementId = await measurement.getAttribute("data-annotation-id");
+  expect(measurementId).toBeTruthy();
+  const downloadPromise = page.waitForEvent("download");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const download = await downloadPromise;
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles((await download.path())!);
+  await expect(surface.locator(`[data-role='annotation-owner'][data-annotation-id='${measurementId}']`)).toHaveAttribute("aria-label", /Δ 2 cycles/);
 });
