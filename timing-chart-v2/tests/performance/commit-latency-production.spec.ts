@@ -7,7 +7,7 @@ type FrameInteractionSample = { firstRafMs: number; followingRafMs: number; over
 async function installFrameInteractionProbe(page: import("@playwright/test").Page) {
   await page.evaluate(() => {
     type Probe = {
-      armed?: { id: number; eventType: "click" | "pointermove"; selector: string };
+      armed?: { id: number; eventType: "click" | "pointermove" | "wheel"; selector: string };
       nextId: number;
       longTasks: Array<{ startTime: number; duration: number }>;
       samples: Record<string, FrameInteractionSample>;
@@ -39,12 +39,13 @@ async function installFrameInteractionProbe(page: import("@playwright/test").Pag
     };
     document.addEventListener("click", record, true);
     document.addEventListener("pointermove", record, true);
+    document.addEventListener("wheel", record, true);
   });
 }
 
-async function armFrameInteraction(page: import("@playwright/test").Page, eventType: "click" | "pointermove", selector: string) {
+async function armFrameInteraction(page: import("@playwright/test").Page, eventType: "click" | "pointermove" | "wheel", selector: string) {
   return page.evaluate(({ eventType, selector }) => {
-    const probe = (window as typeof window & { __frameInteractionProbe?: { nextId: number; armed?: { id: number; eventType: "click" | "pointermove"; selector: string } } }).__frameInteractionProbe;
+    const probe = (window as typeof window & { __frameInteractionProbe?: { nextId: number; armed?: { id: number; eventType: "click" | "pointermove" | "wheel"; selector: string } } }).__frameInteractionProbe;
     if (!probe) throw new Error("Frame interaction probe is not installed");
     const id = ++probe.nextId;
     probe.armed = { id, eventType, selector };
@@ -231,6 +232,51 @@ test("production 100x500 Signal selection and Annotation pointermove stay within
     selectionSamples.push(measured);
   }
 
+  const ribbonSamples: FrameInteractionSample[] = [];
+  for (let index = 0; index < 10; index += 1) {
+    const tabName = index % 2 === 0 ? "View" : "Home";
+    const selector = `.ribbon-tabs > button[aria-label='${tabName}']`;
+    const id = await armFrameInteraction(page, "click", selector);
+    await page.locator(selector).click();
+    await expect.poll(() => readFrameInteraction(page, id)).toBeTruthy();
+    const measured = await readFrameInteraction(page, id);
+    if (!measured) throw new Error(`Ribbon switch frame sample ${id} did not complete`);
+    ribbonSamples.push(measured);
+  }
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  const zoomSamples: FrameInteractionSample[] = [];
+  for (let index = 0; index < 10; index += 1) {
+    const command = index % 2 === 0 ? "zoom-in" : "zoom-out";
+    const selector = `[aria-label='${command === "zoom-in" ? "Zoom In" : "Zoom Out"}']`;
+    const id = await armFrameInteraction(page, "click", selector);
+    await page.locator(selector).click();
+    await expect.poll(() => readFrameInteraction(page, id)).toBeTruthy();
+    const measured = await readFrameInteraction(page, id);
+    if (!measured) throw new Error(`Zoom frame sample ${id} did not complete`);
+    zoomSamples.push(measured);
+  }
+
+  const viewport = page.getByTestId("cycle-viewport");
+  const viewportBox = await viewport.boundingBox();
+  expect(viewportBox).not.toBeNull();
+  await page.mouse.move(viewportBox!.x + viewportBox!.width / 2, viewportBox!.y + viewportBox!.height / 2);
+  const scrollSamples: FrameInteractionSample[] = [];
+  for (let index = 0; index < 10; index += 1) {
+    const beforeScrollTop = await viewport.evaluate((element) => element.scrollTop);
+    const id = await armFrameInteraction(page, "wheel", "[data-testid='cycle-viewport']");
+    await page.mouse.wheel(0, 80);
+    await expect.poll(() => readFrameInteraction(page, id)).toBeTruthy();
+    const measured = await readFrameInteraction(page, id);
+    if (!measured) throw new Error(`Vertical scroll frame sample ${id} did not complete`);
+    await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(beforeScrollTop);
+    scrollSamples.push(measured);
+  }
+  await viewport.evaluate(async (element) => {
+    element.scrollTop = 0;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  });
+
   const annotation = host.locator("[data-role='annotation-owner'][data-annotation-id='ann_perf_0']");
   await expect(annotation).toBeVisible();
   await annotation.locator("[data-role='annotation-label']").click();
@@ -264,7 +310,17 @@ test("production 100x500 Signal selection and Annotation pointermove stay within
     p95FollowingRafMs: percentile(pointerSamples.map((sample) => sample.followingRafMs), 0.95),
     overlappingLongTasks: pointerSamples.reduce((count, sample) => count + sample.overlappingLongTasks, 0),
   };
-  console.log(`[interaction-frame-gate] ${JSON.stringify({ workload: "100x500", selection, annotationPointermove })}`);
+  const summarizeInteractions = (samples: FrameInteractionSample[]) => ({
+    samples: samples.length,
+    p95FirstRafMs: percentile(samples.map((sample) => sample.firstRafMs), 0.95),
+    p95FollowingRafMs: percentile(samples.map((sample) => sample.followingRafMs), 0.95),
+    overlappingLongTasks: samples.reduce((count, sample) => count + sample.overlappingLongTasks, 0),
+  });
+  const ribbon = summarizeInteractions(ribbonSamples);
+  const zoom = summarizeInteractions(zoomSamples);
+  const verticalScroll = summarizeInteractions(scrollSamples);
+  const interactionSummaries = { selection, ribbon, zoom, verticalScroll, annotationPointermove };
+  console.log(`[interaction-frame-gate] ${JSON.stringify({ workload: "100x500", ...interactionSummaries })}`);
   expect(selection.samples).toBe(10);
   expect(selection.p95FirstRafMs, "Signal selection p95 input-to-next-frame must remain below 50ms").toBeLessThan(50);
   expect(selection.p95FollowingRafMs, "Signal selection p95 input-to-following-frame must remain below 50ms").toBeLessThan(50);
@@ -273,6 +329,12 @@ test("production 100x500 Signal selection and Annotation pointermove stay within
   expect(annotationPointermove.p95FirstRafMs, "Annotation pointermove p95 input-to-next-frame must remain below 50ms").toBeLessThan(50);
   expect(annotationPointermove.p95FollowingRafMs, "Annotation pointermove p95 input-to-following-frame must remain below 50ms").toBeLessThan(50);
   expect(annotationPointermove.overlappingLongTasks, "Annotation pointermove must not overlap a Long Task").toBe(0);
+  for (const [name, summary] of Object.entries({ ribbon, zoom, verticalScroll })) {
+    expect(summary.samples, `${name} requires ten real input samples`).toBe(10);
+    expect(summary.p95FirstRafMs, `${name} p95 input-to-next-frame must remain below 50ms`).toBeLessThan(50);
+    expect(summary.p95FollowingRafMs, `${name} p95 input-to-following-frame must remain below 50ms`).toBeLessThan(50);
+    expect(summary.overlappingLongTasks, `${name} must not overlap a Long Task`).toBe(0);
+  }
   expect(await host.getAttribute("data-canonical-revision")).toBe(initialRevision);
   await expect(page.getByTestId("history-status")).toHaveText(initialHistory!);
   await expect(page.getByTestId("dirty-status")).toHaveText(initialDirty!);
