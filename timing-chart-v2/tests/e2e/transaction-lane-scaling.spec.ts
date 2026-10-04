@@ -164,6 +164,7 @@ test("10k entities hidden by one collapsed fold use bounded rescue DOM and prese
     trackWidth: element.querySelector<HTMLElement>("[data-transaction-track]")?.getBoundingClientRect().width ?? 0,
     labelsWidth: element.querySelector<HTMLElement>(".transaction-lane-labels")?.getBoundingClientRect().width ?? 0,
     candidates: Number(element.getAttribute("data-horizontal-candidate-transactions")),
+    trackCandidateVisits: Number(element.getAttribute("data-track-candidate-visits")),
     bars: element.querySelectorAll("[data-transaction-id]").length,
     bookmarkMarkers: element.querySelectorAll("[data-bookmark-id]").length,
     foldSummaries: element.querySelectorAll("[data-hidden-bookmark-count]").length,
@@ -183,6 +184,7 @@ test("10k entities hidden by one collapsed fold use bounded rescue DOM and prese
   expect(initial.hiddenBookmarkCount).toBe(10_000);
   expect(initial.rulerBookmarkMarkers).toBe(1);
   expect(initial.rulerHiddenBookmarkCount).toBe(10_000);
+  expect(initial.trackCandidateVisits).toBeLessThanOrEqual(128);
   expect(initial.laneHeight).toBeLessThanOrEqual(40);
   expect(initial.viewportScrollHeight).toBeLessThan(1_000);
 
@@ -282,6 +284,56 @@ test("10k entities hidden by one collapsed fold use bounded rescue DOM and prese
   await expect(page.locator(".editor-shell")).toHaveAttribute("data-minimap-enabled", "false");
   const miniMapHiddenFirstScroll = await measureScrollFrames("MiniMap hidden first interaction after reload");
   console.log(`[issue-865-cold-scroll-ab] ${JSON.stringify(miniMapHiddenFirstScroll)}`);
+});
+
+test("10k overlapping Transactions render only the horizontally relevant visible stack rows", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const base = generatePerformanceDocument({ signalCount: 1, cycleCount: 500, profile: "transaction-heavy" });
+  const cycleCount = 500;
+  const document = {
+    ...base,
+    timeline: { ...base.timeline, end: cycleCount, cycleCount },
+    transactions: Array.from({ length: 10_000 }, (_, index) => ({ id: `txn_stack_${index}`, name: `Overlapping ${index}`, start: 10, end: 20, laneId: "lane_0" })),
+    bookmarks: [],
+    timeGroups: [],
+  };
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "transaction-overlapping-stack.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", "10000", { timeout: 60_000 });
+  await page.getByRole("button", { name: "Transaction", exact: true }).click();
+  const lanes = page.getByTestId("transaction-lanes");
+  await expect(lanes).toBeVisible();
+  await expect.poll(() => lanes.locator("[data-transaction-id]").count()).toBeGreaterThan(0);
+  const before = {
+    ids: await lanes.locator("[data-transaction-id]").evaluateAll((bars) => bars.map((bar) => bar.getAttribute("data-transaction-id"))),
+    candidates: Number(await lanes.getAttribute("data-track-candidate-visits")),
+    revision: await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision"),
+    history: await page.getByTestId("history-status").textContent(),
+    dirty: await page.getByTestId("dirty-status").textContent(),
+  };
+  expect(before.ids.length).toBeLessThan(128);
+  expect(before.candidates).toBeLessThan(128);
+  const viewport = page.getByTestId("cycle-viewport");
+  await viewport.evaluate((element) => { element.scrollTop = Math.min(1_200, element.scrollHeight - element.clientHeight); });
+  await expect.poll(() => lanes.locator("[data-transaction-id]").first().getAttribute("data-transaction-id")).not.toBe(before.ids[0]);
+  const after = {
+    ids: await lanes.locator("[data-transaction-id]").evaluateAll((bars) => bars.map((bar) => bar.getAttribute("data-transaction-id"))),
+    candidates: Number(await lanes.getAttribute("data-track-candidate-visits")),
+  };
+  expect(after.ids.length).toBeLessThan(128);
+  expect(after.candidates).toBeLessThan(128);
+  await page.getByTestId("transaction-left-tree").evaluate((element) => element.scrollTo({ top: element.scrollHeight }));
+  const selectedTreeRow = page.getByTestId("transaction-left-tree-row-txn_stack_9999");
+  await expect(selectedTreeRow).toBeVisible();
+  await selectedTreeRow.click();
+  await expect(lanes.locator('[data-transaction-id="txn_stack_9999"]')).toHaveAttribute("data-selected", "true");
+  expect(await lanes.locator("[data-transaction-id]").count()).toBeLessThan(128);
+  expect(Number(await lanes.getAttribute("data-track-candidate-visits"))).toBeLessThan(128);
+  expect(await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision")).toBe(before.revision);
+  expect(await page.getByTestId("history-status").textContent()).toBe(before.history);
+  expect(await page.getByTestId("dirty-status").textContent()).toBe(before.dirty);
 });
 
 test("standalone Transaction cycle viewport scroll advances the virtualized lane window", async ({ page }) => {

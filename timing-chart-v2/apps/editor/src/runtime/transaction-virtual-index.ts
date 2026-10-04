@@ -190,6 +190,41 @@ export function indexTransactionIntervals<T extends TransactionInterval>(items: 
   return { ordered, maxEndTree, leafCount, byId: new Map(ordered.map((item) => [item.id, item] as const)) };
 }
 
+/** Return a bounded set of hidden-fold representative bars for the current viewport. */
+export function transactionFoldRepresentativeIntervals<T extends TransactionInterval>(
+  index: TransactionIntervalIndex<T>, folds: FoldRanges, sourceWindow: TransactionSourceWindowState,
+): readonly T[] {
+  if (sourceWindow === null || folds.length === 0 || index.ordered.length === 0) return [];
+  const window = sourceWindow ?? { start: index.ordered[0]!.start, end: index.maxEndTree[1]! };
+  const result = new Map<string, T>();
+  let representativeCount = 0;
+  const startsAtOrAfter = (cycle: number) => {
+    let low = 0; let high = index.ordered.length;
+    while (low < high) {
+      const middle = low + Math.floor((high - low) / 2);
+      if (index.ordered[middle]!.start < cycle) low = middle + 1;
+      else high = middle;
+    }
+    return low;
+  };
+  for (let foldIndex = firstFoldEndingAtOrAfter(folds, window.start, false); foldIndex < folds.length; foldIndex += 1) {
+    if (representativeCount >= 32) break;
+    const [foldStart, foldEnd] = folds[foldIndex]!;
+    if (foldStart > window.end) break;
+    const first = startsAtOrAfter(foldStart);
+    const probeEnd = Math.min(index.ordered.length, first + 8);
+    for (let position = first; position < probeEnd && representativeCount < 32; position += 1) {
+      const transaction = index.ordered[position]!;
+      if (transaction.start >= foldEnd) break;
+      if (transaction.end <= foldEnd) {
+        result.set(transaction.id, transaction);
+        representativeCount += 1;
+      }
+    }
+  }
+  return [...result.values()];
+}
+
 /** Query half-open time range [start,end), returning only intersecting
  * intervals plus a selected/active pinned item. `visitedNodes` is exposed so
  * deterministic tests can guard against regressing to a full bucket scan. */

@@ -7,7 +7,7 @@ import type { TransactionLaneCommandActions } from "../application/editor-surfac
 import { InlineNameInput } from "../inline-name-input.js";
 import { registerActiveGestureCancel } from "./active-gesture-cancellation.js";
 import { mergeTransactionFoldRanges, transactionFoldBoundariesInWindow, transactionFoldContainingCycle, transactionFoldContainingEndBoundary, transactionFoldRangesIntersecting, transactionVisibleSegments, type TransactionFoldRange } from "./transaction-fold-index.js";
-import { bookmarksOutsideFolds, hiddenBookmarkFoldSummaries, indexTransactionIntervals, INITIAL_TRANSACTION_SOURCE_WINDOW, nextTransactionVerticalWindow, retainTransactionSourceWindow, transactionGeometryGuidesInSourceWindow, transactionIntervalsOutsideFolds, type TransactionIntervalIndex, type TransactionSourceWindowState, type TransactionVerticalWindow } from "./transaction-virtual-index.js";
+import { bookmarksOutsideFolds, hiddenBookmarkFoldSummaries, indexTransactionIntervals, INITIAL_TRANSACTION_SOURCE_WINDOW, nextTransactionVerticalWindow, retainTransactionSourceWindow, transactionFoldRepresentativeIntervals, transactionGeometryGuidesInSourceWindow, transactionIntervalsOutsideFolds, type TransactionIntervalIndex, type TransactionSourceWindowState, type TransactionVerticalWindow } from "./transaction-virtual-index.js";
 import { TRANSACTION_LANE_ROW_HEIGHT as LANE_ROW_HEIGHT, transactionLaneBandHeights } from "./transaction-lane-layout.js";
 
 const GROUP_HEADER_HEIGHT = 24;
@@ -20,7 +20,7 @@ const EMPTY_TRANSACTION_GROUPS: NonNullable<CanonicalDocument["transactionGroups
 // takes the first row whose last-placed end is already <= its own start)
 // gives a deterministic, minimal-row assignment with no dependency on
 // document/array order beyond that sort.
-function assignStackRows(transactions: readonly Transaction[], folds: readonly TransactionFoldRange[]): { readonly rowOf: ReadonlyMap<TransactionId, number>; readonly rowCount: number } {
+function assignStackRows(transactions: readonly Transaction[], folds: readonly TransactionFoldRange[]): { readonly rowOf: ReadonlyMap<TransactionId, number>; readonly rowCount: number; readonly transactionsByRow: ReadonlyMap<number, readonly Transaction[]> } {
   // Fully fold-hidden Transactions have no visible interval to stack. Letting
   // them reserve rows inflated the lane/grid to tens of thousands of pixels,
   // even though the renderer mounts only bounded fold representatives.
@@ -67,17 +67,41 @@ function assignStackRows(transactions: readonly Transaction[], folds: readonly T
     return result!;
   };
   const rowOf = new Map<TransactionId, number>();
+  const transactionsByRow = new Map<number, Transaction[]>();
   let rowCount = 0;
   for (const transaction of sorted) {
     const reusable = available[0] !== undefined && available[0].end <= transaction.start ? pop() : undefined;
     const row = reusable?.row ?? rowCount++;
     rowOf.set(transaction.id, row);
+    const rowTransactions = transactionsByRow.get(row);
+    if (rowTransactions) rowTransactions.push(transaction);
+    else transactionsByRow.set(row, [transaction]);
     push({ end: transaction.end, row });
   }
-  return { rowOf, rowCount: Math.max(1, rowCount) };
+  return { rowOf, rowCount: Math.max(1, rowCount), transactionsByRow };
 }
 
-type LaneBand = { readonly key: string; readonly laneId: string; readonly groupId: string | undefined; readonly labelTop: number; readonly trackTop: number; readonly labelHeight: number; readonly trackHeight: number; readonly rowOf: ReadonlyMap<TransactionId, number> };
+function transactionsInStackRowWindow(ordered: readonly Transaction[], start: number, end: number): readonly Transaction[] {
+  // Greedy stacking guarantees intervals assigned to one row never overlap,
+  // so both their starts and ends are monotonically increasing. Two binary
+  // searches return only the row's horizontal-window intersections.
+  let low = 0; let high = ordered.length;
+  while (low < high) {
+    const middle = low + Math.floor((high - low) / 2);
+    if (ordered[middle]!.end <= start) low = middle + 1;
+    else high = middle;
+  }
+  const first = low;
+  high = ordered.length;
+  while (low < high) {
+    const middle = low + Math.floor((high - low) / 2);
+    if (ordered[middle]!.start < end) low = middle + 1;
+    else high = middle;
+  }
+  return ordered.slice(first, low);
+}
+
+type LaneBand = { readonly key: string; readonly laneId: string; readonly groupId: string | undefined; readonly labelTop: number; readonly trackTop: number; readonly labelHeight: number; readonly trackHeight: number; readonly rowOf: ReadonlyMap<TransactionId, number>; readonly rowCount: number; readonly transactionsByRow: ReadonlyMap<number, readonly Transaction[]> };
 type GroupHeaderBand = { readonly key: string; readonly labelTop: number; readonly trackTop: number; readonly label: string; readonly color: string | undefined; readonly count: number; readonly groupId: string | undefined; readonly collapsed: boolean };
 
 type TransactionDragEdge = "body" | "start" | "end";
@@ -410,6 +434,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
     const pinned = selectedId === undefined ? undefined : new Set<string>([selectedId]);
     return transactionIntervalsOutsideFolds(horizontalDocumentIndex, collapsedFoldRanges, horizontalSourceWindow, pinned);
   }, [collapsedFoldRanges, horizontalDocumentIndex, horizontalSourceWindow, selectedId]);
+  const foldRescueCandidates = useMemo(() => transactionFoldRepresentativeIntervals(horizontalDocumentIndex, collapsedFoldRanges, horizontalSourceWindow), [collapsedFoldRanges, horizontalDocumentIndex, horizontalSourceWindow]);
   const collapsedFoldBoundaries = useMemo(() => (rawDocument.timeGroups ?? [])
     .filter((group) => group.presentation?.collapsed)
     .flatMap((group) => [group.start, group.end])
@@ -575,13 +600,13 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
         stackRowBuilds.current += 1;
         rowsByFold.set(foldRanges, stackRows);
       }
-      const { rowOf, rowCount } = stackRows;
+      const { rowOf, rowCount, transactionsByRow } = stackRows;
       // The center label column is Lane-only. Transaction navigation and
       // names belong to the authoritative left Transaction Tree; mirroring
       // them here creates rows outside the single-row label band whenever
       // one lane contains multiple sequential Transactions.
       const { labelHeight, trackHeight } = transactionLaneBandHeights(rowCount);
-      laneBands.push({ key: transactionLaneIdentityKey(section.groupId, laneId), laneId, groupId: section.groupId, labelTop: labelCursor, trackTop: trackCursor, labelHeight, trackHeight, rowOf });
+      laneBands.push({ key: transactionLaneIdentityKey(section.groupId, laneId), laneId, groupId: section.groupId, labelTop: labelCursor, trackTop: trackCursor, labelHeight, trackHeight, rowOf, rowCount, transactionsByRow });
       labelCursor += labelHeight;
       trackCursor += trackHeight;
     }
@@ -621,11 +646,55 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   const visibleGroupHeaders = groupHeaders.filter((header) => isVisible(header.labelTop, GROUP_HEADER_HEIGHT));
   const bandContainsSelected = (band: LaneBand) => selectedId !== undefined && currentKeys.get(selectedId) === laneKey(band.groupId, band.laneId);
   const visibleLaneBands = laneBands.filter((band) => isVisible(band.labelTop, band.labelHeight) || isVisible(band.trackTop, band.trackHeight) || bandContainsSelected(band));
-  const isTrackTransactionVisible = (band: LaneBand, transaction: Transaction) => {
-    if (isTransactionSelected(transaction.id)) return true;
-    const row = band.rowOf.get(transaction.id) ?? 0;
-    return isVisible(band.trackTop + 4 + row * LANE_ROW_HEIGHT, LANE_ROW_HEIGHT);
-  };
+  const { trackCandidatesByLane, trackCandidateVisits } = useMemo(() => {
+    const byLane = new Map<string, Map<TransactionId, Transaction>>();
+    let candidateVisits = 0;
+    const append = (band: LaneBand, transaction: Transaction) => {
+      const key = laneKey(band.groupId, band.laneId);
+      let bucket = byLane.get(key);
+      if (!bucket) { bucket = new Map(); byLane.set(key, bucket); }
+      bucket.set(transaction.id, transaction);
+    };
+    const firstRow = (band: LaneBand) => Math.max(0, Math.floor((virtualTop - band.trackTop - 4) / LANE_ROW_HEIGHT));
+    const lastRow = (band: LaneBand) => Math.min(band.rowCount - 1, Math.floor((virtualBottom - band.trackTop - 5) / LANE_ROW_HEIGHT));
+    for (const band of visibleLaneBands) {
+      const selectedInBand = selectedId !== undefined && currentKeys.get(selectedId) === laneKey(band.groupId, band.laneId);
+      const selectedRow = selectedInBand ? band.rowOf.get(selectedId!) : undefined;
+      const from = firstRow(band);
+      const to = lastRow(band);
+      const rows = new Set<number>();
+      for (let row = from; row <= to; row += 1) rows.add(row);
+      if (selectedRow !== undefined) rows.add(selectedRow);
+      for (const row of rows) {
+        const rowTransactions = band.transactionsByRow.get(row);
+        if (!rowTransactions || horizontalSourceWindow === null) continue;
+        const candidates = horizontalSourceWindow === undefined
+          ? rowTransactions
+          : transactionsInStackRowWindow(rowTransactions, horizontalSourceWindow.start, horizontalSourceWindow.end);
+        candidateVisits += candidates.length;
+        for (const transaction of candidates) append(band, transaction);
+        if (selectedRow === row && selectedId !== undefined) {
+          const selected = horizontalDocumentIndex.byId.get(selectedId);
+          if (selected) { candidateVisits += 1; append(band, selected); }
+        }
+      }
+      // Fold-hidden representatives and a selected, fully hidden Transaction
+      // have no stacking row. Keep their bounded rescue path independent of
+      // the ordinary visible-row index.
+      const laneIdentity = laneKey(band.groupId, band.laneId);
+      for (const transaction of foldRescueCandidates) {
+        if (currentKeys.get(transaction.id) === laneIdentity && !band.rowOf.has(transaction.id)) {
+          candidateVisits += 1;
+          append(band, transaction);
+        }
+      }
+      if (selectedInBand && selectedRow === undefined && selectedId !== undefined) {
+        const selected = horizontalDocumentIndex.byId.get(selectedId);
+        if (selected) { candidateVisits += 1; append(band, selected); }
+      }
+    }
+    return { trackCandidatesByLane: new Map([...byLane].map(([key, bucket]) => [key, [...bucket.values()]])), trackCandidateVisits: candidateVisits };
+  }, [currentKeys, foldRescueCandidates, horizontalDocumentIndex, horizontalSourceWindow, selectedId, virtualBottom, virtualTop, visibleLaneBands]);
 
   useLayoutEffect(() => {
     const element = owner.current;
@@ -640,7 +709,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   // scrolling .cycle-viewport that drives virtualWindow. Keep its normal CSS
   // top (34px); applying -virtualWindow.top here would subtract the scroll
   // offset a second time and make offscreen lanes unreachable.
-  return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" data-mount-serial={mountSerial.current} data-total-transactions={document.transactions.length} data-horizontal-candidate-transactions={horizontalDocumentCandidates.length} data-hidden-bookmark-fold-summaries={hiddenBookmarkSummaries.length} data-lane-index-builds={laneIndexBuilds.current} data-stack-row-builds={stackRowBuilds.current} data-transaction-filter-builds={transactionFilterBuilds.current} style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
+  return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" data-mount-serial={mountSerial.current} data-total-transactions={document.transactions.length} data-horizontal-candidate-transactions={horizontalDocumentCandidates.length} data-track-candidate-visits={trackCandidateVisits} data-hidden-bookmark-fold-summaries={hiddenBookmarkSummaries.length} data-lane-index-builds={laneIndexBuilds.current} data-stack-row-builds={stackRowBuilds.current} data-transaction-filter-builds={transactionFilterBuilds.current} style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
     <div className="transaction-lane-labels">
       {visibleGroupHeaders.map((header) => {
         const group = header.groupId === undefined ? undefined : transactionGroupById.get(header.groupId);
@@ -673,7 +742,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
       <div className="transaction-bookmark-markers" aria-label="Transaction bookmarks">{visibleBookmarks.map((bookmark) => { const left = x(bookmark.start); if (left === undefined) return null; const containingFold = bookmark.id === selectedBookmarkId ? (rawDocument.timeGroups ?? []).find((group) => group.presentation?.collapsed && bookmark.start >= group.start && bookmark.start < group.end) : undefined; return <button type="button" key={bookmark.id} data-bookmark-id={bookmark.id} data-source-cycle={bookmark.start} data-selected={String(bookmark.id === selectedBookmarkId)} aria-pressed={bookmark.id === selectedBookmarkId} {...(containingFold === undefined ? {} : { "data-inside-collapsed": containingFold.name })} aria-label={`Go to bookmark ${bookmark.name}`} title={`${bookmark.name}: ${bookmark.start}`} style={{ left }} onClick={() => onNavigateBookmark?.(bookmark.start, bookmark.id)} />; })}{hiddenBookmarkSummaries.map((summary) => { const left = x(summary.end) ?? x(summary.start); return left === undefined ? null : <button type="button" key={`fold-bookmarks-${summary.start}-${summary.end}`} className="transaction-fold-bookmark-summary" data-hidden-bookmark-count={summary.count} data-fold-start={summary.start} data-fold-end={summary.end} aria-label={`${summary.count} bookmarks inside collapsed range`} title={`${summary.count} bookmarks inside collapsed range`} style={{ left }} onClick={() => onNavigateBookmark?.(summary.start)} />; })}</div>
       {visibleGroupHeaders.map((header) => <div key={header.key} className="transaction-group-header-band" aria-hidden="true" style={{ top: header.trackTop, height: GROUP_HEADER_HEIGHT }} />)}
       {visibleLaneBands.map((band) => <div className="transaction-lane" key={band.key} data-lane-id={band.laneId} style={{ top: band.trackTop, height: band.trackHeight }}>
-        {(horizontalCandidatesByLane.get(laneKey(band.groupId, band.laneId)) ?? []).filter((transaction) => transaction.visible !== false && isTrackTransactionVisible(band, transaction)).map((transaction) => {
+        {(trackCandidatesByLane.get(laneKey(band.groupId, band.laneId)) ?? []).map((transaction) => {
           const startX = x(transaction.start);
           const endX = x(transaction.end);
           // A Transaction fully inside a collapsed TimeGroup has no rendered X, but must still mount its "hidden in fold" affordance
