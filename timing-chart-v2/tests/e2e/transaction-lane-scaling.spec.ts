@@ -160,11 +160,16 @@ test("10k entities hidden by one collapsed fold use bounded rescue DOM and prese
   await expect(minimap).toBeVisible();
   await expect(minimap).toHaveAttribute("aria-busy", "false", { timeout: 60_000 });
   const initial = await lanes.evaluate((element) => ({
+    laneWidth: element.getBoundingClientRect().width,
+    trackWidth: element.querySelector<HTMLElement>("[data-transaction-track]")?.getBoundingClientRect().width ?? 0,
+    labelsWidth: element.querySelector<HTMLElement>(".transaction-lane-labels")?.getBoundingClientRect().width ?? 0,
     candidates: Number(element.getAttribute("data-horizontal-candidate-transactions")),
     bars: element.querySelectorAll("[data-transaction-id]").length,
     bookmarkMarkers: element.querySelectorAll("[data-bookmark-id]").length,
     foldSummaries: element.querySelectorAll("[data-hidden-bookmark-count]").length,
     hiddenBookmarkCount: Number(element.querySelector("[data-hidden-bookmark-count]")?.getAttribute("data-hidden-bookmark-count")),
+    rulerBookmarkMarkers: element.ownerDocument.querySelectorAll(".cycle-ruler [data-bookmark-id]").length,
+    rulerHiddenBookmarkCount: Number(element.ownerDocument.querySelector(".cycle-ruler [data-hidden-bookmark-count]")?.getAttribute("data-hidden-bookmark-count") ?? 0),
     laneHeight: Number.parseFloat((element as HTMLElement).style.height),
     viewportScrollHeight: (element.closest("[data-testid='cycle-viewport']") as HTMLElement | null)?.scrollHeight ?? 0,
     transactionMiniMapSegments: document.querySelectorAll(".minimap-segment-transaction").length,
@@ -176,6 +181,8 @@ test("10k entities hidden by one collapsed fold use bounded rescue DOM and prese
   expect(initial.bookmarkMarkers).toBe(0);
   expect(initial.foldSummaries).toBe(1);
   expect(initial.hiddenBookmarkCount).toBe(10_000);
+  expect(initial.rulerBookmarkMarkers).toBe(1);
+  expect(initial.rulerHiddenBookmarkCount).toBe(10_000);
   expect(initial.laneHeight).toBeLessThanOrEqual(40);
   expect(initial.viewportScrollHeight).toBeLessThan(1_000);
 

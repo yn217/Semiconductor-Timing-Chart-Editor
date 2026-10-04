@@ -196,9 +196,22 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     finalX = point.x;
   }
   const overlays: HTMLElement[] = [];
+  const hiddenBookmarksByFold = new Map<string, { bookmarkId: string; count: number }>();
+  const displayCycleByBookmarkId = new Map<string, number | undefined>();
   for (const bookmark of document.bookmarks) {
     const displayCycle = mapping.sourceToDisplay(bookmark.start);
+    displayCycleByBookmarkId.set(bookmark.id, displayCycle);
+    if (displayCycle !== undefined) continue;
+    const fold = mapping.collapsedGroupAtSource(bookmark.start);
+    if (fold === undefined) continue;
+    const summary = hiddenBookmarksByFold.get(fold.id);
+    if (summary) summary.count += 1;
+    else hiddenBookmarksByFold.set(fold.id, { bookmarkId: bookmark.id, count: 1 });
+  }
+  for (const bookmark of document.bookmarks) {
+    const displayCycle = displayCycleByBookmarkId.get(bookmark.id);
     const containingFold = displayCycle === undefined ? mapping.collapsedGroupAtSource(bookmark.start) : undefined;
+    if (containingFold !== undefined && hiddenBookmarksByFold.get(containingFold.id)?.bookmarkId !== bookmark.id) continue;
     const anchorCycle = containingFold === undefined ? displayCycle : (containingFold.end < document.timeline.cycleCount ? containingFold.end : Math.max(0, containingFold.start - 1));
     const anchorDisplay = anchorCycle === undefined ? undefined : mapping.sourceToDisplay(anchorCycle);
     if (anchorCycle === undefined || anchorDisplay === undefined) continue;
@@ -217,6 +230,14 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     marker.textContent = containingFold === undefined ? (tcScale > 1 ? "◆" : `◆ ${bookmark.name}`) : `◆ ${bookmark.name} (inside ${containingFold.name})`;
     marker.setAttribute("aria-label", bookmark.name);
     marker.title = containingFold === undefined ? `${bookmark.name}: cycle ${bookmark.start}` : `${bookmark.name}: cycle ${bookmark.start} inside collapsed ${containingFold.name}`;
+    if (containingFold !== undefined) {
+      const hiddenCount = hiddenBookmarksByFold.get(containingFold.id)?.count ?? 1;
+      if (hiddenCount > 1) {
+        marker.dataset.hiddenBookmarkCount = String(hiddenCount);
+        marker.setAttribute("aria-label", `${hiddenCount} bookmarks inside collapsed ${containingFold.name}; representative ${bookmark.name}`);
+        marker.title = `${hiddenCount} bookmarks inside collapsed ${containingFold.name}; representative ${bookmark.name}: cycle ${bookmark.start}`;
+      }
+    }
     overlays.push(marker);
   }
   for (const group of document.timeGroups.filter((item) => item.presentation?.collapsed)) {
