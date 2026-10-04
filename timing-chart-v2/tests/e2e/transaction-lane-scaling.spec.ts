@@ -354,6 +354,31 @@ test("standalone Transaction cycle viewport scroll advances the virtualized lane
   await expect(lanes.locator("[data-transaction-id]")).not.toHaveCount(0);
 });
 
+test("vertical Lane lookup is viewport-bounded across 10k distinct Lanes", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const base = generatePerformanceDocument({ signalCount: 1, cycleCount: 500, profile: "transaction-heavy" });
+  const transactions = Array.from({ length: 10_000 }, (_, index) => ({ id: `txn_lane_window_${index}`, name: `Lane transaction ${index}`, start: 10, end: 20, laneId: `lane_${index}` }));
+  const document = { ...base, transactions, bookmarks: [], timeGroups: [] };
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "transaction-10k-lane-window.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", "10000", { timeout: 60_000 });
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  const lanes = page.getByTestId("transaction-lanes");
+  const viewport = page.getByTestId("cycle-viewport");
+  await expect(lanes).toBeVisible();
+  await expect.poll(async () => Number(await lanes.getAttribute("data-vertical-band-visits"))).toBeLessThan(64);
+  const before = await lanes.locator(".transaction-lane-label").first().getAttribute("data-lane-id");
+  await viewport.evaluate((element) => { element.scrollTop = Math.min(200_000, element.scrollHeight - element.clientHeight); });
+  await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  await expect.poll(() => lanes.locator(".transaction-lane-label").first().getAttribute("data-lane-id")).not.toBe(before);
+  const visits = Number(await lanes.getAttribute("data-vertical-band-visits"));
+  const mountedLanes = await lanes.locator(".transaction-lane-label").count();
+  expect(visits).toBeLessThan(64);
+  expect(mountedLanes).toBeLessThan(64);
+});
+
 test("selected Transaction drag survives a horizontal virtualization window change", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");

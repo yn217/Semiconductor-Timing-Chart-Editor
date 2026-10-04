@@ -8,7 +8,7 @@ import { InlineNameInput } from "../inline-name-input.js";
 import { registerActiveGestureCancel } from "./active-gesture-cancellation.js";
 import { mergeTransactionFoldRanges, transactionFoldBoundariesInWindow, transactionFoldContainingCycle, transactionFoldContainingEndBoundary, transactionFoldRangesIntersecting, transactionVisibleSegments, type TransactionFoldRange } from "./transaction-fold-index.js";
 import { bookmarksOutsideFolds, hiddenBookmarkFoldSummaries, indexTransactionIntervals, INITIAL_TRANSACTION_SOURCE_WINDOW, nextTransactionVerticalWindow, retainTransactionSourceWindow, transactionFoldRepresentativeIntervals, transactionGeometryGuidesInSourceWindow, transactionIntervalsOutsideFolds, type TransactionIntervalIndex, type TransactionSourceWindowState, type TransactionVerticalWindow } from "./transaction-virtual-index.js";
-import { TRANSACTION_LANE_ROW_HEIGHT as LANE_ROW_HEIGHT, transactionLaneBandHeights } from "./transaction-lane-layout.js";
+import { TRANSACTION_LANE_ROW_HEIGHT as LANE_ROW_HEIGHT, transactionLaneBandHeights, transactionLaneBandsInVerticalWindow } from "./transaction-lane-layout.js";
 
 const GROUP_HEADER_HEIGHT = 24;
 let transactionLanesMountSerial = 0;
@@ -572,9 +572,10 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
       })()
     : [{ groupId: undefined, label: undefined, color: undefined, lanes: [...new Set(["lane_0", ...document.transactions.map((transaction) => transaction.laneId ?? "lane_0")])].sort() }], [document.transactions, groups, hasGroups]);
 
-  const { groupHeaders, laneBands, totalHeight } = useMemo(() => {
+  const { groupHeaders, laneBands, laneBandByKey, totalHeight } = useMemo(() => {
     const groupHeaders: GroupHeaderBand[] = [];
     const laneBands: LaneBand[] = [];
+    const laneBandByKey = new Map<string, LaneBand>();
     let labelCursor = 0;
     let trackCursor = 0;
     for (const section of sections) {
@@ -606,12 +607,14 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
       // them here creates rows outside the single-row label band whenever
       // one lane contains multiple sequential Transactions.
       const { labelHeight, trackHeight } = transactionLaneBandHeights(rowCount);
-      laneBands.push({ key: transactionLaneIdentityKey(section.groupId, laneId), laneId, groupId: section.groupId, labelTop: labelCursor, trackTop: trackCursor, labelHeight, trackHeight, rowOf, rowCount, transactionsByRow });
+      const band = { key: transactionLaneIdentityKey(section.groupId, laneId), laneId, groupId: section.groupId, labelTop: labelCursor, trackTop: trackCursor, labelHeight, trackHeight, rowOf, rowCount, transactionsByRow };
+      laneBands.push(band);
+      laneBandByKey.set(band.key, band);
       labelCursor += labelHeight;
       trackCursor += trackHeight;
     }
     }
-    return { groupHeaders, laneBands, totalHeight: Math.max(labelCursor, trackCursor, LANE_ROW_HEIGHT) };
+    return { groupHeaders, laneBands, laneBandByKey, totalHeight: Math.max(labelCursor, trackCursor, LANE_ROW_HEIGHT) };
   }, [collapsedGroups, laneTransactionsByKey, sections, transactionCountByGroup]);
   const [virtualWindow, setVirtualWindow] = useState<TransactionVerticalWindow>({ top: 0, height: 900 });
   useEffect(() => {
@@ -644,8 +647,9 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   const virtualBottom = Math.min(totalHeight, virtualWindow.top + virtualWindow.height + virtualOverscan);
   const isVisible = (top: number, height: number) => top < virtualBottom && top + height > virtualTop;
   const visibleGroupHeaders = groupHeaders.filter((header) => isVisible(header.labelTop, GROUP_HEADER_HEIGHT));
-  const bandContainsSelected = (band: LaneBand) => selectedId !== undefined && currentKeys.get(selectedId) === laneKey(band.groupId, band.laneId);
-  const visibleLaneBands = laneBands.filter((band) => isVisible(band.labelTop, band.labelHeight) || isVisible(band.trackTop, band.trackHeight) || bandContainsSelected(band));
+  const selectedLaneKey = selectedId === undefined ? undefined : currentKeys.get(selectedId);
+  const laneWindow = transactionLaneBandsInVerticalWindow(laneBands, virtualTop, virtualBottom, selectedLaneKey === undefined ? undefined : laneBandByKey.get(selectedLaneKey));
+  const visibleLaneBands = laneWindow.bands;
   const { trackCandidatesByLane, trackCandidateVisits } = useMemo(() => {
     const byLane = new Map<string, Map<TransactionId, Transaction>>();
     let candidateVisits = 0;
@@ -709,7 +713,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   // scrolling .cycle-viewport that drives virtualWindow. Keep its normal CSS
   // top (34px); applying -virtualWindow.top here would subtract the scroll
   // offset a second time and make offscreen lanes unreachable.
-  return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" data-mount-serial={mountSerial.current} data-total-transactions={document.transactions.length} data-horizontal-candidate-transactions={horizontalDocumentCandidates.length} data-track-candidate-visits={trackCandidateVisits} data-hidden-bookmark-fold-summaries={hiddenBookmarkSummaries.length} data-lane-index-builds={laneIndexBuilds.current} data-stack-row-builds={stackRowBuilds.current} data-transaction-filter-builds={transactionFilterBuilds.current} style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
+  return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" data-mount-serial={mountSerial.current} data-total-transactions={document.transactions.length} data-horizontal-candidate-transactions={horizontalDocumentCandidates.length} data-track-candidate-visits={trackCandidateVisits} data-vertical-band-visits={laneWindow.visits} data-hidden-bookmark-fold-summaries={hiddenBookmarkSummaries.length} data-lane-index-builds={laneIndexBuilds.current} data-stack-row-builds={stackRowBuilds.current} data-transaction-filter-builds={transactionFilterBuilds.current} style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
     <div className="transaction-lane-labels">
       {visibleGroupHeaders.map((header) => {
         const group = header.groupId === undefined ? undefined : transactionGroupById.get(header.groupId);
