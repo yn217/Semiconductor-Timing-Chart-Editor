@@ -128,6 +128,34 @@ function isSignalRenameOnly(previous: CanonicalDocument, next: CanonicalDocument
   return targetCount === 1 && changedCount === 1;
 }
 
+/** Only permits changing one Signal's role; all validation-sensitive data remains shared and unchanged. */
+export function isSignalRoleChangeOnly(previous: CanonicalDocument, next: CanonicalDocument, signalId: string): boolean {
+  if (!isRecord(next) || !sameOwnKeys(previous, next) || !Array.isArray(previous.signals) || !Array.isArray(next.signals)) return false;
+  for (const key of Object.keys(previous)) {
+    if (key !== "signals" && !Object.is(previous[key as keyof CanonicalDocument], next[key as keyof CanonicalDocument])) return false;
+  }
+  if (previous.signals.length !== next.signals.length) return false;
+
+  let targetCount = 0;
+  let changedCount = 0;
+  for (let index = 0; index < previous.signals.length; index += 1) {
+    const before = previous.signals[index]!;
+    const after = next.signals[index]!;
+    if (before.id === signalId) targetCount += 1;
+    if (before === after) continue;
+    changedCount += 1;
+    if (!isRecord(after) || before.id !== signalId || after.id !== signalId || !sameOwnKeys(before, after)) return false;
+    if (after.role === before.role || !(after.role === "input" || after.role === "output" || after.role === "internal")) return false;
+    for (const key of Object.keys(before)) {
+      if (key === "role") continue;
+      if (key !== "display" && !Object.is(before[key as keyof typeof before], after[key as keyof typeof after])) return false;
+    }
+    if (!isRecord(before.display) || !isRecord(after.display) || !sameOwnKeys(before.display, after.display)) return false;
+    for (const key of Object.keys(before.display)) if (!Object.is(before.display[key], after.display[key])) return false;
+  }
+  return targetCount === 1 && changedCount === 1;
+}
+
 function isParsedCanonicalDocument(value: CanonicalDocument | ParsedCanonicalDocument): value is ParsedCanonicalDocument {
   return isTrustedParsedCanonicalDocument(value);
 }
@@ -197,6 +225,21 @@ export class DocumentSession implements CanonicalStore, CanonicalMutationPort {
     // This scoped proof is the single validation for this planner-generated
     // operation. Every unmodified canonical branch is the prior validated,
     // deeply frozen branch; the changed fields are checked above.
+    this.#snapshot = deepFreeze({ revision: this.#snapshot.revision + 1, document: next }) as CanonicalSnapshot;
+    this.#commits += 1;
+    return this.#snapshot;
+  }
+
+  commitSignalRoleChange(next: Readonly<CanonicalDocument>, expectedRevision: number, signalId: string): CanonicalSnapshot {
+    if (expectedRevision !== this.#snapshot.revision) throw new CanonicalCommitError("stale", `Stale canonical revision ${expectedRevision}; current revision is ${this.#snapshot.revision}.`);
+    this.#validationRuns += 1;
+    if (!isSignalRoleChangeOnly(this.#snapshot.document, next as CanonicalDocument, signalId)) {
+      const problem: DocumentProblem = { code: "INVALID_INCREMENTAL_SIGNAL_ROLE_CHANGE", path: "$.signals", message: "Incremental role commit changed fields outside the target Signal role." };
+      throw new CanonicalCommitError("validation", problem.message, [problem]);
+    }
+    // A role-only planner result cannot affect IDs, references, timeline/value
+    // ranges, or any resource-budget count. Every other branch remains the
+    // previously validated and deeply frozen value.
     this.#snapshot = deepFreeze({ revision: this.#snapshot.revision + 1, document: next }) as CanonicalSnapshot;
     this.#commits += 1;
     return this.#snapshot;

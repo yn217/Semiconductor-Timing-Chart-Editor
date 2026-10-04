@@ -974,8 +974,8 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       const currentWidth = signal.type === "bus" ? signal.width : undefined;
       const currentEnumId = signal.type === "clock" ? undefined : signal.enumId;
       const currentVisible = signal.display.visible !== false;
-      const currentAlign = signal.display.align;
-      const currentOverflow = signal.display.overflow;
+      const currentAlign = signal.display.align ?? document.layout.signalNameAlign;
+      const currentOverflow = signal.display.overflow ?? document.layout.overflow;
       const currentStyle = signal.display.style;
       const nextFormat = nextType === "bus" ? command.displayFormat ?? currentFormat : undefined;
       const nextWidth = nextType === "bus" ? command.width ?? currentWidth : undefined;
@@ -992,10 +992,11 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       const nextAlign = command.displayAlign ?? currentAlign;
       const nextOverflow = command.displayOverflow ?? currentOverflow;
       const nextStyle = command.displayStyle ?? currentStyle;
-      const nextSpacingBefore = command.spacingBefore ?? signal.spacingBefore;
-      const nextSpacingAfter = command.spacingAfter ?? signal.spacingAfter;
+      const nextSpacingBefore = command.spacingBefore === 0 && signal.spacingBefore === undefined ? undefined : command.spacingBefore ?? signal.spacingBefore;
+      const nextSpacingAfter = command.spacingAfter === 0 && signal.spacingAfter === undefined ? undefined : command.spacingAfter ?? signal.spacingAfter;
       if (signal.name === name && signal.role === command.role && signal.type === nextType && currentFormat === nextFormat && currentWidth === nextWidth && (signal.type === "clock" || signal.enumId === nextEnumId) && currentVisible === nextVisible && currentAlign === nextAlign && currentOverflow === nextOverflow && signal.spacingBefore === nextSpacingBefore && signal.spacingAfter === nextSpacingAfter && semanticEqual(currentStyle, nextStyle)) return fail("no-op", "NO_OP", "$", "Signal properties are unchanged.");
-      const nextDisplay = { ...signal.display, name, visible: nextVisible, ...(nextAlign === undefined ? {} : { align: nextAlign }), ...(nextOverflow === undefined ? {} : { overflow: nextOverflow }), ...(nextStyle === undefined ? {} : { style: nextStyle }) };
+      const { visible: _visible, align: _align, overflow: _overflow, ...baseDisplay } = signal.display;
+      const nextDisplay = { ...baseDisplay, name, ...(nextVisible === true ? {} : { visible: nextVisible }), ...(nextAlign === document.layout.signalNameAlign ? {} : { align: nextAlign }), ...(nextOverflow === document.layout.overflow ? {} : { overflow: nextOverflow }), ...(nextStyle === undefined ? {} : { style: nextStyle }) };
       const next: Signal = signal.type === "clock"
         ? { ...signal, name, role: command.role, display: nextDisplay, ...(nextSpacingBefore === undefined ? {} : { spacingBefore: nextSpacingBefore }), ...(nextSpacingAfter === undefined ? {} : { spacingAfter: nextSpacingAfter }) }
         : (() => {
@@ -1004,7 +1005,7 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
           return { ...base, type: valueType, name, role: command.role, display: nextDisplay, ...(nextWidth === undefined ? {} : { width: nextWidth }), ...(nextFormat === undefined ? {} : { displayFormat: nextFormat }), ...(nextEnumId === undefined ? {} : { enumId: nextEnumId }), ...(nextSpacingBefore === undefined ? {} : { spacingBefore: nextSpacingBefore }), ...(nextSpacingAfter === undefined ? {} : { spacingAfter: nextSpacingAfter }) };
         })();
       const waveformChanged = signal.type !== nextType || currentFormat !== nextFormat || currentWidth !== nextWidth || (signal.type !== "clock" && signal.enumId !== nextEnumId);
-      const spacingChanged = signal.spacingBefore !== nextSpacingBefore || signal.spacingAfter !== nextSpacingAfter;
+      const spacingChanged = (signal.spacingBefore ?? 0) !== (nextSpacingBefore ?? 0) || (signal.spacingAfter ?? 0) !== (nextSpacingAfter ?? 0);
       // Visibility changes the derived row layout exactly like signal.setVisibility: the rows below compact, so their screen Y,
       // dependent annotations and the MiniMap must be invalidated too (otherwise wave owners stay one row off their labels).
       const visibilityChanged = currentVisible !== nextVisible;

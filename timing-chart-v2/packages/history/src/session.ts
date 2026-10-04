@@ -11,6 +11,7 @@ import {
 import {
   CanonicalCommitError,
   DocumentSession,
+  isSignalRoleChangeOnly,
   type CanonicalSessionMetrics,
   type CanonicalSnapshot,
   type CanonicalStore,
@@ -115,7 +116,12 @@ export class CommandHistorySession implements CanonicalStore, SemanticCommandDis
     const before = this.getSnapshot();
     const plan = planCommand(before.document, command);
     if (!plan.ok) return { ok: false, reason: plan.reason, problems: plan.problems };
-    return this.#commit(command, before, plan.document, plan.changeSet, plan.inverseChangeSet, command.type === "signal.rename" ? command.signalId : undefined);
+    const scopedSignalChange = command.type === "signal.rename"
+      ? { kind: "rename" as const, signalId: command.signalId }
+      : command.type === "signal.updateProperties" && isSignalRoleChangeOnly(before.document, plan.document, command.signalId)
+        ? { kind: "role" as const, signalId: command.signalId }
+        : undefined;
+    return this.#commit(command, before, plan.document, plan.changeSet, plan.inverseChangeSet, scopedSignalChange);
   }
 
   executeBatch(id: CommandId, commands: readonly SemanticCommand[]): CommandResult {
@@ -148,11 +154,13 @@ export class CommandHistorySession implements CanonicalStore, SemanticCommandDis
     return this.#commit(action, before, candidate, mergeChangeSets(forward), mergeChangeSets(inverse));
   }
 
-  #commit(action: RecordedAction, before: CanonicalSnapshot, candidate: CanonicalDocument, changeSet: ChangeSet, inverseChangeSet: ChangeSet, renamedSignalId?: string): CommandResult {
+  #commit(action: RecordedAction, before: CanonicalSnapshot, candidate: CanonicalDocument, changeSet: ChangeSet, inverseChangeSet: ChangeSet, scopedSignalChange?: Readonly<{ kind: "rename" | "role"; signalId: string }>): CommandResult {
     try {
-      const after = renamedSignalId === undefined
-        ? this.#documents.commit(candidate, before.revision)
-        : this.#documents.commitSignalRename(candidate, before.revision, renamedSignalId);
+      const after = scopedSignalChange?.kind === "rename"
+        ? this.#documents.commitSignalRename(candidate, before.revision, scopedSignalChange.signalId)
+        : scopedSignalChange?.kind === "role"
+          ? this.#documents.commitSignalRoleChange(candidate, before.revision, scopedSignalChange.signalId)
+          : this.#documents.commit(candidate, before.revision);
       const entry: HistoryEntry = {
         commandId: action.id,
         action,

@@ -48,6 +48,37 @@ describe("DocumentSession atomic Open/Save", () => {
     expect(session.metrics()).toEqual({ validationRuns: beforeMetrics.validationRuns + 1, commits: beforeMetrics.commits });
   });
 
+  it("accepts only a structurally isolated Signal role change through the incremental commit boundary", () => {
+    const session = new DocumentSession(canonicalFixture());
+    const before = session.getSnapshot();
+    const beforeMetrics = session.metrics();
+    const original = before.document.signals[1]!;
+    const changed = { ...original, role: original.role === "input" ? "output" as const : "input" as const };
+    const signals = [...before.document.signals];
+    signals[1] = changed;
+    const after = session.commitSignalRoleChange({ ...before.document, signals }, before.revision, original.id);
+
+    expect(after.document.signals[1]?.role).toBe(changed.role);
+    expect(after.document.signals[0]).toBe(before.document.signals[0]);
+    expect(after.document.signalGroups).toBe(before.document.signalGroups);
+    expect(session.metrics()).toEqual({ validationRuns: beforeMetrics.validationRuns + 1, commits: beforeMetrics.commits + 1 });
+    expect(Object.isFrozen(changed)).toBe(true);
+  });
+
+  it("rejects incremental role candidates that also alter validation-sensitive semantics", () => {
+    const session = new DocumentSession(canonicalFixture());
+    const before = session.getSnapshot();
+    const beforeMetrics = session.metrics();
+    const original = before.document.signals[1]!;
+    const changed = { ...original, role: "output" as const, values: [] };
+    const signals = [...before.document.signals];
+    signals[1] = changed;
+
+    expect(() => session.commitSignalRoleChange({ ...before.document, signals }, before.revision, original.id)).toThrow(/changed fields outside/);
+    expect(session.getSnapshot()).toBe(before);
+    expect(session.metrics()).toEqual({ validationRuns: beforeMetrics.validationRuns + 1, commits: beforeMetrics.commits });
+  });
+
   it("accepts a validated parse handoff without a second validation or deep clone", () => {
     const parsed = parseDocument(JSON.stringify(canonicalFixture()));
     expect(parsed.ok).toBe(true);

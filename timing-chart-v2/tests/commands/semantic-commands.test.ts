@@ -813,6 +813,26 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document.signals.find((signal) => signal.id === "sig_data")?.display.name).toBe("RENAMED");
   });
 
+  it("commits an Inspector role-only Signal update through one scoped validation and preserves Undo/Redo", () => {
+    const source = canonicalFixture();
+    const session = new CommandHistorySession(source);
+    const before = session.getSnapshot().document;
+    const beforeMetrics = session.metrics();
+    const original = before.signals.find((signal) => signal.id === "sig_data")!;
+    const role = original.role === "input" ? "output" : "input";
+
+    const result = session.execute({ id: commandId("cmd_scoped_role"), type: "signal.updateProperties", signalId: original.id, name: original.name, role, visible: true, displayAlign: source.layout.signalNameAlign, displayOverflow: source.layout.overflow, spacingBefore: 0, spacingAfter: 0 });
+
+    expect(result.ok).toBe(true);
+    expect(session.metrics()).toEqual({ validationRuns: beforeMetrics.validationRuns + 1, commits: beforeMetrics.commits + 1 });
+    expect(session.historyState()).toMatchObject({ undoDepth: 1, dirty: true });
+    expect(session.getSnapshot().document.signals.find((signal) => signal.id === original.id)?.role).toBe(role);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.signals.find((signal) => signal.id === original.id)?.role).toBe(original.role);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.signals.find((signal) => signal.id === original.id)?.role).toBe(role);
+  });
+
   it("atomically rejects sized bus literals that exceed the Signal width", () => {
     const source = canonicalFixture();
     const bus = source.signals.find((signal) => signal.id === "sig_data");
