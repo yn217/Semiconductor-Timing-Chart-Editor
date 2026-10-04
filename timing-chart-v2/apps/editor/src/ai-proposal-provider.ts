@@ -1,5 +1,5 @@
 import { planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
-import { measurementProfilePair, valueSignalValueProblem, type AnnotationId, type AnnotationType, type CanonicalDocument, type GroupId, type MeasurementProfile, type SemanticAnchor, type SignalId, type SignalRole, type TimeGroup, type TimeGroupId, type TransactionGroupId, type TransactionId, type TransactionPhase, type TransitionAnchorKind, type ValueSignal } from "@timing-chart-v2/schema";
+import { measurementProfilePair, valueSignalValueProblem, type AnnotationId, type AnnotationType, type CanonicalDocument, type GroupId, type JsonObject, type MeasurementProfile, type SemanticAnchor, type SignalId, type SignalRole, type TimeGroup, type TimeGroupId, type TransactionGroupId, type TransactionId, type TransactionPhase, type TransitionAnchorKind, type ValueSignal } from "@timing-chart-v2/schema";
 import { nextCommandId } from "./command-id.js";
 import { nextEntityId } from "./entity-id.js";
 import { createAnnotation } from "./create-annotation.js";
@@ -45,6 +45,27 @@ export const AI_TYPED_PROPOSAL_TOOLS = [
   "propose_add_phase", "propose_update_phase", "propose_delete_phase", "propose_link_signal", "propose_unlink_signal",
 ] as const;
 export type AITypedProposalTool = typeof AI_TYPED_PROPOSAL_TOOLS[number];
+
+function isJsonValue(value: unknown, ancestors = new Set<object>()): boolean {
+  if (value === null || typeof value === "string" || typeof value === "boolean") return true;
+  if (typeof value === "number") return Number.isFinite(value);
+  if (typeof value !== "object" || ancestors.has(value)) return false;
+  if (!Array.isArray(value)) {
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype !== Object.prototype && prototype !== null) return false;
+  }
+  ancestors.add(value);
+  const valid = Array.isArray(value)
+    ? value.every((item) => isJsonValue(item, ancestors))
+    : Object.values(value).every((item) => isJsonValue(item, ancestors));
+  ancestors.delete(value);
+  return valid;
+}
+
+function isJsonObject(value: unknown): value is JsonObject {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    && isJsonValue(value);
+}
 
 export function buildTypedProposal(document: CanonicalDocument, revision: number, tool: string, args: Readonly<Record<string, unknown>>): AIProposalResult {
   if (tool === "propose_insert_cycles" || tool === "propose_delete_cycles" || tool === "propose_move_range" || tool === "propose_duplicate_range") return buildTypedTimelineProposal(document, revision, tool, args);
@@ -120,12 +141,15 @@ export function buildTypedSignalProposal(document: CanonicalDocument, revision: 
   if (tool === "propose_update_signal") {
     const role = args.role;
     const visible = args.visible;
+    const displayStyle = args.displayStyle;
     if (role !== undefined && role !== "input" && role !== "output" && role !== "internal") return { ok: false, message: "role must be input, output, or internal." };
     if (visible !== undefined && typeof visible !== "boolean") return { ok: false, message: "visible must be a boolean." };
-    if (role === undefined && visible === undefined) return { ok: false, message: "propose_update_signal requires role or visible." };
+    if (displayStyle !== undefined && !isJsonObject(displayStyle)) return { ok: false, message: "displayStyle must be a JSON object." };
+    if (role === undefined && visible === undefined && displayStyle === undefined) return { ok: false, message: "propose_update_signal requires role, visible, or displayStyle." };
     const nextRole = (role ?? signal.role) as typeof signal.role;
-    const commandFields = { type: "signal.updateProperties" as const, signalId: signal.id, name: signal.name, role: nextRole, ...(visible === undefined ? {} : { visible }) };
-    return { ok: true, proposal: proposal(revision, `Update ${signal.display.name}${role === undefined ? " visibility" : ` role to ${role}`}${visible === undefined ? "" : ` and visibility to ${visible ? "shown" : "hidden"}`}`, [command(commandFields, "typed_update_signal")]) };
+    const commandFields = { type: "signal.updateProperties" as const, signalId: signal.id, name: signal.name, role: nextRole, ...(visible === undefined ? {} : { visible }), ...(displayStyle === undefined ? {} : { displayStyle }) };
+    const changes = [role === undefined ? undefined : `role to ${role}`, visible === undefined ? undefined : `visibility to ${visible ? "shown" : "hidden"}`, displayStyle === undefined ? undefined : "display style"].filter((item): item is string => item !== undefined);
+    return { ok: true, proposal: proposal(revision, `Update ${signal.display.name} ${changes.join(" and ")}`, [command(commandFields, "typed_update_signal")]) };
   }
   if (typeof name !== "string" || name.trim().length === 0) return { ok: false, message: "propose_rename_signal requires a non-empty name." };
   const normalizedName = name.trim();

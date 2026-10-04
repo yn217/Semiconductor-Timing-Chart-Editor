@@ -77,6 +77,14 @@ describe("Agent Bridge security boundaries (#395 item 11)", () => {
     expect(tool?.[0]).toContain("end: { type: \"integer\", minimum: 1 }");
   });
 
+  it("advertises displayStyle as an explicit typed Signal property, not a generic document patch", () => {
+    const tool = source.match(/\{ name: "propose_update_signal",[\s\S]*?\n/);
+    expect(tool?.[0]).toContain("displayStyle: { type: \"object\"");
+    expect(tool?.[0]).toContain("{ required: [\"displayStyle\"] }");
+    expect(tool?.[0]).toContain("signal.updateProperties");
+    expect(tool?.[0]).toContain("not a document JSON patch");
+  });
+
   it("documents semantic type-specific fields for Annotation reads, not pixel geometry", () => {
     const tool = source.match(/\{ name: "get_annotations",[\s\S]*?\n/);
     expect(tool?.[0]).toContain("Measurement profile/kind");

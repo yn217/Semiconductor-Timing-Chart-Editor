@@ -126,6 +126,14 @@ describe("Agent Bridge workspace view-only operations", () => {
 });
 
 describe("Agent Bridge typed proposal batching", () => {
+  it("routes typed Signal displayStyle updates through the approval proposal owner", () => {
+    const onProposeTypedEdit = vi.fn(() => ({ summary: "Update Signal display style", baseRevision: 3, kind: "semantic-command", requiresApproval: true as const, message: "Review required" }));
+    const context = { onProposeTypedEdit } as unknown as AIBridgeContext;
+    const displayStyle = { color: "#114477", labelColor: "#ffffff" };
+    executeAIBridgeTool("propose_update_signal", { signalId: "sig_data", displayStyle }, context);
+    expect(onProposeTypedEdit).toHaveBeenCalledWith("propose_update_signal", { signalId: "sig_data", displayStyle });
+  });
+
   it("normalizes Transaction creation's explicit source-cycle fields for the existing proposal owner", () => {
     const onProposeTypedEdit = vi.fn(() => ({ summary: "Create Transaction", baseRevision: 3, kind: "semantic-command", requiresApproval: true as const, message: "Review required" }));
     const context = { onProposeTypedEdit } as unknown as AIBridgeContext;

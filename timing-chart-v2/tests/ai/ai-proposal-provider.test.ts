@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type SemanticCommand } from "@timing-chart-v2/commands";
+import { planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
 import { buildTypedAnnotationProposal, buildTypedBookmarkProposal, buildTypedProposalBatch, buildTypedSignalGroupProposal, buildTypedSignalProposal, buildTypedTimeGroupProposal, buildTypedTimelineProposal, buildTypedTransactionGroupProposal, buildTypedTransactionProposal, deterministicMockAIProposalProvider } from "../../apps/editor/src/ai-proposal-provider.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
@@ -71,7 +71,29 @@ describe("deterministic AI proposal provider", () => {
     const result = buildTypedSignalProposal(document, 13, "propose_update_signal", { signalId: "sig_data", role: "output", visible: false });
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.proposal.commands).toEqual([expect.objectContaining({ type: "signal.updateProperties", signalId: "sig_data", name: "DATA", role: "output", visible: false })]);
-    expect(buildTypedSignalProposal(document, 13, "propose_update_signal", { signalId: "sig_data" })).toEqual({ ok: false, message: "propose_update_signal requires role or visible." });
+    expect(buildTypedSignalProposal(document, 13, "propose_update_signal", { signalId: "sig_data" })).toEqual({ ok: false, message: "propose_update_signal requires role, visible, or displayStyle." });
+  });
+
+  it("supports a typed displayStyle update through signal.updateProperties and rejects non-JSON values", () => {
+    const document = canonicalFixture();
+    const displayStyle = { color: "#114477", waveformColor: "#006699", fontSize: 12 };
+    const result = buildTypedSignalProposal(document, 13, "propose_update_signal", { signalId: "sig_data", displayStyle });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.proposal.summary).toBe("Update DATA display style");
+      expect(result.proposal.commands).toEqual([expect.objectContaining({ type: "signal.updateProperties", signalId: "sig_data", name: "DATA", role: "internal", displayStyle })]);
+      const planned = planCommand(document, result.proposal.commands[0]!);
+      expect(planned.ok).toBe(true);
+      if (planned.ok) {
+        expect(planned.document.signals.find((signal) => signal.id === "sig_data")?.display.style).toEqual(displayStyle);
+        expect(planned.changeSet.waveSemantics).toBeUndefined();
+        expect(planned.changeSet.geometryLocal).toBeUndefined();
+      }
+    }
+    const cyclic: Record<string, unknown> = {};
+    cyclic.self = cyclic;
+    expect(buildTypedSignalProposal(document, 13, "propose_update_signal", { signalId: "sig_data", displayStyle: cyclic })).toEqual({ ok: false, message: "displayStyle must be a JSON object." });
+    expect(buildTypedSignalProposal(document, 13, "propose_update_signal", { signalId: "sig_data" })).toEqual({ ok: false, message: "propose_update_signal requires role, visible, or displayStyle." });
   });
 
   it("builds typed signal-move proposals using stable Signal and Group IDs", () => {
