@@ -107,6 +107,8 @@ describe("Agent Bridge security boundaries (#395 item 11)", () => {
     expect(updateTool?.[0]).toContain("anchorSignalId: { type: \"string\", minLength: 1 }");
     expect(updateTool?.[0]).toContain("anchorPoint: { type: \"string\", enum:");
     expect(updateTool?.[0]).toContain("canonical source cycles");
+    expect(updateTool?.[0]).toContain("measurement: { type: \"object\"");
+    expect(updateTool?.[0]).toContain("required: [\"measurement\"]");
   });
 
   it("uses distinct bearer credentials for MCP and Editor transport routes", () => {

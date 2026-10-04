@@ -322,6 +322,23 @@ describe("deterministic AI proposal provider", () => {
     expect(document.annotations).toHaveLength(0);
   });
 
+  it("updates existing Measurement semantics through annotation.updateMeasurement", () => {
+    const base = canonicalFixture();
+    const document = {
+      ...base,
+      annotations: [{ id: "measurement_existing" as AnnotationId, type: "measurement" as const, label: "Rise", visible: true, measurement: { profile: "cycle" as const, anchorKind: "threshold" as const }, start: { signalId: "sig_data" as SignalId, cycle: 2, point: "cycle-start" as const }, end: { signalId: "sig_data" as SignalId, cycle: 5, point: "cycle-end" as const } }],
+    };
+    const custom = buildTypedAnnotationProposal(document, 42, "propose_update_annotation", { annotationId: "measurement_existing", measurement: { profile: "custom", anchorKind: "ratio", startValue: 0.2, endValue: 0.8 } });
+    expect(custom.ok).toBe(true);
+    if (custom.ok) expect(custom.proposal.commands).toEqual([expect.objectContaining({ type: "annotation.updateMeasurement", annotationId: "measurement_existing", profile: "custom", anchorKind: "ratio", start: 0.2, end: 0.8 })]);
+    const cycle = buildTypedAnnotationProposal(document, 42, "propose_update_annotation", { annotationId: "measurement_existing", measurement: { profile: "cycle" } });
+    expect(cycle.ok).toBe(true);
+    if (cycle.ok) expect(cycle.proposal.commands[0]).toMatchObject({ type: "annotation.updateMeasurement", profile: "cycle" });
+    expect(buildTypedAnnotationProposal(document, 42, "propose_update_annotation", { annotationId: "measurement_existing", measurement: { profile: "custom", anchorKind: "ratio", startValue: 0.9, endValue: 0.1 } })).toMatchObject({ ok: false, message: expect.stringContaining("startValue <= endValue") });
+    const nonMeasurement = { ...base, annotations: [{ id: "annotation_text" as AnnotationId, type: "text" as const, label: "Note", visible: true, anchor: { signalId: "sig_data" as SignalId, cycle: 1, point: "cycle-start" as const } }] };
+    expect(buildTypedAnnotationProposal(nonMeasurement, 42, "propose_update_annotation", { annotationId: "annotation_text", measurement: { profile: "10-90" } })).toMatchObject({ ok: false, message: expect.stringContaining("only valid") });
+  });
+
   it("creates Ghost Trace proposals with an independently selected stable source Signal and validates semantics", () => {
     const document = canonicalFixture();
     const result = buildTypedAnnotationProposal(document, 35, "propose_create_annotation", {

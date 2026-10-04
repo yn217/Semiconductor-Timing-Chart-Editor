@@ -458,6 +458,7 @@ export function buildTypedAnnotationProposal(document: CanonicalDocument, revisi
     const anchorCycle = args.anchorCycle;
     const anchorSignalId = args.anchorSignalId;
     const anchorPoint = args.anchorPoint;
+    const measurement = args.measurement;
     if (label !== undefined && (typeof label !== "string" || !label.trim())) return { ok: false, message: "label must be a non-empty string when supplied." };
     if (visible !== undefined && typeof visible !== "boolean") return { ok: false, message: "visible must be a boolean." };
     if (color !== undefined && (typeof color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(color))) return { ok: false, message: "color must be a six-digit hexadecimal color." };
@@ -465,6 +466,31 @@ export function buildTypedAnnotationProposal(document: CanonicalDocument, revisi
     if (sourceSignalId !== undefined && (typeof sourceSignalId !== "string" || !document.signals.some((signal) => signal.id === sourceSignalId && signal.type !== "commentRow"))) return { ok: false, message: `Ghost Trace source Signal '${String(sourceSignalId)}' does not exist in the current document.` };
     if (traceOffsetCycles !== undefined && (annotation.type !== "ghostTrace" || typeof traceOffsetCycles !== "number" || !Number.isFinite(traceOffsetCycles))) return { ok: false, message: "traceOffsetCycles is only valid as a finite number for Ghost Trace Annotations." };
     if (opacity !== undefined && (!(["ghostTrace", "timingRegion"] as const).includes(annotation.type as "ghostTrace" | "timingRegion") || typeof opacity !== "number" || !Number.isFinite(opacity) || opacity < 0 || opacity > 1)) return { ok: false, message: "opacity is only valid for Ghost Trace or Timing Region Annotations and must be between 0 and 1." };
+    if (measurement !== undefined && (annotation.type !== "measurement" || typeof measurement !== "object" || measurement === null || Array.isArray(measurement))) return { ok: false, message: "measurement options are only valid as an object for a Measurement Annotation." };
+    let measurementCommand: SemanticCommand | undefined;
+    if (measurement !== undefined) {
+      const options = measurement as Record<string, unknown>;
+      const profile = options.profile;
+      const anchorKind = options.anchorKind ?? "threshold";
+      const startValue = options.startValue;
+      const endValue = options.endValue;
+      const profiles: readonly MeasurementProfile[] = ["cycle", "30-70", "10-90", "20-80", "50%", "custom"];
+      if (Object.keys(options).some((key) => !["profile", "anchorKind", "startValue", "endValue"].includes(key)) || typeof profile !== "string" || !profiles.includes(profile as MeasurementProfile) || (anchorKind !== "threshold" && anchorKind !== "ratio")) return { ok: false, message: "measurement options require a supported profile/anchorKind and no unknown fields." };
+      let pair: { readonly start: number; readonly end: number };
+      if (profile === "cycle") {
+        if (startValue !== undefined || endValue !== undefined) return { ok: false, message: "cycle measurement profile does not accept custom endpoints." };
+        pair = { start: 0, end: 1 };
+      } else if (profile === "custom") {
+        if (typeof startValue !== "number" || typeof endValue !== "number" || !Number.isFinite(startValue) || !Number.isFinite(endValue) || startValue < 0 || endValue > 1 || startValue > endValue) return { ok: false, message: "custom Measurement startValue/endValue must be finite fractions in [0,1] with startValue <= endValue." };
+        pair = { start: startValue, end: endValue };
+      } else {
+        if (startValue !== undefined || endValue !== undefined) return { ok: false, message: "standard Measurement profiles derive endpoints and do not accept custom values." };
+        const standardPair = measurementProfilePair(profile as Exclude<MeasurementProfile, "cycle">);
+        if (!standardPair) return { ok: false, message: `Measurement profile '${profile}' does not define transition endpoints.` };
+        pair = standardPair;
+      }
+      measurementCommand = command({ type: "annotation.updateMeasurement", annotationId: annotation.id, profile: profile as MeasurementProfile, anchorKind: anchorKind as TransitionAnchorKind, ...pair }, "typed_update_annotation_measurement");
+    }
     const anchorFields = ["anchor", "start", "end", "from", "to"] as const;
     const hasAnchorUpdate = anchorCycle !== undefined || anchorSignalId !== undefined || anchorPoint !== undefined;
     if (hasAnchorUpdate && (typeof anchorField !== "string" || !anchorFields.includes(anchorField as typeof anchorFields[number]))) return { ok: false, message: "Semantic anchor updates require anchorField: anchor, start, end, from, or to." };
@@ -481,7 +507,7 @@ export function buildTypedAnnotationProposal(document: CanonicalDocument, revisi
       if ((currentAnchor.threshold !== undefined || currentAnchor.transition !== undefined) && !(nextPoint === "transition-start" || nextPoint === "transition-center" || nextPoint === "transition-end")) return { ok: false, message: "Threshold/ratio anchors must retain a transition anchor point." };
       nextAnchor = { ...currentAnchor, ...(anchorCycle === undefined ? {} : { cycle: anchorCycle as number }), ...(anchorSignalId === undefined ? {} : { signalId: anchorSignalId as SignalId }), ...(anchorPoint === undefined ? {} : { point: nextPoint }) };
     }
-    if (label === undefined && visible === undefined && color === undefined && sourceSignalId === undefined && traceOffsetCycles === undefined && opacity === undefined && !hasAnchorUpdate) return { ok: false, message: "propose_update_annotation requires at least one supported changed field." };
+    if (label === undefined && visible === undefined && color === undefined && sourceSignalId === undefined && traceOffsetCycles === undefined && opacity === undefined && measurementCommand === undefined && !hasAnchorUpdate) return { ok: false, message: "propose_update_annotation requires at least one supported changed field." };
     const updatedLabel = typeof label === "string" ? label.trim() : annotation.label;
     const updatedVisible = typeof visible === "boolean" ? visible : annotation.visible;
     const updatedColor = typeof color === "string" ? color : annotation.color;
@@ -494,6 +520,7 @@ export function buildTypedAnnotationProposal(document: CanonicalDocument, revisi
       commands.push(command(fields, "typed_update_annotation"));
     }
     if (nextAnchor && typeof anchorField === "string") commands.push(command({ type: "annotation.setAnchor", annotationId: annotation.id, field: anchorField as "anchor" | "start" | "end" | "from" | "to", anchor: nextAnchor }, "typed_update_annotation_anchor"));
+    if (measurementCommand) commands.push(measurementCommand);
     return { ok: true, proposal: proposal(revision, `Update Annotation ${annotation.label}`, commands) };
   }
   return { ok: false, message: `Unsupported typed Annotation proposal '${tool}'.` };
