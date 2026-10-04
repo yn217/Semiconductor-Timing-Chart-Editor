@@ -29,26 +29,30 @@ export function syncGroupHeaderLayer(
       cache.set(id, shell);
       creates += 1;
     }
-    shell.dataset.groupId = header.groupId;
-    shell.dataset.groupName = header.groupName;
-    shell.dataset.groupHeader = "true";
-    if (surface === "left") {
-      shell.setAttribute("role", "treeitem");
-      shell.tabIndex = -1;
-      shell.setAttribute("aria-level", "1");
-      shell.setAttribute("aria-expanded", String(!header.collapsed));
-      shell.setAttribute("aria-selected", "false");
+    const signature = `${surface}\u0000${header.groupId}\u0000${header.groupName}\u0000${header.collapsed}\u0000${JSON.stringify(header.groupStyle ?? {})}`;
+    if (shell.dataset.presentationSignature !== signature) {
+      shell.dataset.groupId = header.groupId;
+      shell.dataset.groupName = header.groupName;
+      shell.dataset.groupHeader = "true";
+      if (surface === "left") {
+        shell.setAttribute("role", "treeitem");
+        shell.tabIndex = -1;
+        shell.setAttribute("aria-level", "1");
+        shell.setAttribute("aria-expanded", String(!header.collapsed));
+        shell.setAttribute("aria-selected", "false");
+      }
+      const applies = groupStyleAppliesToSurface(header.groupStyle?.extend, surface);
+      const background = applies && header.groupStyle?.showBackground
+        ? groupBackgroundColor(header.groupStyle.background, header.groupStyle.opacity)
+        : undefined;
+      if (background) shell.style.setProperty("--group-background", background);
+      else shell.style.removeProperty("--group-background");
+      if (applies && header.groupStyle?.border) shell.style.setProperty("--group-border", header.groupStyle.border);
+      else shell.style.removeProperty("--group-border");
+      if (surface === "left") populateGroupHeader(shell, header);
+      else if (shell.textContent !== header.groupName) shell.textContent = header.groupName;
+      shell.dataset.presentationSignature = signature;
     }
-    const applies = groupStyleAppliesToSurface(header.groupStyle?.extend, surface);
-    const background = applies && header.groupStyle?.showBackground
-      ? groupBackgroundColor(header.groupStyle.background, header.groupStyle.opacity)
-      : undefined;
-    if (background) shell.style.setProperty("--group-background", background);
-    else shell.style.removeProperty("--group-background");
-    if (applies && header.groupStyle?.border) shell.style.setProperty("--group-border", header.groupStyle.border);
-    else shell.style.removeProperty("--group-border");
-    if (surface === "left") populateGroupHeader(shell, header);
-    else shell.textContent = header.groupName;
     place(shell, header);
     ordered.push(shell);
   }
