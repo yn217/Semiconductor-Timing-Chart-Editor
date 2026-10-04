@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { documentState, expectViewOnly } from "./view-only.js";
 
 test.use({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1 });
 
@@ -141,28 +142,30 @@ test("View group controls stay inside their owned regions", async ({ page }) => 
   expect(fitButtons[0]!.right).toBeLessThanOrEqual(fitButtons[1]!.left);
 });
 
-test("Layout Focus Waveform restores the previous panel state without document history", async ({ page }) => {
-  await page.goto("/");
-  const shell = page.locator(".editor-shell");
-  const surface = page.locator("[data-role='timing-chart-surface']");
-  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
-  await page.getByTestId("ribbon").getByLabel("Inspector").click();
-  const before = {
-    revision: await surface.getAttribute("data-canonical-revision"),
-    history: await surface.getAttribute("data-history-depth"),
-    bottom: await shell.getAttribute("data-bottom-visible"),
-  };
-  await page.getByTestId("ribbon").getByRole("button", { name: "Focus Waveform" }).click();
-  await expect(shell).toHaveAttribute("data-workspace-preset", "waveform");
-  await expect(shell).toHaveAttribute("data-inspector-visible", "false");
-  await expect(shell).toHaveAttribute("data-bottom-visible", "false");
-  await page.getByTestId("ribbon").getByRole("button", { name: "Focus Waveform" }).click();
-  await expect(shell).toHaveAttribute("data-workspace-preset", "edit");
-  await expect(shell).toHaveAttribute("data-inspector-visible", "false");
-  await expect(shell).toHaveAttribute("data-bottom-visible", before.bottom!);
-  expect(await surface.getAttribute("data-canonical-revision")).toBe(before.revision);
-  expect(await surface.getAttribute("data-history-depth")).toBe(before.history);
-});
+for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }]) {
+  test(`Layout Focus Waveform expands the canvas and restores panels without document changes at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    const shell = page.locator(".editor-shell");
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+    await page.getByTestId("ribbon").getByLabel("Inspector").click();
+    const before = await documentState(page);
+    const bottomBefore = await shell.getAttribute("data-bottom-visible");
+    const canvasBefore = await page.locator(".cycle-panel").evaluate((element) => element.getBoundingClientRect().height);
+
+    await page.getByTestId("ribbon").getByRole("button", { name: "Focus Waveform" }).click();
+    await expect(shell).toHaveAttribute("data-workspace-preset", "waveform");
+    await expect(shell).toHaveAttribute("data-inspector-visible", "false");
+    await expect(shell).toHaveAttribute("data-bottom-visible", "false");
+    await expect.poll(() => page.locator(".cycle-panel").evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThan(canvasBefore);
+
+    await page.getByTestId("ribbon").getByRole("button", { name: "Focus Waveform" }).click();
+    await expect(shell).toHaveAttribute("data-workspace-preset", "edit");
+    await expect(shell).toHaveAttribute("data-inspector-visible", "false");
+    await expect(shell).toHaveAttribute("data-bottom-visible", bottomBefore!);
+    await expectViewOnly(page, before);
+  });
+}
 
 // #389: Inspector/Bottom Editor/Signal Tree start checked=true, so their
 // normal (not-hovering) state used to permanently show the exact same
