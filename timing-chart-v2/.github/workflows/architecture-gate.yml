@@ -43,6 +43,9 @@ jobs:
       - name: Run repository checks
         run: npm run check
 
+      - name: Run browser-internal interaction latency gate
+        run: npm run test:perf:interaction-prod
+
       - name: Run approved dependency audit
         run: npm audit --audit-level=high --omit=optional
 
