@@ -126,7 +126,22 @@ test("a test MCP client can connect, read the live document/selection, and reque
   const initResponse = await fetch(`${BASE_URL}/mcp`, { method: "POST", headers: { authorization: `Bearer ${TOKEN}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 0, method: "initialize" }) });
   expect((await initResponse.json()).result.serverInfo.name).toBe("timing-chart-v2-ai-bridge");
   const listResponse = await fetch(`${BASE_URL}/mcp`, { method: "POST", headers: { authorization: `Bearer ${TOKEN}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 0, method: "tools/list" }) });
-  const tools = ((await listResponse.json()).result.tools as { name: string }[]).map((tool) => tool.name);
+  const catalog = (await listResponse.json()).result.tools as { name: string; inputSchema: { properties?: Record<string, unknown>; required?: string[] } }[];
+  const tools = catalog.map((tool) => tool.name);
+  const createTransactionTool = catalog.find((tool) => tool.name === "propose_create_transaction");
+  expect(createTransactionTool?.inputSchema.required).toEqual(expect.arrayContaining(["startCycle", "endCycle"]));
+  expect(createTransactionTool?.inputSchema.properties).toHaveProperty("startCycle");
+  expect(createTransactionTool?.inputSchema.properties).toHaveProperty("endCycle");
+  expect(createTransactionTool?.inputSchema.properties).not.toHaveProperty("start");
+  expect(createTransactionTool?.inputSchema.properties).not.toHaveProperty("end");
+  const moveTransactionTool = catalog.find((tool) => tool.name === "propose_move_transaction");
+  expect(moveTransactionTool?.inputSchema.required).toContain("startCycle");
+  expect(moveTransactionTool?.inputSchema.properties).toHaveProperty("startCycle");
+  expect(moveTransactionTool?.inputSchema.properties).not.toHaveProperty("start");
+  const resizeTransactionTool = catalog.find((tool) => tool.name === "propose_resize_transaction");
+  expect(resizeTransactionTool?.inputSchema.required).toContain("cycle");
+  expect(resizeTransactionTool?.inputSchema.properties).toHaveProperty("cycle");
+  expect(resizeTransactionTool?.inputSchema.properties).not.toHaveProperty("value");
   const addedTools = ["set_selection", "reveal_entity", "propose_move_signal_group", "propose_delete_signal_group", "fit_selection", "propose_create_time_group", "propose_update_time_group", "propose_delete_time_group", "switch_mode", "open_panel", "set_visible_time_range", "submit_proposal"];
   // The tool SET is the contract; listing order is an implementation detail of the bridge registry.
   expect(tools.filter((tool) => addedTools.includes(tool)).sort()).toEqual([...addedTools].sort());
@@ -277,8 +292,8 @@ test("external Transaction+Phases+Signals proposal validates and applies as one 
   const beforeDirty = await page.getByTestId("dirty-status").textContent();
 
   const response = await callTool("propose_create_transaction", TOKEN, {
-    name: "MCP_READ", start: 10, end: 40,
-    phases: [{ name: "Address", start: 10, end: 16 }, { name: "Data", start: 16, end: 32 }, { name: "Response", start: 32, end: 40 }],
+    name: "MCP_READ", startCycle: 10, endCycle: 40,
+    phases: [{ name: "Address", startCycle: 10, endCycle: 16 }, { name: "Data", startCycle: 16, endCycle: 32 }, { name: "Response", startCycle: 32, endCycle: 40 }],
     linkedSignalIds: ["sig_cycle_request", "sig_cycle_ready"],
   });
   expect(response.body.result!.isError).toBe(false);

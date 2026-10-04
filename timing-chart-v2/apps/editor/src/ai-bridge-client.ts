@@ -50,6 +50,31 @@ export type AIBridgeContext = {
 };
 
 type Identified = Readonly<{ id: string }>;
+
+/** Normalize MCP's explicitly named canonical source-cycle fields to the existing proposal builder's internal shape. */
+function normalizeTypedProposalArguments(tool: string, args: Readonly<Record<string, unknown>>): Readonly<Record<string, unknown>> {
+  if (tool === "propose_create_transaction") {
+    const { startCycle, endCycle, phases, ...rest } = args;
+    const normalizedPhases = Array.isArray(phases)
+      ? phases.map((phase) => {
+        if (typeof phase !== "object" || phase === null || Array.isArray(phase)) return phase;
+        const { startCycle: phaseStartCycle, endCycle: phaseEndCycle, ...phaseRest } = phase as Record<string, unknown>;
+        return { ...phaseRest, start: phaseStartCycle, end: phaseEndCycle };
+      })
+      : phases;
+    return { ...rest, start: startCycle, end: endCycle, ...(phases === undefined ? {} : { phases: normalizedPhases }) };
+  }
+  if (tool === "propose_move_transaction") {
+    const { startCycle, ...rest } = args;
+    return { ...rest, start: startCycle };
+  }
+  if (tool === "propose_resize_transaction") {
+    const { cycle, ...rest } = args;
+    return { ...rest, value: cycle };
+  }
+  return args;
+}
+
 const idIndexes = new WeakMap<readonly Identified[], ReadonlyMap<string, Identified>>();
 function indexById<T extends Identified>(items: readonly T[]): ReadonlyMap<string, T> {
   const key = items as readonly Identified[];
@@ -290,13 +315,13 @@ function executeAIBridgeToolCore(tool: string, args: Record<string, unknown>, co
       const operation = item as Record<string, unknown>;
       if (typeof operation.tool !== "string" || !(AI_TYPED_PROPOSAL_TOOLS as readonly string[]).includes(operation.tool)) throw new Error(`operations[${index}] uses an unsupported typed proposal tool.`);
       if (!operation.arguments || typeof operation.arguments !== "object" || Array.isArray(operation.arguments)) throw new Error(`operations[${index}].arguments must be an object.`);
-      operations.push({ tool: operation.tool, arguments: operation.arguments as Readonly<Record<string, unknown>> });
+      operations.push({ tool: operation.tool, arguments: normalizeTypedProposalArguments(operation.tool, operation.arguments as Readonly<Record<string, unknown>>) });
     }
     return context.onSubmitProposal(baseRevision as number, operations);
   }
   if (tool === "propose_create_signal" || tool === "propose_rename_signal" || tool === "propose_update_signal" || tool === "propose_move_signal" || tool === "propose_insert_cycles" || tool === "propose_delete_cycles" || tool === "propose_move_range" || tool === "propose_duplicate_range" || tool === "propose_create_signal_group" || tool === "propose_rename_signal_group" || tool === "propose_move_signal_group" || tool === "propose_delete_signal_group" || tool === "propose_create_transaction_group" || tool === "propose_rename_transaction_group" || tool === "propose_delete_transaction_group" || tool === "propose_create_time_group" || tool === "propose_update_time_group" || tool === "propose_delete_time_group" || tool === "propose_create_transaction" || tool === "propose_update_transaction" || tool === "propose_move_transaction" || tool === "propose_resize_transaction" || tool === "propose_delete_transaction" || tool === "propose_create_bookmark" || tool === "propose_move_bookmark" || tool === "propose_update_bookmark" || tool === "propose_delete_bookmark" || tool === "propose_create_annotation" || tool === "propose_update_annotation" || tool === "propose_delete_annotation" || tool === "propose_add_phase" || tool === "propose_update_phase" || tool === "propose_delete_phase" || tool === "propose_link_signal" || tool === "propose_unlink_signal") {
     if (!context.onProposeTypedEdit) throw new Error(`${tool} is not available in the current surface.`);
-    return context.onProposeTypedEdit(tool, args);
+    return context.onProposeTypedEdit(tool, normalizeTypedProposalArguments(tool, args));
   }
   throw new Error(`Unknown tool '${tool}'.`);
 }

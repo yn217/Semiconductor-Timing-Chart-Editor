@@ -126,6 +126,49 @@ describe("Agent Bridge workspace view-only operations", () => {
 });
 
 describe("Agent Bridge typed proposal batching", () => {
+  it("normalizes Transaction creation's explicit source-cycle fields for the existing proposal owner", () => {
+    const onProposeTypedEdit = vi.fn(() => ({ summary: "Create Transaction", baseRevision: 3, kind: "semantic-command", requiresApproval: true as const, message: "Review required" }));
+    const context = { onProposeTypedEdit } as unknown as AIBridgeContext;
+    executeAIBridgeTool("propose_create_transaction", {
+      name: "Read", startCycle: 10, endCycle: 30,
+      phases: [{ name: "Data", startCycle: 12, endCycle: 24 }],
+    }, context);
+    expect(onProposeTypedEdit).toHaveBeenCalledWith("propose_create_transaction", {
+      name: "Read", start: 10, end: 30,
+      phases: [{ name: "Data", start: 12, end: 24 }],
+    });
+  });
+
+  it("normalizes batched Transaction creation to the same internal proposal shape", () => {
+    const onSubmitProposal = vi.fn(() => ({ summary: "1 operation", baseRevision: 8, kind: "semantic-command", requiresApproval: true as const, message: "Review required" }));
+    const context = { revision: 8, onSubmitProposal } as unknown as AIBridgeContext;
+    executeAIBridgeTool("submit_proposal", { baseRevision: 8, operations: [{
+      tool: "propose_create_transaction",
+      arguments: { name: "Read", startCycle: 10, endCycle: 30, phases: [{ name: "Data", startCycle: 12, endCycle: 24 }] },
+    }, {
+      tool: "propose_move_transaction",
+      arguments: { transactionId: "txn_read", startCycle: 14 },
+    }, {
+      tool: "propose_resize_transaction",
+      arguments: { transactionId: "txn_read", edge: "end", cycle: 36 },
+    }] }, context);
+    expect(onSubmitProposal).toHaveBeenCalledWith(8, [
+      { tool: "propose_create_transaction", arguments: { name: "Read", start: 10, end: 30, phases: [{ name: "Data", start: 12, end: 24 }] } },
+      { tool: "propose_move_transaction", arguments: { transactionId: "txn_read", start: 14 } },
+      { tool: "propose_resize_transaction", arguments: { transactionId: "txn_read", edge: "end", value: 36 } },
+    ]);
+  });
+
+  it.each([
+    ["propose_move_transaction", { transactionId: "txn_read", startCycle: 14 }, { transactionId: "txn_read", start: 14 }],
+    ["propose_resize_transaction", { transactionId: "txn_read", edge: "end", cycle: 36 }, { transactionId: "txn_read", edge: "end", value: 36 }],
+  ])("normalizes direct %s source-cycle arguments for the proposal builder", (tool, input, expected) => {
+    const onProposeTypedEdit = vi.fn(() => ({ summary: "Update Transaction", baseRevision: 3, kind: "semantic-command", requiresApproval: true as const, message: "Review required" }));
+    const context = { onProposeTypedEdit } as unknown as AIBridgeContext;
+    executeAIBridgeTool(tool, input, context);
+    expect(onProposeTypedEdit).toHaveBeenCalledWith(tool, expected);
+  });
+
   it("routes one revisioned allowlisted operation batch to the preview owner", () => {
     const onSubmitProposal = vi.fn(() => ({ summary: "2 operations", baseRevision: 8, kind: "semantic-command", requiresApproval: true as const, message: "Review required" }));
     const context = { revision: 8, onSubmitProposal } as unknown as AIBridgeContext;
