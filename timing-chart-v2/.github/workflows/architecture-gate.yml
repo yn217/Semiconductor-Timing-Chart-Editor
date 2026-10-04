@@ -49,8 +49,8 @@ jobs:
       - name: Run approved dependency audit
         run: npm audit --audit-level=high --omit=optional
 
-      - name: Run Chromium browser acceptance
-        run: npm run test:e2e
+      - name: Run reviewed focused Chromium browser profile
+        run: npm run test:e2e:pr
 
       - name: Verify deliberate failure path
         if: ${{ inputs.force_failure == true }}
