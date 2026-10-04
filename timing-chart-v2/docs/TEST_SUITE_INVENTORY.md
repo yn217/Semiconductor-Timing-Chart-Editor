@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 413 spec files and 1234 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 414 spec files and 1235 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1234/1234 cases reviewed.
+Semantic review progress: 1235/1235 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 626 |
 | `nightly` | 238 |
 | `performance` | 73 |
-| `pr` | 390 |
+| `pr` | 391 |
 | `visual` | 180 |
 
 ## Top recorded per-case runtimes
@@ -163,6 +163,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-431-constraint-authoring.spec.ts` | 1 | 1/1 reviewed |
 | `issue-431-constraint-problem-reveal.spec.ts` | 1 | 1/1 reviewed |
 | `issue-431-enum-state-save-open.spec.ts` | 2 | 2/2 reviewed |
+| `issue-431-physical-timebase.spec.ts` | 1 | 1/1 reviewed |
 | `issue-431-protocol-check-toggle.spec.ts` | 2 | 2/2 reviewed |
 | `issue-431-signal-pin.spec.ts` | 1 | 1/1 reviewed |
 | `issue-431-signal-selection-groups.spec.ts` | 1 | 1/1 reviewed |
