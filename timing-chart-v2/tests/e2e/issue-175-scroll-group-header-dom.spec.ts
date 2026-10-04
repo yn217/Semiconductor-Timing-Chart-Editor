@@ -24,16 +24,22 @@ test("vertical viewport updates reuse unchanged Group header controls", async ({
   const scrollEvidence = await page.evaluate(async () => {
     const header = document.querySelector<HTMLElement>("[data-role='left-group-header'][data-group-id='grp_perf_0']");
     const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']");
-    if (!header || !viewport) throw new Error("Expected visible Group header and Cycle viewport");
+    const timingLayer = document.querySelector<HTMLElement>("[data-role='timing-semantic-rows']");
+    if (!header || !viewport || !timingLayer) throw new Error("Expected visible Group header, timing layer, and Cycle viewport");
     const initialChildren = [...header.childNodes];
     const initialSignature = header.dataset.presentationSignature;
     const mutations: string[] = [];
+    let timingNodesAddedOrRemoved = 0;
     const observer = new MutationObserver((records) => {
       for (const record of records.filter((entry) => entry.type === "childList")) {
         mutations.push(`${[...record.removedNodes].map((node) => (node as HTMLElement).dataset?.role ?? node.nodeName)} -> ${[...record.addedNodes].map((node) => (node as HTMLElement).dataset?.role ?? node.nodeName)}`);
       }
     });
     observer.observe(header, { childList: true });
+    const timingObserver = new MutationObserver((records) => {
+      timingNodesAddedOrRemoved += records.reduce((count, record) => count + record.addedNodes.length + record.removedNodes.length, 0);
+    });
+    timingObserver.observe(timingLayer, { childList: true });
     viewport.scrollTop += 80;
     await new Promise<void>((resolve) => {
       let frames = 4;
@@ -41,6 +47,7 @@ test("vertical viewport updates reuse unchanged Group header controls", async ({
       requestAnimationFrame(next);
     });
     observer.disconnect();
+    timingObserver.disconnect();
     return {
       scrollTop: viewport.scrollTop,
       childListChanges: mutations.length,
@@ -48,11 +55,13 @@ test("vertical viewport updates reuse unchanged Group header controls", async ({
       initialSignature,
       finalSignature: header.dataset.presentationSignature,
       sameChildNodes: initialChildren.length === header.childNodes.length && initialChildren.every((child, index) => header.childNodes[index] === child),
+      timingNodesAddedOrRemoved,
     };
   });
   expect(scrollEvidence.scrollTop).toBeGreaterThan(0);
   expect(scrollEvidence.childListChanges, `unchanged Group header controls must not be reconstructed during scroll: ${JSON.stringify(scrollEvidence)}`).toBe(0);
   expect(scrollEvidence.sameChildNodes).toBe(true);
+  expect(scrollEvidence.timingNodesAddedOrRemoved, "scroll must only add/remove newly entering or exiting timing rows").toBeLessThan(10);
   expect(await host.getAttribute("data-canonical-revision")).toBe(before);
 
   await header.locator("[data-role='tree-collapse']").click();
