@@ -99,4 +99,30 @@ test("ChangeSet invalidation matrix keeps derived owners local", async ({ page }
   expect(clockAfter.render.waveDromRenders).toBe(clockBefore.render.waveDromRenders + 1);
   expect(clockAfter.render.localGeometryBuilds).toBe(clockBefore.render.localGeometryBuilds + 1);
   expect(clockAfter.session.validationRuns).toBe(clockBefore.session.validationRuns + 1);
+
+  // A ruler/display mapping change (Label Anchor) rebuilds the shared
+  // ruler/overlay projection but does not change waveform semantics or local
+  // geometry. Existing wave owners must retain their SVG artifacts.
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  const timeline = page.getByTestId("timeline-editor");
+  await timeline.getByLabel("Timeline range start").fill("2");
+  await timeline.getByRole("button", { name: "Add Label Anchor", exact: true }).click();
+  await waitForIdle(page);
+  const requestSvgBeforeFold = await surface.locator("[data-signal-id='sig_cycle_request'] > svg").elementHandle();
+  const clockSvgBeforeFold = await surface.locator("[data-signal-id='sig_cycle_clock'] > svg").elementHandle();
+  const mappingBefore = { session: await sessionCounters(page), render: await renderCounters(page) };
+  const anchor = timeline.locator("[data-label-anchor-id]").first();
+  await anchor.getByRole("button", { name: /Edit Label Anchor/ }).click();
+  await page.getByLabel("Label Anchor display").fill("12");
+  await page.getByTestId("apply-label-anchor").click();
+  await waitForIdle(page);
+  const mappingAfter = { session: await sessionCounters(page), render: await renderCounters(page) };
+  expect(mappingAfter.session.rulerBuilds).toBe(mappingBefore.session.rulerBuilds + 1);
+  expect(mappingAfter.session.annotationResolvePasses).toBe(mappingBefore.session.annotationResolvePasses + 1);
+  expect(mappingAfter.render.waveDromRenders).toBe(mappingBefore.render.waveDromRenders);
+  expect(mappingAfter.render.localGeometryBuilds).toBe(mappingBefore.render.localGeometryBuilds);
+  const requestSvgAfterMapping = await surface.locator("[data-signal-id='sig_cycle_request'] > svg").elementHandle();
+  const clockSvgAfterMapping = await surface.locator("[data-signal-id='sig_cycle_clock'] > svg").elementHandle();
+  expect(await clockSvgBeforeFold!.evaluate((before, after) => before === after, clockSvgAfterMapping)).toBe(true);
+  expect(await requestSvgBeforeFold!.evaluate((before, after) => before === after, requestSvgAfterMapping)).toBe(true);
 });
