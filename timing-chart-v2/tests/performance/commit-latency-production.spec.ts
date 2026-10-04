@@ -2,6 +2,64 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, test, type CDPSession } from "@playwright/test";
 
+type FrameInteractionSample = { firstRafMs: number; followingRafMs: number; overlappingLongTasks: number };
+
+async function installFrameInteractionProbe(page: import("@playwright/test").Page) {
+  await page.evaluate(() => {
+    type Probe = {
+      armed?: { id: number; eventType: "click" | "pointermove"; selector: string };
+      nextId: number;
+      longTasks: Array<{ startTime: number; duration: number }>;
+      samples: Record<string, FrameInteractionSample>;
+    };
+    const target = window as typeof window & { __frameInteractionProbe?: Probe };
+    const probe: Probe = { nextId: 0, longTasks: [], samples: {} };
+    target.__frameInteractionProbe = probe;
+    new PerformanceObserver((list) => {
+      probe.longTasks.push(...list.getEntries().map((entry) => ({ startTime: entry.startTime, duration: entry.duration })));
+    }).observe({ entryTypes: ["longtask"] });
+    const record = (event: Event) => {
+      const current = target.__frameInteractionProbe;
+      const armed = current?.armed;
+      const eventTarget = event.target;
+      if (!current || !armed || event.type !== armed.eventType || !(eventTarget instanceof Element) || !eventTarget.closest(armed.selector)) return;
+      current.armed = undefined;
+      const startedAt = performance.now();
+      requestAnimationFrame(() => {
+        const firstRafAt = performance.now();
+        requestAnimationFrame(() => {
+          const followingRafAt = performance.now();
+          current.samples[String(armed.id)] = {
+            firstRafMs: firstRafAt - startedAt,
+            followingRafMs: followingRafAt - startedAt,
+            overlappingLongTasks: current.longTasks.filter((task) => task.startTime < followingRafAt && task.startTime + task.duration > startedAt).length,
+          };
+        });
+      });
+    };
+    document.addEventListener("click", record, true);
+    document.addEventListener("pointermove", record, true);
+  });
+}
+
+async function armFrameInteraction(page: import("@playwright/test").Page, eventType: "click" | "pointermove", selector: string) {
+  return page.evaluate(({ eventType, selector }) => {
+    const probe = (window as typeof window & { __frameInteractionProbe?: { nextId: number; armed?: { id: number; eventType: "click" | "pointermove"; selector: string } } }).__frameInteractionProbe;
+    if (!probe) throw new Error("Frame interaction probe is not installed");
+    const id = ++probe.nextId;
+    probe.armed = { id, eventType, selector };
+    return id;
+  }, { eventType, selector });
+}
+
+async function readFrameInteraction(page: import("@playwright/test").Page, id: number) {
+  return page.evaluate((sampleId) => (window as typeof window & { __frameInteractionProbe?: { samples: Record<string, FrameInteractionSample> } }).__frameInteractionProbe?.samples[String(sampleId)], id);
+}
+
+function percentile(values: number[], fraction: number) {
+  return [...values].sort((left, right) => left - right)[Math.min(values.length - 1, Math.ceil(values.length * fraction) - 1)] ?? 0;
+}
+
 async function cdpMetrics(cdp: CDPSession): Promise<Record<string, number>> {
   const result = await cdp.send("Performance.getMetrics") as { metrics: { name: string; value: number }[] };
   return Object.fromEntries(result.metrics.map((metric) => [metric.name, metric.value]));
@@ -142,4 +200,80 @@ test("production Inspector Signal commits on perf_1000x1000 measure idle latency
   expect(internalSorted.at(-1)!, "worst browser-internal Enter -> next requestAnimationFrame").toBeLessThan(50);
   expect(Math.max(...propertySamples.map((sample) => sample.inputToNextRafMs)), "worst browser-internal Inspector Apply -> next requestAnimationFrame").toBeLessThan(50);
   expect(longTasks, "ordinary Inspector commits must not create an interaction Long Task").toHaveLength(0);
+});
+
+test("production 100x500 Signal selection and Annotation pointermove stay within the interaction frame gate", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1_672, height: 941 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const file = readFileSync(resolve(process.cwd(), "samples/performance/perf_100x500_full_span.tcd.json"));
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "perf_100x500_full_span.tcd.json", mimeType: "application/json", buffer: file });
+  await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 90_000 });
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  const initialRevision = await host.getAttribute("data-canonical-revision");
+  const initialHistory = await page.getByTestId("history-status").textContent();
+  const initialDirty = await page.getByTestId("dirty-status").textContent();
+  await installFrameInteractionProbe(page);
+
+  const selectionSamples: FrameInteractionSample[] = [];
+  for (let index = 1; index <= 10; index += 1) {
+    const selector = `[data-role='frozen-row'][data-row-id='sig_perf_${index}']`;
+    const row = host.locator(selector);
+    await expect(row).toBeVisible();
+    const id = await armFrameInteraction(page, "click", selector);
+    await row.click();
+    await expect(row).toHaveAttribute("data-selected", "true");
+    await expect.poll(() => readFrameInteraction(page, id)).toBeTruthy();
+    const measured = await readFrameInteraction(page, id);
+    if (!measured) throw new Error(`Signal selection frame sample ${id} did not complete`);
+    selectionSamples.push(measured);
+  }
+
+  const annotation = host.locator("[data-role='annotation-owner'][data-annotation-id='ann_perf_0']");
+  await expect(annotation).toBeVisible();
+  await annotation.locator("[data-role='annotation-label']").click();
+  const handle = annotation.locator("[data-role='annotation-handle']").first();
+  const box = await handle.boundingBox();
+  expect(box, "the fixture's visible Annotation must expose a draggable handle").not.toBeNull();
+  await page.mouse.move(box!.x + 2, box!.y + 2);
+  await page.mouse.down();
+  const pointerSamples: FrameInteractionSample[] = [];
+  for (let offset = 1; offset <= 10; offset += 1) {
+    const id = await armFrameInteraction(page, "pointermove", "[data-role='annotation-owner']");
+    await page.mouse.move(box!.x + 2 + offset, box!.y + 2);
+    await expect.poll(() => readFrameInteraction(page, id)).toBeTruthy();
+    const measured = await readFrameInteraction(page, id);
+    if (!measured) throw new Error(`Annotation pointermove frame sample ${id} did not complete`);
+    pointerSamples.push(measured);
+  }
+  await annotation.dispatchEvent("pointercancel");
+  await page.mouse.up();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+
+  const selection = {
+    samples: selectionSamples.length,
+    p95FirstRafMs: percentile(selectionSamples.map((sample) => sample.firstRafMs), 0.95),
+    p95FollowingRafMs: percentile(selectionSamples.map((sample) => sample.followingRafMs), 0.95),
+    overlappingLongTasks: selectionSamples.reduce((count, sample) => count + sample.overlappingLongTasks, 0),
+  };
+  const annotationPointermove = {
+    samples: pointerSamples.length,
+    p95FirstRafMs: percentile(pointerSamples.map((sample) => sample.firstRafMs), 0.95),
+    p95FollowingRafMs: percentile(pointerSamples.map((sample) => sample.followingRafMs), 0.95),
+    overlappingLongTasks: pointerSamples.reduce((count, sample) => count + sample.overlappingLongTasks, 0),
+  };
+  console.log(`[interaction-frame-gate] ${JSON.stringify({ workload: "100x500", selection, annotationPointermove })}`);
+  expect(selection.samples).toBe(10);
+  expect(selection.p95FirstRafMs, "Signal selection p95 input-to-next-frame must remain below 50ms").toBeLessThan(50);
+  expect(selection.p95FollowingRafMs, "Signal selection p95 input-to-following-frame must remain below 50ms").toBeLessThan(50);
+  expect(selection.overlappingLongTasks, "Signal selection must not overlap a Long Task").toBe(0);
+  expect(annotationPointermove.samples).toBe(10);
+  expect(annotationPointermove.p95FirstRafMs, "Annotation pointermove p95 input-to-next-frame must remain below 50ms").toBeLessThan(50);
+  expect(annotationPointermove.p95FollowingRafMs, "Annotation pointermove p95 input-to-following-frame must remain below 50ms").toBeLessThan(50);
+  expect(annotationPointermove.overlappingLongTasks, "Annotation pointermove must not overlap a Long Task").toBe(0);
+  expect(await host.getAttribute("data-canonical-revision")).toBe(initialRevision);
+  await expect(page.getByTestId("history-status")).toHaveText(initialHistory!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(initialDirty!);
 });

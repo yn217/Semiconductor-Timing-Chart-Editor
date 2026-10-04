@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-04T15:08:30.048Z",
+  "generatedAt": "2026-10-04T17:31:26.553Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -22973,7 +22973,7 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 296,
+      "line": 347,
       "title": "1000x1000 virtualization mounts viewport-scale rows and avoids duplicate bindings",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -23000,7 +23000,7 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 317,
+      "line": 368,
       "title": "large valid fixture records Open/Save browser profile evidence",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -23027,7 +23027,7 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 339,
+      "line": 390,
       "title": "viewport-only projection remains bounded at 1k, 5k, and 10k rows",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -23054,7 +23054,7 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 368,
+      "line": 419,
       "title": "repeated Open A/B/A releases old owners and does not stack handlers",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -23081,7 +23081,7 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 385,
+      "line": 436,
       "title": "PR Open gate: browser presentation-ready stays under 1s and within approved-main regression budget",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -23109,7 +23109,7 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 459,
+      "line": 510,
       "title": "nightly/manual 500/1000 heavy profiles",
       "project": "chromium",
       "timeoutMs": 120000,
