@@ -72,7 +72,7 @@ test.describe("status context", () => {
     const viewOnlyBefore = await documentState(page);
     await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
     await page.getByRole("button", { name: "Pick arrow endpoints", exact: true }).click();
-    await expect(page.getByTestId("tool-status")).toHaveText("Arrow pick · from");
+    await expect(page.getByTestId("tool-status")).toHaveText("Annotation endpoint pick · from");
     await page.keyboard.press("Escape");
     await expect(page.getByTestId("tool-status")).toHaveText("Ready · Tool: Select");
     await expectViewOnly(page, viewOnlyBefore);

@@ -632,3 +632,31 @@ test("creates a Dependency (not just an Arrow) with two snapped clicks when Depe
   await expect(surface.locator("[data-annotation-type='arrow']")).toHaveCount(1);
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
 });
+
+test("creates an edge-to-edge Measurement from two snapped Signal transitions as one semantic action", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const waveBox = await surface.locator("[data-role='stable-waveform-surface']").boundingBox();
+  const requestBox = await surface.locator("[data-role='timing-row'][data-row-id='sig_cycle_request']").boundingBox();
+  const readyBox = await surface.locator("[data-role='timing-row'][data-row-id='sig_cycle_ready']").boundingBox();
+  const cycle3 = Number.parseFloat(await page.getByTestId("cycle-ruler").locator("[data-cycle='3']").evaluate((element) => (element as HTMLElement).style.left));
+  const cycle5 = Number.parseFloat(await page.getByTestId("cycle-ruler").locator("[data-cycle='5']").evaluate((element) => (element as HTMLElement).style.left));
+  expect(waveBox && requestBox && readyBox).toBeTruthy();
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByLabel("Annotation type").selectOption("measurement");
+  await page.getByRole("button", { name: "Pick measurement endpoints" }).click();
+  await expect(page.getByTestId("arrow-pick-status")).toHaveText("Click from transition");
+  await page.mouse.click(waveBox!.x + cycle3, requestBox!.y + requestBox!.height / 2);
+  await expect(page.getByTestId("arrow-pick-status")).toHaveText("Click to transition");
+  await page.mouse.click(waveBox!.x + cycle5, readyBox!.y + readyBox!.height / 2);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+
+  const measurement = surface.locator("[data-role='annotation-owner'][data-annotation-type='measurement']");
+  await expect(measurement).toHaveCount(1);
+  await expect(measurement).toHaveAttribute("aria-label", /Δ 2 cycles/);
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(host).toHaveAttribute("data-canonical-revision", "1");
+});

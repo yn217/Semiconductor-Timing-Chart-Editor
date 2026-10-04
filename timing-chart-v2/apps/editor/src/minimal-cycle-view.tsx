@@ -93,7 +93,7 @@ export function MinimalCycleView() {
   // -- those remain a further, separate follow-up.
   const lowerCanvasClickRef = useRef<(event: MouseEvent, targetHost: HTMLElement, targetViewport: HTMLElement) => void>(() => undefined);
   const timelineRuntimeRef = useRef<TimelineViewportRuntime | null>(null);
-  const armArrowPick = useRef<(annotationType: "arrow" | "dependency") => void>(() => undefined);
+  const armArrowPick = useRef<(annotationType: "arrow" | "dependency" | "measurement") => void>(() => undefined);
   const selectAllRef = useRef<() => void>(() => undefined);
   const snapTransactionCycle = useRef<(clientX: number, surfaceLeft?: number, horizontalScroll?: number) => number | undefined>(() => undefined);
   const transactionBoundaryX = useRef<(cycle: number) => number | undefined>(() => undefined);
@@ -791,7 +791,7 @@ export function MinimalCycleView() {
     },
   };
   const shellStatus = {
-    toolStatus: arrowPickStatus === "idle" ? (rangeSelectionActive ? (viewMode === "Cycle" ? "Range select active" : "Source range select active") : "Ready · Tool: Select") : `Arrow pick · ${arrowPickStatus}`,
+    toolStatus: arrowPickStatus === "idle" ? (rangeSelectionActive ? (viewMode === "Cycle" ? "Range select active" : "Source range select active") : "Ready · Tool: Select") : `Annotation endpoint pick · ${arrowPickStatus}`,
     selectionStatus: selectedSignalIds.size > 1 ? `${selectedSignalIds.size} signals` : selectedTransactionIds.size > 1 ? `${selectedTransactionIds.size} transactions` : selectedTransaction?.name ?? selectedAnnotation?.label ?? selectedSignal?.display.name ?? selectedGroup?.name ?? "None",
     signalCount: snapshot.document.signals.length,
     annotationCount: snapshot.document.annotations.length,

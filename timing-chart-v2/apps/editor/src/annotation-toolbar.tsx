@@ -12,7 +12,7 @@ import { RibbonIcon } from "./ribbon-icon.js";
 // height, label alignment and hover/focus/disabled treatment as the rest
 // of the Ribbon now. Every aria-label/value/option/behavior is unchanged;
 // only the underlying markup moved onto DsRibbonButton/DsRibbonSelect.
-export function AnnotationToolbar({ document, range, signalId, onCreate, arrowPickStatus, onArmArrow }: { readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly signalId: SignalId | undefined; readonly onCreate: (annotation: Annotation) => void; readonly arrowPickStatus: "idle" | "from" | "to"; readonly onArmArrow: (annotationType: "arrow" | "dependency") => void }) {
+export function AnnotationToolbar({ document, range, signalId, onCreate, arrowPickStatus, onArmArrow }: { readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly signalId: SignalId | undefined; readonly onCreate: (annotation: Annotation) => void; readonly arrowPickStatus: "idle" | "from" | "to"; readonly onArmArrow: (annotationType: "arrow" | "dependency" | "measurement") => void }) {
   const [type, setType] = useState<AnnotationType>("text");
   const [measurementProfile, setMeasurementProfile] = useState<MeasurementProfile>("cycle");
   const [measurementKind, setMeasurementKind] = useState<TransitionAnchorKind>("threshold");
@@ -29,13 +29,10 @@ export function AnnotationToolbar({ document, range, signalId, onCreate, arrowPi
     </DsRibbonSelect>
     {type === "measurement" && <><label>Profile<DsRibbonSelect ariaLabel="Measurement threshold" dataTestId="measurement-profile" value={measurementProfile} onChange={(event) => setMeasurementProfile(event.target.value as MeasurementProfile)}>{MEASUREMENT_PROFILES.map((profile) => <option key={profile} value={profile}>{profile === "cycle" ? "Cycle anchors" : profile === "50%" ? "50%" : profile === "custom" ? "Custom" : `${profile}%`}</option>)}</DsRibbonSelect></label>{measurementProfile !== "cycle" && <label>Meaning<DsRibbonSelect ariaLabel="Measurement anchor kind" value={measurementKind} onChange={(event) => setMeasurementKind(event.target.value as TransitionAnchorKind)}><option value="threshold">Transition threshold</option><option value="ratio">Transition ratio</option></DsRibbonSelect></label>}{measurementProfile === "custom" && <><label>Start %<input aria-label="Custom measurement start" type="number" min="0" max="100" step="1" value={customStart} onChange={(event) => setCustomStart(event.target.value)} /></label><label>End %<input aria-label="Custom measurement end" type="number" min="0" max="100" step="1" value={customEnd} onChange={(event) => setCustomEnd(event.target.value)} /></label></>}</>}
     <DsRibbonButton ariaLabel="Add annotation" icon={<RibbonIcon name="i-textbox" />} disabled={!signalId || !customValid} title={signalId ? undefined : "No timing Signal is available in this document to anchor an Annotation."} onClick={() => signalId && onCreate(createAnnotation(type, signalId, range, document, thresholdSpec))}>Add annotation</DsRibbonButton>
-    {/* Picking real transition endpoints has always produced an "arrow"
-        annotation regardless of the type dropdown above -- #375: it must
-        also be able to produce a "dependency" (the other line-shaped type
-        with real From/To semantic anchors) when that's the selected type,
-        without changing this control's existing label/availability for
-        every other type. */}
-    <DsRibbonButton ariaLabel="Pick arrow endpoints" icon={<RibbonIcon name="i-arrow-annotation" />} className={arrowPickStatus === "idle" ? undefined : "active"} onClick={() => onArmArrow(type === "dependency" ? "dependency" : "arrow")}>Pick arrow endpoints</DsRibbonButton>
+    {/* Picked transition anchors are shared by Arrow, Dependency and
+        edge-to-edge Measurement. The latter stores the same resolved
+        semantic anchors in its start/end fields instead of from/to. */}
+    <DsRibbonButton ariaLabel={type === "measurement" ? "Pick measurement endpoints" : "Pick arrow endpoints"} icon={<RibbonIcon name="i-arrow-annotation" />} className={arrowPickStatus === "idle" ? undefined : "active"} onClick={() => onArmArrow(type === "measurement" ? "measurement" : type === "dependency" ? "dependency" : "arrow")}>{type === "measurement" ? "Pick measurement endpoints" : "Pick arrow endpoints"}</DsRibbonButton>
     {arrowPickStatus !== "idle" && <b data-testid="arrow-pick-status">Click {arrowPickStatus} transition</b>}
     <span>Uses selected Signal and Timeline range · drag handles snap to rendered geometry</span>
   </div>;

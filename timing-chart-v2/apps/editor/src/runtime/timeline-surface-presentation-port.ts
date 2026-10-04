@@ -14,7 +14,7 @@ export interface TimelineSurfacePresentationPort {
   readonly reapplySelectionRef: MutableRefObject<() => void>;
   readonly lowerCanvasClickRef: MutableRefObject<(event: MouseEvent, targetHost: HTMLElement, targetViewport: HTMLElement) => void>;
   readonly timelineRuntimeRef: MutableRefObject<TimelineViewportRuntime | null>;
-  readonly armArrowPick: MutableRefObject<(annotationType: "arrow" | "dependency") => void>;
+  readonly armArrowPick: MutableRefObject<(annotationType: "arrow" | "dependency" | "measurement") => void>;
   readonly snapTransactionCycle: MutableRefObject<(clientX: number, surfaceLeft?: number, horizontalScroll?: number) => number | undefined>;
   readonly transactionBoundaryX: MutableRefObject<(cycle: number) => number | undefined>;
   readonly transactionSourceWindow: MutableRefObject<(viewport: HTMLElement) => Readonly<{ start: number; end: number }> | undefined>;

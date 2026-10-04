@@ -20,11 +20,11 @@ export type TransitionArrowPickerContext = Readonly<{
 /** Owns the two-click lifecycle for creating a transition-anchored annotation. */
 export class TransitionArrowPicker {
   #pending: "armed" | SemanticAnchor | undefined;
-  #annotationType: "arrow" | "dependency" = "arrow";
+  #annotationType: "arrow" | "dependency" | "measurement" = "arrow";
 
   constructor(private readonly context: TransitionArrowPickerContext) {}
 
-  arm = (annotationType: "arrow" | "dependency"): void => {
+  arm = (annotationType: "arrow" | "dependency" | "measurement"): void => {
     this.#pending = "armed";
     this.#annotationType = annotationType;
     this.context.setStatus("from");
@@ -66,17 +66,27 @@ export class TransitionArrowPicker {
       this.context.rendererHost.dataset.snapKind = snap.kind;
       return true;
     }
-    const annotation: Annotation = {
-      id: nextEntityId("annotation", this.context.getDocument()) as AnnotationId,
-      type: this.#annotationType,
-      label: "Transition",
-      visible: true,
-      color: "#d04a36",
-      from: this.#pending,
-      to: snap.anchor,
-      lineType: "straight",
-      arrowhead: "end",
-    };
+    const annotation: Annotation = this.#annotationType === "measurement"
+      ? {
+        id: nextEntityId("annotation", this.context.getDocument()) as AnnotationId,
+        type: "measurement",
+        label: `Measurement ${this.#pending.cycle}–${snap.anchor.cycle}`,
+        visible: true,
+        color: "#d04a36",
+        start: this.#pending,
+        end: snap.anchor,
+      }
+      : {
+        id: nextEntityId("annotation", this.context.getDocument()) as AnnotationId,
+        type: this.#annotationType,
+        label: "Transition",
+        visible: true,
+        color: "#d04a36",
+        from: this.#pending,
+        to: snap.anchor,
+        lineType: "straight",
+        arrowhead: "end",
+      };
     const result = this.context.execute({ id: nextCommandId("annotation_transition_arrow"), type: "annotation.create", annotation });
     if (result.ok) this.context.selectAnnotation(annotation.id);
     this.reset();
