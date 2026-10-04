@@ -99,6 +99,10 @@ function documentSummary(document: CanonicalDocument) {
     annotationCount: document.annotations.length,
     transactionCount: document.transactions.length,
     cycleCount: document.timeline.cycleCount,
+    timebase: {
+      cycleUnit: "source-cycle" as const,
+      physical: document.timeline.physicalTimebase ?? null,
+    },
   };
 }
 

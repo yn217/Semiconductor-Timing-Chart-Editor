@@ -24,6 +24,30 @@ describe("Agent Bridge semantic Annotation reads", () => {
   });
 });
 
+describe("Agent Bridge document time units", () => {
+  it("identifies canonical source cycles and exposes the configured physical timebase", () => {
+    const base = canonicalFixture();
+    const configured = {
+      ...base,
+      timeline: { ...base.timeline, physicalTimebase: { referenceFrequencyHz: 100_000_000, unit: "ns" as const } },
+    };
+
+    expect(executeAIBridgeTool("get_document_summary", {}, { document: configured } as unknown as AIBridgeContext)).toMatchObject({
+      cycleCount: configured.timeline.cycleCount,
+      timebase: { cycleUnit: "source-cycle", physical: { referenceFrequencyHz: 100_000_000, unit: "ns" } },
+    });
+  });
+
+  it("keeps legacy cycle-only documents explicit without inventing a physical unit", () => {
+    const document = canonicalFixture();
+
+    expect(executeAIBridgeTool("get_document_summary", {}, { document } as unknown as AIBridgeContext)).toMatchObject({
+      cycleCount: document.timeline.cycleCount,
+      timebase: { cycleUnit: "source-cycle", physical: null },
+    });
+  });
+});
+
 describe("Agent Bridge view-only selection", () => {
   it("selects an existing stable ID without changing the canonical document", () => {
     const document = canonicalFixture();
