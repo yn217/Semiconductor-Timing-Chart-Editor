@@ -9,6 +9,12 @@ export interface RenderInvalidation {
   readonly refreshOverlays: boolean;
 }
 
+export function isAnnotationOnlyChangeSet(changeSet: ChangeSet): boolean {
+  const keys = Object.keys(changeSet);
+  const annotationKey = keys.some((key) => key === "annotationPosition" || key === "annotationStyle" || key === "annotationOrder" || key === "annotationGroups");
+  return annotationKey && keys.every((key) => key === "annotationPosition" || key === "annotationStyle" || key === "annotationOrder" || key === "annotationGroups" || key === "minimapOverview" || key === "timingDiagnosticsUnchanged");
+}
+
 export function deriveRenderInvalidation(changeSet: ChangeSet, referenceSignalId: SignalId | undefined): RenderInvalidation {
   const full = changeSet.fullDocumentReplace === true;
   const snapDependenciesChanged = full || changeSet.rowOrder !== undefined || changeSet.addedSignals !== undefined || changeSet.removedSignals !== undefined || changeSet.addedGroups !== undefined || changeSet.removedGroups !== undefined || changeSet.waveSemantics !== undefined || changeSet.geometryLocal !== undefined || changeSet.geometryScreenX === true || changeSet.geometryScreenY !== undefined || changeSet.annotationPosition !== undefined || changeSet.annotationStyle !== undefined || changeSet.bookmarkPosition !== undefined || changeSet.timeGroupSemantics !== undefined || changeSet.timelineSemantics === true;
@@ -26,7 +32,7 @@ export function deriveRenderInvalidation(changeSet: ChangeSet, referenceSignalId
 export function annotationStylePatchIds(changeSet: ChangeSet): readonly string[] | undefined {
   const ids = changeSet.annotationStyle;
   if (!ids?.length || changeSet.annotationPosition !== undefined) return undefined;
-  return Object.keys(changeSet).every((key) => key === "annotationStyle" || key === "minimapOverview" || key === "timingDiagnosticsUnchanged")
+  return isAnnotationOnlyChangeSet(changeSet) && Object.keys(changeSet).every((key) => key === "annotationStyle" || key === "minimapOverview" || key === "timingDiagnosticsUnchanged")
     ? ids
     : undefined;
 }

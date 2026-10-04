@@ -15,12 +15,11 @@ import { ViewMetricsOwner } from "./view-metrics.js";
 import { buildViewportWindow } from "./viewport-window.js";
 import { createEdgeCounterProjectionMetrics } from "./edge-counter-projection.js";
 import { TimelineGeometryOwner, usesFullDocumentWaveformWindow } from "./timeline-geometry-owner.js";
-import { deriveRenderInvalidation } from "./render-invalidation.js";
+import { annotationStylePatchIds, deriveRenderInvalidation, isAnnotationOnlyChangeSet } from "./render-invalidation.js";
 import { createTimelineViewportRuntime } from "./timeline-viewport-runtime.js";
 import { resolveTransactionSnapCycle } from "./interaction-controller.js";
 import { scheduleInitialTimelineRefresh } from "./document-lifecycle-controller.js";
 import { refreshRendererAnnotationStyles, refreshRendererForReason } from "./render-coordinator.js";
-import { annotationStylePatchIds } from "./render-invalidation.js";
 import { createWaveformSurfaceProvider } from "./waveform-surface-provider.js";
 import { refreshWaveCanvasViewport } from "./canvas-wave-painter.js";
 import { initialWaveSignalIds, mountInitialTimelineProjection, projectViewportWindow, projectionForInitialWaveBootstrap } from "./viewport-projection.js";
@@ -659,8 +658,9 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       // renderer on every inspector/bottom-table commit in large documents.
       const presentationOnlyChange = changed.rowPresentation !== undefined
         && Object.keys(changed).every((key) => key === "rowPresentation" || key === "minimapOverview");
+      const annotationOnlyChange = isAnnotationOnlyChangeSet(changed);
       if (presentationOnlyChange) renderer.updatePresentation(projection);
-      else if (!transactionOnlyChange) renderer.update(projection);
+      else if (!transactionOnlyChange && !annotationOnlyChange) renderer.update(projection);
       signalSplitRuntimeRef.current?.onDocumentChanged(result);
       setTimelineRange((range) => {
         const start = Math.min(range.start, result.snapshot.document.timeline.cycleCount - 1);

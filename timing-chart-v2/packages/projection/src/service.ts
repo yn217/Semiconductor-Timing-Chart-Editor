@@ -73,12 +73,18 @@ export class DefaultProjectionService implements ProjectionService {
     const normalizedTreeFilter = signalTreeFilter.trim().toLocaleLowerCase();
     const treeFilterKey = `${signalTreeTypeFilter}\u0000${normalizedTreeFilter}`;
     const presentationKeys = Object.keys(request.changeSet);
+    const annotationOnlyChange = presentationKeys.some((key) => key === "annotationPosition" || key === "annotationStyle" || key === "annotationOrder" || key === "annotationGroups")
+      && presentationKeys.every((key) => key === "annotationPosition" || key === "annotationStyle" || key === "annotationOrder" || key === "annotationGroups" || key === "minimapOverview" || key === "timingDiagnosticsUnchanged");
     const presentationOnlyRows = request.changeSet.rowPresentation !== undefined
       && presentationKeys.every((key) => key === "rowPresentation" || key === "timingDiagnosticsUnchanged" || key === "minimapOverview");
     if (presentationOnlyRows && request.previous && this.#layout && this.#navigationLayout && this.#collapsedGroupKey === collapsedGroupKey && this.#treeFilterKey === treeFilterKey) {
       const patch = this.#patchRowPresentation(document, request.changeSet.rowPresentation!);
       this.#projectionBuilds += 1;
       return this.#projectPresentationOnly(request, patch);
+    }
+    if (annotationOnlyChange && request.previous && this.#layout && this.#navigationLayout && this.#collapsedGroupKey === collapsedGroupKey && this.#treeFilterKey === treeFilterKey) {
+      this.#projectionBuilds += 1;
+      return { ...request.previous, revision: request.snapshot.revision, waveSignalIds: [] };
     }
     const invalidatesLayout = request.changeSet.fullDocumentReplace || request.changeSet.rowOrder !== undefined || request.changeSet.rowPresentation !== undefined || request.changeSet.geometryScreenY !== undefined || request.changeSet.addedSignals !== undefined || request.changeSet.removedSignals !== undefined || request.changeSet.addedGroups !== undefined || request.changeSet.removedGroups !== undefined;
     if (!this.#layout || !this.#navigationLayout || invalidatesLayout || this.#collapsedGroupKey !== collapsedGroupKey || this.#treeFilterKey !== treeFilterKey) {

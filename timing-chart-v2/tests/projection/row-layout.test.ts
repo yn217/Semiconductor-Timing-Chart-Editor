@@ -589,6 +589,28 @@ describe("RowLayout and projection invariants", () => {
     expect(service.diagnostics()).toMatchObject({ projectionBuilds: 2, viewportOnlyBuilds: 1, fullVisibleRowScans: 3, viewportRowsVisited: 1, viewportBinarySearchSteps: expect.any(Number), rowLayoutBuilds: 1 });
   });
 
+  it("reuses row projection for Annotation-only revisions without rescanning visible rows", () => {
+    const document = layoutFixture();
+    const service = new DefaultProjectionService();
+    const viewport = { viewportStartY: 0, viewportEndY: 25, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] as RowId[] };
+    const initial = service.project({ snapshot: { revision: 0, document } as CanonicalSnapshot, changeSet: { fullDocumentReplace: true }, viewport });
+    const before = service.diagnostics();
+    const revised = service.project({
+      snapshot: { revision: 1, document: { ...document, annotations: [{ id: "ann_style" as never, type: "text" as const, label: "Updated", visible: true, anchor: { signalId: "sig_data" as SignalId, cycle: 2, point: "cycle-start" as const } }] } as CanonicalDocument } as CanonicalSnapshot,
+      changeSet: { annotationStyle: ["ann_style" as never], minimapOverview: true },
+      viewport,
+      previous: initial,
+    });
+
+    expect(revised.revision).toBe(1);
+    expect(revised.rowLayout).toBe(initial.rowLayout);
+    expect(revised.navigationRowLayout).toBe(initial.navigationRowLayout);
+    expect(revised.mountedRowIds).toBe(initial.mountedRowIds);
+    expect(revised.waveSignalIds).toEqual([]);
+    expect(service.diagnostics().fullVisibleRowScans).toBe(before.fullVisibleRowScans);
+    expect(service.diagnostics().rowLayoutBuilds).toBe(before.rowLayoutBuilds);
+  });
+
   it.each([1000, 5000, 10000])("keeps pure-scroll projection work viewport-bounded for %i rows", (signalCount) => {
     const document = generatePerformanceDocument({ signalCount, cycleCount: 100 });
     const service = new DefaultProjectionService();
