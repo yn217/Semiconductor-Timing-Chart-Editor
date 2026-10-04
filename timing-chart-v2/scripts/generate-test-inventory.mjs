@@ -230,6 +230,10 @@ const slowestMeasuredCases = cases
 const measuredSpecRuntimes = [...reviewsByFile.values()]
   .filter((review) => Number.isFinite(review.measuredRuntimeMs))
   .sort((a, b) => b.measuredRuntimeMs - a.measuredRuntimeMs || a.file.localeCompare(b.file));
+const unreviewedCaseCount = cases.length - inventory.reviewedCaseCount;
+const reviewStatusSummary = unreviewedCaseCount > 0
+  ? `This is a complete name/location inventory, not a completed semantic review. ${unreviewedCaseCount} cases remain \`UNREVIEWED\` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.`
+  : "This inventory's cases all have explicit semantic review records. Classification does not imply that the full execution suite or every acceptance profile has been run.";
 const markdown = [
   "# Playwright test inventory",
   "",
@@ -261,7 +265,7 @@ const markdown = [
   "| ---: | --- | --- |",
   ...measuredSpecRuntimes.map((review) => `| ${review.measuredRuntimeMs} | ${(review.profiles ?? []).map((profile) => `\`${profile}\``).join(", ") || "—"} | \`${review.file}\` |`),
   "",
-  "> This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.",
+  `> ${reviewStatusSummary}`,
   "",
   "| Spec file | Cases | Review status |",
   "| --- | ---: | --- |",
