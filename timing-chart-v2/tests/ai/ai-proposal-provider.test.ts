@@ -271,6 +271,48 @@ describe("deterministic AI proposal provider", () => {
     expect(document.annotations[0]).toMatchObject({ label: "Note", visible: true, color: "#d04a36" });
   });
 
+  it("creates typed Measurement proposals with the selected profile and semantic threshold/ratio anchors", () => {
+    const document = canonicalFixture();
+    const standard = buildTypedAnnotationProposal(document, 31, "propose_create_annotation", {
+      type: "measurement", signalId: "sig_data", start: 2, end: 6,
+      measurement: { profile: "10-90", anchorKind: "ratio" },
+    });
+    expect(standard.ok).toBe(true);
+    if (standard.ok) expect(standard.proposal.commands[0]).toMatchObject({
+      type: "annotation.create",
+      annotation: {
+        type: "measurement",
+        measurement: { profile: "10-90", anchorKind: "ratio" },
+        start: { signalId: "sig_data", cycle: 2, point: "transition-center", transition: { kind: "ratio", value: 0.1 } },
+        end: { signalId: "sig_data", cycle: 5, point: "transition-center", transition: { kind: "ratio", value: 0.9 } },
+      },
+    });
+
+    const custom = buildTypedAnnotationProposal(document, 32, "propose_create_annotation", {
+      type: "measurement", signalId: "sig_data", start: 2, end: 6,
+      measurement: { profile: "custom", anchorKind: "threshold", startValue: 0.2, endValue: 0.8 },
+    });
+    expect(custom.ok).toBe(true);
+    if (custom.ok) expect(custom.proposal.commands[0]).toMatchObject({
+      type: "annotation.create",
+      annotation: {
+        measurement: { profile: "custom", anchorKind: "threshold" },
+        start: { transition: { kind: "threshold", value: 0.2 } },
+        end: { transition: { kind: "threshold", value: 0.8 } },
+      },
+    });
+
+    expect(buildTypedAnnotationProposal(document, 33, "propose_create_annotation", {
+      type: "measurement", signalId: "sig_data", start: 2, end: 6,
+      measurement: { profile: "custom", anchorKind: "ratio", startValue: 0.9, endValue: 0.2 },
+    })).toMatchObject({ ok: false, message: expect.stringContaining("startValue <= endValue") });
+    expect(buildTypedAnnotationProposal(document, 34, "propose_create_annotation", {
+      type: "range", signalId: "sig_data", start: 2, end: 6,
+      measurement: { profile: "10-90", anchorKind: "ratio" },
+    })).toMatchObject({ ok: false, message: expect.stringContaining("only valid") });
+    expect(document.annotations).toHaveLength(0);
+  });
+
   it("returns a revisioned semantic proposal without mutating the source document", () => {
     const document = canonicalFixture();
     const result = deterministicMockAIProposalProvider.propose({ document, revision: 7, query: "rename selected signal to DATA_RENAMED", selectedSignalId: "sig_data" as never });

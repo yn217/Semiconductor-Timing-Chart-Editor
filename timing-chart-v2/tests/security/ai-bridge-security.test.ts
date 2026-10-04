@@ -77,6 +77,16 @@ describe("Agent Bridge security boundaries (#395 item 11)", () => {
     expect(tool?.[0]).toContain("end: { type: \"integer\", minimum: 1 }");
   });
 
+  it("advertises typed Measurement profile and threshold/ratio options", () => {
+    const tool = source.match(/\{ name: "propose_create_annotation",[\s\S]*?\n/);
+    expect(tool?.[0]).toContain("measurement: { type: \"object\"");
+    expect(tool?.[0]).toContain("profile: { type: \"string\", enum: [\"cycle\", \"30-70\", \"10-90\", \"20-80\", \"50%\", \"custom\"] }");
+    expect(tool?.[0]).toContain("anchorKind: { type: \"string\", enum: [\"threshold\", \"ratio\"] }");
+    expect(tool?.[0]).toContain("startValue: { type: \"number\", minimum: 0, maximum: 1 }");
+    expect(tool?.[0]).toContain("endValue: { type: \"number\", minimum: 0, maximum: 1 }");
+    expect(tool?.[0]).toContain("additionalProperties: false");
+  });
+
   it("uses distinct bearer credentials for MCP and Editor transport routes", () => {
     const routeCredentialIndex = source.indexOf("const expectedToken = url.pathname");
     const tokenCheckIndex = source.indexOf("timingSafeTokenEquals(bearerToken(req), expectedToken)");

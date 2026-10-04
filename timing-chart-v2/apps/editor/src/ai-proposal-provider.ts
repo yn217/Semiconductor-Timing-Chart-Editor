@@ -1,5 +1,5 @@
 import { planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
-import { valueSignalValueProblem, type AnnotationId, type AnnotationType, type CanonicalDocument, type GroupId, type SignalId, type SignalRole, type TimeGroup, type TimeGroupId, type TransactionGroupId, type TransactionId, type TransactionPhase, type ValueSignal } from "@timing-chart-v2/schema";
+import { measurementProfilePair, valueSignalValueProblem, type AnnotationId, type AnnotationType, type CanonicalDocument, type GroupId, type MeasurementProfile, type SignalId, type SignalRole, type TimeGroup, type TimeGroupId, type TransactionGroupId, type TransactionId, type TransactionPhase, type TransitionAnchorKind, type ValueSignal } from "@timing-chart-v2/schema";
 import { nextCommandId } from "./command-id.js";
 import { nextEntityId } from "./entity-id.js";
 import { createAnnotation } from "./create-annotation.js";
@@ -392,11 +392,38 @@ export function buildTypedAnnotationProposal(document: CanonicalDocument, revisi
     const signalId = args.signalId;
     const start = args.start;
     const end = args.end;
+    const measurement = args.measurement;
     const supportedTypes: readonly AnnotationType[] = ["text", "callout", "verticalLine", "range", "bracket", "highlight", "marker", "measurement", "arrow", "dependency", "timingRegion", "ghostTrace", "rectangle", "ellipse", "connector", "textbox"];
     if (typeof type !== "string" || !supportedTypes.includes(type as AnnotationType)) return { ok: false, message: "propose_create_annotation requires a supported Annotation type." };
     if (typeof signalId !== "string" || !document.signals.some((signal) => signal.id === signalId && signal.type !== "commentRow")) return { ok: false, message: `Signal '${String(signalId ?? "")}' does not exist in the current document.` };
     if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || (start as number) < 0 || (end as number) <= (start as number) || (end as number) > document.timeline.cycleCount) return { ok: false, message: "propose_create_annotation requires integer source-cycle boundaries within the timeline with end > start." };
-    const created = createAnnotation(type as AnnotationType, signalId as SignalId, { start: start as number, end: end as number }, document);
+    if (measurement !== undefined && (type !== "measurement" || typeof measurement !== "object" || measurement === null || Array.isArray(measurement))) return { ok: false, message: "measurement options are only valid as an object for a Measurement Annotation." };
+    let thresholdSpec: Parameters<typeof createAnnotation>[4] = undefined;
+    if (measurement !== undefined) {
+      const options = measurement as Record<string, unknown>;
+      const profile = options.profile;
+      const anchorKind = options.anchorKind;
+      const customStart = options.startValue;
+      const customEnd = options.endValue;
+      const profiles: readonly MeasurementProfile[] = ["cycle", "30-70", "10-90", "20-80", "50%", "custom"];
+      if (Object.keys(options).some((key) => !["profile", "anchorKind", "startValue", "endValue"].includes(key)) || typeof profile !== "string" || !profiles.includes(profile as MeasurementProfile)) return { ok: false, message: "measurement options require a supported profile and no unknown fields." };
+      if (profile === "cycle") {
+        if (anchorKind !== undefined || customStart !== undefined || customEnd !== undefined) return { ok: false, message: "cycle measurement profile does not accept anchorKind or custom endpoints." };
+      } else {
+        if (anchorKind !== undefined && anchorKind !== "threshold" && anchorKind !== "ratio") return { ok: false, message: "measurement anchorKind must be threshold or ratio." };
+        const kind = (anchorKind ?? "threshold") as TransitionAnchorKind;
+        if (profile === "custom") {
+          if (typeof customStart !== "number" || typeof customEnd !== "number" || !Number.isFinite(customStart) || !Number.isFinite(customEnd) || customStart < 0 || customEnd > 1 || customStart > customEnd) return { ok: false, message: "custom Measurement startValue/endValue must be finite fractions in [0,1] with startValue <= endValue." };
+          thresholdSpec = { profile: "custom", anchorKind: kind, start: customStart, end: customEnd };
+        } else {
+          if (customStart !== undefined || customEnd !== undefined) return { ok: false, message: "standard Measurement profiles derive endpoints and do not accept custom startValue/endValue." };
+          const pair = measurementProfilePair(profile as MeasurementProfile);
+          if (!pair) return { ok: false, message: `Measurement profile '${profile}' does not define transition endpoints.` };
+          thresholdSpec = { profile: profile as Exclude<MeasurementProfile, "cycle">, anchorKind: kind, ...pair };
+        }
+      }
+    }
+    const created = createAnnotation(type as AnnotationType, signalId as SignalId, { start: start as number, end: end as number }, document, thresholdSpec);
     const label = args.label;
     const annotation = typeof label === "string" && label.trim() ? { ...created, label: label.trim() } : created;
     return { ok: true, proposal: proposal(revision, `Create ${annotation.type} Annotation ${annotation.label}`, [command({ type: "annotation.create", annotation }, "typed_create_annotation")]) };
