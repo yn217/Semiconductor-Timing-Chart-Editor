@@ -48,8 +48,7 @@ export function syncGroupHeaderLayer(
     if (applies && header.groupStyle?.border) shell.style.setProperty("--group-border", header.groupStyle.border);
     else shell.style.removeProperty("--group-border");
     if (surface === "left") populateGroupHeader(shell, header);
-    else if (surface === "frozen") shell.textContent = header.groupName;
-    else shell.replaceChildren();
+    else shell.textContent = header.groupName;
     place(shell, header);
     ordered.push(shell);
   }

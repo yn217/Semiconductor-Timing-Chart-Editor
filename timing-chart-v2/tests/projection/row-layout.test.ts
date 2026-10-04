@@ -336,11 +336,24 @@ describe("RowLayout and projection invariants", () => {
   });
   it("removes the group header height when showHeader is disabled", () => {
     const document = canonicalFixture();
-    document.signalGroups = document.signalGroups.map((group, index) => index === 0 ? { ...group, style: { showHeader: false } } : group);
+    document.signalGroups = document.signalGroups.map((group, index) => index === 0 ? { ...group, style: { showHeader: false, headerHeight: 48 } } : group);
     const result = calculateRowLayout(document);
     expect(result.groupHeaders[0]).toMatchObject({ groupId: "grp_main", y: 0, height: 0 });
     expect(result.visibleRows[0]).toMatchObject({ rowId: "sig_clk", y: 0 });
     expect(result.totalHeight).toBe(62);
+  });
+  it("uses the configured Group header height in shared row geometry", () => {
+    const document = canonicalFixture();
+    const groups = [
+      { ...document.signalGroups[0]!, style: { headerHeight: 48 } },
+      { id: "grp_empty_tail" as GroupId, name: "Empty Tail", rows: [] },
+    ];
+    document.signalGroups = groups;
+    const result = calculateRowLayout(document);
+    const defaultResult = calculateRowLayout({ ...document, signalGroups: [{ ...groups[0]!, style: undefined }, groups[1]!] });
+    expect(result.groupHeaders[0]).toMatchObject({ groupId: "grp_main", y: 0, height: 48 });
+    expect(result.groupHeaders[1]?.y).toBe(defaultResult.groupHeaders[1]!.y + 16);
+    expect(result.visibleRows[0]?.y).toBe(48);
   });
   it("derives collapsed groups as compact layout without changing canonical row IDs", () => {
     const document = layoutFixture();

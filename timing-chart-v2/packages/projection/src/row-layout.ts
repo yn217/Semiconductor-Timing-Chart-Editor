@@ -152,7 +152,7 @@ export function calculateRowLayout(document: CanonicalDocument, collapsedGroupId
     // A search reveals matches inside collapsed groups without changing the
     // user's persisted collapse state; clearing the filter restores it.
     const collapsed = !filterActive && collapsedGroupIds.has(group.id);
-    const headerHeight = group.style?.showHeader === false ? 0 : 32;
+    const headerHeight = group.style?.showHeader === false ? 0 : group.style?.headerHeight ?? 32;
     groupHeaders.push({ rowId: headerRowId, groupId: group.id, groupName: group.name, ...(group.style === undefined ? {} : { groupStyle: group.style }), collapsed, y, height: headerHeight });
     y += headerHeight;
     if (collapsed) {

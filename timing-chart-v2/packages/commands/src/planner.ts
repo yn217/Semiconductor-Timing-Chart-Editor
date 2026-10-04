@@ -1317,10 +1317,12 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       if (!Number.isFinite(command.spacingBefore) || command.spacingBefore < 0 || !Number.isFinite(command.spacingAfter) || command.spacingAfter < 0) return fail("invalid", "INVALID_GROUP_SPACING", "$.spacing", "Group spacing must be finite and non-negative.");
       const style = { ...command.style };
       if (style.opacity !== undefined && (!Number.isFinite(style.opacity) || style.opacity < 0 || style.opacity > 1)) return fail("invalid", "INVALID_GROUP_STYLE", "$.style.opacity", "Group opacity must be between 0 and 1.");
+      if (style.headerHeight !== undefined && (!Number.isFinite(style.headerHeight) || style.headerHeight < 0)) return fail("invalid", "INVALID_GROUP_STYLE", "$.style.headerHeight", "Group header height must be finite and non-negative.");
       if (group.name === name && group.spacingBefore === command.spacingBefore && group.spacingAfter === command.spacingAfter && semanticEqual(group.style ?? {}, style)) return fail("no-op", "NO_OP", "$", "Group properties are unchanged.");
       const next: SignalGroup = { ...group, name, spacingBefore: command.spacingBefore, spacingAfter: command.spacingAfter, ...(Object.keys(style).length === 0 ? {} : { style }) };
       const groups = [...document.signalGroups]; groups[index] = next;
-      const affectedTimingRows = orderedVisibleTimingRows(document).filter((id) => group.rows.includes(id));
+      const affectedGroupRows = new Set(document.signalGroups.slice(index).flatMap((item) => item.rows));
+      const affectedTimingRows = orderedVisibleTimingRows(document).filter((id) => affectedGroupRows.has(id));
       const changeSet: ChangeSet = { rowPresentation: group.rows, geometryScreenY: affectedTimingRows, annotationPosition: annotationsForSignals(document, affectedTimingRows), minimapOverview: true };
       return { ok: true, document: { ...document, signalGroups: groups }, changeSet, inverseChangeSet: changeSet };
     }

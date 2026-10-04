@@ -77,6 +77,7 @@ import { Ribbon } from "../minimal-cycle-view-ribbon.js";
 import { styleNumber, styleString } from "../inspector-style.js";
 import { TransactionLanes } from "../runtime/transaction-lanes.js";
 import { TransactionEditor } from "../transaction-editor.js";
+import { InspectorGroupLayout } from "../inspector-group-layout.js";
 import type { EditorSurfaceCommandController } from "../application/editor-surface-command-controller.js";
 import { buildRuler } from "../runtime/build-ruler.js";
 import { displayBoundaryForSource } from "../runtime/display-boundary.js";
@@ -125,6 +126,9 @@ export function InspectorPanel({ signal, selectedCycle = 0, selectedSignalIds, g
   const [groupShowBorder, setGroupShowBorder] = useState(Boolean(group?.style?.border));
   const [groupExtend, setGroupExtend] = useState<"label" | "waveform" | "both">(group?.style?.extend ?? "both");
   const [groupShowHeader, setGroupShowHeader] = useState(group?.style?.showHeader ?? true);
+  const [groupHeaderHeight, setGroupHeaderHeight] = useState(String(group?.style?.headerHeight ?? 32));
+  const parsedGroupHeaderHeight = groupHeaderHeight.trim() === "" ? Number.NaN : Number(groupHeaderHeight);
+  const validGroupHeaderHeight = Number.isFinite(parsedGroupHeaderHeight) && parsedGroupHeaderHeight >= 0;
   const [visible, setVisible] = useState(signal?.display.visible !== false);
   const [edgeCounter, setEdgeCounter] = useState<EdgeCounterSettings | undefined>(signal?.type === "clock" ? signal.edgeCounter : undefined);
   const phaseDraft = usePendingPhaseDraft(transaction);
@@ -186,6 +190,7 @@ export function InspectorPanel({ signal, selectedCycle = 0, selectedSignalIds, g
       opacity: overrides.opacity ?? groupOpacity,
       extend: overrides.extend ?? groupExtend,
       showHeader: overrides.showHeader ?? groupShowHeader,
+      headerHeight: overrides.headerHeight ?? (validGroupHeaderHeight ? parsedGroupHeaderHeight : group?.style?.headerHeight ?? 32),
       ...(showBorder ? { border: overrides.border ?? groupBorder } : {}),
     };
     onGroupPreview?.(group.id, next);
@@ -227,17 +232,12 @@ export function InspectorPanel({ signal, selectedCycle = 0, selectedSignalIds, g
           sibling AFTER it (outside the scroll), same as Clock's. */}
       <div className="inspector-scroll">
       <InspectorSection sectionId="general" title="General" open={groupSections.general ?? true} onToggle={() => toggleGroupSection("general")}><label>Name<InlineNameInput target={group} value={group.name} ariaLabel="Inspector group name" onRename={(name) => commands.renameGroup(group.id, name)} onCommitted={setGroupName} onDraftChange={setGroupName} /></label></InspectorSection>
-      <InspectorSection sectionId="layout" title="Layout" open={groupSections.layout ?? true} onToggle={() => toggleGroupSection("layout")}>
-        <div className="inspector-property-pair"><label>Spacing Before<input aria-label="Group spacing before" type="number" min="0" value={spacingBefore} onChange={(event) => setSpacingBefore(Number(event.target.value))} /></label><label>Spacing After<input aria-label="Group spacing after" type="number" min="0" value={spacingAfter} onChange={(event) => setSpacingAfter(Number(event.target.value))} /></label></div>
-        <div className="property-row"><span>Rows</span><span>{group.rows.length}</span></div>
-        <PropertyToggle label="Collapsed" ariaLabel="Inspector group collapsed" checked={collapsedGroup} onChange={() => onToggleGroupCollapse?.()} />
-        <small className="inspector-note">Collapse is a view-only layout preference; it does not change Canonical, History, or Dirty state.</small>
-      </InspectorSection>
+      <InspectorGroupLayout group={group} spacingBefore={spacingBefore} spacingAfter={spacingAfter} headerHeight={groupHeaderHeight} collapsed={collapsedGroup} open={groupSections.layout ?? true} onToggleSection={() => toggleGroupSection("layout")} onSpacingBeforeChange={setSpacingBefore} onSpacingAfterChange={setSpacingAfter} onHeaderHeightChange={setGroupHeaderHeight} onPreviewHeaderHeight={(headerHeight) => previewGroupStyle({ headerHeight })} onToggleCollapsed={() => onToggleGroupCollapse?.()} />
       <InspectorSection sectionId="appearance" title="Appearance" open={groupSections.appearance ?? true} onToggle={() => toggleGroupSection("appearance")}>
         <PropertyToggle label="Show Background" ariaLabel="Group show background" checked={groupShowBackground} onChange={(value) => { setGroupShowBackground(value); previewGroupStyle({ showBackground: value }); }} /><label>Background<input aria-label="Group background" type="color" value={groupBackground} onChange={(event) => { const value = event.target.value; setGroupBackground(value); previewGroupStyle({ background: value }); }} /></label><label>Opacity<input aria-label="Group opacity" type="number" min="0" max="1" step="0.05" value={groupOpacity} onChange={(event) => { const value = Number(event.target.value); setGroupOpacity(value); previewGroupStyle({ opacity: value }); }} /></label><PropertyToggle label="Border" ariaLabel="Group show border" checked={groupShowBorder} onChange={(value) => { setGroupShowBorder(value); previewGroupStyle({ showBorder: value }); }} /><label>Border Color<input aria-label="Group border" value={groupBorder} onChange={(event) => { const value = event.target.value; setGroupBorder(value); previewGroupStyle({ border: value }); }} /></label><label>Extend<select aria-label="Group extend" value={groupExtend} onChange={(event) => { const value = event.target.value as typeof groupExtend; setGroupExtend(value); previewGroupStyle({ extend: value }); }}><option value="label">Label</option><option value="waveform">Waveform</option><option value="both">Both</option></select></label><PropertyToggle label="Show Header" ariaLabel="Group show header" checked={groupShowHeader} onChange={(value) => { setGroupShowHeader(value); previewGroupStyle({ showHeader: value }); }} />
       </InspectorSection>
       </div>
-      <InspectorFooter onCancel={onCancel} onApply={() => commands.updateGroupProperties({ groupId: group.id, name: groupName, spacingBefore, spacingAfter, style: { showBackground: groupShowBackground, background: groupBackground, opacity: groupOpacity, extend: groupExtend, ...(groupShowBorder ? { border: groupBorder } : {}), showHeader: groupShowHeader } })} applyDisabled={false} applyTestId="apply-group-properties" />
+      <InspectorFooter onCancel={onCancel} onApply={() => commands.updateGroupProperties({ groupId: group.id, name: groupName, spacingBefore, spacingAfter, style: { showBackground: groupShowBackground, background: groupBackground, opacity: groupOpacity, extend: groupExtend, ...(groupShowBorder ? { border: groupBorder } : {}), showHeader: groupShowHeader, headerHeight: parsedGroupHeaderHeight } })} applyDisabled={!validGroupHeaderHeight} applyTestId="apply-group-properties" />
     </>}
     {transaction && <>
       <div className="inspector-scroll">

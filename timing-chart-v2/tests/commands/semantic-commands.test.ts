@@ -1414,14 +1414,37 @@ describe("command execution and atomic history", () => {
 
   it("applies Group presentation properties in one canonical commit", () => {
     const session = new CommandHistorySession(canonicalFixture());
-    const result = session.execute({ id: commandId("cmd_group_properties"), type: "group.updateProperties", groupId: "grp_main" as GroupId, name: "Main Signals", spacingBefore: 3, spacingAfter: 9, style: { showBackground: true, background: "#eef5fc", opacity: 0.8, extend: "both", border: "#aaccee", showHeader: true } });
+    const result = session.execute({ id: commandId("cmd_group_properties"), type: "group.updateProperties", groupId: "grp_main" as GroupId, name: "Main Signals", spacingBefore: 3, spacingAfter: 9, style: { showBackground: true, background: "#eef5fc", opacity: 0.8, extend: "both", border: "#aaccee", showHeader: true, headerHeight: 48 } });
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.changeSet).toMatchObject({ geometryScreenY: ["sig_clk", "sig_data"], minimapOverview: true });
       expect(result.changeSet.waveSemantics).toBeUndefined();
       expect(result.changeSet.geometryLocal).toBeUndefined();
     }
-    expect(session.getSnapshot().document.signalGroups[0]).toMatchObject({ name: "Main Signals", spacingBefore: 3, spacingAfter: 9, style: { showBackground: true, opacity: 0.8 } });
+    expect(session.getSnapshot().document.signalGroups[0]).toMatchObject({ name: "Main Signals", spacingBefore: 3, spacingAfter: 9, style: { showBackground: true, opacity: 0.8, headerHeight: 48 } });
+    expect(session.historyState().undoDepth).toBe(1);
+  });
+
+  it("invalidates downstream Group geometry and rejects invalid header heights", () => {
+    const source = canonicalFixture();
+    const annotation = { id: "ann_after_group" as AnnotationId, type: "text" as const, label: "After", visible: true, anchor: { signalId: "sig_data" as SignalId, cycle: 2, point: "value-start" as const } };
+    source.annotations = [annotation];
+    source.signalGroups = [
+      { ...source.signalGroups[0]!, rows: ["sig_clk" as SignalId] },
+      { id: "grp_tail" as GroupId, name: "Tail", rows: ["sig_data" as SignalId] },
+    ];
+    const session = new CommandHistorySession(source);
+    const result = session.execute({ id: commandId("cmd_group_header_height"), type: "group.updateProperties", groupId: "grp_main" as GroupId, name: "Main", spacingBefore: 0, spacingAfter: 0, style: { headerHeight: 48 } });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.changeSet).toMatchObject({ geometryScreenY: ["sig_clk", "sig_data"], annotationPosition: ["ann_after_group"] });
+      expect(result.changeSet.waveSemantics).toBeUndefined();
+      expect(result.changeSet.geometryLocal).toBeUndefined();
+    }
+    const beforeInvalid = session.getSnapshot().document;
+    const rejected = session.execute({ id: commandId("cmd_group_header_height_invalid"), type: "group.updateProperties", groupId: "grp_main" as GroupId, name: "Main", spacingBefore: 0, spacingAfter: 0, style: { headerHeight: -1 } });
+    expect(rejected).toMatchObject({ ok: false, reason: "invalid" });
+    expect(session.getSnapshot().document).toBe(beforeInvalid);
     expect(session.historyState().undoDepth).toBe(1);
   });
 

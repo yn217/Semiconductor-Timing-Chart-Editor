@@ -195,7 +195,8 @@
         "opacity": { "type": "number", "minimum": 0, "maximum": 1 },
         "extend": { "enum": ["label", "waveform", "both"] },
         "border": { "type": "string" },
-        "showHeader": { "type": "boolean" }
+        "showHeader": { "type": "boolean" },
+        "headerHeight": { "type": "number", "minimum": 0 }
       }
     },
     "source": {

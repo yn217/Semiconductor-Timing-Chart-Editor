@@ -187,6 +187,7 @@ export interface SignalGroupStyle {
   readonly extend?: "label" | "waveform" | "both";
   readonly border?: string;
   readonly showHeader?: boolean;
+  readonly headerHeight?: number;
 }
 
 export interface SignalGroup {
