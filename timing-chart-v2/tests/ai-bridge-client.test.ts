@@ -3,6 +3,27 @@ import type { CanonicalDocument, GroupId, SignalId } from "@timing-chart-v2/sche
 import { executeAIBridgeTool, type AIBridgeContext } from "../apps/editor/src/ai-bridge-client.js";
 import { canonicalFixture } from "./fixtures/canonical.js";
 
+describe("Agent Bridge semantic Annotation reads", () => {
+  it("returns type-specific canonical options without exposing pixel geometry or mutating the document", () => {
+    const base = canonicalFixture();
+    const document = {
+      ...base,
+      annotations: [
+        { id: "ann_measure" as never, type: "measurement" as const, label: "Rise", visible: true, measurement: { profile: "10-90" as const, anchorKind: "ratio" as const }, start: { signalId: "sig_data" as SignalId, cycle: 2, point: "transition-center" as const, transition: { kind: "ratio" as const, value: 0.1 }, offset: { x: 5, y: 2 } }, end: { signalId: "sig_data" as SignalId, cycle: 4, point: "transition-center" as const, transition: { kind: "ratio" as const, value: 0.9 }, offset: { x: 7, y: 2 } } },
+        { id: "ann_ghost" as never, type: "ghostTrace" as const, label: "Previous", visible: true, sourceSignalId: "sig_clk" as SignalId, traceOffsetCycles: -3, opacity: 0.4, start: { signalId: "sig_data" as SignalId, cycle: 3, point: "cycle-start" as const }, end: { signalId: "sig_data" as SignalId, cycle: 5, point: "cycle-end" as const } },
+      ],
+    };
+    const result = executeAIBridgeTool("get_annotations", {}, { document } as unknown as AIBridgeContext) as { annotations: Array<Record<string, unknown>> };
+
+    expect(result.annotations).toEqual([
+      expect.objectContaining({ id: "ann_measure", measurement: { profile: "10-90", anchorKind: "ratio" }, start: { signalId: "sig_data", cycle: 2 }, end: { signalId: "sig_data", cycle: 4 } }),
+      expect.objectContaining({ id: "ann_ghost", sourceSignalId: "sig_clk", traceOffsetCycles: -3, opacity: 0.4 }),
+    ]);
+    expect(result.annotations[0]).not.toHaveProperty("offset");
+    expect(document.annotations[0]).toMatchObject({ start: { offset: { x: 5, y: 2 } } });
+  });
+});
+
 describe("Agent Bridge view-only selection", () => {
   it("selects an existing stable ID without changing the canonical document", () => {
     const document = canonicalFixture();

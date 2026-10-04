@@ -77,6 +77,13 @@ describe("Agent Bridge security boundaries (#395 item 11)", () => {
     expect(tool?.[0]).toContain("end: { type: \"integer\", minimum: 1 }");
   });
 
+  it("documents semantic type-specific fields for Annotation reads, not pixel geometry", () => {
+    const tool = source.match(/\{ name: "get_annotations",[\s\S]*?\n/);
+    expect(tool?.[0]).toContain("Measurement profile/kind");
+    expect(tool?.[0]).toContain("Ghost Trace source/offset");
+    expect(tool?.[0]).toContain("never pixels");
+  });
+
   it("advertises typed Measurement profile and threshold/ratio options", () => {
     const tool = source.match(/\{ name: "propose_create_annotation",[\s\S]*?\n/);
     expect(tool?.[0]).toContain("measurement: { type: \"object\"");

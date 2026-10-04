@@ -239,7 +239,23 @@ function executeAIBridgeToolCore(tool: string, args: Record<string, unknown>, co
       return cycles.length > 0 && Math.max(...cycles) >= sourceRange.start && Math.min(...cycles) <= sourceRange.end;
     });
     return {
-      annotations: annotations.map((annotation) => ({ id: annotation.id, type: annotation.type, label: annotation.label, visible: annotation.visible, locked: annotation.locked ?? false, anchor: anchorSummary(annotation.anchor), start: anchorSummary(annotation.start), end: anchorSummary(annotation.end), from: anchorSummary(annotation.from), to: anchorSummary(annotation.to) })),
+      annotations: annotations.map((annotation) => ({
+        id: annotation.id,
+        type: annotation.type,
+        label: annotation.label,
+        visible: annotation.visible,
+        locked: annotation.locked ?? false,
+        anchor: anchorSummary(annotation.anchor),
+        start: anchorSummary(annotation.start),
+        end: anchorSummary(annotation.end),
+        from: anchorSummary(annotation.from),
+        to: anchorSummary(annotation.to),
+        ...(annotation.sourceSignalId === undefined ? {} : { sourceSignalId: annotation.sourceSignalId }),
+        ...(annotation.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: annotation.traceOffsetCycles }),
+        ...(annotation.opacity === undefined ? {} : { opacity: annotation.opacity }),
+        ...(annotation.measurement === undefined ? {} : { measurement: annotation.measurement }),
+        ...(annotation.positionMode === undefined ? {} : { positionMode: annotation.positionMode }),
+      })),
     };
   }
   if (tool === "get_bookmarks") {
