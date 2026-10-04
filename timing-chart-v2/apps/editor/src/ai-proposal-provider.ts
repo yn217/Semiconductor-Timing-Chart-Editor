@@ -451,14 +451,24 @@ export function buildTypedAnnotationProposal(document: CanonicalDocument, revisi
     const label = args.label;
     const visible = args.visible;
     const color = args.color;
+    const sourceSignalId = args.sourceSignalId;
+    const traceOffsetCycles = args.traceOffsetCycles;
+    const opacity = args.opacity;
     if (label !== undefined && (typeof label !== "string" || !label.trim())) return { ok: false, message: "label must be a non-empty string when supplied." };
     if (visible !== undefined && typeof visible !== "boolean") return { ok: false, message: "visible must be a boolean." };
     if (color !== undefined && (typeof color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(color))) return { ok: false, message: "color must be a six-digit hexadecimal color." };
-    if (label === undefined && visible === undefined && color === undefined) return { ok: false, message: "propose_update_annotation requires label, visible, or color." };
+    if (sourceSignalId !== undefined && annotation.type !== "ghostTrace") return { ok: false, message: "sourceSignalId is only valid for Ghost Trace Annotations." };
+    if (sourceSignalId !== undefined && (typeof sourceSignalId !== "string" || !document.signals.some((signal) => signal.id === sourceSignalId && signal.type !== "commentRow"))) return { ok: false, message: `Ghost Trace source Signal '${String(sourceSignalId)}' does not exist in the current document.` };
+    if (traceOffsetCycles !== undefined && (annotation.type !== "ghostTrace" || typeof traceOffsetCycles !== "number" || !Number.isFinite(traceOffsetCycles))) return { ok: false, message: "traceOffsetCycles is only valid as a finite number for Ghost Trace Annotations." };
+    if (opacity !== undefined && (!(["ghostTrace", "timingRegion"] as const).includes(annotation.type as "ghostTrace" | "timingRegion") || typeof opacity !== "number" || !Number.isFinite(opacity) || opacity < 0 || opacity > 1)) return { ok: false, message: "opacity is only valid for Ghost Trace or Timing Region Annotations and must be between 0 and 1." };
+    if (label === undefined && visible === undefined && color === undefined && sourceSignalId === undefined && traceOffsetCycles === undefined && opacity === undefined) return { ok: false, message: "propose_update_annotation requires at least one supported changed field." };
     const updatedLabel = typeof label === "string" ? label.trim() : annotation.label;
     const updatedVisible = typeof visible === "boolean" ? visible : annotation.visible;
     const updatedColor = typeof color === "string" ? color : annotation.color;
-    const fields = { type: "annotation.updateProperties" as const, annotationId: annotation.id, label: updatedLabel, visible: updatedVisible, ...(updatedColor === undefined ? {} : { color: updatedColor }), ...(annotation.lineType === undefined ? {} : { lineType: annotation.lineType }), ...(annotation.arrowhead === undefined ? {} : { arrowhead: annotation.arrowhead }), ...(annotation.sourceSignalId === undefined ? {} : { sourceSignalId: annotation.sourceSignalId }), ...(annotation.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: annotation.traceOffsetCycles }), ...(annotation.opacity === undefined ? {} : { opacity: annotation.opacity }), ...(annotation.labelOffset === undefined ? {} : { labelOffset: annotation.labelOffset }), ...(annotation.labelPlacement === undefined ? {} : { labelPlacement: annotation.labelPlacement }), ...(annotation.style === undefined ? {} : { style: annotation.style }), ...(annotation.measurement === undefined ? {} : { measurement: annotation.measurement }) };
+    const nextSourceSignalId = sourceSignalId === undefined ? annotation.sourceSignalId : sourceSignalId as SignalId;
+    const nextTraceOffsetCycles = traceOffsetCycles === undefined ? annotation.traceOffsetCycles : traceOffsetCycles as number;
+    const nextOpacity = opacity === undefined ? annotation.opacity : opacity as number;
+    const fields = { type: "annotation.updateProperties" as const, annotationId: annotation.id, label: updatedLabel, visible: updatedVisible, ...(updatedColor === undefined ? {} : { color: updatedColor }), ...(annotation.lineType === undefined ? {} : { lineType: annotation.lineType }), ...(annotation.arrowhead === undefined ? {} : { arrowhead: annotation.arrowhead }), ...(nextSourceSignalId === undefined ? {} : { sourceSignalId: nextSourceSignalId }), ...(nextTraceOffsetCycles === undefined ? {} : { traceOffsetCycles: nextTraceOffsetCycles }), ...(nextOpacity === undefined ? {} : { opacity: nextOpacity }), ...(annotation.labelOffset === undefined ? {} : { labelOffset: annotation.labelOffset }), ...(annotation.labelPlacement === undefined ? {} : { labelPlacement: annotation.labelPlacement }), ...(annotation.style === undefined ? {} : { style: annotation.style }), ...(annotation.measurement === undefined ? {} : { measurement: annotation.measurement }) };
     return { ok: true, proposal: proposal(revision, `Update Annotation ${annotation.label}`, [command(fields, "typed_update_annotation")]) };
   }
   return { ok: false, message: `Unsupported typed Annotation proposal '${tool}'.` };

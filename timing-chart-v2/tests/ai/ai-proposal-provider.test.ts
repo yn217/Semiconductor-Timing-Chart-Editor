@@ -340,6 +340,16 @@ describe("deterministic AI proposal provider", () => {
       ghostTrace: { opacity: 1.1 },
     })).toMatchObject({ ok: false, message: expect.stringContaining("between 0 and 1") });
     expect(document.annotations).toHaveLength(0);
+
+    const existingGhost = {
+      ...document,
+      annotations: [{ id: "annotation_ghost" as AnnotationId, type: "ghostTrace" as const, label: "Old", visible: true, sourceSignalId: "sig_clk" as SignalId, traceOffsetCycles: 0, opacity: 0.55, start: { signalId: "sig_data" as SignalId, cycle: 1, point: "cycle-start" as const }, end: { signalId: "sig_data" as SignalId, cycle: 3, point: "cycle-end" as const } }],
+    };
+    const update = buildTypedAnnotationProposal(existingGhost, 39, "propose_update_annotation", { annotationId: "annotation_ghost", sourceSignalId: "sig_data", traceOffsetCycles: 2.5, opacity: 0.25 });
+    expect(update.ok).toBe(true);
+    if (update.ok) expect(update.proposal.commands[0]).toMatchObject({ type: "annotation.updateProperties", annotationId: "annotation_ghost", sourceSignalId: "sig_data", traceOffsetCycles: 2.5, opacity: 0.25 });
+    expect(buildTypedAnnotationProposal(existingGhost, 40, "propose_update_annotation", { annotationId: "annotation_ghost", sourceSignalId: "missing_signal" })).toMatchObject({ ok: false, message: expect.stringContaining("does not exist") });
+    expect(buildTypedAnnotationProposal(existingGhost, 41, "propose_update_annotation", { annotationId: "annotation_ghost", opacity: 1.1 })).toMatchObject({ ok: false, message: expect.stringContaining("between 0 and 1") });
   });
 
   it("returns a revisioned semantic proposal without mutating the source document", () => {

@@ -94,6 +94,10 @@ describe("Agent Bridge security boundaries (#395 item 11)", () => {
     expect(tool?.[0]).toContain("traceOffsetCycles: { type: \"number\" }");
     expect(tool?.[0]).toContain("opacity: { type: \"number\", minimum: 0, maximum: 1 }");
     expect(tool?.[0]).toContain("Ghost Trace options identify its stable sourceSignalId");
+    const updateTool = source.match(/\{ name: "propose_update_annotation",[\s\S]*?\n/);
+    expect(updateTool?.[0]).toContain("sourceSignalId: { type: \"string\", minLength: 1 }");
+    expect(updateTool?.[0]).toContain("traceOffsetCycles: { type: \"number\" }");
+    expect(updateTool?.[0]).toContain("opacity: { type: \"number\", minimum: 0, maximum: 1 }");
   });
 
   it("uses distinct bearer credentials for MCP and Editor transport routes", () => {
