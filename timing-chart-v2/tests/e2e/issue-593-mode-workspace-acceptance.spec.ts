@@ -37,9 +37,16 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
     };
 
     const cycle1 = await enter("Cycle");
+    const selectedSignal = page.locator("[data-role='frozen-row'][data-row-id='pclk']").first();
+    await selectedSignal.click();
+    await expect(selectedSignal).toHaveAttribute("data-selected", "true");
+    await expect(selectedSignal).toHaveAttribute("aria-selected", "true");
     const transaction = await enter("Transaction");
     const combined = await enter("Combined");
     const cycle2 = await enter("Cycle");
+    const remountedSignal = page.locator("[data-role='frozen-row'][data-row-id='pclk']").first();
+    await expect(remountedSignal).toHaveAttribute("data-selected", "true");
+    await expect(remountedSignal).toHaveAttribute("aria-selected", "true");
     const transaction2 = await enter("Transaction");
     await enter("Cycle");
 
