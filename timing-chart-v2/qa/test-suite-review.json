@@ -11798,20 +11798,20 @@
     },
     {
       "file": "spacer-clipboard-reorder.spec.ts",
-      "title": "creates a Spacer from the Insert Ribbon, duplicates/copies it, reorders it within its Group by drag, and rejects a cross-Group drop",
-      "domain": "spacer-insert-clipboard-and-group-boundary",
-      "originIssue": 222,
+      "title": "creates, duplicates, copies, reorders and transfers a stable Spacer across populated and empty Groups",
+      "domain": "spacer-insert-clipboard-and-cross-group-transfer",
+      "originIssue": 1072,
       "type": "SEMANTIC_CONTRACT",
       "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": "Insert, Duplicate, clipboard copy/paste, same-Group drag reorder, and cross-Group rejection preserve Spacer height/identity and semantic command/history rules.",
+      "primaryContract": "Insert, Duplicate, clipboard copy/paste, same-Group reorder, and cross-Group transfer to populated or empty Groups preserve stable Spacer identity and route each move through one semantic history operation.",
       "duplicateGroup": "spacer-creation-edit-and-order",
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
       "profiles": [
         "integration"
       ],
       "decision": "KEEP",
-      "reason": "This uniquely covers the Insert Ribbon adapter, fresh identity on copy, in-Group drag, and Core's cross-Group Spacer rejection; Tree Add and Group Inspector edit tests do not cover these operations.",
+      "reason": "This uniquely covers the Insert Ribbon adapter, fresh identity on copy, stable-ID drag reorder, and atomic cross-Group transfer including an empty target Group. Keeping the real drag journey is necessary for the tree drop-target contract; focused command tests cover atomic ownership/history semantics below the browser layer.",
       "replacementTest": null
     },
     {
@@ -16315,6 +16315,80 @@
       ],
       "decision": "KEEP",
       "reason": "This covers invalidation precision after a real semantic commit, complementary to the viewport-only case; the pair distinguishes correct reuse from simply never rebuilding the overview.",
+      "replacementTest": null
+    },
+    {
+      "file": "ai-bridge.spec.ts",
+      "title": "submit_proposal previews an ordered typed batch and applies or undoes it as one History entry",
+      "domain": "external-mcp-typed-batch-preview-atomic-history",
+      "originIssue": 778,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A real MCP submit_proposal request previews ordered stable-ID operations without Canonical/History/Dirty changes, then one human-approved Apply creates one logical History entry and Undo restores the original Signal and Bookmark state.",
+      "duplicateGroup": "external-mcp-proposal-atomic-approval",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "The real HTTP bridge, ordered typed operations, preview-only boundary, one-transaction Apply, and exact Undo jointly protect the external-agent atomicity contract; provider unit tests alone cannot verify the UI approval lifecycle. Runtime is not recorded, so retain the existing medium estimate without claiming a measured cost.",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-1055-signal-tree-offscreen-filter.spec.ts",
+      "title": "Signal Tree filters offscreen canonical Signals, compacts matches, and restores scroll without document mutation",
+      "domain": "signal-tree-offscreen-filter-and-view-only-scroll-restore",
+      "originIssue": 1055,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "On a production-opened 1,000-Signal document, filtering finds an initially offscreen stable Signal ID, compacts the visible tree to its matching row/group, and clearing the filter restores the prior scroll position with Canonical/History/Dirty unchanged.",
+      "duplicateGroup": "signal-tree-offscreen-filter-and-scroll-restore",
+      "executionTier": "TIER_4_PERFORMANCE_OR_NIGHTLY",
+      "profiles": [
+        "integration",
+        "performance",
+        "nightly"
+      ],
+      "decision": "KEEP",
+      "reason": "This combines the actual file-open path, 1k-row offscreen discovery, virtualization/filter projection, scroll restoration, and view-only invariant. Keep it automated in integration/performance tiers; no runtime sample is available, so HEAVY is a fixture-based estimate rather than a measured duration.",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-431-constraint-authoring.spec.ts",
+      "title": "Check authors semantic latency constraints and the checker reports an out-of-range edge",
+      "domain": "latency-constraint-authoring-and-diagnostic",
+      "originIssue": 431,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A user can author a latency constraint from stable Signal selections and cycle bounds, see the checker report a violating edge, and delete that constraint as a separate exact History action.",
+      "duplicateGroup": "latency-constraint-authoring",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "The test covers the Check-tab authoring journey and its connection to actual diagnostic evaluation and semantic History; pure validator tests cannot prove the user-facing authoring and checker flow. Runtime has not been measured in the inventory.",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-431-constraint-problem-reveal.spec.ts",
+      "title": "constraint Problem navigation reveals its stable Signal and offending source cycle",
+      "domain": "constraint-problem-stable-target-reveal",
+      "originIssue": 431,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Activating a latency Problem selects the exact stable Signal ID and navigates to its offending canonical source cycle.",
+      "duplicateGroup": "constraint-problem-navigation",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The user-visible Problems navigation crosses from a diagnostic to selection and time navigation, so the stable-ID/source-cycle result must remain verified at the UI boundary; the small fixture and single target are appropriate for focused PR coverage.",
       "replacementTest": null
     }
   ]

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-03T20:22:31.535Z",
+  "generatedAt": "2026-10-04T03:02:01.891Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 407,
-  "caseCount": 1213,
-  "reviewedCaseCount": 1211,
+  "specFileCount": 409,
+  "caseCount": 1217,
+  "reviewedCaseCount": 1217,
   "curatedProfileCounts": {
-    "integration": 612,
-    "nightly": 226,
-    "performance": 66,
-    "pr": 387,
+    "integration": 615,
+    "nightly": 227,
+    "performance": 67,
+    "pr": 390,
     "visual": 180
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -1555,7 +1555,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 197,
+      "line": 200,
       "title": "get_transactions, get_annotations, get_bookmarks and get_problems are read-only semantic projections",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1581,7 +1581,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 261,
+      "line": 264,
       "title": "external Transaction+Phases+Signals proposal validates and applies as one atomic History entry",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1608,29 +1608,33 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 310,
+      "line": 313,
       "title": "submit_proposal previews an ordered typed batch and applies or undoes it as one History entry",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "external-mcp-typed-batch-preview-atomic-history",
+      "originIssue": 778,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A real MCP submit_proposal request previews ordered stable-ID operations without Canonical/History/Dirty changes, then one human-approved Apply creates one logical History entry and Undo restores the original Signal and Bookmark state.",
+      "duplicateGroup": "external-mcp-proposal-atomic-approval",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The real HTTP bridge, ordered typed operations, preview-only boundary, one-transaction Apply, and exact Undo jointly protect the external-agent atomicity contract; provider unit tests alone cannot verify the UI approval lifecycle. Runtime is not recorded, so retain the existing medium estimate without claiming a measured cost.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ],
+      "contractId": "external-mcp-typed-batch-preview-atomic-history"
     },
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 358,
+      "line": 361,
       "title": "propose_edit builds a Preview only -- it never auto-validates or auto-applies, and a human must still Validate + Apply it themselves",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1656,7 +1660,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 398,
+      "line": 401,
       "title": "propose_rename_signal targets a stable Signal ID and still requires human Validate and Apply",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1682,7 +1686,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 440,
+      "line": 443,
       "title": "the Editor session and pending AI proposal survive Bottom tab switches, then reject stale revision",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1708,7 +1712,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 492,
+      "line": 495,
       "title": "propose_create_signal uses a stable Group ID and remains a Preview until explicit Apply",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1734,7 +1738,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 521,
+      "line": 524,
       "title": "Signal Group move and delete tools target stable IDs and apply only after approval",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1760,7 +1764,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 570,
+      "line": 573,
       "title": "an unauthorized propose_edit call (bad token) never reaches the document, and an empty query is rejected before building any proposal",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1786,7 +1790,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 590,
+      "line": 593,
       "title": "rejects a request with an invalid token, and rejects any tool outside the exposed whitelist",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1812,7 +1816,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 629,
+      "line": 632,
       "title": "bridge disconnect is surfaced truthfully, and the same tab recovers on its own once the bridge comes back",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -7497,7 +7501,7 @@
     {
       "file": "group-band.spec.ts",
       "suitePath": [],
-      "line": 77,
+      "line": 84,
       "title": "keeps invalid Group Band opacity draft-only",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -7523,7 +7527,7 @@
     {
       "file": "group-band.spec.ts",
       "suitePath": [],
-      "line": 90,
+      "line": 100,
       "title": "previews valid Group Band drafts without mutating Canonical and restores them on Cancel",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -9976,18 +9980,24 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-tree-offscreen-filter-and-view-only-scroll-restore",
+      "originIssue": 1055,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "On a production-opened 1,000-Signal document, filtering finds an initially offscreen stable Signal ID, compacts the visible tree to its matching row/group, and clearing the filter restores the prior scroll position with Canonical/History/Dirty unchanged.",
+      "duplicateGroup": "signal-tree-offscreen-filter-and-scroll-restore",
+      "executionTier": "TIER_4_PERFORMANCE_OR_NIGHTLY",
+      "decision": "KEEP",
+      "reason": "This combines the actual file-open path, 1k-row offscreen discovery, virtualization/filter projection, scroll restoration, and view-only invariant. Keep it automated in integration/performance tiers; no runtime sample is available, so HEAVY is a fixture-based estimate rather than a measured duration.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "performance",
+        "nightly"
+      ],
+      "contractId": "signal-tree-offscreen-filter-and-view-only-scroll-restore"
     },
     {
       "file": "issue-175-scrollbar-effect-lifecycle.spec.ts",
@@ -10304,7 +10314,7 @@
     {
       "file": "issue-431-bus-radix.spec.ts",
       "suitePath": [],
-      "line": 22,
+      "line": 29,
       "title": "Bus format agrees across waveform labels, Bottom event table and Save/Open at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -10330,7 +10340,7 @@
     {
       "file": "issue-431-bus-radix.spec.ts",
       "suitePath": [],
-      "line": 22,
+      "line": 29,
       "title": "Bus format agrees across waveform labels, Bottom event table and Save/Open at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -10352,6 +10362,58 @@
         "pr"
       ],
       "contractId": "bus-radix"
+    },
+    {
+      "file": "issue-431-constraint-authoring.spec.ts",
+      "suitePath": [],
+      "line": 6,
+      "title": "Check authors semantic latency constraints and the checker reports an out-of-range edge",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "latency-constraint-authoring-and-diagnostic",
+      "originIssue": 431,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A user can author a latency constraint from stable Signal selections and cycle bounds, see the checker report a violating edge, and delete that constraint as a separate exact History action.",
+      "duplicateGroup": "latency-constraint-authoring",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The test covers the Check-tab authoring journey and its connection to actual diagnostic evaluation and semantic History; pure validator tests cannot prove the user-facing authoring and checker flow. Runtime has not been measured in the inventory.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ],
+      "contractId": "latency-constraint-authoring-and-diagnostic"
+    },
+    {
+      "file": "issue-431-constraint-problem-reveal.spec.ts",
+      "suitePath": [],
+      "line": 21,
+      "title": "constraint Problem navigation reveals its stable Signal and offending source cycle",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "constraint-problem-stable-target-reveal",
+      "originIssue": 431,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Activating a latency Problem selects the exact stable Signal ID and navigates to its offending canonical source cycle.",
+      "duplicateGroup": "constraint-problem-navigation",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The user-visible Problems navigation crosses from a diagnostic to selection and time navigation, so the stable-ID/source-cycle result must remain verified at the UI boundary; the small fixture and single target are appropriate for focused PR coverage.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "constraint-problem-stable-target-reveal"
     },
     {
       "file": "issue-431-enum-state-save-open.spec.ts",
@@ -14867,7 +14929,7 @@
     {
       "file": "issue-753-bookmark-navigation-no-crash.spec.ts",
       "suitePath": [],
-      "line": 9,
+      "line": 10,
       "title": "Bookmark row/marker/Previous/Next keep the editor mounted with no navigation at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -14893,7 +14955,7 @@
     {
       "file": "issue-753-bookmark-navigation-no-crash.spec.ts",
       "suitePath": [],
-      "line": 9,
+      "line": 10,
       "title": "Bookmark row/marker/Previous/Next keep the editor mounted with no navigation at 1392x900",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -14919,7 +14981,7 @@
     {
       "file": "issue-753-bookmark-navigation-no-crash.spec.ts",
       "suitePath": [],
-      "line": 9,
+      "line": 10,
       "title": "Bookmark row/marker/Previous/Next keep the editor mounted with no navigation at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -22673,7 +22735,7 @@
     {
       "file": "performance-internal-latency.spec.ts",
       "suitePath": [],
-      "line": 9,
+      "line": 11,
       "title": "measures GUI latency inside Chromium rather than through Playwright RPC time",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -23952,7 +24014,7 @@
     {
       "file": "ribbon-cursor-ab.spec.ts",
       "suitePath": [],
-      "line": 47,
+      "line": 50,
       "title": "Cursor A guide drag updates only workspace cursor state",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -25628,28 +25690,28 @@
     {
       "file": "spacer-clipboard-reorder.spec.ts",
       "suitePath": [],
-      "line": 10,
-      "title": "creates a Spacer from the Insert Ribbon, duplicates/copies it, reorders it within its Group by drag, and rejects a cross-Group drop",
+      "line": 8,
+      "title": "creates, duplicates, copies, reorders and transfers a stable Spacer across populated and empty Groups",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": "spacer-insert-clipboard-and-group-boundary",
-      "originIssue": 222,
+      "domain": "spacer-insert-clipboard-and-cross-group-transfer",
+      "originIssue": 1072,
       "type": "SEMANTIC_CONTRACT",
       "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": "Insert, Duplicate, clipboard copy/paste, same-Group drag reorder, and cross-Group rejection preserve Spacer height/identity and semantic command/history rules.",
+      "primaryContract": "Insert, Duplicate, clipboard copy/paste, same-Group reorder, and cross-Group transfer to populated or empty Groups preserve stable Spacer identity and route each move through one semantic history operation.",
       "duplicateGroup": "spacer-creation-edit-and-order",
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
       "decision": "KEEP",
-      "reason": "This uniquely covers the Insert Ribbon adapter, fresh identity on copy, in-Group drag, and Core's cross-Group Spacer rejection; Tree Add and Group Inspector edit tests do not cover these operations.",
+      "reason": "This uniquely covers the Insert Ribbon adapter, fresh identity on copy, stable-ID drag reorder, and atomic cross-Group transfer including an empty target Group. Keeping the real drag journey is necessary for the tree drop-target contract; focused command tests cover atomic ownership/history semantics below the browser layer.",
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
         "integration"
       ],
-      "contractId": "spacer-insert-clipboard-and-group-boundary"
+      "contractId": "spacer-insert-clipboard-and-cross-group-transfer"
     },
     {
       "file": "spacer-row.spec.ts",
@@ -28849,7 +28911,33 @@
     {
       "file": "transaction-lane-scaling.spec.ts",
       "suitePath": [],
-      "line": 243,
+      "line": 289,
+      "title": "10k overlapping Transactions render only the horizontally relevant visible stack rows",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "transaction-lane",
+      "originIssue": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Lane scaling follows zoom.",
+      "duplicateGroup": "transaction-lane",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "transaction-lane"
+    },
+    {
+      "file": "transaction-lane-scaling.spec.ts",
+      "suitePath": [],
+      "line": 339,
       "title": "standalone Transaction cycle viewport scroll advances the virtualized lane window",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -28875,7 +28963,33 @@
     {
       "file": "transaction-lane-scaling.spec.ts",
       "suitePath": [],
-      "line": 261,
+      "line": 357,
+      "title": "vertical Lane lookup is viewport-bounded across 10k distinct Lanes",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "transaction-lane",
+      "originIssue": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Lane scaling follows zoom.",
+      "duplicateGroup": "transaction-lane",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "transaction-lane"
+    },
+    {
+      "file": "transaction-lane-scaling.spec.ts",
+      "suitePath": [],
+      "line": 382,
       "title": "selected Transaction drag survives a horizontal virtualization window change",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -28901,7 +29015,7 @@
     {
       "file": "transaction-lane-scaling.spec.ts",
       "suitePath": [],
-      "line": 300,
+      "line": 421,
       "title": "Transaction Fit All and Fit Selection remain view-only",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -28927,7 +29041,7 @@
     {
       "file": "transaction-lane-scaling.spec.ts",
       "suitePath": [],
-      "line": 323,
+      "line": 444,
       "title": "Transaction view state survives both mode-switch directions",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -28953,7 +29067,7 @@
     {
       "file": "transaction-lane-scaling.spec.ts",
       "suitePath": [],
-      "line": 345,
+      "line": 466,
       "title": "central Transaction surface remains viewport-bounded across 1k/5k/10k with bounded mode, scroll, and selection work",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -28980,7 +29094,7 @@
     {
       "file": "transaction-lane-scaling.spec.ts",
       "suitePath": [],
-      "line": 434,
+      "line": 555,
       "title": "single-lane Transaction edits remain bounded on a large sequential fixture",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -31938,11 +32052,11 @@
     {
       "file": "ai-bridge.spec.ts",
       "caseCount": 14,
-      "reviewedCaseCount": 13,
+      "reviewedCaseCount": 14,
       "originIssue": null,
       "declaredTimeoutMs": 10,
       "candidateSignals": [],
-      "semanticReviewStatus": "PARTIAL"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "ai-domain-coverage.spec.ts",
@@ -32897,11 +33011,11 @@
     {
       "file": "issue-1055-signal-tree-offscreen-filter.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": "1055",
       "declaredTimeoutMs": 60,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-175-scrollbar-effect-lifecycle.spec.ts",
@@ -32979,6 +33093,24 @@
       "reviewedCaseCount": 2,
       "originIssue": "431",
       "declaredTimeoutMs": 180,
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "issue-431-constraint-authoring.spec.ts",
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
+      "originIssue": "431",
+      "declaredTimeoutMs": null,
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "issue-431-constraint-problem-reveal.spec.ts",
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
+      "originIssue": "431",
+      "declaredTimeoutMs": 60,
       "candidateSignals": [],
       "semanticReviewStatus": "REVIEWED"
     },
@@ -35322,7 +35454,9 @@
       "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
-      "candidateSignals": [],
+      "candidateSignals": [
+        "dataset"
+      ],
       "semanticReviewStatus": "REVIEWED"
     },
     {
@@ -35646,13 +35780,14 @@
     },
     {
       "file": "transaction-lane-scaling.spec.ts",
-      "caseCount": 11,
-      "reviewedCaseCount": 11,
+      "caseCount": 13,
+      "reviewedCaseCount": 13,
       "originIssue": null,
       "declaredTimeoutMs": 180,
       "candidateSignals": [
         "querySelector",
-        "dataset"
+        "dataset",
+        "geometryRead"
       ],
       "semanticReviewStatus": "REVIEWED"
     },

@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 407 spec files and 1213 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 409 spec files and 1217 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1211/1213 cases reviewed.
+Semantic review progress: 1217/1217 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,10 +10,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 612 |
-| `nightly` | 226 |
-| `performance` | 66 |
-| `pr` | 387 |
+| `integration` | 615 |
+| `nightly` | 227 |
+| `performance` | 67 |
+| `pr` | 390 |
 | `visual` | 180 |
 
 ## Top recorded per-case runtimes
@@ -53,7 +53,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `acceptance-429-transaction-colors.spec.ts` | 4 | 4/4 reviewed |
 | `acceptance-429-transaction-composition.spec.ts` | 32 | 32/32 reviewed |
 | `advanced-json-diagnostic.spec.ts` | 7 | 7/7 reviewed |
-| `ai-bridge.spec.ts` | 14 | 13/14 reviewed |
+| `ai-bridge.spec.ts` | 14 | 14/14 reviewed |
 | `ai-domain-coverage.spec.ts` | 1 | 1/1 reviewed |
 | `ai-proposal-workflow.spec.ts` | 10 | 10/10 reviewed |
 | `annotation-bottom-list.spec.ts` | 1 | 1/1 reviewed |
@@ -150,7 +150,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `interaction-visual-scenarios.spec.ts` | 11 | 11/11 reviewed |
 | `issue-1004-group-hierarchy.spec.ts` | 2 | 2/2 reviewed |
 | `issue-1007-transaction-add-menu.spec.ts` | 4 | 4/4 reviewed |
-| `issue-1055-signal-tree-offscreen-filter.spec.ts` | 1 | 0/1 reviewed |
+| `issue-1055-signal-tree-offscreen-filter.spec.ts` | 1 | 1/1 reviewed |
 | `issue-175-scrollbar-effect-lifecycle.spec.ts` | 1 | 1/1 reviewed |
 | `issue-175-scrollbar-geometry-matrix.spec.ts` | 2 | 2/2 reviewed |
 | `issue-208-open-epoch-coherence.spec.ts` | 1 | 1/1 reviewed |
@@ -159,6 +159,8 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-426-external-bottom-draft-update.spec.ts` | 3 | 3/3 reviewed |
 | `issue-426-inspector-bookmark-rebase.spec.ts` | 2 | 2/2 reviewed |
 | `issue-431-bus-radix.spec.ts` | 2 | 2/2 reviewed |
+| `issue-431-constraint-authoring.spec.ts` | 1 | 1/1 reviewed |
+| `issue-431-constraint-problem-reveal.spec.ts` | 1 | 1/1 reviewed |
 | `issue-431-enum-state-save-open.spec.ts` | 2 | 2/2 reviewed |
 | `issue-431-protocol-check-toggle.spec.ts` | 2 | 2/2 reviewed |
 | `issue-440-mode-context-coherence.spec.ts` | 3 | 3/3 reviewed |
@@ -413,7 +415,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `transaction-inspector-duration-tc.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-inspector-lane-suggestions.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-lane-labels-visible.spec.ts` | 2 | 2/2 reviewed |
-| `transaction-lane-scaling.spec.ts` | 11 | 11/11 reviewed |
+| `transaction-lane-scaling.spec.ts` | 13 | 13/13 reviewed |
 | `transaction-minimap-overview.spec.ts` | 2 | 2/2 reviewed |
 | `transaction-onboarding.spec.ts` | 7 | 7/7 reviewed |
 | `transaction-partial-update-preserves-fields.spec.ts` | 1 | 1/1 reviewed |
@@ -614,6 +616,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `ribbon-more-popover-closure.spec.ts` | geometryRead |
 | `runtime-owner-acceptance.spec.ts` | getComputedStyle |
 | `signal-split.spec.ts` | getComputedStyle |
+| `spacer-clipboard-reorder.spec.ts` | dataset |
 | `splitter-view-state.contract.spec.ts` | getComputedStyle, explicitWait |
 | `stable-id-collision.spec.ts` | querySelector |
 | `stable-surface.spec.ts` | dataset |
@@ -626,7 +629,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `transaction-bottom-panel-table.spec.ts` | geometryRead |
 | `transaction-drag.spec.ts` | geometryRead, explicitWait |
 | `transaction-lane-labels-visible.spec.ts` | getComputedStyle |
-| `transaction-lane-scaling.spec.ts` | querySelector, dataset |
+| `transaction-lane-scaling.spec.ts` | querySelector, dataset, geometryRead |
 | `transaction-minimap-overview.spec.ts` | getComputedStyle |
 | `transaction-phase-bars.spec.ts` | geometryRead |
 | `transaction-ribbon-groups.spec.ts` | dataset |
