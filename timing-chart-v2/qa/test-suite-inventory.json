@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-04T11:22:23.798Z",
+  "generatedAt": "2026-10-04T11:46:23.309Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,13 +11,13 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 412,
-  "caseCount": 1229,
-  "reviewedCaseCount": 1229,
+  "specFileCount": 413,
+  "caseCount": 1234,
+  "reviewedCaseCount": 1234,
   "curatedProfileCounts": {
     "integration": 627,
-    "nightly": 232,
-    "performance": 67,
+    "nightly": 237,
+    "performance": 72,
     "pr": 390,
     "visual": 180
   },
@@ -22652,6 +22652,141 @@
       "contractId": "far-jump-long-task-budget"
     },
     {
+      "file": "perf-fixed-full-span-open.spec.ts",
+      "suitePath": [],
+      "line": 27,
+      "title": "fixed 100x500 full-span Open, cold run 1/5",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "fixed-full-span-100x500-open-stress",
+      "originIssue": 174,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
+      "measuredRuntimeMs": 952,
+      "primaryContract": "The production File Open path completes a fixed 100 Signal x 500 cycle workload with all 100 waveform owners rendered over the full 0..500 source span, while recording browser-internal Open/render metrics.",
+      "duplicateGroup": "fixed-full-span-open-benchmark",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "decision": "KEEP",
+      "reason": "This is a fixed-work engineering stress benchmark, distinct from the product Open SLO gate: it asserts 100/100 full-span render owners and measures application/browser phases with Playwright tracing disabled. Its five cold samples are intentionally costly and belong in the dedicated performance/nightly profile, not routine PR execution. The recorded 952ms median is local directional evidence, not an SLO or cross-runner speedup claim.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ],
+      "contractId": "fixed-full-span-100x500-open-stress"
+    },
+    {
+      "file": "perf-fixed-full-span-open.spec.ts",
+      "suitePath": [],
+      "line": 27,
+      "title": "fixed 100x500 full-span Open, cold run 2/5",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "fixed-full-span-100x500-open-stress",
+      "originIssue": 174,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
+      "measuredRuntimeMs": 952,
+      "primaryContract": "The production File Open path completes a fixed 100 Signal x 500 cycle workload with all 100 waveform owners rendered over the full 0..500 source span, while recording browser-internal Open/render metrics.",
+      "duplicateGroup": "fixed-full-span-open-benchmark",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "decision": "KEEP",
+      "reason": "This is a fixed-work engineering stress benchmark, distinct from the product Open SLO gate: it asserts 100/100 full-span render owners and measures application/browser phases with Playwright tracing disabled. Its five cold samples are intentionally costly and belong in the dedicated performance/nightly profile, not routine PR execution. The recorded 952ms median is local directional evidence, not an SLO or cross-runner speedup claim.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ],
+      "contractId": "fixed-full-span-100x500-open-stress"
+    },
+    {
+      "file": "perf-fixed-full-span-open.spec.ts",
+      "suitePath": [],
+      "line": 27,
+      "title": "fixed 100x500 full-span Open, cold run 3/5",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "fixed-full-span-100x500-open-stress",
+      "originIssue": 174,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
+      "measuredRuntimeMs": 952,
+      "primaryContract": "The production File Open path completes a fixed 100 Signal x 500 cycle workload with all 100 waveform owners rendered over the full 0..500 source span, while recording browser-internal Open/render metrics.",
+      "duplicateGroup": "fixed-full-span-open-benchmark",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "decision": "KEEP",
+      "reason": "This is a fixed-work engineering stress benchmark, distinct from the product Open SLO gate: it asserts 100/100 full-span render owners and measures application/browser phases with Playwright tracing disabled. Its five cold samples are intentionally costly and belong in the dedicated performance/nightly profile, not routine PR execution. The recorded 952ms median is local directional evidence, not an SLO or cross-runner speedup claim.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ],
+      "contractId": "fixed-full-span-100x500-open-stress"
+    },
+    {
+      "file": "perf-fixed-full-span-open.spec.ts",
+      "suitePath": [],
+      "line": 27,
+      "title": "fixed 100x500 full-span Open, cold run 4/5",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "fixed-full-span-100x500-open-stress",
+      "originIssue": 174,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
+      "measuredRuntimeMs": 952,
+      "primaryContract": "The production File Open path completes a fixed 100 Signal x 500 cycle workload with all 100 waveform owners rendered over the full 0..500 source span, while recording browser-internal Open/render metrics.",
+      "duplicateGroup": "fixed-full-span-open-benchmark",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "decision": "KEEP",
+      "reason": "This is a fixed-work engineering stress benchmark, distinct from the product Open SLO gate: it asserts 100/100 full-span render owners and measures application/browser phases with Playwright tracing disabled. Its five cold samples are intentionally costly and belong in the dedicated performance/nightly profile, not routine PR execution. The recorded 952ms median is local directional evidence, not an SLO or cross-runner speedup claim.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ],
+      "contractId": "fixed-full-span-100x500-open-stress"
+    },
+    {
+      "file": "perf-fixed-full-span-open.spec.ts",
+      "suitePath": [],
+      "line": 27,
+      "title": "fixed 100x500 full-span Open, cold run 5/5",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "fixed-full-span-100x500-open-stress",
+      "originIssue": 174,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
+      "measuredRuntimeMs": 952,
+      "primaryContract": "The production File Open path completes a fixed 100 Signal x 500 cycle workload with all 100 waveform owners rendered over the full 0..500 source span, while recording browser-internal Open/render metrics.",
+      "duplicateGroup": "fixed-full-span-open-benchmark",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "decision": "KEEP",
+      "reason": "This is a fixed-work engineering stress benchmark, distinct from the product Open SLO gate: it asserts 100/100 full-span render owners and measures application/browser phases with Playwright tracing disabled. Its five cold samples are intentionally costly and belong in the dedicated performance/nightly profile, not routine PR execution. The recorded 952ms median is local directional evidence, not an SLO or cross-runner speedup claim.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ],
+      "contractId": "fixed-full-span-100x500-open-stress"
+    },
+    {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
       "line": 14,
@@ -35432,6 +35567,18 @@
       "declaredTimeoutMs": 180,
       "candidateSignals": [
         "querySelector"
+      ],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "perf-fixed-full-span-open.spec.ts",
+      "caseCount": 5,
+      "reviewedCaseCount": 5,
+      "originIssue": null,
+      "declaredTimeoutMs": 180,
+      "candidateSignals": [
+        "querySelector",
+        "dataset"
       ],
       "semanticReviewStatus": "REVIEWED"
     },

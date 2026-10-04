@@ -3353,6 +3353,24 @@
       "decision": "KEEP",
       "reason": "Regression for the #753 white-page recording.",
       "replacementTest": null
+    },
+    {
+      "file": "perf-fixed-full-span-open.spec.ts",
+      "domain": "fixed-full-span-100x500-open-stress",
+      "originIssue": 174,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
+      "measuredRuntimeMs": 952,
+      "primaryContract": "The production File Open path completes a fixed 100 Signal x 500 cycle workload with all 100 waveform owners rendered over the full 0..500 source span, while recording browser-internal Open/render metrics.",
+      "duplicateGroup": "fixed-full-span-open-benchmark",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "profiles": [
+        "performance",
+        "nightly"
+      ],
+      "decision": "KEEP",
+      "reason": "This is a fixed-work engineering stress benchmark, distinct from the product Open SLO gate: it asserts 100/100 full-span render owners and measures application/browser phases with Playwright tracing disabled. Its five cold samples are intentionally costly and belong in the dedicated performance/nightly profile, not routine PR execution. The recorded 952ms median is local directional evidence, not an SLO or cross-runner speedup claim.",
+      "replacementTest": null
     }
   ],
   "reviews": [

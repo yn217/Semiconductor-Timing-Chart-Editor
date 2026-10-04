@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 412 spec files and 1229 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 413 spec files and 1234 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1229/1229 cases reviewed.
+Semantic review progress: 1234/1234 cases reviewed.
 
 ## Curated profile membership
 
@@ -11,8 +11,8 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | Profile | Reviewed cases |
 | --- | ---: |
 | `integration` | 627 |
-| `nightly` | 232 |
-| `performance` | 67 |
+| `nightly` | 237 |
+| `performance` | 72 |
 | `pr` | 390 |
 | `visual` | 180 |
 
@@ -348,6 +348,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `open-progressive-wave-yield.spec.ts` | 3 | 3/3 reviewed |
 | `open-validation-handoff.spec.ts` | 3 | 3/3 reviewed |
 | `perf-755-far-jump-longtask.spec.ts` | 1 | 1/1 reviewed |
+| `perf-fixed-full-span-open.spec.ts` | 5 | 5/5 reviewed |
 | `performance-closure.spec.ts` | 11 | 11/11 reviewed |
 | `performance-internal-latency.spec.ts` | 1 | 1/1 reviewed |
 | `performance-view-only-validation.spec.ts` | 1 | 1/1 reviewed |
@@ -611,6 +612,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `mode-isolation-journey.spec.ts` | getComputedStyle, dataset, geometryRead |
 | `open-progressive-wave-yield.spec.ts` | querySelector, dataset, explicitWait |
 | `perf-755-far-jump-longtask.spec.ts` | querySelector |
+| `perf-fixed-full-span-open.spec.ts` | querySelector, dataset |
 | `performance-closure.spec.ts` | querySelector, dataset, geometryRead, explicitWait |
 | `production-presentation-equivalence.spec.ts` | getComputedStyle, geometryRead |
 | `qa-cross-mode-journey.spec.ts` | querySelector |
