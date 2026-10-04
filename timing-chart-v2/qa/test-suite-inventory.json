@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-04T03:02:01.891Z",
+  "generatedAt": "2026-10-04T06:55:04.236Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,12 +11,12 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 409,
-  "caseCount": 1217,
-  "reviewedCaseCount": 1217,
+  "specFileCount": 411,
+  "caseCount": 1221,
+  "reviewedCaseCount": 1221,
   "curatedProfileCounts": {
-    "integration": 615,
-    "nightly": 227,
+    "integration": 619,
+    "nightly": 230,
     "performance": 67,
     "pr": 390,
     "visual": 180
@@ -10000,6 +10000,58 @@
       "contractId": "signal-tree-offscreen-filter-and-view-only-scroll-restore"
     },
     {
+      "file": "issue-1072-cross-surface-alignment.spec.ts",
+      "suitePath": [],
+      "line": 8,
+      "title": "Group header hide keeps Left/Frozen/Timing rows aligned at 1280x720",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "group-header-cross-surface-alignment-compact",
+      "originIssue": 1072,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Hiding a Group header removes its height consistently from the Left, Frozen, and Timing surfaces while keeping corresponding Signal rows aligned within one pixel; the setting survives Undo/Redo and Save/Open.",
+      "duplicateGroup": "group-header-cross-surface-alignment",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is width-sensitive cross-surface geometry and state persistence, so both supported viewport classes remain in the PR layout contract.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "group-header-cross-surface-alignment-compact"
+    },
+    {
+      "file": "issue-1072-cross-surface-alignment.spec.ts",
+      "suitePath": [],
+      "line": 8,
+      "title": "Group header hide keeps Left/Frozen/Timing rows aligned at 1672x941",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "group-header-cross-surface-alignment-wide",
+      "originIssue": 1072,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Hiding a Group header removes its height consistently from the Left, Frozen, and Timing surfaces while keeping corresponding Signal rows aligned within one pixel; the setting survives Undo/Redo and Save/Open.",
+      "duplicateGroup": "group-header-cross-surface-alignment",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is width-sensitive cross-surface geometry and state persistence, so both supported viewport classes remain in the PR layout contract.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "group-header-cross-surface-alignment-wide"
+    },
+    {
       "file": "issue-175-scrollbar-effect-lifecycle.spec.ts",
       "suitePath": [],
       "line": 5,
@@ -10359,7 +10411,8 @@
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
-        "pr"
+        "integration",
+        "nightly"
       ],
       "contractId": "bus-radix"
     },
@@ -10463,7 +10516,8 @@
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
-        "pr"
+        "integration",
+        "nightly"
       ],
       "contractId": "enum-state-save-open"
     },
@@ -10515,9 +10569,36 @@
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
-        "pr"
+        "integration",
+        "nightly"
       ],
       "contractId": "check-category-toggle"
+    },
+    {
+      "file": "issue-431-signal-selection-groups.spec.ts",
+      "suitePath": [],
+      "line": 6,
+      "title": "Signal Tree creates a Group from multi-selection and moves selected Signals atomically",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "signal-tree-multi-select-group-operations",
+      "originIssue": 431,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A user can create a Group from a stable-ID multi-selection, move those Signals atomically, and restore exact ownership through one-step Undo/Redo without losing selection.",
+      "duplicateGroup": "signal-tree-group-selection",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is the only production UI journey for multi-select Group creation and bulk move; command tests alone cannot prove the Tree action surface, selection retention, and displayed ownership remain coherent.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "signal-tree-multi-select-group-operations"
     },
     {
       "file": "issue-440-mode-context-coherence.spec.ts",
@@ -22735,7 +22816,7 @@
     {
       "file": "performance-internal-latency.spec.ts",
       "suitePath": [],
-      "line": 11,
+      "line": 15,
       "title": "measures GUI latency inside Chromium rather than through Playwright RPC time",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -25690,8 +25771,34 @@
     {
       "file": "spacer-clipboard-reorder.spec.ts",
       "suitePath": [],
-      "line": 8,
-      "title": "creates, duplicates, copies, reorders and transfers a stable Spacer across populated and empty Groups",
+      "line": 10,
+      "title": "creates, duplicates, copies, reorders and transfers a stable Spacer across populated and empty Groups at 1280x720",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "spacer-insert-clipboard-and-cross-group-transfer",
+      "originIssue": 1072,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Insert, Duplicate, clipboard copy/paste, same-Group reorder, and cross-Group transfer to populated or empty Groups preserve stable Spacer identity and route each move through one semantic history operation.",
+      "duplicateGroup": "spacer-creation-edit-and-order",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This uniquely covers the Insert Ribbon adapter, fresh identity on copy, stable-ID drag reorder, and atomic cross-Group transfer including an empty target Group. Keeping the real drag journey is necessary for the tree drop-target contract; focused command tests cover atomic ownership/history semantics below the browser layer.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ],
+      "contractId": "spacer-insert-clipboard-and-cross-group-transfer"
+    },
+    {
+      "file": "spacer-clipboard-reorder.spec.ts",
+      "suitePath": [],
+      "line": 10,
+      "title": "creates, duplicates, copies, reorders and transfers a stable Spacer across populated and empty Groups at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
@@ -33018,6 +33125,17 @@
       "semanticReviewStatus": "REVIEWED"
     },
     {
+      "file": "issue-1072-cross-surface-alignment.spec.ts",
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
+      "originIssue": "1072",
+      "declaredTimeoutMs": null,
+      "candidateSignals": [
+        "geometryRead"
+      ],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
       "file": "issue-175-scrollbar-effect-lifecycle.spec.ts",
       "caseCount": 1,
       "reviewedCaseCount": 1,
@@ -33130,6 +33248,17 @@
       "originIssue": "431",
       "declaredTimeoutMs": 120,
       "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "issue-431-signal-selection-groups.spec.ts",
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
+      "originIssue": "431",
+      "declaredTimeoutMs": null,
+      "candidateSignals": [
+        "dataset"
+      ],
       "semanticReviewStatus": "REVIEWED"
     },
     {
@@ -35450,8 +35579,8 @@
     },
     {
       "file": "spacer-clipboard-reorder.spec.ts",
-      "caseCount": 1,
-      "reviewedCaseCount": 1,
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [

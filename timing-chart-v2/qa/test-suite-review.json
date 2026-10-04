@@ -11798,7 +11798,25 @@
     },
     {
       "file": "spacer-clipboard-reorder.spec.ts",
-      "title": "creates, duplicates, copies, reorders and transfers a stable Spacer across populated and empty Groups",
+      "title": "creates, duplicates, copies, reorders and transfers a stable Spacer across populated and empty Groups at 1280x720",
+      "domain": "spacer-insert-clipboard-and-cross-group-transfer",
+      "originIssue": 1072,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Insert, Duplicate, clipboard copy/paste, same-Group reorder, and cross-Group transfer to populated or empty Groups preserve stable Spacer identity and route each move through one semantic history operation.",
+      "duplicateGroup": "spacer-creation-edit-and-order",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "This uniquely covers the Insert Ribbon adapter, fresh identity on copy, stable-ID drag reorder, and atomic cross-Group transfer including an empty target Group. Keeping the real drag journey is necessary for the tree drop-target contract; focused command tests cover atomic ownership/history semantics below the browser layer.",
+      "replacementTest": null
+    },
+    {
+      "file": "spacer-clipboard-reorder.spec.ts",
+      "title": "creates, duplicates, copies, reorders and transfers a stable Spacer across populated and empty Groups at 1672x941",
       "domain": "spacer-insert-clipboard-and-cross-group-transfer",
       "originIssue": 1072,
       "type": "SEMANTIC_CONTRACT",
@@ -16389,6 +16407,84 @@
       ],
       "decision": "KEEP",
       "reason": "The user-visible Problems navigation crosses from a diagnostic to selection and time navigation, so the stable-ID/source-cycle result must remain verified at the UI boundary; the small fixture and single target are appropriate for focused PR coverage.",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-431-bus-radix.spec.ts",
+      "title": "Bus format agrees across waveform labels, Bottom event table and Save/Open at 1672x941",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
+    },
+    {
+      "file": "issue-431-enum-state-save-open.spec.ts",
+      "title": "State/Enum keeps values, mapping, binding and symbolic labels through Save -> Open at 1672x941",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
+    },
+    {
+      "file": "issue-431-protocol-check-toggle.spec.ts",
+      "title": "Protocol check ON/OFF/ON through the Check tab is deterministic at 1672x941",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
+    },
+    {
+      "file": "issue-1072-cross-surface-alignment.spec.ts",
+      "title": "Group header hide keeps Left/Frozen/Timing rows aligned at 1280x720",
+      "domain": "group-header-cross-surface-alignment-compact",
+      "originIssue": 1072,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Hiding a Group header removes its height consistently from the Left, Frozen, and Timing surfaces while keeping corresponding Signal rows aligned within one pixel; the setting survives Undo/Redo and Save/Open.",
+      "duplicateGroup": "group-header-cross-surface-alignment",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "This is width-sensitive cross-surface geometry and state persistence, so both supported viewport classes remain in the PR layout contract.",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-1072-cross-surface-alignment.spec.ts",
+      "title": "Group header hide keeps Left/Frozen/Timing rows aligned at 1672x941",
+      "domain": "group-header-cross-surface-alignment-wide",
+      "originIssue": 1072,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Hiding a Group header removes its height consistently from the Left, Frozen, and Timing surfaces while keeping corresponding Signal rows aligned within one pixel; the setting survives Undo/Redo and Save/Open.",
+      "duplicateGroup": "group-header-cross-surface-alignment",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "This is width-sensitive cross-surface geometry and state persistence, so both supported viewport classes remain in the PR layout contract.",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-431-signal-selection-groups.spec.ts",
+      "title": "Signal Tree creates a Group from multi-selection and moves selected Signals atomically",
+      "domain": "signal-tree-multi-select-group-operations",
+      "originIssue": 431,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A user can create a Group from a stable-ID multi-selection, move those Signals atomically, and restore exact ownership through one-step Undo/Redo without losing selection.",
+      "duplicateGroup": "signal-tree-group-selection",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "This is the only production UI journey for multi-select Group creation and bulk move; command tests alone cannot prove the Tree action surface, selection retention, and displayed ownership remain coherent.",
       "replacementTest": null
     }
   ]

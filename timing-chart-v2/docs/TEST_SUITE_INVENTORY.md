@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 409 spec files and 1217 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 411 spec files and 1221 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1217/1217 cases reviewed.
+Semantic review progress: 1221/1221 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,8 +10,8 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 615 |
-| `nightly` | 227 |
+| `integration` | 619 |
+| `nightly` | 230 |
 | `performance` | 67 |
 | `pr` | 390 |
 | `visual` | 180 |
@@ -151,6 +151,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-1004-group-hierarchy.spec.ts` | 2 | 2/2 reviewed |
 | `issue-1007-transaction-add-menu.spec.ts` | 4 | 4/4 reviewed |
 | `issue-1055-signal-tree-offscreen-filter.spec.ts` | 1 | 1/1 reviewed |
+| `issue-1072-cross-surface-alignment.spec.ts` | 2 | 2/2 reviewed |
 | `issue-175-scrollbar-effect-lifecycle.spec.ts` | 1 | 1/1 reviewed |
 | `issue-175-scrollbar-geometry-matrix.spec.ts` | 2 | 2/2 reviewed |
 | `issue-208-open-epoch-coherence.spec.ts` | 1 | 1/1 reviewed |
@@ -163,6 +164,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-431-constraint-problem-reveal.spec.ts` | 1 | 1/1 reviewed |
 | `issue-431-enum-state-save-open.spec.ts` | 2 | 2/2 reviewed |
 | `issue-431-protocol-check-toggle.spec.ts` | 2 | 2/2 reviewed |
+| `issue-431-signal-selection-groups.spec.ts` | 1 | 1/1 reviewed |
 | `issue-440-mode-context-coherence.spec.ts` | 3 | 3/3 reviewed |
 | `issue-440-pinned-bookmark-transaction.spec.ts` | 2 | 2/2 reviewed |
 | `issue-441-ribbon-label-integrity.spec.ts` | 3 | 3/3 reviewed |
@@ -382,7 +384,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `signal-split.spec.ts` | 1 | 1/1 reviewed |
 | `signal-type-label-registry.spec.ts` | 2 | 2/2 reviewed |
 | `signal-visibility-recover.spec.ts` | 1 | 1/1 reviewed |
-| `spacer-clipboard-reorder.spec.ts` | 1 | 1/1 reviewed |
+| `spacer-clipboard-reorder.spec.ts` | 2 | 2/2 reviewed |
 | `spacer-row.spec.ts` | 1 | 1/1 reviewed |
 | `spacer.spec.ts` | 1 | 1/1 reviewed |
 | `split-active-pane.spec.ts` | 6 | 6/6 reviewed |
@@ -495,9 +497,11 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `insert-timeline-ribbon.spec.ts` | getComputedStyle, dataset, geometryRead |
 | `inspector-hide-compacts-rows.spec.ts` | dataset, geometryRead |
 | `issue-1004-group-hierarchy.spec.ts` | querySelector, getComputedStyle, geometryRead |
+| `issue-1072-cross-surface-alignment.spec.ts` | geometryRead |
 | `issue-175-scrollbar-geometry-matrix.spec.ts` | geometryRead |
 | `issue-208-open-epoch-coherence.spec.ts` | querySelector |
 | `issue-219-wave-url-lifetime.spec.ts` | querySelector, explicitWait |
+| `issue-431-signal-selection-groups.spec.ts` | dataset |
 | `issue-441-ribbon-label-integrity.spec.ts` | getComputedStyle, geometryRead |
 | `issue-549-cursor-multi-frame-drag.spec.ts` | dataset |
 | `issue-573-combined-shared-time-axis.spec.ts` | geometryRead, explicitWait |
