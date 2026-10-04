@@ -33,6 +33,11 @@ describe("render invalidation owner", () => {
     });
   });
 
+  it("keeps the SnapIndex for annotation-style-only changes but invalidates it for anchor changes", () => {
+    expect(deriveRenderInvalidation({ annotationStyle: ["ann_a"] } as ChangeSet, "signal_clk" as never).snapDependenciesChanged).toBe(false);
+    expect(deriveRenderInvalidation({ annotationPosition: ["ann_a"] } as ChangeSet, "signal_clk" as never).snapDependenciesChanged).toBe(true);
+  });
+
   it("still reprojects overlays when a Signal visibility change moves annotation rows", () => {
     expect(deriveRenderInvalidation({ rowPresentation: ["sig_a"], geometryScreenY: ["sig_b"], annotationPosition: ["ann_a"] } as ChangeSet, "signal_clk" as never)).toEqual({
       snapDependenciesChanged: true,
