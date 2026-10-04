@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-04T11:46:23.309Z",
+  "generatedAt": "2026-10-04T11:59:12.191Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -15,9 +15,9 @@
   "caseCount": 1234,
   "reviewedCaseCount": 1234,
   "curatedProfileCounts": {
-    "integration": 627,
-    "nightly": 237,
-    "performance": 72,
+    "integration": 626,
+    "nightly": 238,
+    "performance": 73,
     "pr": 390,
     "visual": 180
   },
@@ -8050,28 +8050,29 @@
     {
       "file": "history-retention.spec.ts",
       "suitePath": [],
-      "line": 6,
+      "line": 7,
       "title": "keeps long browser edit history within the documented retention horizon",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": "history-metrics-browser-projection",
-      "originIssue": 163,
+      "domain": "history-retention-horizon-browser",
+      "originIssue": 275,
       "type": "ARCHITECTURE_GUARD",
-      "costClass": "MEDIUM",
-      "measuredRuntimeMs": null,
-      "primaryContract": "After 100 real GUI visibility actions, browser-exposed history counters report committed actions, retained entries, eviction count, and snapshot estimate consistently.",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": 41600,
+      "primaryContract": "After HISTORY_RETENTION_POLICY.maxEntries + 5 individually projected production UI visibility actions across canonical Signals, browser-exposed counters report the exact committed count, oldest-entry evictions, capped Undo depth, and retained snapshot estimate.",
       "duplicateGroup": "history-retention-boundary",
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "executionTier": "TIER_4_PERFORMANCE",
       "decision": "KEEP",
-      "reason": "The 100-action browser case is below the configured 1000-entry horizon, so it is not the eviction-boundary proof; the existing history-retention and performance-statistics unit tests exercise 10k actions and actual eviction. Keep this as the distinct UI-to-session-metrics projection contract, and do not describe it as proving eviction.",
+      "reason": "The browser journey now crosses the actual 1,000-entry retention horizon and verifies eviction through the production UI command path. Each synthetic DOM click yields through requestAnimationFrame so React commits every distinct interaction rather than batching repeated commands. One trace-off focused run took 41.6s; keep it in the dedicated performance/nightly profile, not routine PR integration. Unit tests remain the source for exact Undo/Redo and saved-clean-marker semantics.",
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
-        "integration"
+        "performance",
+        "nightly"
       ],
-      "contractId": "history-metrics-browser-projection"
+      "contractId": "history-retention-horizon-browser"
     },
     {
       "file": "home-command-surface.spec.ts",
@@ -33294,7 +33295,7 @@
       "caseCount": 1,
       "reviewedCaseCount": 1,
       "originIssue": null,
-      "declaredTimeoutMs": 90,
+      "declaredTimeoutMs": 180,
       "candidateSignals": [],
       "semanticReviewStatus": "REVIEWED"
     },

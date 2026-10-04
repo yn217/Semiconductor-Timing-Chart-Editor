@@ -10,9 +10,9 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 627 |
-| `nightly` | 237 |
-| `performance` | 72 |
+| `integration` | 626 |
+| `nightly` | 238 |
+| `performance` | 73 |
 | `pr` | 390 |
 | `visual` | 180 |
 
@@ -22,6 +22,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 
 | Runtime (ms) | Profile | Spec file | Test case |
 | ---: | --- | --- | --- |
+| 41600 | `performance`, `nightly` | `history-retention.spec.ts` | keeps long browser edit history within the documented retention horizon |
 | 28400 | `visual` | `issue-441-ribbon-label-integrity.spec.ts` | Ribbon labels are intact across Cycle, Transaction and Combined at 1672x941 |
 | 25200 | `visual` | `issue-441-ribbon-label-integrity.spec.ts` | Ribbon labels are intact across Cycle, Transaction and Combined at 1280x720 |
 | 25100 | `visual` | `issue-441-ribbon-label-integrity.spec.ts` | Ribbon labels are intact across Cycle, Transaction and Combined at 1024x700 |
@@ -41,7 +42,6 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | 6900 | `visual` | `left-tree-compact-footer.spec.ts` | keeps the left tree footer compact at the Golden viewport |
 | 6600 | `performance` | `local-geometry-dom-batch.spec.ts` | keeps WaveDrom DOM writes and Local Geometry reads inside one render batch |
 | 6500 | `integration`, `nightly` | `issue-757-far-scroll-window-coverage.spec.ts` | a far scrollLeft jump repaints the window at the viewport, not from cycle 0 |
-| 6400 | `integration` | `listener-lifecycle.spec.ts` | registers the Left Tree keydown handler exactly once per mount (no duplicate listener) |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
