@@ -62,11 +62,20 @@ for (let run = 1; run <= RUNS; run += 1) {
     const waveBatch = JSON.parse((await host.getAttribute("data-open-wave-batch-metrics")) ?? "{}") as Record<string, number>;
     const phases = JSON.parse((await host.getAttribute("data-open-phase-marks")) ?? "{}") as Record<string, number>;
     const durations = JSON.parse((await host.getAttribute("data-open-phase-durations")) ?? "{}") as Record<string, number>;
-    const spans = [...new Set(await page.locator("[data-wave-owner]").evaluateAll((elements) => elements.map((element) => `${(element as HTMLElement).dataset.renderedSourceWindowStart ?? "?"}-${(element as HTMLElement).dataset.renderedSourceWindowEnd ?? "?"}`)))].filter((span) => span !== "?-?");
+    const renderedOwners = await page.locator("[data-wave-owner][data-wave-state='ready']").evaluateAll((elements) => elements.map((element) => {
+      const owner = element as HTMLElement;
+      return {
+        signalId: owner.dataset.waveOwner,
+        start: owner.dataset.renderedSourceWindowStart,
+        end: owner.dataset.renderedSourceWindowEnd,
+      };
+    }));
 
     // Fixed-condition guard: identical work every run, or the number is not comparable.
     expect(waveBatch.renderCount, "all 100 owners must render").toBe(100);
-    expect(spans, "every owner must cover the full 0..500 source span").toEqual(["0-500"]);
+    expect(renderedOwners, "all 100 waveform mount owners must be ready").toHaveLength(100);
+    expect(new Set(renderedOwners.map((owner) => owner.signalId)).size, "each canonical Signal must own exactly one ready waveform mount").toBe(100);
+    expect(renderedOwners.filter((owner) => owner.start === "0" && owner.end === "500"), "every owner must cover the full 0..500 source span").toHaveLength(100);
 
     const delta = (name: string) => (after[name]! - before[name]!) * 1000;
     const row = {
