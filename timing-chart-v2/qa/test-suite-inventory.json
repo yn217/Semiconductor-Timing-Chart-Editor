@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-04T07:15:41.601Z",
+  "generatedAt": "2026-10-04T07:20:42.196Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -15,10 +15,10 @@
   "caseCount": 1221,
   "reviewedCaseCount": 1221,
   "curatedProfileCounts": {
-    "integration": 622,
+    "integration": 623,
     "nightly": 230,
     "performance": 67,
-    "pr": 387,
+    "pr": 386,
     "visual": 180
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -18206,22 +18206,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": "mode-context",
+      "domain": "mode-context-wide-viewport",
       "originIssue": 840,
       "type": "USER_JOURNEY",
       "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": "Cycle -> Transaction does not keep a stale Cycle context.",
+      "primaryContract": "Cycle selection status remains explicitly source-cycle-based after switching to the Transaction time axis, without mutating the document.",
       "duplicateGroup": "mode-context",
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "decision": "KEEP",
-      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
-      "replacementTest": null,
+      "decision": "MOVE_LAYER",
+      "reason": "The 1280x720 case retains this full-fixture mode-switch/status journey in the PR profile. The wide copy checks the same status semantics and nonzero Transaction bars without a width-specific clipping, overflow, or pane-geometry assertion, so keep the second viewport in integration.",
+      "replacementTest": "issue-840-stale-cycle-context.spec.ts — Cycle range and cursor status remain truthful after switching to the Transaction time axis at 1280x720",
       "reviewStatus": "REVIEWED",
       "profiles": [
-        "pr"
+        "integration"
       ],
-      "contractId": "mode-context"
+      "contractId": "mode-context-wide-viewport"
     },
     {
       "file": "issue-841-legend-bounds.spec.ts",

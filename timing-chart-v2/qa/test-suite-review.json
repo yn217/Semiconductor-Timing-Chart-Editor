@@ -16522,6 +16522,24 @@
       "decision": "MOVE_LAYER",
       "reason": "The 1280x720 case retains the same full Replace All preview/commit/Undo journey in the normal PR profile. This wide copy contains no viewport-specific layout assertion, so preserve it in integration instead of duplicating the expensive user journey in the PR gate.",
       "replacementTest": "find-replace-journey.spec.ts — Find & Replace previews, renames all matches in one step and undoes at 1280x720"
+    },
+    {
+      "file": "issue-840-stale-cycle-context.spec.ts",
+      "title": "Cycle range and cursor status remain truthful after switching to the Transaction time axis at 1672x941",
+      "domain": "mode-context-wide-viewport",
+      "originIssue": 840,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Cycle selection status remains explicitly source-cycle-based after switching to the Transaction time axis, without mutating the document.",
+      "duplicateGroup": "mode-context",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "MOVE_LAYER",
+      "reason": "The 1280x720 case retains this full-fixture mode-switch/status journey in the PR profile. The wide copy checks the same status semantics and nonzero Transaction bars without a width-specific clipping, overflow, or pane-geometry assertion, so keep the second viewport in integration.",
+      "replacementTest": "issue-840-stale-cycle-context.spec.ts — Cycle range and cursor status remain truthful after switching to the Transaction time axis at 1280x720"
     }
   ]
 }
