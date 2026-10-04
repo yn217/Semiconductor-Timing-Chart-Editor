@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 414 spec files and 1235 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 414 spec files and 1236 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1235/1235 cases reviewed.
+Semantic review progress: 1236/1236 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 626 |
 | `nightly` | 238 |
 | `performance` | 73 |
-| `pr` | 391 |
+| `pr` | 392 |
 | `visual` | 180 |
 
 ## Top recorded per-case runtimes
@@ -66,7 +66,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `annotation-presentation-controls.spec.ts` | 6 | 6/6 reviewed |
 | `annotation-presentation.spec.ts` | 1 | 1/1 reviewed |
 | `annotation-preview-update.spec.ts` | 3 | 3/3 reviewed |
-| `annotation-snap.spec.ts` | 19 | 19/19 reviewed |
+| `annotation-snap.spec.ts` | 20 | 20/20 reviewed |
 | `annotation-virtualization-closure.spec.ts` | 3 | 3/3 reviewed |
 | `architecture-probe.spec.ts` | 1 | 1/1 reviewed |
 | `arrange-disabled-reasons.spec.ts` | 1 | 1/1 reviewed |

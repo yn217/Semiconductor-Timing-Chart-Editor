@@ -4182,6 +4182,24 @@
     },
     {
       "file": "annotation-snap.spec.ts",
+      "title": "creates an edge-to-edge Measurement from two snapped Signal transitions as one semantic action",
+      "domain": "annotation-measurement-two-point-capture",
+      "originIssue": 431,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Selecting Measurement and snapping two actual Signal transitions creates a semantic Measurement with the measured cycle delta and one history action.",
+      "duplicateGroup": "annotation-measurement-two-point-capture",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The existing arrow/dependency capture contracts do not protect Measurement start/end semantics or the user-visible measured Δ; this is the focused #431 edge-to-edge acceptance.",
+      "replacementTest": null
+    },
+    {
+      "file": "annotation-snap.spec.ts",
       "title": "creates every Annotation type on a renderer-owned stable overlay surface",
       "domain": "annotation-type-creation-and-projection",
       "originIssue": null,

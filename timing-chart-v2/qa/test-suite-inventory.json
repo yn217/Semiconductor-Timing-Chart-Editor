@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-04T13:59:07.598Z",
+  "generatedAt": "2026-10-04T15:08:30.048Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -12,13 +12,13 @@
     "retryAndFlakySummary": null
   },
   "specFileCount": 414,
-  "caseCount": 1235,
-  "reviewedCaseCount": 1235,
+  "caseCount": 1236,
+  "reviewedCaseCount": 1236,
   "curatedProfileCounts": {
     "integration": 626,
     "nightly": 238,
     "performance": 73,
-    "pr": 391,
+    "pr": 392,
     "visual": 180
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -3366,6 +3366,32 @@
         "pr"
       ],
       "contractId": "annotation-dependency-creation-type"
+    },
+    {
+      "file": "annotation-snap.spec.ts",
+      "suitePath": [],
+      "line": 636,
+      "title": "creates an edge-to-edge Measurement from two snapped Signal transitions as one semantic action",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "annotation-measurement-two-point-capture",
+      "originIssue": 431,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Selecting Measurement and snapping two actual Signal transitions creates a semantic Measurement with the measured cycle delta and one history action.",
+      "duplicateGroup": "annotation-measurement-two-point-capture",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The existing arrow/dependency capture contracts do not protect Measurement start/end semantics or the user-visible measured Δ; this is the focused #431 edge-to-edge acceptance.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "annotation-measurement-two-point-capture"
     },
     {
       "file": "annotation-virtualization-closure.spec.ts",
@@ -32653,8 +32679,8 @@
     },
     {
       "file": "annotation-snap.spec.ts",
-      "caseCount": 19,
-      "reviewedCaseCount": 19,
+      "caseCount": 20,
+      "reviewedCaseCount": 20,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
