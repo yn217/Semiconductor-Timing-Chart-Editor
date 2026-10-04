@@ -104,6 +104,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   #navigationRowIndex = new Map<string, RowLayoutEntry>();
   readonly #pending = new Set<Promise<void>>();
   #layers: Layers | undefined;
+  #sourceWindowSnapshot: Readonly<{ start: number; end: number }> | undefined;
+  #sourceWindowSnapshotResolved = false;
   #counters: RenderCounters = { waveDromRenders: 0, localGeometryBuilds: 0, rowPositionUpdates: 0, overlayUpdates: 0 };
   #diagnostics: RendererDiagnostics = { projectionUpdates: 0, mountedRows: 0, mountedWaveOwners: 0, cachedWaveOwners: 0, waveOwnerCacheLimit: 32, domNodeCreates: 0, domNodeDestroys: 0, domNodeMoves: 0, waveArtifactCacheHits: 0, waveArtifactCacheMisses: 0, waveArtifactDisposals: 0, waveArtifactMarkupCacheHits: 0, waveArtifactMarkupCacheMisses: 0, waveRendersBySignal: {}, localGeometryBuildsBySignal: {}, annotationResolvePasses: 0, resolvedAnnotations: 0, waveBatchCount: 0, waveBatchFrameYields: 0, waveBatchMaxSize: 0, waveBatchPending: 0, wavePrefetchOwnerCount: 0, wavePrefetchRequestedCount: 0, wavePrefetchPreparedCount: 0, wavePrefetchReusedCount: 0, wavePrefetchStaleCount: 0, wavePrefetchFailedCount: 0, rowsVisited: 0, fullRowScans: 0, waveRendersBySignalCount: 0, localGeometryBuildsBySignalCount: 0, documentEpoch: 0, rowYSize: 0, rowYStaleCount: 0, rowYPrunePasses: 0, dirtyWaveSize: 0, waveVersionSize: 0, fullReplaceEpochResets: 0, staleWaveResultsDropped: 0, diagnosticMapPrunePasses: 0, diagnosticSerializationCount: 0, diagnosticSerializationBytes: 0, diagnosticSerializationDurationMs: 0, diagnosticStringifyCount: 0, diagnosticStringifyDurationMs: 0, diagnosticEncodingCount: 0, diagnosticEncodingDurationMs: 0, diagnosticPublishCount: 0, diagnosticPublishDurationMs: 0 };
 
@@ -140,6 +142,12 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   update(projection: RenderProjection): void {
     const layers = this.#layers;
     if (!layers) throw new Error("Timing chart renderer must be mounted before update.");
+    // The renderer has one source-time viewport. Snapshot its bounded window
+    // before row reconciliation mutates layout; reading the viewport width
+    // later in this update can synchronously flush those DOM changes.
+    const existingConnectedOwner = [...this.#waveOwners.values()].find((owner) => owner.isConnected);
+    let sharedSourceWindow = existingConnectedOwner ? this.#readSourceWindow(existingConnectedOwner) : undefined;
+    let sharedSourceWindowResolved = existingConnectedOwner !== undefined;
     const frozenLayer = this.#syncFrozenLayer(layers);
     assertCrossSurfaceInvariant(projection);
     this.#diagnostics = { ...this.#diagnostics, projectionUpdates: this.#diagnostics.projectionUpdates + 1, mountedRows: projection.mountedRowIds.length };
@@ -284,7 +292,11 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       }
       // A bounded waveform is presentation-local: scrolling can keep the
       // same owner mounted while changing the source window it must display.
-      const sourceWindow = this.#provider.getSourceWindow?.(owner);
+      if (!sharedSourceWindowResolved) {
+        sharedSourceWindow = this.#readSourceWindow(owner);
+        sharedSourceWindowResolved = true;
+      }
+      const sourceWindow = sharedSourceWindow;
       const sourceWindowChanged = sourceWindow !== undefined &&
         (owner.dataset.renderedSourceWindowStart !== String(sourceWindow.start) ||
           owner.dataset.renderedSourceWindowEnd !== String(sourceWindow.end));
@@ -329,6 +341,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   updateViewport(projection: RenderProjection): void {
     if (!this.#layers) throw new Error("Timing chart renderer must be mounted before viewport update.");
     assertCrossSurfaceInvariant(projection);
+    const sourceOwner = projection.mountedSignalIds.map((id) => this.#waveOwners.get(id)).find((owner) => owner?.isConnected);
+    if (sourceOwner) this.#readSourceWindow(sourceOwner);
     for (const signalId of projection.mountedSignalIds) {
       const owner = this.#waveOwners.get(signalId);
       if (!owner || !owner.isConnected) {
@@ -337,7 +351,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         this.update(projection);
         return;
       }
-      const sourceWindow = this.#provider.getSourceWindow?.(owner);
+      const sourceWindow = this.#sourceWindowSnapshot;
       const sourceWindowChanged = sourceWindow !== undefined
         && (owner.dataset.renderedSourceWindowStart !== String(sourceWindow.start)
           || owner.dataset.renderedSourceWindowEnd !== String(sourceWindow.end));
@@ -522,6 +536,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#waveQueue.clear();
     this.#waveWindowRetryKeys.clear();
     this.#waveStaleRetryKeys.clear();
+    this.#sourceWindowSnapshot = undefined;
+    this.#sourceWindowSnapshotResolved = false;
     this.#waveRendersBySignal.clear();
     this.#localGeometryBuildsBySignal.clear();
     this.#waveBatchScheduled = false;
@@ -604,7 +620,9 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       ? this.#prefetchSignalIds.slice(Math.max(0, first - count), first)
       : this.#prefetchSignalIds.slice(last + 1, last + 1 + count);
     const sourceOwner = projection.mountedSignalIds.map((id) => this.#waveOwners.get(id)).find((owner) => owner?.isConnected);
-    const sourceWindow = sourceOwner ? this.#provider.getSourceWindow?.(sourceOwner) : undefined;
+    const sourceWindow = this.#sourceWindowSnapshotResolved
+      ? this.#sourceWindowSnapshot
+      : sourceOwner ? this.#readSourceWindow(sourceOwner) : undefined;
     if (!sourceWindow || sourceWindow.end <= sourceWindow.start) {
       this.#prefetchPlan = [];
       this.#diagnostics = { ...this.#diagnostics, wavePrefetchOwnerCount: 0 };
@@ -736,8 +754,10 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     // for extra paint frames merely because the visible set exceeds an
     // arbitrary per-frame count. Detached owners are still filtered below,
     // and large-document providers retain their own cooperative frame yields.
+    const firstConnectedOwner = [...this.#waveQueue.values()].map((item) => item.owner).find((owner) => owner.isConnected);
+    if (!this.#sourceWindowSnapshotResolved && firstConnectedOwner) this.#readSourceWindow(firstConnectedOwner);
     const queued = [...this.#waveQueue.entries()].map(([signalId, item]) => {
-      const configured = this.#provider.getSourceWindow?.(item.owner);
+      const configured = this.#sourceWindowSnapshot;
       const start = configured?.start ?? Number(item.owner.dataset.sourceWindowStart);
       const end = configured?.end ?? Number(item.owner.dataset.sourceWindowEnd);
       return { signalId, owner: item.owner, version: item.version, documentEpoch: item.documentEpoch,
@@ -842,7 +862,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       }
       if (this.#isWavePending(request.signalId, request)) this.#wavePending.delete(request.signalId);
       this.#waveStaleRetryKeys.delete(`${request.documentEpoch}:${request.signalId}:${request.version}`);
-      const currentWindow = request.owner.isConnected ? this.#provider.getSourceWindow?.(request.owner) : undefined;
+      const currentWindow = request.owner.isConnected ? this.#sourceWindowSnapshot : undefined;
       const windowStillStale = currentWindow !== undefined &&
         (request.owner.dataset.renderedSourceWindowStart !== String(currentWindow.start) ||
           request.owner.dataset.renderedSourceWindowEnd !== String(currentWindow.end));
@@ -861,6 +881,13 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#diagnostics = { ...this.#diagnostics, waveBatchPending: this.#waveQueue.size };
     this.#publishCounters();
     this.#startWavePrefetch();
+  }
+
+  #readSourceWindow(owner: HTMLElement): Readonly<{ start: number; end: number }> | undefined {
+    const sourceWindow = this.#provider.getSourceWindow?.(owner);
+    this.#sourceWindowSnapshot = sourceWindow;
+    this.#sourceWindowSnapshotResolved = true;
+    return sourceWindow;
   }
 
   #publishCounters(): void {

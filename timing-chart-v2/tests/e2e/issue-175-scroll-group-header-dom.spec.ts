@@ -68,3 +68,59 @@ test("vertical viewport updates reuse unchanged Group header controls", async ({
   await expect(header.locator("[data-role='tree-collapse']")).toHaveAttribute("aria-expanded", "false");
   expect(await host.getAttribute("data-canonical-revision")).toBe(before);
 });
+
+test("scroll projection resolves source window before virtual row DOM changes", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const document = generatePerformanceDocument({ signalCount: 5_000, cycleCount: 32, profile: "standard" });
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({
+    name: "issue-175-source-window-scroll.tcd",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(document)),
+  });
+  await expect(page.locator(".app-titlebar h1")).toHaveText(document.document.title);
+  await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+
+  const viewport = page.getByTestId("cycle-viewport");
+  const before = {
+    revision: await host.getAttribute("data-canonical-revision"),
+    history: await page.getByTestId("history-status").textContent(),
+    dirty: await page.getByTestId("dirty-status").textContent(),
+  };
+  const cdp = await page.context().newCDPSession(page);
+  const events: Array<{ name?: string; ph?: string; args?: { data?: Record<string, unknown> } }> = [];
+  cdp.on("Tracing.dataCollected", ({ value }: { value: typeof events }) => events.push(...value));
+  const complete = new Promise<void>((resolve) => cdp.once("Tracing.tracingComplete", resolve));
+  await cdp.send("Tracing.start", {
+    categories: "disabled-by-default-devtools.timeline.invalidationTracking",
+    transferMode: "ReportEvents",
+  });
+  await viewport.evaluate(async (element) => {
+    element.scrollTop += 1_000;
+    await new Promise<void>((resolve) => {
+      let frames = 5;
+      const next = () => { if (--frames === 0) resolve(); else requestAnimationFrame(next); };
+      requestAnimationFrame(next);
+    });
+  });
+  await cdp.send("Tracing.end");
+  await complete;
+  await cdp.detach();
+
+  const invalidations = events.filter((event) => event.name === "LayoutInvalidationTracking").map((event) => {
+    const data = event.args?.data ?? {};
+    const stack = Array.isArray(data.stackTrace) ? data.stackTrace as Array<{ functionName?: string }> : [];
+    return { reason: data.reason, stack: stack.map((frame) => frame.functionName) };
+  });
+  expect(invalidations.some((event) => event.reason === "Removed from layout" && event.stack[0] === "syncShellLayer"),
+    "the fixture must exercise virtual row removal").toBe(true);
+  expect(invalidations.filter((event) => event.reason === "Added to layout" && event.stack[0] === "getSourceWindow"),
+    "source-window reads must not follow virtual row DOM writes").toHaveLength(0);
+  expect(await host.getAttribute("data-canonical-revision")).toBe(before.revision);
+  expect(await page.getByTestId("history-status").textContent()).toBe(before.history);
+  expect(await page.getByTestId("dirty-status").textContent()).toBe(before.dirty);
+});
