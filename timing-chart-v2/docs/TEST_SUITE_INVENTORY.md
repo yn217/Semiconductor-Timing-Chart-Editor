@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 414 spec files and 1236 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 415 spec files and 1238 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1236/1236 cases reviewed.
+Semantic review progress: 1238/1238 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 626 |
 | `nightly` | 238 |
 | `performance` | 73 |
-| `pr` | 392 |
+| `pr` | 394 |
 | `visual` | 180 |
 
 ## Top recorded per-case runtimes
@@ -152,6 +152,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-1007-transaction-add-menu.spec.ts` | 4 | 4/4 reviewed |
 | `issue-1055-signal-tree-offscreen-filter.spec.ts` | 1 | 1/1 reviewed |
 | `issue-1072-cross-surface-alignment.spec.ts` | 2 | 2/2 reviewed |
+| `issue-175-scroll-group-header-dom.spec.ts` | 2 | 2/2 reviewed |
 | `issue-175-scrollbar-effect-lifecycle.spec.ts` | 1 | 1/1 reviewed |
 | `issue-175-scrollbar-geometry-matrix.spec.ts` | 2 | 2/2 reviewed |
 | `issue-208-open-epoch-coherence.spec.ts` | 1 | 1/1 reviewed |
@@ -501,6 +502,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `inspector-hide-compacts-rows.spec.ts` | dataset, geometryRead |
 | `issue-1004-group-hierarchy.spec.ts` | querySelector, getComputedStyle, geometryRead |
 | `issue-1072-cross-surface-alignment.spec.ts` | geometryRead |
+| `issue-175-scroll-group-header-dom.spec.ts` | dataset |
 | `issue-175-scrollbar-geometry-matrix.spec.ts` | geometryRead |
 | `issue-208-open-epoch-coherence.spec.ts` | querySelector |
 | `issue-219-wave-url-lifetime.spec.ts` | querySelector, explicitWait |

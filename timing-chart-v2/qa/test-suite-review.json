@@ -586,6 +586,23 @@
       "replacementTest": null
     },
     {
+      "file": "issue-175-scroll-group-header-dom.spec.ts",
+      "domain": "virtualized-scroll-dom-lifecycle",
+      "originIssue": 175,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Vertical viewport updates retain unchanged Group-header child identity, add/remove only entering/exiting timing rows, and resolve the source window before virtual-row DOM mutations without changing Canonical/History/Dirty.",
+      "duplicateGroup": "virtualized-scroll-dom-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Two focused regressions cover separate browser-observable invalidation contracts introduced for #175. The first prevents unnecessary header DOM replacement; the second uses a Chromium invalidation trace to ensure source-window geometry reads do not follow virtual-row DOM writes. Neither substitutes for production latency acceptance, and neither deletes or weakens broader coverage.",
+      "replacementTest": null
+    },
+    {
       "file": "issue-175-scrollbar-geometry-matrix.spec.ts",
       "domain": "timeline-scrollbar",
       "originIssue": 175,

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-04T17:47:39.505Z",
+  "generatedAt": "2026-10-04T20:23:08.668Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 414,
-  "caseCount": 1236,
-  "reviewedCaseCount": 1236,
+  "specFileCount": 415,
+  "caseCount": 1238,
+  "reviewedCaseCount": 1238,
   "curatedProfileCounts": {
     "integration": 626,
     "nightly": 238,
     "performance": 73,
-    "pr": 392,
+    "pr": 394,
     "visual": 180
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -10131,6 +10131,58 @@
         "pr"
       ],
       "contractId": "group-header-cross-surface-alignment-wide"
+    },
+    {
+      "file": "issue-175-scroll-group-header-dom.spec.ts",
+      "suitePath": [],
+      "line": 4,
+      "title": "vertical viewport updates reuse unchanged Group header controls",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "virtualized-scroll-dom-lifecycle",
+      "originIssue": 175,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Vertical viewport updates retain unchanged Group-header child identity, add/remove only entering/exiting timing rows, and resolve the source window before virtual-row DOM mutations without changing Canonical/History/Dirty.",
+      "duplicateGroup": "virtualized-scroll-dom-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Two focused regressions cover separate browser-observable invalidation contracts introduced for #175. The first prevents unnecessary header DOM replacement; the second uses a Chromium invalidation trace to ensure source-window geometry reads do not follow virtual-row DOM writes. Neither substitutes for production latency acceptance, and neither deletes or weakens broader coverage.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "virtualized-scroll-dom-lifecycle"
+    },
+    {
+      "file": "issue-175-scroll-group-header-dom.spec.ts",
+      "suitePath": [],
+      "line": 72,
+      "title": "scroll projection resolves source window before virtual row DOM changes",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "virtualized-scroll-dom-lifecycle",
+      "originIssue": 175,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Vertical viewport updates retain unchanged Group-header child identity, add/remove only entering/exiting timing rows, and resolve the source window before virtual-row DOM mutations without changing Canonical/History/Dirty.",
+      "duplicateGroup": "virtualized-scroll-dom-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Two focused regressions cover separate browser-observable invalidation contracts introduced for #175. The first prevents unnecessary header DOM replacement; the second uses a Chromium invalidation trace to ensure source-window geometry reads do not follow virtual-row DOM writes. Neither substitutes for production latency acceptance, and neither deletes or weakens broader coverage.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "virtualized-scroll-dom-lifecycle"
     },
     {
       "file": "issue-175-scrollbar-effect-lifecycle.spec.ts",
@@ -33530,6 +33582,17 @@
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "geometryRead"
+      ],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "issue-175-scroll-group-header-dom.spec.ts",
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
+      "originIssue": "175",
+      "declaredTimeoutMs": 60,
+      "candidateSignals": [
+        "dataset"
       ],
       "semanticReviewStatus": "REVIEWED"
     },
