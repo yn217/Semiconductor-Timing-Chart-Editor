@@ -1,5 +1,5 @@
 import { planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
-import { measurementProfilePair, valueSignalValueProblem, type AnnotationId, type AnnotationType, type CanonicalDocument, type GroupId, type MeasurementProfile, type SignalId, type SignalRole, type TimeGroup, type TimeGroupId, type TransactionGroupId, type TransactionId, type TransactionPhase, type TransitionAnchorKind, type ValueSignal } from "@timing-chart-v2/schema";
+import { measurementProfilePair, valueSignalValueProblem, type AnnotationId, type AnnotationType, type CanonicalDocument, type GroupId, type MeasurementProfile, type SemanticAnchor, type SignalId, type SignalRole, type TimeGroup, type TimeGroupId, type TransactionGroupId, type TransactionId, type TransactionPhase, type TransitionAnchorKind, type ValueSignal } from "@timing-chart-v2/schema";
 import { nextCommandId } from "./command-id.js";
 import { nextEntityId } from "./entity-id.js";
 import { createAnnotation } from "./create-annotation.js";
@@ -454,6 +454,10 @@ export function buildTypedAnnotationProposal(document: CanonicalDocument, revisi
     const sourceSignalId = args.sourceSignalId;
     const traceOffsetCycles = args.traceOffsetCycles;
     const opacity = args.opacity;
+    const anchorField = args.anchorField;
+    const anchorCycle = args.anchorCycle;
+    const anchorSignalId = args.anchorSignalId;
+    const anchorPoint = args.anchorPoint;
     if (label !== undefined && (typeof label !== "string" || !label.trim())) return { ok: false, message: "label must be a non-empty string when supplied." };
     if (visible !== undefined && typeof visible !== "boolean") return { ok: false, message: "visible must be a boolean." };
     if (color !== undefined && (typeof color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(color))) return { ok: false, message: "color must be a six-digit hexadecimal color." };
@@ -461,15 +465,36 @@ export function buildTypedAnnotationProposal(document: CanonicalDocument, revisi
     if (sourceSignalId !== undefined && (typeof sourceSignalId !== "string" || !document.signals.some((signal) => signal.id === sourceSignalId && signal.type !== "commentRow"))) return { ok: false, message: `Ghost Trace source Signal '${String(sourceSignalId)}' does not exist in the current document.` };
     if (traceOffsetCycles !== undefined && (annotation.type !== "ghostTrace" || typeof traceOffsetCycles !== "number" || !Number.isFinite(traceOffsetCycles))) return { ok: false, message: "traceOffsetCycles is only valid as a finite number for Ghost Trace Annotations." };
     if (opacity !== undefined && (!(["ghostTrace", "timingRegion"] as const).includes(annotation.type as "ghostTrace" | "timingRegion") || typeof opacity !== "number" || !Number.isFinite(opacity) || opacity < 0 || opacity > 1)) return { ok: false, message: "opacity is only valid for Ghost Trace or Timing Region Annotations and must be between 0 and 1." };
-    if (label === undefined && visible === undefined && color === undefined && sourceSignalId === undefined && traceOffsetCycles === undefined && opacity === undefined) return { ok: false, message: "propose_update_annotation requires at least one supported changed field." };
+    const anchorFields = ["anchor", "start", "end", "from", "to"] as const;
+    const hasAnchorUpdate = anchorCycle !== undefined || anchorSignalId !== undefined || anchorPoint !== undefined;
+    if (hasAnchorUpdate && (typeof anchorField !== "string" || !anchorFields.includes(anchorField as typeof anchorFields[number]))) return { ok: false, message: "Semantic anchor updates require anchorField: anchor, start, end, from, or to." };
+    if (!hasAnchorUpdate && anchorField !== undefined) return { ok: false, message: "anchorField requires at least one anchorCycle, anchorSignalId, or anchorPoint value." };
+    let nextAnchor: SemanticAnchor | undefined;
+    if (hasAnchorUpdate) {
+      const currentAnchor = (annotation as Partial<Record<typeof anchorFields[number], SemanticAnchor>>)[anchorField as typeof anchorFields[number]];
+      if (!currentAnchor) return { ok: false, message: `Annotation '${annotation.id}' has no '${String(anchorField)}' semantic anchor.` };
+      if (anchorCycle !== undefined && (!Number.isSafeInteger(anchorCycle) || (anchorCycle as number) < 0 || (anchorCycle as number) >= document.timeline.cycleCount)) return { ok: false, message: "anchorCycle must be an integer source cycle within the timeline." };
+      if (anchorSignalId !== undefined && (typeof anchorSignalId !== "string" || !document.signals.some((signal) => signal.id === anchorSignalId && signal.type !== "commentRow"))) return { ok: false, message: `Anchor Signal '${String(anchorSignalId)}' does not exist in the current document.` };
+      const anchorPoints: readonly SemanticAnchor["point"][] = ["cycle-start", "cycle-center", "cycle-end", "transition-start", "transition-center", "transition-end", "rising-edge", "falling-edge", "value-start", "value-center", "row-center"];
+      if (anchorPoint !== undefined && (typeof anchorPoint !== "string" || !anchorPoints.includes(anchorPoint as SemanticAnchor["point"]))) return { ok: false, message: "anchorPoint must be a supported semantic anchor point." };
+      const nextPoint = (anchorPoint ?? currentAnchor.point) as SemanticAnchor["point"];
+      if ((currentAnchor.threshold !== undefined || currentAnchor.transition !== undefined) && !(nextPoint === "transition-start" || nextPoint === "transition-center" || nextPoint === "transition-end")) return { ok: false, message: "Threshold/ratio anchors must retain a transition anchor point." };
+      nextAnchor = { ...currentAnchor, ...(anchorCycle === undefined ? {} : { cycle: anchorCycle as number }), ...(anchorSignalId === undefined ? {} : { signalId: anchorSignalId as SignalId }), ...(anchorPoint === undefined ? {} : { point: nextPoint }) };
+    }
+    if (label === undefined && visible === undefined && color === undefined && sourceSignalId === undefined && traceOffsetCycles === undefined && opacity === undefined && !hasAnchorUpdate) return { ok: false, message: "propose_update_annotation requires at least one supported changed field." };
     const updatedLabel = typeof label === "string" ? label.trim() : annotation.label;
     const updatedVisible = typeof visible === "boolean" ? visible : annotation.visible;
     const updatedColor = typeof color === "string" ? color : annotation.color;
     const nextSourceSignalId = sourceSignalId === undefined ? annotation.sourceSignalId : sourceSignalId as SignalId;
     const nextTraceOffsetCycles = traceOffsetCycles === undefined ? annotation.traceOffsetCycles : traceOffsetCycles as number;
     const nextOpacity = opacity === undefined ? annotation.opacity : opacity as number;
-    const fields = { type: "annotation.updateProperties" as const, annotationId: annotation.id, label: updatedLabel, visible: updatedVisible, ...(updatedColor === undefined ? {} : { color: updatedColor }), ...(annotation.lineType === undefined ? {} : { lineType: annotation.lineType }), ...(annotation.arrowhead === undefined ? {} : { arrowhead: annotation.arrowhead }), ...(nextSourceSignalId === undefined ? {} : { sourceSignalId: nextSourceSignalId }), ...(nextTraceOffsetCycles === undefined ? {} : { traceOffsetCycles: nextTraceOffsetCycles }), ...(nextOpacity === undefined ? {} : { opacity: nextOpacity }), ...(annotation.labelOffset === undefined ? {} : { labelOffset: annotation.labelOffset }), ...(annotation.labelPlacement === undefined ? {} : { labelPlacement: annotation.labelPlacement }), ...(annotation.style === undefined ? {} : { style: annotation.style }), ...(annotation.measurement === undefined ? {} : { measurement: annotation.measurement }) };
-    return { ok: true, proposal: proposal(revision, `Update Annotation ${annotation.label}`, [command(fields, "typed_update_annotation")]) };
+    const commands: SemanticCommand[] = [];
+    if (label !== undefined || visible !== undefined || color !== undefined || sourceSignalId !== undefined || traceOffsetCycles !== undefined || opacity !== undefined) {
+      const fields = { type: "annotation.updateProperties" as const, annotationId: annotation.id, label: updatedLabel, visible: updatedVisible, ...(updatedColor === undefined ? {} : { color: updatedColor }), ...(annotation.lineType === undefined ? {} : { lineType: annotation.lineType }), ...(annotation.arrowhead === undefined ? {} : { arrowhead: annotation.arrowhead }), ...(nextSourceSignalId === undefined ? {} : { sourceSignalId: nextSourceSignalId }), ...(nextTraceOffsetCycles === undefined ? {} : { traceOffsetCycles: nextTraceOffsetCycles }), ...(nextOpacity === undefined ? {} : { opacity: nextOpacity }), ...(annotation.labelOffset === undefined ? {} : { labelOffset: annotation.labelOffset }), ...(annotation.labelPlacement === undefined ? {} : { labelPlacement: annotation.labelPlacement }), ...(annotation.style === undefined ? {} : { style: annotation.style }), ...(annotation.measurement === undefined ? {} : { measurement: annotation.measurement }) };
+      commands.push(command(fields, "typed_update_annotation"));
+    }
+    if (nextAnchor && typeof anchorField === "string") commands.push(command({ type: "annotation.setAnchor", annotationId: annotation.id, field: anchorField as "anchor" | "start" | "end" | "from" | "to", anchor: nextAnchor }, "typed_update_annotation_anchor"));
+    return { ok: true, proposal: proposal(revision, `Update Annotation ${annotation.label}`, commands) };
   }
   return { ok: false, message: `Unsupported typed Annotation proposal '${tool}'.` };
 }

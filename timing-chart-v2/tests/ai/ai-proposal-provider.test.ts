@@ -261,6 +261,12 @@ describe("deterministic AI proposal provider", () => {
     const updated = buildTypedAnnotationProposal(document, 26, "propose_update_annotation", { annotationId: "annotation_1", visible: false, color: "#112233" });
     expect(updated.ok).toBe(true);
     if (updated.ok) expect(updated.proposal.commands).toEqual([expect.objectContaining({ type: "annotation.updateProperties", annotationId: "annotation_1", label: "Note", visible: false, color: "#112233" })]);
+    const anchorUpdate = buildTypedAnnotationProposal(document, 26, "propose_update_annotation", { annotationId: "annotation_1", anchorField: "anchor", anchorCycle: 4, anchorSignalId: "sig_clk", anchorPoint: "cycle-center" });
+    expect(anchorUpdate.ok).toBe(true);
+    if (anchorUpdate.ok) expect(anchorUpdate.proposal.commands).toEqual([expect.objectContaining({ type: "annotation.setAnchor", annotationId: "annotation_1", field: "anchor", anchor: { signalId: "sig_clk", cycle: 4, point: "cycle-center" } })]);
+    const combinedUpdate = buildTypedAnnotationProposal(document, 26, "propose_update_annotation", { annotationId: "annotation_1", label: "Moved note", anchorField: "anchor", anchorCycle: 4 });
+    expect(combinedUpdate.ok).toBe(true);
+    if (combinedUpdate.ok) expect(combinedUpdate.proposal.commands.map((item) => item.type)).toEqual(["annotation.updateProperties", "annotation.setAnchor"]);
     const deleted = buildTypedAnnotationProposal(document, 27, "propose_delete_annotation", { annotationId: "annotation_1" });
     expect(deleted.ok).toBe(true);
     if (deleted.ok) expect(deleted.proposal.commands).toEqual([expect.objectContaining({ type: "annotation.delete", annotationId: "annotation_1" })]);
@@ -268,6 +274,9 @@ describe("deterministic AI proposal provider", () => {
     expect(buildTypedAnnotationProposal(document, 25, "propose_create_annotation", { type: "range", signalId: "sig_data", start: 2, end: 99 })).toEqual({ ok: false, message: "propose_create_annotation requires integer source-cycle boundaries within the timeline with end > start." });
     expect(buildTypedAnnotationProposal(document, 26, "propose_update_annotation", { annotationId: "missing", label: "X" })).toEqual({ ok: false, message: "Annotation 'missing' does not exist in the current document." });
     expect(buildTypedAnnotationProposal(document, 26, "propose_update_annotation", { annotationId: "annotation_1", color: "red" })).toEqual({ ok: false, message: "color must be a six-digit hexadecimal color." });
+    expect(buildTypedAnnotationProposal(document, 26, "propose_update_annotation", { annotationId: "annotation_1", anchorCycle: 99, anchorField: "anchor" })).toMatchObject({ ok: false, message: expect.stringContaining("within the timeline") });
+    expect(buildTypedAnnotationProposal(document, 26, "propose_update_annotation", { annotationId: "annotation_1", anchorSignalId: "missing", anchorField: "anchor" })).toMatchObject({ ok: false, message: expect.stringContaining("does not exist") });
+    expect(buildTypedAnnotationProposal(document, 26, "propose_update_annotation", { annotationId: "annotation_1", anchorCycle: 2 })).toMatchObject({ ok: false, message: expect.stringContaining("require anchorField") });
     expect(document.annotations[0]).toMatchObject({ label: "Note", visible: true, color: "#d04a36" });
   });
 

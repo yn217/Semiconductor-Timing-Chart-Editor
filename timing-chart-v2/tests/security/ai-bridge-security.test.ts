@@ -100,6 +100,15 @@ describe("Agent Bridge security boundaries (#395 item 11)", () => {
     expect(updateTool?.[0]).toContain("opacity: { type: \"number\", minimum: 0, maximum: 1 }");
   });
 
+  it("advertises semantic Annotation anchor updates in source-cycle coordinates", () => {
+    const updateTool = source.match(/\{ name: "propose_update_annotation",[\s\S]*?\n/);
+    expect(updateTool?.[0]).toContain("anchorField: { type: \"string\", enum: [\"anchor\", \"start\", \"end\", \"from\", \"to\"] }");
+    expect(updateTool?.[0]).toContain("anchorCycle: { type: \"integer\", minimum: 0 }");
+    expect(updateTool?.[0]).toContain("anchorSignalId: { type: \"string\", minLength: 1 }");
+    expect(updateTool?.[0]).toContain("anchorPoint: { type: \"string\", enum:");
+    expect(updateTool?.[0]).toContain("canonical source cycles");
+  });
+
   it("uses distinct bearer credentials for MCP and Editor transport routes", () => {
     const routeCredentialIndex = source.indexOf("const expectedToken = url.pathname");
     const tokenCheckIndex = source.indexOf("timingSafeTokenEquals(bearerToken(req), expectedToken)");
