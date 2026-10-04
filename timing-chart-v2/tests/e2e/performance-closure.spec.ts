@@ -204,18 +204,62 @@ test("PR guard: 100x500 selection/reorder/edit/annotation/view hard invariants w
   expect(renderBeforeSelection.localGeometryBuilds).toBeGreaterThan(0);
   expect(geometryBeforeSelection.totalDuplicateKeyCollisions).toBeLessThanOrEqual(geometryBeforeSelection.totalDuplicateKeyChecks);
   expect(geometryBeforeSelection.totalMatrixReads).toBe(0); // #755: no SVG matrix reads on the analytic path
+  // Measure from the browser's actual dispatched input event, not around
+  // Playwright RPC/locator latency. The first RAF is the event's next frame;
+  // the second RAF records that the browser had a paint opportunity between
+  // callbacks (it is not presented as physical display scan-out time).
+  await page.evaluate(() => {
+    type Probe = { armed?: { id: number; type: string; selector: string }; nextId: number; samples: Record<string, { firstRafMs: number; nextFrameMs: number; longTasks: number; domNodes: number }> };
+    const target = window as Window & { __interactionFrameProbe?: Probe; __p13LongTasks?: number };
+    const probe: Probe = { nextId: 0, samples: {} };
+    target.__interactionFrameProbe = probe;
+    document.addEventListener("click", (event) => record(event), true);
+    document.addEventListener("pointermove", (event) => record(event), true);
+    function record(event: Event) {
+      const current = target.__interactionFrameProbe;
+      const armed = current?.armed;
+      const eventTarget = event.target;
+      if (!armed || event.type !== armed.type || !(eventTarget instanceof Element) || !eventTarget.closest(armed.selector)) return;
+      current.armed = undefined;
+      const started = performance.now();
+      const longTasksAtStart = target.__p13LongTasks ?? 0;
+      requestAnimationFrame(() => {
+        const first = performance.now();
+        requestAnimationFrame(() => {
+          current.samples[String(armed.id)] = {
+            firstRafMs: first - started,
+            nextFrameMs: performance.now() - started,
+            longTasks: Math.max(0, (target.__p13LongTasks ?? 0) - longTasksAtStart),
+            domNodes: document.querySelectorAll("*").length,
+          };
+        });
+      });
+    }
+  });
+  const armFrameProbe = (type: "click" | "pointermove", selector: string) => page.evaluate(({ type, selector }) => {
+    const probe = (window as Window & { __interactionFrameProbe?: { nextId: number; armed?: { id: number; type: string; selector: string } } }).__interactionFrameProbe;
+    if (!probe) throw new Error("Browser interaction frame probe was not installed");
+    const id = ++probe.nextId;
+    probe.armed = { id, type, selector };
+    return id;
+  }, { type, selector });
+  const readFrameProbe = (id: number) => page.evaluate((sampleId) => {
+    const probe = (window as Window & { __interactionFrameProbe?: { samples: Record<string, { firstRafMs: number; nextFrameMs: number; longTasks: number; domNodes: number }> } }).__interactionFrameProbe;
+    return probe?.samples[String(sampleId)];
+  }, id);
   const samples: BrowserPerformanceSample[] = [];
   for (let trial = 0; trial < 10; trial += 1) {
     const index = trial % 5 + 1;
     const name = `${index % 5 === 0 ? "BUS" : "SIG"}_${index}`;
-    const started = await page.evaluate(() => performance.now());
+    const probeId = await armFrameProbe("click", `[data-role='frozen-row'][data-row-id='sig_perf_${index}']`);
     // The fixture intentionally samples already-mounted rows; force avoids Playwright
     // auto-scrolling a virtualized row and turning selection into a viewport mutation.
     await host.locator(`[data-role='frozen-row'][data-row-id='sig_perf_${index}']`).dispatchEvent("click");
     await expect(page.getByTestId("selection-status")).toHaveText(name);
-    const ended = await page.evaluate(() => performance.now());
-    const rafMs = await page.evaluate(() => new Promise<number>((resolve) => { const before = performance.now(); requestAnimationFrame(() => resolve(performance.now() - before)); }));
-    samples.push({ durationMs: ended - started, rafMs, longTasks: await page.evaluate(() => (globalThis as unknown as { __p13LongTasks: number }).__p13LongTasks), domNodes: await page.locator("*").count() });
+    await expect.poll(async () => Boolean(await readFrameProbe(probeId))).toBe(true);
+    const measured = await readFrameProbe(probeId);
+    if (!measured) throw new Error(`Selection frame probe ${probeId} did not complete`);
+    samples.push({ durationMs: measured.nextFrameMs, rafMs: measured.firstRafMs, longTasks: measured.longTasks, domNodes: measured.domNodes });
   }
   expect(await counters(page)).toEqual(renderBeforeSelection);
   const sessionAfterSelection = await sessionCounters(page);
@@ -269,7 +313,14 @@ test("PR guard: 100x500 selection/reorder/edit/annotation/view hard invariants w
   const handle = annotation.locator("[data-role='annotation-handle']").first(); const handleBox = await handle.boundingBox();
   await page.mouse.move(handleBox!.x + 2, handleBox!.y + 2); await page.mouse.down(); const snapAfterDown = await sessionCounters(page);
   const pointerSamples: BrowserPerformanceSample[] = [];
-  for (let offset = 1; offset <= 10; offset += 1) { const started = await page.evaluate(() => performance.now()); await page.mouse.move(handleBox!.x + 2 + offset, handleBox!.y + 2); const ended = await page.evaluate(() => performance.now()); pointerSamples.push({ durationMs: ended - started, rafMs: await page.evaluate(() => new Promise<number>((resolve) => { const before = performance.now(); requestAnimationFrame(() => resolve(performance.now() - before)); })), longTasks: await page.evaluate(() => (globalThis as unknown as { __p13LongTasks: number }).__p13LongTasks), domNodes: await page.locator("*").count() }); }
+  for (let offset = 1; offset <= 10; offset += 1) {
+    const probeId = await armFrameProbe("pointermove", "[data-role='annotation-owner']");
+    await page.mouse.move(handleBox!.x + 2 + offset, handleBox!.y + 2);
+    await expect.poll(async () => Boolean(await readFrameProbe(probeId))).toBe(true);
+    const measured = await readFrameProbe(probeId);
+    if (!measured) throw new Error(`Pointer frame probe ${probeId} did not complete`);
+    pointerSamples.push({ durationMs: measured.nextFrameMs, rafMs: measured.firstRafMs, longTasks: measured.longTasks, domNodes: measured.domNodes });
+  }
   expect((await sessionCounters(page)).snapIndexBuilds).toBeLessThanOrEqual(snapAfterDown.snapIndexBuilds + 1); await annotation.dispatchEvent("pointercancel"); await page.mouse.up();
   const historyBeforePreview = await page.getByTestId("history-status").textContent(); const previewBefore = await counters(page);
   const box = await annotation.locator("[data-role='annotation-body']").boundingBox(); await page.mouse.move(box!.x + 2, box!.y + 2); await page.mouse.down(); await page.mouse.move(box!.x + 10, box!.y + 4); await annotation.dispatchEvent("pointercancel"); await page.mouse.up();
@@ -287,7 +338,7 @@ test("PR guard: 100x500 selection/reorder/edit/annotation/view hard invariants w
   const sessionAfterView = await sessionCounters(page); expect(sessionAfterView.rowLayoutBuilds).toBe(sessionBeforeView.rowLayoutBuilds); expect(sessionAfterView.commits).toBe(sessionBeforeView.commits);
 
   const browserAfter = await cdpMetrics(cdp); const summary = summarizePerformance(samples); const pointerSummary = summarizePerformance(pointerSamples);
-  const evidence = { fixture: "perf_100x500", summary, pointerSummary, geometryExtraction: geometryBeforeSelection, internal: { renderBeforeSelection, reorderBefore, reorderAfter, editBefore, editAfter, annotationBefore, annotationAfter, viewBefore, viewAfter, diagnostics: await diagnostics(page), session: await sessionCounters(page) }, browser: { before: browserBefore, after: browserAfter } };
+  const evidence = { fixture: "perf_100x500", latencyMethod: "browser capture input timestamp -> first RAF and following RAF; excludes Playwright call wall time", summary, pointerSummary, geometryExtraction: geometryBeforeSelection, internal: { renderBeforeSelection, reorderBefore, reorderAfter, editBefore, editAfter, annotationBefore, annotationAfter, viewBefore, viewAfter, diagnostics: await diagnostics(page), session: await sessionCounters(page) }, browser: { before: browserBefore, after: browserAfter } };
   console.log(`[phase13-pr] ${JSON.stringify({ summary, pointerSummary, diagnostics: evidence.internal.diagnostics, browserDelta: { layoutCount: (browserAfter.LayoutCount ?? 0) - (browserBefore.LayoutCount ?? 0), layoutDuration: (browserAfter.LayoutDuration ?? 0) - (browserBefore.LayoutDuration ?? 0), recalcStyleCount: (browserAfter.RecalcStyleCount ?? 0) - (browserBefore.RecalcStyleCount ?? 0), recalcStyleDuration: (browserAfter.RecalcStyleDuration ?? 0) - (browserBefore.RecalcStyleDuration ?? 0), scriptDuration: (browserAfter.ScriptDuration ?? 0) - (browserBefore.ScriptDuration ?? 0), taskDuration: (browserAfter.TaskDuration ?? 0) - (browserBefore.TaskDuration ?? 0), jsHeapUsedSize: browserAfter.JSHeapUsedSize ?? 0 } })}`);
   await testInfo.attach("phase13-pr-performance.json", { body: Buffer.from(JSON.stringify(evidence, null, 2)), contentType: "application/json" });
   expect(summary.trials).toBe(10); expect(summary.p95Ms).toBeGreaterThanOrEqual(summary.medianMs); expect(summary.maxDomNodes).toBeGreaterThan(0); expect(pointerSummary.trials).toBe(10); expect(pointerSummary.p95Ms).toBeGreaterThanOrEqual(pointerSummary.medianMs);
