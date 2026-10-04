@@ -88,6 +88,11 @@ function visit(suites, file = "", suitePath = []) {
             contractId: selectedReview.contractId ?? selectedReview.domain ?? null,
             originIssue: selectedReview.originIssue ?? (Number(record.file.match(/(?:issue|acceptance)-(\d+)/i)?.[1]) || null),
             costClass: selectedReview.costClass === "SMALL" ? "FAST" : selectedReview.costClass,
+            ...(Number.isFinite(review?.measuredRuntimeMs)
+              ? { runtimeMeasurementScope: "CASE" }
+              : Number.isFinite(specReview?.measuredRuntimeMs)
+                ? { runtimeMeasurementScope: "SPEC" }
+                : {}),
             reviewStatus: "REVIEWED",
           });
         }
@@ -219,9 +224,12 @@ for (const test of cases) {
   fileCounts.set(test.file, counts);
 }
 const slowestMeasuredCases = cases
-  .filter((test) => Number.isFinite(test.measuredRuntimeMs))
+  .filter((test) => test.runtimeMeasurementScope === "CASE" && Number.isFinite(test.measuredRuntimeMs))
   .sort((a, b) => b.measuredRuntimeMs - a.measuredRuntimeMs || a.file.localeCompare(b.file))
   .slice(0, 20);
+const measuredSpecRuntimes = [...reviewsByFile.values()]
+  .filter((review) => Number.isFinite(review.measuredRuntimeMs))
+  .sort((a, b) => b.measuredRuntimeMs - a.measuredRuntimeMs || a.file.localeCompare(b.file));
 const markdown = [
   "# Playwright test inventory",
   "",
@@ -239,11 +247,19 @@ const markdown = [
   "",
   "## Top recorded per-case runtimes",
   "",
-  "These are the highest non-null `measuredRuntimeMs` values already recorded in the curated manifest. Inventory generation does not execute tests or refresh these measurements; treat them as case-level observations, not a full-profile runtime baseline.",
+  "These are case-level observations recorded directly on case reviews. Inventory generation does not execute tests or refresh these measurements; they are not a full-profile runtime baseline.",
   "",
   "| Runtime (ms) | Profile | Spec file | Test case |",
   "| ---: | --- | --- | --- |",
   ...slowestMeasuredCases.map((test) => `| ${test.measuredRuntimeMs} | ${(test.profiles ?? []).map((profile) => `\`${profile}\``).join(", ") || "—"} | \`${test.file}\` | ${test.title.replaceAll("|", "\\|")} |`),
+  "",
+  "## Recorded spec-level runtimes",
+  "",
+  "These values were measured for a whole spec file and are deliberately not copied into the case-level runtime table.",
+  "",
+  "| Runtime (ms) | Profile | Spec file |",
+  "| ---: | --- | --- |",
+  ...measuredSpecRuntimes.map((review) => `| ${review.measuredRuntimeMs} | ${(review.profiles ?? []).map((profile) => `\`${profile}\``).join(", ") || "—"} | \`${review.file}\` |`),
   "",
   "> This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.",
   "",

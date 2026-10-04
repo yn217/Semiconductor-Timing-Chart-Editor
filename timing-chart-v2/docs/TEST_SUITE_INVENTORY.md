@@ -18,7 +18,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 ## Top recorded per-case runtimes
 
-These are the highest non-null `measuredRuntimeMs` values already recorded in the curated manifest. Inventory generation does not execute tests or refresh these measurements; treat them as case-level observations, not a full-profile runtime baseline.
+These are case-level observations recorded directly on case reviews. Inventory generation does not execute tests or refresh these measurements; they are not a full-profile runtime baseline.
 
 | Runtime (ms) | Profile | Spec file | Test case |
 | ---: | --- | --- | --- |
@@ -41,7 +41,19 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | 7600 | `pr` | `issue-744-diagnostics-freshness.spec.ts` | timing diagnostics stay current across a semantic edit, Undo and Redo (no silent clear) |
 | 6900 | `visual` | `left-tree-compact-footer.spec.ts` | keeps the left tree footer compact at the Golden viewport |
 | 6600 | `performance` | `local-geometry-dom-batch.spec.ts` | keeps WaveDrom DOM writes and Local Geometry reads inside one render batch |
-| 6500 | `integration`, `nightly` | `issue-757-far-scroll-window-coverage.spec.ts` | a far scrollLeft jump repaints the window at the viewport, not from cycle 0 |
+| 6400 | `integration` | `listener-lifecycle.spec.ts` | registers the Left Tree keydown handler exactly once per mount (no duplicate listener) |
+
+## Recorded spec-level runtimes
+
+These values were measured for a whole spec file and are deliberately not copied into the case-level runtime table.
+
+| Runtime (ms) | Profile | Spec file |
+| ---: | --- | --- |
+| 26233 | `visual` | `issue-441-ribbon-label-integrity.spec.ts` |
+| 6500 | `integration`, `nightly` | `issue-757-far-scroll-window-coverage.spec.ts` |
+| 5600 | `integration` | `issue-755-analytic-transition-equivalence.spec.ts` |
+| 3600 | `integration`, `visual` | `issue-746-visible-group-create.spec.ts` |
+| 952 | `performance`, `nightly` | `perf-fixed-full-span-open.spec.ts` |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 

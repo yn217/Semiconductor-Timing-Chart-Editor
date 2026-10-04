@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-04T20:23:08.668Z",
+  "generatedAt": "2026-10-04T21:11:00.189Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -1609,7 +1609,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 200,
+      "line": 215,
       "title": "get_transactions, get_annotations, get_bookmarks and get_problems are read-only semantic projections",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1635,7 +1635,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 264,
+      "line": 279,
       "title": "external Transaction+Phases+Signals proposal validates and applies as one atomic History entry",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1662,7 +1662,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 313,
+      "line": 328,
       "title": "submit_proposal previews an ordered typed batch and applies or undoes it as one History entry",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1688,7 +1688,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 361,
+      "line": 376,
       "title": "propose_edit builds a Preview only -- it never auto-validates or auto-applies, and a human must still Validate + Apply it themselves",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1714,7 +1714,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 401,
+      "line": 416,
       "title": "propose_rename_signal targets a stable Signal ID and still requires human Validate and Apply",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1740,7 +1740,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 443,
+      "line": 458,
       "title": "the Editor session and pending AI proposal survive Bottom tab switches, then reject stale revision",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1766,7 +1766,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 495,
+      "line": 510,
       "title": "propose_create_signal uses a stable Group ID and remains a Preview until explicit Apply",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1792,7 +1792,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 524,
+      "line": 539,
       "title": "Signal Group move and delete tools target stable IDs and apply only after approval",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1818,7 +1818,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 573,
+      "line": 588,
       "title": "an unauthorized propose_edit call (bad token) never reaches the document, and an empty query is rejected before building any proposal",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1844,7 +1844,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 593,
+      "line": 608,
       "title": "rejects a request with an invalid token, and rejects any tool outside the exposed whitelist",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1870,7 +1870,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "suitePath": [],
-      "line": 632,
+      "line": 647,
       "title": "bridge disconnect is surfaced truthfully, and the same tab recovers on its own once the bridge comes back",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -8098,7 +8098,8 @@
         "performance",
         "nightly"
       ],
-      "contractId": "history-retention-horizon-browser"
+      "contractId": "history-retention-horizon-browser",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "home-command-surface.spec.ts",
@@ -10991,7 +10992,8 @@
       "profiles": [
         "visual"
       ],
-      "contractId": "ribbon-responsive-label-integrity"
+      "contractId": "ribbon-responsive-label-integrity",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "issue-441-ribbon-label-integrity.spec.ts",
@@ -11017,7 +11019,8 @@
       "profiles": [
         "visual"
       ],
-      "contractId": "ribbon-responsive-label-integrity"
+      "contractId": "ribbon-responsive-label-integrity",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "issue-441-ribbon-label-integrity.spec.ts",
@@ -11043,7 +11046,8 @@
       "profiles": [
         "visual"
       ],
-      "contractId": "ribbon-responsive-label-integrity"
+      "contractId": "ribbon-responsive-label-integrity",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "issue-456-sized-bus-literal.spec.ts",
@@ -14640,7 +14644,8 @@
       "profiles": [
         "pr"
       ],
-      "contractId": "timing-diagnostics-freshness"
+      "contractId": "timing-diagnostics-freshness",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "issue-744-diagnostics-freshness.spec.ts",
@@ -14666,7 +14671,8 @@
       "profiles": [
         "integration"
       ],
-      "contractId": "canonical-validation-owner-boundary"
+      "contractId": "canonical-validation-owner-boundary",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "issue-746-visible-group-create.spec.ts",
@@ -14693,7 +14699,8 @@
         "integration",
         "visual"
       ],
-      "contractId": "transaction-group-creation-discoverability"
+      "contractId": "transaction-group-creation-discoverability",
+      "runtimeMeasurementScope": "SPEC"
     },
     {
       "file": "issue-747-a11y-and-sort-matrix.spec.ts",
@@ -14955,7 +14962,8 @@
       "profiles": [
         "pr"
       ],
-      "contractId": "transaction-tc-scale-validation"
+      "contractId": "transaction-tc-scale-validation",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "issue-750-geometry-10-to-50.spec.ts",
@@ -14981,7 +14989,8 @@
       "profiles": [
         "pr"
       ],
-      "contractId": "transaction-tc-display-geometry"
+      "contractId": "transaction-tc-display-geometry",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "issue-750-geometry-10-to-50.spec.ts",
@@ -15346,7 +15355,8 @@
       "profiles": [
         "pr"
       ],
-      "contractId": "bookmark-in-app-navigation"
+      "contractId": "bookmark-in-app-navigation",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "issue-753-bookmark-navigation-stays-in-app.spec.ts",
@@ -15372,7 +15382,8 @@
       "profiles": [
         "pr"
       ],
-      "contractId": "bookmark-in-app-navigation"
+      "contractId": "bookmark-in-app-navigation",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "issue-753-bookmark-navigation-stays-in-app.spec.ts",
@@ -15398,7 +15409,8 @@
       "profiles": [
         "pr"
       ],
-      "contractId": "bookmark-in-app-navigation"
+      "contractId": "bookmark-in-app-navigation",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "issue-753-stress-classified.spec.ts",
@@ -15502,7 +15514,8 @@
       "profiles": [
         "integration"
       ],
-      "contractId": "renderer-independent-analytic-geometry-equivalence"
+      "contractId": "renderer-independent-analytic-geometry-equivalence",
+      "runtimeMeasurementScope": "SPEC"
     },
     {
       "file": "issue-755-canvas-production-acceptance.spec.ts",
@@ -15664,7 +15677,8 @@
         "integration",
         "nightly"
       ],
-      "contractId": "far-window-render-coverage"
+      "contractId": "far-window-render-coverage",
+      "runtimeMeasurementScope": "SPEC"
     },
     {
       "file": "issue-759-group-disclosure-shared.spec.ts",
@@ -15716,7 +15730,8 @@
       "profiles": [
         "pr"
       ],
-      "contractId": "combined-shared-wheel-scroll"
+      "contractId": "combined-shared-wheel-scroll",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "issue-761-start-input-width.spec.ts",
@@ -15984,7 +15999,8 @@
       "profiles": [
         "visual"
       ],
-      "contractId": "transaction-zoom-text-and-geometry"
+      "contractId": "transaction-zoom-text-and-geometry",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "issue-767-zoom-keeps-glyph-shape.spec.ts",
@@ -16010,7 +16026,8 @@
       "profiles": [
         "pr"
       ],
-      "contractId": "transaction-zoom-edge-drag"
+      "contractId": "transaction-zoom-edge-drag",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "issue-767-zoom-keeps-glyph-shape.spec.ts",
@@ -16036,7 +16053,8 @@
       "profiles": [
         "pr"
       ],
-      "contractId": "transaction-narrow-bar-drag-handle"
+      "contractId": "transaction-narrow-bar-drag-handle",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "issue-768-mode-switch-budget.spec.ts",
@@ -21493,7 +21511,8 @@
       "profiles": [
         "visual"
       ],
-      "contractId": "left-tree-header-action-visual-alignment"
+      "contractId": "left-tree-header-action-visual-alignment",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "left-pane-constraint.spec.ts",
@@ -21519,7 +21538,8 @@
       "profiles": [
         "visual"
       ],
-      "contractId": "left-pane-minimum-start-constraint"
+      "contractId": "left-pane-minimum-start-constraint",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "left-pane-constraint.spec.ts",
@@ -21545,7 +21565,8 @@
       "profiles": [
         "visual"
       ],
-      "contractId": "left-pane-minimum-start-constraint"
+      "contractId": "left-pane-minimum-start-constraint",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "left-tree-action-icons.spec.ts",
@@ -21597,7 +21618,8 @@
       "profiles": [
         "visual"
       ],
-      "contractId": "left-tree-compact-footer-responsive-acceptance"
+      "contractId": "left-tree-compact-footer-responsive-acceptance",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "left-tree-compact-footer.spec.ts",
@@ -21623,7 +21645,8 @@
       "profiles": [
         "visual"
       ],
-      "contractId": "left-tree-compact-footer-responsive-acceptance"
+      "contractId": "left-tree-compact-footer-responsive-acceptance",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "left-tree-critical-icons.spec.ts",
@@ -21675,7 +21698,8 @@
       "profiles": [
         "integration"
       ],
-      "contractId": "left-tree-collapse-projection-contract"
+      "contractId": "left-tree-collapse-projection-contract",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "left-tree-interaction.spec.ts",
@@ -21701,7 +21725,8 @@
       "profiles": [
         "integration"
       ],
-      "contractId": "left-tree-visibility-projection-contract"
+      "contractId": "left-tree-visibility-projection-contract",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "left-tree-interaction.spec.ts",
@@ -21727,7 +21752,8 @@
       "profiles": [
         "integration"
       ],
-      "contractId": "left-tree-context-menu-and-insertion-flow"
+      "contractId": "left-tree-context-menu-and-insertion-flow",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "left-tree-menu-contrast.spec.ts",
@@ -21883,7 +21909,8 @@
       "profiles": [
         "integration"
       ],
-      "contractId": "left-tree-keydown-listener-lifecycle"
+      "contractId": "left-tree-keydown-listener-lifecycle",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "listener-lifecycle.spec.ts",
@@ -21909,7 +21936,8 @@
       "profiles": [
         "pr"
       ],
-      "contractId": "left-tree-roving-focus-step"
+      "contractId": "left-tree-roving-focus-step",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "local-geometry-dom-batch.spec.ts",
@@ -21935,7 +21963,8 @@
       "profiles": [
         "performance"
       ],
-      "contractId": "wave-dom-geometry-render-batch"
+      "contractId": "wave-dom-geometry-render-batch",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "measurement-anchor-drag.spec.ts",
@@ -22781,7 +22810,8 @@
         "performance",
         "nightly"
       ],
-      "contractId": "fixed-full-span-100x500-open-stress"
+      "contractId": "fixed-full-span-100x500-open-stress",
+      "runtimeMeasurementScope": "SPEC"
     },
     {
       "file": "perf-fixed-full-span-open.spec.ts",
@@ -22808,7 +22838,8 @@
         "performance",
         "nightly"
       ],
-      "contractId": "fixed-full-span-100x500-open-stress"
+      "contractId": "fixed-full-span-100x500-open-stress",
+      "runtimeMeasurementScope": "SPEC"
     },
     {
       "file": "perf-fixed-full-span-open.spec.ts",
@@ -22835,7 +22866,8 @@
         "performance",
         "nightly"
       ],
-      "contractId": "fixed-full-span-100x500-open-stress"
+      "contractId": "fixed-full-span-100x500-open-stress",
+      "runtimeMeasurementScope": "SPEC"
     },
     {
       "file": "perf-fixed-full-span-open.spec.ts",
@@ -22862,7 +22894,8 @@
         "performance",
         "nightly"
       ],
-      "contractId": "fixed-full-span-100x500-open-stress"
+      "contractId": "fixed-full-span-100x500-open-stress",
+      "runtimeMeasurementScope": "SPEC"
     },
     {
       "file": "perf-fixed-full-span-open.spec.ts",
@@ -22889,7 +22922,8 @@
         "performance",
         "nightly"
       ],
-      "contractId": "fixed-full-span-100x500-open-stress"
+      "contractId": "fixed-full-span-100x500-open-stress",
+      "runtimeMeasurementScope": "SPEC"
     },
     {
       "file": "performance-closure.spec.ts",
@@ -28181,7 +28215,8 @@
       "profiles": [
         "visual"
       ],
-      "contractId": "transaction-bottom-table-responsive-alignment-compact"
+      "contractId": "transaction-bottom-table-responsive-alignment-compact",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "transaction-bottom-panel-table.spec.ts",
@@ -28207,7 +28242,8 @@
       "profiles": [
         "visual"
       ],
-      "contractId": "transaction-bottom-table-responsive-alignment-wide"
+      "contractId": "transaction-bottom-table-responsive-alignment-wide",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "transaction-bottom-phase-linked-signals.spec.ts",
