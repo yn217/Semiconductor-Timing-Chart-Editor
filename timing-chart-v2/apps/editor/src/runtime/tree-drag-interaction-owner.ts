@@ -1,5 +1,5 @@
 import type { SemanticCommand } from "@timing-chart-v2/commands";
-import type { CanonicalDocument, GroupId, SignalId, SpacerId } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, GroupId, RowId, SignalId, SpacerId } from "@timing-chart-v2/schema";
 import { nextCommandId } from "../command-id.js";
 
 type Dragged = Readonly<{ kind: "signal" | "spacer" | "group"; id: string }>;
@@ -48,9 +48,16 @@ export class TreeDragInteractionOwner {
   onDragOver = (event: DragEvent): void => {
     if (!this.#dragged) return;
     const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='left-row'][data-row-id]") : null;
-    if (!target) return;
+    const groupHeader = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='left-group-header'][data-group-id]") : null;
+    if (!target && !(this.#dragged.kind === "spacer" && groupHeader)) return;
     event.preventDefault();
     for (const row of this.context.rendererHost.querySelectorAll<HTMLElement>("[data-drop-position]")) delete row.dataset.dropPosition;
+    if (!target && groupHeader) {
+      groupHeader.dataset.dropPosition = "inside";
+      if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+      return;
+    }
+    if (!target) return;
     const bounds = target.getBoundingClientRect();
     target.dataset.dropPosition = event.clientY >= bounds.top + bounds.height / 2 ? "after" : "before";
     if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
@@ -60,18 +67,28 @@ export class TreeDragInteractionOwner {
     const dragged = this.#dragged;
     if (!dragged) return;
     const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='left-row'][data-row-id]") : null;
+    const groupHeader = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='left-group-header'][data-group-id]") : null;
+    if (dragged.kind === "spacer" && groupHeader?.dataset.groupId) {
+      const document = this.context.getDocument();
+      const sourceGroup = document.signalGroups.find((group) => group.rows.includes(dragged.id as RowId));
+      const targetGroup = document.signalGroups.find((group) => group.id === groupHeader.dataset.groupId);
+      if (sourceGroup && targetGroup) {
+        event.preventDefault();
+        const index = sourceGroup.id === targetGroup.id ? targetGroup.rows.length - 1 : targetGroup.rows.length;
+        this.context.execute({ id: nextCommandId("drag_spacer"), type: "spacer.move", spacerId: dragged.id as SpacerId, targetGroupId: targetGroup.id, index });
+      }
+      this.#dragged = undefined;
+      this.clearDropState();
+      return;
+    }
     if (!target?.dataset.rowId || !target.dataset.groupId) return;
     event.preventDefault();
     const after = target.dataset.dropPosition === "after";
     const document = this.context.getDocument();
     if (dragged.kind === "signal" || dragged.kind === "spacer") {
-      const sourceGroup = document.signalGroups.find((group) => group.rows.includes(dragged.id as SignalId));
+      const sourceGroup = document.signalGroups.find((group) => group.rows.includes(dragged.id as RowId));
       const targetGroup = document.signalGroups.find((group) => group.id === target.dataset.groupId);
-      // A Spacer belongs to exactly one Group and can only reorder within it
-      // (spacer.move rejects a cross-Group targetGroupId); a cross-Group drop
-      // target is simply not a valid drop for a Spacer, matching drop
-      // validation for every other row kind here.
-      if (sourceGroup && targetGroup && dragged.id !== target.dataset.rowId && (dragged.kind === "signal" || sourceGroup.id === targetGroup.id)) {
+      if (sourceGroup && targetGroup && dragged.id !== target.dataset.rowId) {
         const sourceIndex = sourceGroup.rows.indexOf(dragged.id as SignalId);
         let index = targetGroup.rows.indexOf(target.dataset.rowId as SignalId) + (after ? 1 : 0);
         if (sourceGroup.id === targetGroup.id && sourceIndex < index) index -= 1;

@@ -201,12 +201,25 @@ function moveSpacer(document: CanonicalDocument, command: Extract<SemanticComman
   const sourceGroup = document.signalGroups[sourceGroupIndex];
   const targetGroup = document.signalGroups[targetGroupIndex];
   if (!sourceGroup || !targetGroup) return fail("invalid", "GROUP_NOT_FOUND", "$.targetGroupId", "Spacer owner or target group does not exist.");
-  if (sourceGroup.id !== targetGroup.id || !sourceGroup.spacers?.some((spacer) => spacer.id === command.spacerId)) return fail("invalid", "SPACER_OWNER_MISMATCH", "$.targetGroupId", "A Spacer can only move within its owning group.");
-  const remaining = sourceGroup.rows.filter((row) => row !== command.spacerId);
-  if (!Number.isInteger(command.index) || command.index < 0 || command.index > remaining.length) return fail("invalid", "INDEX_OUT_OF_RANGE", "$.index", "Spacer move index is outside the post-removal rows.");
-  remaining.splice(command.index, 0, command.spacerId);
-  if (remaining.every((row, index) => row === sourceGroup.rows[index])) return fail("no-op", "NO_OP", "$", "Spacer is already at the requested position.");
-  const groups = [...document.signalGroups]; groups[sourceGroupIndex] = { ...sourceGroup, rows: remaining };
+  const spacer = sourceGroup.spacers?.find((item) => item.id === command.spacerId);
+  if (!spacer) return fail("invalid", "SPACER_OWNER_MISMATCH", "$.spacerId", "The source group does not own this Spacer.");
+  const sameGroup = sourceGroupIndex === targetGroupIndex;
+  const sourceRows = sourceGroup.rows.filter((row) => row !== command.spacerId);
+  const targetBase = sameGroup ? sourceRows : [...targetGroup.rows];
+  if (!Number.isInteger(command.index) || command.index < 0 || command.index > targetBase.length) return fail("invalid", "INDEX_OUT_OF_RANGE", "$.index", "Spacer move index is outside the post-removal target rows.");
+  const targetRows = [...targetBase];
+  targetRows.splice(command.index, 0, command.spacerId);
+  if (sameGroup && targetRows.every((row, index) => row === sourceGroup.rows[index])) return fail("no-op", "NO_OP", "$", "Spacer is already at the requested position.");
+  const groups = document.signalGroups.map((group, index) => {
+    if (sameGroup && index === sourceGroupIndex) return { ...group, rows: targetRows };
+    if (index === sourceGroupIndex) {
+      const remainingSpacers = group.spacers?.filter((item) => item.id !== command.spacerId) ?? [];
+      const { spacers: _ownedSpacers, ...groupWithoutSpacers } = group;
+      return { ...groupWithoutSpacers, rows: sourceRows, ...(remainingSpacers.length ? { spacers: remainingSpacers } : {}) };
+    }
+    if (index === targetGroupIndex) return { ...group, rows: targetRows, spacers: [...(group.spacers ?? []), spacer] };
+    return group;
+  });
   const nextDocument = { ...document, signalGroups: groups };
   const changedRows = changedPositions(orderedRows(document), orderedRows(nextDocument));
   const changedTimingRows = changedPositions(orderedVisibleTimingRows(document), orderedVisibleTimingRows(nextDocument));

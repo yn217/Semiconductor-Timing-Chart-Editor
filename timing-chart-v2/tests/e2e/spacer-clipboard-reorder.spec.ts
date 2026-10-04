@@ -3,11 +3,9 @@ import { startInCycleMode } from "./cycle-startup.js";
 
 startInCycleMode(test);
 
-// #222: covers the acceptance items spacer.spec.ts / spacer-row.spec.ts don't --
-// Insert Ribbon creation, Duplicate, Copy/Paste, and same-Group drag reorder
-// -- plus proves the actual (not #222's assumed) cross-Group contract, so
-// the full required-behavior list has real, direct evidence.
-test("creates a Spacer from the Insert Ribbon, duplicates/copies it, reorders it within its Group by drag, and rejects a cross-Group drop", async ({ page }) => {
+// Insert Ribbon creation, Duplicate, Copy/Paste, same-Group reorder and
+// cross-Group transfer all exercise the production Semantic Command route.
+test("creates, duplicates, copies, reorders and transfers a stable Spacer across populated and empty Groups", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
@@ -67,29 +65,36 @@ test("creates a Spacer from the Insert Ribbon, duplicates/copies it, reorders it
   await expect(host).toHaveAttribute("data-canonical-revision", String(Number(revisionBeforeMove) + 1));
   expect(await originalSpacer.getAttribute("data-group-id")).toBe(controlGroupId);
 
-  // #222's own text asks for cross-Group Spacer move via drag, but
-  // spacer.move's planner (packages/commands/src/planner.ts) explicitly
-  // rejects a cross-Group targetGroupId with SPACER_OWNER_MISMATCH -- a
-  // Spacer belongs to exactly one Group by deliberate Core command policy,
-  // not by omission. The drag interaction owner correctly refuses to even
-  // attempt it (a cross-Group drop is silently a no-op for a Spacer,
-  // matching every other row kind's own drop-target validation). Assert
-  // that contract directly rather than assuming the issue's cross-Group
-  // wording is current: dropping onto a Payload-group row must not move
-  // the Spacer out of Control.
-  const revisionBeforeCrossGroupAttempt = await host.getAttribute("data-canonical-revision");
-  const historyBeforeCrossGroupAttempt = await page.getByTestId("history-status").textContent();
+  // Transfer into another Group before its first Signal, retaining identity.
+  const revisionBeforeCrossGroupMove = await host.getAttribute("data-canonical-revision");
   const payloadRow = treeRows.locator("[data-role='left-row'][data-row-id='sig_cycle_data']");
   await originalSpacerInTree.dragTo(payloadRow, { targetPosition: { x: 100, y: 2 } });
-  await expect(host).toHaveAttribute("data-canonical-revision", revisionBeforeCrossGroupAttempt!);
-  await expect(page.getByTestId("history-status")).toHaveText(historyBeforeCrossGroupAttempt!);
+  await expect(host).toHaveAttribute("data-canonical-revision", String(Number(revisionBeforeCrossGroupMove) + 1));
+  const payloadGroupId = await payloadRow.getAttribute("data-group-id");
+  await expect(originalSpacer).toHaveAttribute("data-group-id", payloadGroupId!);
+  await expect(page.getByTestId("history-status")).toHaveText("History 5 / Redo 0");
+
+  // An empty Group header is a drop target too; transfer is one semantic move.
+  const groupHeaders = host.locator("[data-role='left-group-header'][data-group-id]");
+  const existingGroupIds = await groupHeaders.evaluateAll((nodes) => nodes.map((node) => (node as HTMLElement).dataset.groupId));
+  await page.getByRole("button", { name: "Add signal or group", exact: true }).click();
+  await page.getByTestId("create-group").click();
+  const emptyGroupId = await groupHeaders.evaluateAll((nodes) => nodes.map((node) => (node as HTMLElement).dataset.groupId).find((id) => id && !existingGroupIds.includes(id)));
+  expect(emptyGroupId).toBeTruthy();
+  const emptyGroupHeader = host.locator(`[data-role='left-group-header'][data-group-id='${emptyGroupId}']`);
+  await expect(emptyGroupHeader).toBeVisible();
+  const revisionBeforeEmptyDrop = await host.getAttribute("data-canonical-revision");
+  await originalSpacerInTree.dragTo(emptyGroupHeader);
+  await expect(host).toHaveAttribute("data-canonical-revision", String(Number(revisionBeforeEmptyDrop) + 1));
+  await expect(originalSpacer).toHaveAttribute("data-group-id", emptyGroupId!);
+  await expect(page.getByTestId("history-status")).toHaveText("History 7 / Redo 0");
 
   // Undo everything back to the start and confirm the document returns to
   // having zero Spacer rows (proves the whole sequence is real semantic
   // history, not view-only state).
-  for (let guard = 0; guard < 10 && (await page.getByTestId("history-status").textContent()) !== "History 0 / Redo 4"; guard += 1) {
+  for (let guard = 0; guard < 10 && (await page.getByTestId("history-status").textContent()) !== "History 0 / Redo 7"; guard += 1) {
     await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
   }
-  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 4");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 7");
   await expect(host.locator("[data-role='left-row'][data-row-id^='spacer_']")).toHaveCount(0);
 });

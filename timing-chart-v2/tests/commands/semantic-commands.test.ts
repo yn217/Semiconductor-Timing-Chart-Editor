@@ -1453,6 +1453,42 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document.signalGroups[0]).not.toHaveProperty("spacers");
   });
 
+  it("transfers a Spacer across populated and empty Groups as one stable-ID history action", () => {
+    const spacerId = "spacer_transfer" as SpacerId;
+    const source = canonicalFixture();
+    source.signalGroups = [
+      { id: "grp_main" as GroupId, name: "Source", rows: ["sig_clk", spacerId], spacers: [{ id: spacerId, height: 37 }] },
+      { id: "grp_payload" as GroupId, name: "Payload", rows: ["sig_data"] },
+      { id: "grp_empty" as GroupId, name: "Empty", rows: [] },
+    ];
+    const session = new CommandHistorySession(source);
+    const original = session.getSnapshot().document;
+
+    const intoPopulated = session.execute({ id: commandId("spacer_transfer_populated"), type: "spacer.move", spacerId, targetGroupId: "grp_payload" as GroupId, index: 0 });
+    expect(intoPopulated.ok).toBe(true);
+    let moved = session.getSnapshot().document;
+    expect(moved.signalGroups.map((group) => group.rows)).toEqual([["sig_clk"], [spacerId, "sig_data"], []]);
+    expect(moved.signalGroups.map((group) => group.spacers ?? [])).toEqual([[], [{ id: spacerId, height: 37 }], []]);
+    expect(moved.signalGroups.flatMap((group) => group.spacers ?? []).filter((item) => item.id === spacerId)).toHaveLength(1);
+    expect(session.historyState().undoDepth).toBe(1);
+
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document).toEqual(original);
+    expect(session.redo().ok).toBe(true);
+    moved = session.getSnapshot().document;
+    expect(moved.signalGroups[1]?.rows).toEqual([spacerId, "sig_data"]);
+    expect(session.historyState().undoDepth).toBe(1);
+
+    expect(session.execute({ id: commandId("spacer_transfer_empty"), type: "spacer.move", spacerId, targetGroupId: "grp_empty" as GroupId, index: 0 }).ok).toBe(true);
+    moved = session.getSnapshot().document;
+    expect(moved.signalGroups.map((group) => group.rows)).toEqual([["sig_clk"], ["sig_data"], [spacerId]]);
+    expect(moved.signalGroups[2]?.spacers).toEqual([{ id: spacerId, height: 37 }]);
+    const reopened = parseDocument(serializeValidatedCanonicalDocument(moved));
+    expect(reopened.document.signalGroups).toEqual(moved.signalGroups);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.signalGroups.map((group) => group.rows)).toEqual([["sig_clk"], [spacerId, "sig_data"], []]);
+  });
+
   it("updates Transaction phases atomically and rejects phases outside the transaction", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const created = session.execute({ id: commandId("cmd_txn_phase_create"), type: "transaction.create", transaction: { id: "txn_phase" as TransactionId, name: "Transfer", start: 2, end: 8 } });
