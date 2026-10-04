@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-04T07:02:55.887Z",
+  "generatedAt": "2026-10-04T07:13:17.183Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -15,10 +15,10 @@
   "caseCount": 1221,
   "reviewedCaseCount": 1221,
   "curatedProfileCounts": {
-    "integration": 620,
+    "integration": 621,
     "nightly": 230,
     "performance": 67,
-    "pr": 389,
+    "pr": 388,
     "visual": 180
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -10635,7 +10635,7 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": "mode-context",
+      "domain": "mode-context-wide-viewport",
       "originIssue": 440,
       "type": "USER_JOURNEY",
       "costClass": "MEDIUM",
@@ -10643,14 +10643,14 @@
       "primaryContract": "Mode switches keep Inspector/Bottom context coherent with the selection.",
       "duplicateGroup": "mode-context",
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "decision": "KEEP",
-      "reason": "Classified in the #782 inventory refresh from the protected user-visible contract; kept at the tier shown. Implementation-coupling review is tracked separately (B2).",
-      "replacementTest": null,
+      "decision": "MOVE_LAYER",
+      "reason": "The 1280x720 case already covers the same stateful mode-context journey in the PR profile. This 1672x941 copy has no width-specific geometry, clipping, or overflow assertion, so retain it in integration rather than running the expensive 90-second journey twice in the normal PR gate.",
+      "replacementTest": "issue-440-mode-context-coherence.spec.ts — Bookmark Inspector target does not survive Cycle -> Transaction at 1280x720",
       "reviewStatus": "REVIEWED",
       "profiles": [
-        "pr"
+        "integration"
       ],
-      "contractId": "mode-context"
+      "contractId": "mode-context-wide-viewport"
     },
     {
       "file": "issue-440-mode-context-coherence.spec.ts",

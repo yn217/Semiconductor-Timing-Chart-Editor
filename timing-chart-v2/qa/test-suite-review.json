@@ -16486,6 +16486,24 @@
       "decision": "KEEP",
       "reason": "This is the only production UI journey for multi-select Group creation and bulk move; command tests alone cannot prove the Tree action surface, selection retention, and displayed ownership remain coherent.",
       "replacementTest": null
+    },
+    {
+      "file": "issue-440-mode-context-coherence.spec.ts",
+      "title": "Bookmark Inspector target does not survive Cycle -> Transaction at 1672x941",
+      "domain": "mode-context-wide-viewport",
+      "originIssue": 440,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Mode switches keep Inspector/Bottom context coherent with the selection.",
+      "duplicateGroup": "mode-context",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "MOVE_LAYER",
+      "reason": "The 1280x720 case already covers the same stateful mode-context journey in the PR profile. This 1672x941 copy has no width-specific geometry, clipping, or overflow assertion, so retain it in integration rather than running the expensive 90-second journey twice in the normal PR gate.",
+      "replacementTest": "issue-440-mode-context-coherence.spec.ts — Bookmark Inspector target does not survive Cycle -> Transaction at 1280x720"
     }
   ]
 }

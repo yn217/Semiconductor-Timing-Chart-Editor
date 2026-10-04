@@ -10,10 +10,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 620 |
+| `integration` | 621 |
 | `nightly` | 230 |
 | `performance` | 67 |
-| `pr` | 389 |
+| `pr` | 388 |
 | `visual` | 180 |
 
 ## Top recorded per-case runtimes
