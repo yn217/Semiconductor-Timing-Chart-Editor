@@ -316,6 +316,34 @@ describe("TimelineGeometryOwner", () => {
     expect(resolveAxis).toHaveBeenCalledTimes(2);
   });
 
+  it("preserves horizontal geometry caches when only mounted-row snap candidates change", () => {
+    const clockId = signalId("sig_cycle_clock");
+    const geometry = new ImmutableLocalGeometryMap(clockId, Array.from({ length: 129 }, (_, cycle) => ({ cycle, point: "cycle-start" as const, position: { x: cycle * 40, y: 0 } })));
+    const document = {
+      ...cycleDocument,
+      timeline: { ...cycleDocument.timeline, cycleCount: 500, end: 500 },
+      signals: Array.from({ length: 100 }, (_, index) => ({ ...cycleDocument.signals[0]!, id: signalId(index === 0 ? "sig_cycle_clock" : `sig_perf_${index}`) })),
+    };
+    const owner = new TimelineGeometryOwner({
+      mappingCache: new DisplayTimeMappingCache(),
+      geometryMaps: new Map([[clockId, geometry]]),
+      getDocument: () => document,
+      getProjection: () => ({} as RenderProjection),
+      onSnapIndexBuilt: () => undefined,
+    });
+    owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1);
+    const resolveAxis = vi.spyOn(owner, "resolveTimeAxis");
+    const first = owner.sourceWindowForLocalRange(document, 0, 1_120);
+
+    owner.invalidateSnapCandidates();
+    expect(owner.sourceWindowForLocalRange(document, 0, 1_120)).toEqual(first);
+    expect(resolveAxis).toHaveBeenCalledTimes(1);
+
+    owner.invalidateSnapIndex();
+    expect(owner.sourceWindowForLocalRange(document, 0, 1_120)).toEqual(first);
+    expect(resolveAxis).toHaveBeenCalledTimes(2);
+  });
+
   it.each([160, 3_000, 4_096])("keeps the full WaveDrom source range stable while scrolling a %i-cycle document", (cycleCount) => {
     const clockId = signalId("sig_cycle_clock");
     const geometry = new ImmutableLocalGeometryMap(clockId, Array.from({ length: 31 }, (_, cycle) => ({ cycle, point: "cycle-start" as const, position: { x: cycle * 40, y: 0 } })));

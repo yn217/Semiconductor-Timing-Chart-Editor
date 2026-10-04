@@ -40,6 +40,25 @@ describe("renderer overlay refresh reasons", () => {
     expect(renderer.updateEdgeCounters.mock.lastCall?.[0]).toHaveLength(8);
   });
 
+  it("refreshes Annotation overlays on scroll without reprojecting unchanged Edge Counters", () => {
+    const base = canonicalFixture();
+    const geometry = clockGeometry();
+    const mapping = buildDisplayTimeMapping(base.timeline, []);
+    const timeAxisMetrics = Object.freeze({
+      generation: 1,
+      timeAxis: resolveTimeAxisGeometry(base, new Map([["sig_clk", geometry]])),
+      mapping,
+      presentationScale: 1,
+      displayCycleCount: mapping.displayCycleCount,
+    }) satisfies TimeAxisMetrics;
+    const renderer = { updateEdgeCounters: vi.fn(), updateOverlays: vi.fn() };
+
+    refreshRendererForReason(renderer, { current: null }, "scroll", base, projection(), new Map([["sig_clk", geometry]]), timeAxisMetrics, { start: 0, end: 8 }, 0, undefined);
+
+    expect(renderer.updateOverlays).toHaveBeenCalledOnce();
+    expect(renderer.updateEdgeCounters).not.toHaveBeenCalled();
+  });
+
   it("projects annotation overlays using the captured TimeAxisMetrics mapping and scale", () => {
     const base = canonicalFixture();
     const signal = base.signals[0]!;

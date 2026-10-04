@@ -117,7 +117,11 @@ export function refreshRendererOverlays(renderer: Pick<TimingChartRenderer, "upd
     } else if (target) annotationViewportProjectionCaches.delete(target);
   }
   if (!reusable) renderer.updateOverlays(overlays);
-  refreshRendererEdgeCounters(renderer, document, projection, geometryMaps, timeAxisMetrics, range, selectedCycle, presentationScale, selectedEdge, metrics);
+  // Scroll changes which Annotation overlays are visible, but not the
+  // semantic range, selected cycle/edge, or time-axis geometry that owns Edge
+  // Counters. Their dedicated range/selection/geometry refreshes remain the
+  // update authority; reprojecting them here repeated work on every scroll.
+  if (reason !== "scroll") refreshRendererEdgeCounters(renderer, document, projection, geometryMaps, timeAxisMetrics, range, selectedCycle, presentationScale, selectedEdge, metrics);
   for (const owner of target?.querySelectorAll<HTMLElement>("[data-annotation-id]") ?? []) {
     const selected = String(owner.dataset.annotationId === selectedAnnotationId);
     if (owner.dataset.selected !== selected) owner.dataset.selected = selected;

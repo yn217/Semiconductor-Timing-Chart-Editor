@@ -380,7 +380,13 @@ export class TimelineGeometryOwner {
     return this.#snapIndex;
   }
 
-  invalidateSnapIndex(): void { this.#snapIndex = undefined; this.#viewportBoundaryCache = undefined; this.#sourceWindowCache = undefined; }
+  invalidateSnapCandidates(): void { this.#snapIndex = undefined; }
+
+  invalidateSnapIndex(): void {
+    this.invalidateSnapCandidates();
+    this.#viewportBoundaryCache = undefined;
+    this.#sourceWindowCache = undefined;
+  }
 
   private viewportBoundaryEntries(owner: LocalGeometryMap, signalId: SignalId, mapping: DisplayTimeMapping, cycleCount: number): readonly { readonly cycle: number; readonly x: number }[] {
     const cached = this.#viewportBoundaryCache;

@@ -461,7 +461,14 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
             const sameProjection = nextProjection === projection;
             window = nextWindow;
             projection = nextProjection;
-            if (mountedSignalsChanged) timelineGeometry.invalidateSnapIndex();
+            if (mountedSignalsChanged) {
+              // Preserve horizontal geometry caches only while their current
+              // axis owner remains mounted. Documents without a pinned axis
+              // owner still take the conservative full-invalidation path.
+              const axisOwner = timelineGeometry.timeAxisMetrics.timeAxis.ownerSignalId;
+              if (axisOwner !== undefined && nextProjection.mountedSignalIds.includes(axisOwner)) timelineGeometry.invalidateSnapCandidates();
+              else timelineGeometry.invalidateSnapIndex();
+            }
             if (sameProjection) renderer.updateViewport(projection);
             else {
               renderer.update(projection);
