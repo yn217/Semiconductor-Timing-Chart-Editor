@@ -268,7 +268,7 @@ export function InspectorPanel({ signal, selectedCycle = 0, selectedSignalIds, g
         <TransactionPhaseEditor transaction={transaction} transactions={document.transactions ?? []} commands={commands} compact cyclesPerTc={tcPer} parentRange={{ start: transactionStart, end: transactionEnd }} />
       </InspectorSection>
       <InspectorSection sectionId="linked-signals" title="Linked Signals" count={transaction.linkedSignals?.length ?? 0} onAdd={() => {}} open={transactionSections["linked-signals"] ?? true} onToggle={() => toggleTransactionSection("linked-signals")}>
-        <label className="checkline">Focus linked Signals<input aria-label="Focus linked signals" type="checkbox" checked={focusLinkedSignals} onChange={(event) => onFocusLinkedSignalsChange?.(event.target.checked)} /></label>
+        <label className="checkline">Focus linked Signals<input aria-label="Focus linked signals" type="checkbox" checked={focusLinkedSignals && (transaction.linkedSignals?.length ?? 0) > 0} disabled={(transaction.linkedSignals?.length ?? 0) === 0} onChange={(event) => onFocusLinkedSignalsChange?.(event.target.checked)} /></label>
         <TransactionLinkedSignals transaction={transaction} document={document} onToggle={(signalId) => onToggleTransactionSignal(transaction.id, signalId)} renderUnlinkButton={(label, onClick) => <EditorIconButton label={label} icon="close" onClick={onClick} />} />
       </InspectorSection>
       {transactionStatus && <output role="status">{transactionStatus}</output>}

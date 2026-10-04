@@ -847,7 +847,7 @@ export function MinimalCycleView() {
       style: { "--gui-left-width": `${modeComposition.fixedLeftWidth ?? leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px`, "--gui-role-width": `${snapshot.document.layout.roleColumnWidth}px`, "--gui-signal-width": `${snapshot.document.layout.signalNameWidth}px`, "--gui-signal-align": snapshot.document.layout.signalNameAlign, "--gui-signal-split-upper-ratio": String(signalSplitRatio), "--transaction-tree-row-height": viewMode === "Transaction" ? "29px" : undefined } as React.CSSProperties,
       density, workspacePreset, inspectorVisible, bottomVisible, viewMode, rulerEnabled, minimapEnabled, signalTreeVisible,
       showSignalNames, showRoles, showAnnotations, showTransactions, showGroupBackground,
-      focusLinkedSignals: focusLinkedSignals && selectedTransaction !== undefined,
+      focusLinkedSignals: focusLinkedSignals && (selectedTransaction?.linkedSignals?.length ?? 0) > 0,
       layoutOverflow: snapshot.document.layout.overflow, leftPaneWidth, frozenPaneWidth, bottomHeight, inspectorWidth,
       cycleCount: snapshot.document.timeline.cycleCount, signalCount: snapshot.document.signals.length, transactionCount: snapshot.document.transactions.length,
     }}
