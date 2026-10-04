@@ -85,33 +85,10 @@ import { buildSnapIndex } from "../runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "../runtime/annotation-overlays.js";
 import { createTimelineViewportRuntime } from "../runtime/timeline-viewport-runtime.js";
 import { SIGNAL_TYPE_OPTIONS, signalTypeLabel as sharedSignalTypeLabel } from "../runtime/signal-type-registry.js";
+import { InspectorSpacerEditor } from "./inspector-spacer-editor.js";
 
 
 const spacerId = (value: string) => value as SpacerId;
-
-function InspectorSpacerDraft({ spacer, onApply, onDelete }: { readonly spacer: SpacerRow; readonly onApply: (height: number) => void; readonly onDelete: () => void }) {
-  const [draft, setDraft] = useState(String(spacer.height));
-  useEffect(() => {
-    setDraft(String(spacer.height));
-  }, [spacer.id, spacer.height]);
-  const height = Number(draft);
-  const valid = draft.trim().length > 0 && Number.isFinite(height) && height > 0;
-  const dirty = draft !== String(spacer.height);
-  const changed = valid && height !== spacer.height;
-  const error = dirty && !valid ? "Spacer height must be a finite positive number." : "";
-  return <form data-spacer-id={spacer.id} onSubmit={(event) => {
-    event.preventDefault();
-    if (changed) onApply(height);
-  }}>
-    <code>{spacer.id}</code>
-    <label>Height<input name="height" aria-label={`Spacer height ${spacer.id}`} aria-invalid={error ? true : undefined} type="number" min="1" step="1" value={draft} onChange={(event) => setDraft(event.target.value)} /></label>
-    {error && <span role="alert" className="editor-problem">{error}</span>}
-    {changed && <span className="draft-unapplied-indicator" role="status">Unapplied changes</span>}
-    <button type="submit" disabled={!changed}>Apply Height</button>
-    <button type="button" onClick={() => setDraft(String(spacer.height))} disabled={!dirty}>Cancel</button>
-    <button type="button" onClick={onDelete}>Delete</button>
-  </form>;
-}
 
 export function InspectorPanel({ signal, selectedCycle = 0, selectedSignalIds, group, annotation, transaction, bookmark, legendSelected = false, collapsedGroup, onToggleGroupCollapse, registry, document, changeSet, cyclesPerTc: tcPer = 10, viewport, commands, onReveal, onCancel, onClose, onDeleteBookmark, onToggleTransactionSignal, focusLinkedSignals = false, onFocusLinkedSignalsChange, onGroupPreview, onAnnotationPreview, minimapMode = "signal" }: { readonly signal: Signal | undefined; readonly selectedCycle?: number; readonly selectedSignalIds?: ReadonlySet<SignalId>; readonly group: SignalGroup | undefined; readonly annotation: Annotation | undefined; readonly transaction: Transaction | undefined; readonly bookmark: Bookmark | undefined; readonly legendSelected?: boolean; readonly collapsedGroup: boolean; readonly onToggleGroupCollapse: (() => void) | undefined; readonly registry: UiCommandRegistry; readonly document: Readonly<CanonicalDocument>; readonly changeSet: ChangeSet; readonly cyclesPerTc?: number; readonly viewport: RefObject<HTMLDivElement | null>; readonly commands: EditorSurfaceCommandController; readonly onReveal: () => void; readonly onCancel: () => void; readonly onClose: () => void; readonly onDeleteBookmark: () => void; readonly onToggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => void; readonly focusLinkedSignals?: boolean; readonly onFocusLinkedSignalsChange?: (value: boolean) => void; readonly onGroupPreview?: (groupId: GroupId, style: SignalGroupStyle | undefined) => void; readonly onAnnotationPreview?: (annotationId: AnnotationId, draft: { readonly label?: string; readonly color?: string; readonly opacity?: number } | undefined) => void; readonly minimapMode?: "signal" | "transaction" }) {
   if ((selectedSignalIds?.size ?? 0) > 1) return <InspectorMultiSelection count={selectedSignalIds!.size} registry={registry} document={document} viewport={viewport} onCancel={onCancel} onClose={onClose} />;
@@ -201,7 +178,7 @@ export function InspectorPanel({ signal, selectedCycle = 0, selectedSignalIds, g
   if (legendSelected) return <InspectorLegendEditor document={document} viewport={viewport} commands={commands} onCancel={onCancel} onClose={onClose} />;
   if (!group && !transaction) return <LayoutInspector document={document} viewport={viewport} commands={commands} onCancel={onCancel} onClose={onClose} minimapMode={minimapMode} />;
   const spacerMoveEditor = group ? <section data-testid="spacer-reorder"><h3>Spacer Reorder</h3>{(group.spacers ?? []).map((spacer) => { const index = group.rows.indexOf(spacer.id); return <div key={spacer.id} data-spacer-reorder-id={spacer.id}><code>{spacer.id}</code><button type="button" aria-label={`Move spacer ${spacer.id} up`} disabled={index <= 0} onClick={() => commands.moveSpacer(spacer.id, group.id, index - 1)}>Up</button><button type="button" aria-label={`Move spacer ${spacer.id} down`} disabled={index < 0 || index >= group.rows.length - 1} onClick={() => commands.moveSpacer(spacer.id, group.id, index + 1)}>Down</button></div>})}</section> : null;
-  const spacerEditor = group ? <section data-testid="inspector-spacers"><h3>Spacer Rows</h3><button type="button" data-testid="add-spacer" onClick={() => commands.createSpacer({ id: spacerId(nextEntityId("spacer", document)), height: 24 }, group.id, group.rows.length)}>Add Spacer</button>{(group.spacers ?? []).map((spacer) => <InspectorSpacerDraft key={spacer.id} spacer={spacer} onApply={(height) => commands.updateSpacer(spacer.id, height)} onDelete={() => commands.deleteSpacer(spacer.id)} />)}</section> : null;
+  const spacerEditor = group ? <section data-testid="inspector-spacers"><h3>Spacer Rows</h3><button type="button" data-testid="add-spacer" onClick={() => commands.createSpacer({ id: spacerId(nextEntityId("spacer", document)), height: 24 }, group.id, group.rows.length)}>Add Spacer</button>{(group.spacers ?? []).map((spacer) => <InspectorSpacerEditor key={spacer.id} spacer={spacer} onApply={(height) => commands.updateSpacer(spacer.id, height)} onDelete={() => commands.deleteSpacer(spacer.id)} />)}</section> : null;
   const { state: groupSections, toggle: toggleGroupSection } = useInspectorAccordion("group", { general: true, layout: true, appearance: true });
   const { state: transactionSections, toggle: toggleTransactionSection } = useInspectorAccordion("transaction", { general: true, timing: true, phases: true, "linked-signals": true });
   return <aside className="inspector" data-testid="inspector" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}>
