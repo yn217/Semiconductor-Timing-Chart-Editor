@@ -21,8 +21,15 @@ test("Spacer rows are presented as spacing, not blank Signal rows", async ({ pag
   await expect(left.locator("[data-role='tree-visibility']")).toHaveCount(0);
   await expect(left.locator("[data-role='tree-spacer-label']")).toHaveText("Spacer");
   const frozen = surface.locator("[data-role='frozen-row'][data-row-id='sp.clk']");
+  const timing = surface.locator("[data-role='timing-row'][data-row-id='sp.clk']");
+  await expect(frozen).toHaveAttribute("data-row-kind", "spacer");
+  await expect(timing).toHaveAttribute("data-row-kind", "spacer");
   await expect(frozen.locator("[data-role='signal-role']")).toHaveCount(0);
   await expect(frozen).toHaveText("");
+  await left.click();
+  await expect(left).toHaveAttribute("data-selected", "true");
+  await expect(timing).toHaveAttribute("data-selected", "true");
+  await expect(timing).toHaveCSS("border-top-style", "dashed");
   // Real Signals keep their role badge.
   await expect(surface.locator("[data-role='frozen-row'][data-row-id='s.clk'] [data-role='signal-role']")).toHaveCount(1);
 });

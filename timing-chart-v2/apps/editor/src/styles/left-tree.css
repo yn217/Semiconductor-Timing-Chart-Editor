@@ -63,6 +63,10 @@
 .surface-host [data-role="left-row"] { grid-template-columns: 74px minmax(0, 1fr) 24px 22px 20px; }
 /* #900: a Spacer is spacing, not a Signal: label + row actions only, no role badge / visibility eye. */
 .surface-host [data-role="left-row"][data-row-kind="spacer"] { grid-template-columns: minmax(0, 1fr) 22px 20px; }
+.surface-host [data-role="left-row"][data-row-kind="spacer"]:hover,
+.surface-host [data-role="left-row"][data-row-kind="spacer"][data-selected="true"] { background: color-mix(in srgb, #2f6fb0 8%, white); box-shadow: inset 0 1px 0 #9aabc0, inset 0 -1px 0 #9aabc0; }
+.surface-host [data-role="frozen-row"][data-row-kind="spacer"][data-selected="true"],
+.surface-host [data-role="timing-row"][data-row-kind="spacer"][data-selected="true"] { box-sizing: border-box; border-block: 1px dashed #9aabc0; background: color-mix(in srgb, #2f6fb0 6%, transparent); }
 .surface-host [data-role="tree-spacer-label"] { color: #8a96a8; font-style: italic; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Preserve native hidden behavior if a row is explicitly hidden by another
