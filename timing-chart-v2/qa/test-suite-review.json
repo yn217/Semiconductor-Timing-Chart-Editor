@@ -705,6 +705,23 @@
       "replacementTest": null
     },
     {
+      "file": "issue-431-signal-pin.spec.ts",
+      "domain": "signal-pin-sticky-virtualization",
+      "originIssue": 431,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A user-pinned stable Signal ID stays mounted at the top of the scrolling Cycle surfaces with frozen-label/waveform Y alignment; unpin restores ordinary viewport virtualization and changes no Canonical, History, or Dirty state.",
+      "duplicateGroup": "signal-pin-sticky-virtualization",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "This is the only production-route browser contract for the context-menu Pin/Unpin gesture across File Open epoch rebinding, actual vertical scrolling, stable-row retention, waveform alignment, and view-only invariants. The projection unit tests do not cover the mounted UI lifecycle, so retain the focused browser case in PR verification.",
+      "replacementTest": null
+    },
+    {
       "file": "issue-431-enum-state-save-open.spec.ts",
       "domain": "enum-state-save-open",
       "originIssue": 431,
@@ -10659,6 +10676,42 @@
       "replacementTest": null
     },
     {
+      "file": "ribbon-cursor-ab.spec.ts",
+      "title": "Cursor A/B keep their source-cycle X through zoom and horizontal scroll at 1280x720",
+      "domain": "source-cycle-cursor-geometry",
+      "originIssue": 431,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "At 1280x720, Cursor A/B stay aligned to their authoritative source-cycle ruler boundaries through 800% zoom and real horizontal scroll without Canonical, History, or Dirty changes.",
+      "duplicateGroup": "source-cycle-cursor-geometry",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "This viewport-specific regression checks source-time projection against ruler geometry after zoom and horizontal navigation; the wide viewport counterpart protects responsive geometry independently.",
+      "replacementTest": null
+    },
+    {
+      "file": "ribbon-cursor-ab.spec.ts",
+      "title": "Cursor A/B keep their source-cycle X through zoom and horizontal scroll at 1672x941",
+      "domain": "source-cycle-cursor-geometry",
+      "originIssue": 431,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "At 1672x941, Cursor A/B stay aligned to their authoritative source-cycle ruler boundaries through 800% zoom and real horizontal scroll without Canonical, History, or Dirty changes.",
+      "duplicateGroup": "source-cycle-cursor-geometry",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "This viewport-specific regression checks source-time projection against ruler geometry after zoom and horizontal navigation; the compact viewport counterpart protects responsive geometry independently.",
+      "replacementTest": null
+    },
+    {
       "file": "ribbon-layout.spec.ts",
       "title": "Home Ribbon labels and icons do not overlap at 1365px",
       "domain": "home-ribbon-icon-label-overlap",
@@ -15480,20 +15533,38 @@
     },
     {
       "file": "view-ribbon-slot.spec.ts",
-      "title": "Layout Focus Waveform restores the previous panel state without document history",
+      "title": "Layout Focus Waveform expands the canvas and restores panels without document changes at 1280x720",
       "domain": "workspace-focus-layout-restore",
       "originIssue": null,
       "type": "USER_JOURNEY",
-      "costClass": "SMALL",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": "Focus Waveform hides Inspector and Bottom, then restores the previous preset and Bottom visibility without document mutation.",
+      "primaryContract": "At 1280x720 Focus Waveform hides Inspector and Bottom, expands the Cycle canvas, restores the prior preset and Bottom visibility, and leaves document state unchanged.",
       "duplicateGroup": "workspace-layout-state",
       "executionTier": "TIER_2_FOCUSED_BROWSER",
       "profiles": [
         "pr"
       ],
       "decision": "KEEP",
-      "reason": "A short production UI-state round trip with visible outcomes and a view-only invariant.",
+      "reason": "This viewport-specific production UI journey protects compact-layout usability and the view-only invariant; the wider viewport is a separate collection case.",
+      "replacementTest": null
+    },
+    {
+      "file": "view-ribbon-slot.spec.ts",
+      "title": "Layout Focus Waveform expands the canvas and restores panels without document changes at 1672x941",
+      "domain": "workspace-focus-layout-restore",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "At 1672x941 Focus Waveform hides Inspector and Bottom, expands the Cycle canvas, restores the prior preset and Bottom visibility, and leaves document state unchanged.",
+      "duplicateGroup": "workspace-layout-state",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Retains the explicit wide-viewport layout acceptance rather than inferring it from the compact viewport; both are inexpensive focused checks.",
       "replacementTest": null
     },
     {

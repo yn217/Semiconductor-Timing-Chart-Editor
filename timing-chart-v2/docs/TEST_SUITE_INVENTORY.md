@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 411 spec files and 1221 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 412 spec files and 1229 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1221/1221 cases reviewed.
+Semantic review progress: 1229/1229 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,10 +10,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 623 |
-| `nightly` | 230 |
+| `integration` | 627 |
+| `nightly` | 232 |
 | `performance` | 67 |
-| `pr` | 386 |
+| `pr` | 390 |
 | `visual` | 180 |
 
 ## Top recorded per-case runtimes
@@ -48,7 +48,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | Spec file | Cases | Review status |
 | --- | ---: | --- |
 | `acceptance-397-sample-a.spec.ts` | 4 | 4/4 reviewed |
-| `acceptance-397-sample-c.spec.ts` | 3 | 3/3 reviewed |
+| `acceptance-397-sample-c.spec.ts` | 5 | 5/5 reviewed |
 | `acceptance-397-sample-d.spec.ts` | 4 | 4/4 reviewed |
 | `acceptance-429-transaction-colors.spec.ts` | 4 | 4/4 reviewed |
 | `acceptance-429-transaction-composition.spec.ts` | 32 | 32/32 reviewed |
@@ -164,6 +164,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-431-constraint-problem-reveal.spec.ts` | 1 | 1/1 reviewed |
 | `issue-431-enum-state-save-open.spec.ts` | 2 | 2/2 reviewed |
 | `issue-431-protocol-check-toggle.spec.ts` | 2 | 2/2 reviewed |
+| `issue-431-signal-pin.spec.ts` | 1 | 1/1 reviewed |
 | `issue-431-signal-selection-groups.spec.ts` | 1 | 1/1 reviewed |
 | `issue-440-mode-context-coherence.spec.ts` | 3 | 3/3 reviewed |
 | `issue-440-pinned-bookmark-transaction.spec.ts` | 2 | 2/2 reviewed |
@@ -362,7 +363,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `review-checks-refresh.spec.ts` | 2 | 2/2 reviewed |
 | `review-workflow.spec.ts` | 3 | 3/3 reviewed |
 | `ribbon-caption-layout.spec.ts` | 2 | 2/2 reviewed |
-| `ribbon-cursor-ab.spec.ts` | 2 | 2/2 reviewed |
+| `ribbon-cursor-ab.spec.ts` | 4 | 4/4 reviewed |
 | `ribbon-layout.spec.ts` | 2 | 2/2 reviewed |
 | `ribbon-more-popover-closure.spec.ts` | 4 | 4/4 reviewed |
 | `ribbon-responsive-overflow.spec.ts` | 3 | 3/3 reviewed |
@@ -448,7 +449,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `value-signal-compatibility.spec.ts` | 7 | 7/7 reviewed |
 | `view-metrics-owner.spec.ts` | 1 | 1/1 reviewed |
 | `view-mode-readability.spec.ts` | 3 | 3/3 reviewed |
-| `view-ribbon-slot.spec.ts` | 7 | 7/7 reviewed |
+| `view-ribbon-slot.spec.ts` | 8 | 8/8 reviewed |
 | `visual-grammar-cross-component.spec.ts` | 2 | 2/2 reviewed |
 | `visual-reference-lifecycle.spec.ts` | 1 | 1/1 reviewed |
 | `visual-regression-modes.spec.ts` | 6 | 6/6 reviewed |
@@ -616,6 +617,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `reorder-visibility.spec.ts` | dataset, geometryRead |
 | `review-workflow.spec.ts` | getComputedStyle, geometryRead |
 | `ribbon-caption-layout.spec.ts` | querySelector, getComputedStyle, geometryRead |
+| `ribbon-cursor-ab.spec.ts` | getComputedStyle, geometryRead |
 | `ribbon-layout.spec.ts` | geometryRead |
 | `ribbon-more-popover-closure.spec.ts` | geometryRead |
 | `runtime-owner-acceptance.spec.ts` | getComputedStyle |

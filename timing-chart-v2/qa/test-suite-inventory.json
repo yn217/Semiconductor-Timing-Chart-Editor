@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-04T07:20:42.196Z",
+  "generatedAt": "2026-10-04T11:22:23.798Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 411,
-  "caseCount": 1221,
-  "reviewedCaseCount": 1221,
+  "specFileCount": 412,
+  "caseCount": 1229,
+  "reviewedCaseCount": 1229,
   "curatedProfileCounts": {
-    "integration": 623,
-    "nightly": 230,
+    "integration": 627,
+    "nightly": 232,
     "performance": 67,
-    "pr": 386,
+    "pr": 390,
     "visual": 180
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -190,6 +190,60 @@
       "suitePath": [],
       "line": 82,
       "title": "Cycle/Transaction Split: linked Signal cross-highlight uses stable IDs and stays aligned after Zoom",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "cycle-transaction-combined-sample-acceptance",
+      "originIssue": 397,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "The production Sample C keeps Cycle/Transaction panes usable and semantically aligned through mode changes, zoom and selection at responsive widths.",
+      "duplicateGroup": "sample-397-transaction-split-acceptance",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "The split composition and pane-local geometry are visible cross-surface behavior, and the two viewport cases cover width-dependent clipping/overlap. This fixture-driven journey belongs in integration/nightly; its semantic time anchors should remain independent of production geometry formulas.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ],
+      "contractId": "cycle-transaction-combined-sample-acceptance"
+    },
+    {
+      "file": "acceptance-397-sample-c.spec.ts",
+      "suitePath": [],
+      "line": 106,
+      "title": "Transaction Inspector can focus linked Signals without changing selection or document state at 1280x720",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "cycle-transaction-combined-sample-acceptance",
+      "originIssue": 397,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "The production Sample C keeps Cycle/Transaction panes usable and semantically aligned through mode changes, zoom and selection at responsive widths.",
+      "duplicateGroup": "sample-397-transaction-split-acceptance",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "The split composition and pane-local geometry are visible cross-surface behavior, and the two viewport cases cover width-dependent clipping/overlap. This fixture-driven journey belongs in integration/nightly; its semantic time anchors should remain independent of production geometry formulas.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ],
+      "contractId": "cycle-transaction-combined-sample-acceptance"
+    },
+    {
+      "file": "acceptance-397-sample-c.spec.ts",
+      "suitePath": [],
+      "line": 106,
+      "title": "Transaction Inspector can focus linked Signals without changing selection or document state at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
@@ -10625,6 +10679,32 @@
         "nightly"
       ],
       "contractId": "check-category-toggle"
+    },
+    {
+      "file": "issue-431-signal-pin.spec.ts",
+      "suitePath": [],
+      "line": 10,
+      "title": "pinned Signal stays at the viewport top with its waveform row aligned and view-only state unchanged",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "signal-pin-sticky-virtualization",
+      "originIssue": 431,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A user-pinned stable Signal ID stays mounted at the top of the scrolling Cycle surfaces with frozen-label/waveform Y alignment; unpin restores ordinary viewport virtualization and changes no Canonical, History, or Dirty state.",
+      "duplicateGroup": "signal-pin-sticky-virtualization",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is the only production-route browser contract for the context-menu Pin/Unpin gesture across File Open epoch rebinding, actual vertical scrolling, stable-row retention, waveform alignment, and view-only invariants. The projection unit tests do not cover the mounted UI lifecycle, so retain the focused browser case in PR verification.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "signal-pin-sticky-virtualization"
     },
     {
       "file": "issue-431-signal-selection-groups.spec.ts",
@@ -24121,7 +24201,7 @@
     {
       "file": "ribbon-cursor-ab.spec.ts",
       "suitePath": [],
-      "line": 13,
+      "line": 14,
       "title": "Cursor A/B Ribbon controls set/swap/clear the status bar readout with zero Canonical/History delta",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -24147,7 +24227,7 @@
     {
       "file": "ribbon-cursor-ab.spec.ts",
       "suitePath": [],
-      "line": 50,
+      "line": 51,
       "title": "Cursor A guide drag updates only workspace cursor state",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -24169,6 +24249,58 @@
         "integration"
       ],
       "contractId": "cursor-guide-drag-view-state"
+    },
+    {
+      "file": "ribbon-cursor-ab.spec.ts",
+      "suitePath": [],
+      "line": 74,
+      "title": "Cursor A/B keep their source-cycle X through zoom and horizontal scroll at 1280x720",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "source-cycle-cursor-geometry",
+      "originIssue": 431,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "At 1280x720, Cursor A/B stay aligned to their authoritative source-cycle ruler boundaries through 800% zoom and real horizontal scroll without Canonical, History, or Dirty changes.",
+      "duplicateGroup": "source-cycle-cursor-geometry",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This viewport-specific regression checks source-time projection against ruler geometry after zoom and horizontal navigation; the wide viewport counterpart protects responsive geometry independently.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "source-cycle-cursor-geometry"
+    },
+    {
+      "file": "ribbon-cursor-ab.spec.ts",
+      "suitePath": [],
+      "line": 74,
+      "title": "Cursor A/B keep their source-cycle X through zoom and horizontal scroll at 1672x941",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "source-cycle-cursor-geometry",
+      "originIssue": 431,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "At 1672x941, Cursor A/B stay aligned to their authoritative source-cycle ruler boundaries through 800% zoom and real horizontal scroll without Canonical, History, or Dirty changes.",
+      "duplicateGroup": "source-cycle-cursor-geometry",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This viewport-specific regression checks source-time projection against ruler geometry after zoom and horizontal navigation; the compact viewport counterpart protects responsive geometry independently.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "source-cycle-cursor-geometry"
     },
     {
       "file": "ribbon-layout.spec.ts",
@@ -31424,7 +31556,7 @@
     {
       "file": "view-ribbon-slot.spec.ts",
       "suitePath": [],
-      "line": 5,
+      "line": 6,
       "title": "View exposes stable Show/Panels/Guides/Zoom/Workspace/Layout slots",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -31450,7 +31582,7 @@
     {
       "file": "view-ribbon-slot.spec.ts",
       "suitePath": [],
-      "line": 64,
+      "line": 65,
       "title": "View zoom uses a shared view-only route and does not move Home presentation",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -31476,7 +31608,7 @@
     {
       "file": "view-ribbon-slot.spec.ts",
       "suitePath": [],
-      "line": 106,
+      "line": 107,
       "title": "View groups compress without horizontal overflow at 1280px",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -31502,7 +31634,7 @@
     {
       "file": "view-ribbon-slot.spec.ts",
       "suitePath": [],
-      "line": 123,
+      "line": 124,
       "title": "View group controls stay inside their owned regions",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -31528,8 +31660,8 @@
     {
       "file": "view-ribbon-slot.spec.ts",
       "suitePath": [],
-      "line": 144,
-      "title": "Layout Focus Waveform restores the previous panel state without document history",
+      "line": 146,
+      "title": "Layout Focus Waveform expands the canvas and restores panels without document changes at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
@@ -31537,13 +31669,13 @@
       "domain": "workspace-focus-layout-restore",
       "originIssue": null,
       "type": "USER_JOURNEY",
-      "costClass": "FAST",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": "Focus Waveform hides Inspector and Bottom, then restores the previous preset and Bottom visibility without document mutation.",
+      "primaryContract": "At 1280x720 Focus Waveform hides Inspector and Bottom, expands the Cycle canvas, restores the prior preset and Bottom visibility, and leaves document state unchanged.",
       "duplicateGroup": "workspace-layout-state",
       "executionTier": "TIER_2_FOCUSED_BROWSER",
       "decision": "KEEP",
-      "reason": "A short production UI-state round trip with visible outcomes and a view-only invariant.",
+      "reason": "This viewport-specific production UI journey protects compact-layout usability and the view-only invariant; the wider viewport is a separate collection case.",
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
@@ -31554,7 +31686,33 @@
     {
       "file": "view-ribbon-slot.spec.ts",
       "suitePath": [],
-      "line": 175,
+      "line": 146,
+      "title": "Layout Focus Waveform expands the canvas and restores panels without document changes at 1672x941",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "workspace-focus-layout-restore",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "At 1672x941 Focus Waveform hides Inspector and Bottom, expands the Cycle canvas, restores the prior preset and Bottom visibility, and leaves document state unchanged.",
+      "duplicateGroup": "workspace-layout-state",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Retains the explicit wide-viewport layout acceptance rather than inferring it from the compact viewport; both are inexpensive focused checks.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "workspace-focus-layout-restore"
+    },
+    {
+      "file": "view-ribbon-slot.spec.ts",
+      "suitePath": [],
+      "line": 178,
       "title": "View Panels toggle buttons look like other ribbon buttons: accent icon only, no tile border/fill/bar (#389)",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -31580,7 +31738,7 @@
     {
       "file": "view-ribbon-slot.spec.ts",
       "suitePath": [],
-      "line": 202,
+      "line": 205,
       "title": "Layout Reset restores application panes without mutating the document",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -32159,8 +32317,8 @@
     },
     {
       "file": "acceptance-397-sample-c.spec.ts",
-      "caseCount": 3,
-      "reviewedCaseCount": 3,
+      "caseCount": 5,
+      "reviewedCaseCount": 5,
       "originIssue": "397",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -33299,6 +33457,15 @@
       "reviewedCaseCount": 2,
       "originIssue": "431",
       "declaredTimeoutMs": 120,
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "issue-431-signal-pin.spec.ts",
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
+      "originIssue": "431",
+      "declaredTimeoutMs": null,
       "candidateSignals": [],
       "semanticReviewStatus": "REVIEWED"
     },
@@ -35425,11 +35592,14 @@
     },
     {
       "file": "ribbon-cursor-ab.spec.ts",
-      "caseCount": 2,
-      "reviewedCaseCount": 2,
+      "caseCount": 4,
+      "reviewedCaseCount": 4,
       "originIssue": null,
       "declaredTimeoutMs": null,
-      "candidateSignals": [],
+      "candidateSignals": [
+        "getComputedStyle",
+        "geometryRead"
+      ],
       "semanticReviewStatus": "REVIEWED"
     },
     {
@@ -36288,8 +36458,8 @@
     },
     {
       "file": "view-ribbon-slot.spec.ts",
-      "caseCount": 7,
-      "reviewedCaseCount": 7,
+      "caseCount": 8,
+      "reviewedCaseCount": 8,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
