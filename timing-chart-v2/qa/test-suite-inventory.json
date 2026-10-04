@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-04T06:55:04.236Z",
+  "generatedAt": "2026-10-04T07:02:55.887Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -15,10 +15,10 @@
   "caseCount": 1221,
   "reviewedCaseCount": 1221,
   "curatedProfileCounts": {
-    "integration": 619,
+    "integration": 620,
     "nightly": 230,
     "performance": 67,
-    "pr": 390,
+    "pr": 389,
     "visual": 180
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -6844,7 +6844,7 @@
       "replacementTest": "minimap-viewport-closure.spec.ts — MiniMap viewport indicator follows live scroll, resize, pan and remount state",
       "reviewStatus": "REVIEWED",
       "profiles": [
-        "pr"
+        "integration"
       ],
       "contractId": "minimap-pointer-pan-view-only"
     },
