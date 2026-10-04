@@ -27,4 +27,10 @@ test("Document Properties physical timebase formats cursor delta without changin
   await expect(page.getByTestId("cursor-status")).toContainText("B 7");
   await expect(page.getByTestId("cursor-status")).toContainText("Δ 5 cycles (50 ns)");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+
+  await properties.getByRole("button", { name: "Close properties" }).click();
+  await page.getByTestId("cycle-surface").locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
+  const physicalFrequency = page.getByTestId("inspector-clock-physical-frequency");
+  await expect(physicalFrequency).toHaveAttribute("data-hz", "50000000");
+  await expect(physicalFrequency).toContainText("Hz");
 });
