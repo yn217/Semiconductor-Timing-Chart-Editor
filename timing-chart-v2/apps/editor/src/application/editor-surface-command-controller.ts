@@ -1,5 +1,5 @@
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
-import type { Annotation, AnnotationGroup, AnnotationGroupId, AnnotationId, Bookmark, BookmarkId, CanonicalDocument, CheckSettings, ClockGenerator, CommentRow, ConstraintId, EdgeCounterSettings, EnumDefinition, GroupId, JsonObject, LabelAnchorId, ResetSemantics, SemanticAnchor, Signal, SignalGroup, SignalId, SpacerId, SpacerRow, TimeGroup, TimeGroupId, TimelineLabelAnchor, Transaction, TransactionGroup, TransactionId, CommandId, TransactionTimeScale, ValueSignal } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationGroup, AnnotationGroupId, AnnotationId, Bookmark, BookmarkId, CanonicalDocument, CheckSettings, ClockGenerator, CommentRow, ConstraintId, EdgeCounterSettings, EnumDefinition, GroupId, JsonObject, LabelAnchorId, ResetSemantics, SemanticAnchor, Signal, SignalGroup, SignalId, SpacerId, SpacerRow, TimeGroup, TimeGroupId, TimelineLabelAnchor, Transaction, TransactionGroup, TransactionId, CommandId, TransactionTimeScale, ValueSignal, PhysicalTimebase } from "@timing-chart-v2/schema";
 
 type CommandOf<T extends SemanticCommand["type"]> = Extract<SemanticCommand, { readonly type: T }>;
 type CommandPayload<T extends SemanticCommand["type"]> = Omit<CommandOf<T>, "id" | "type">;
@@ -69,6 +69,7 @@ export interface DocumentPropertiesCommandActions {
     readonly footer: CanonicalDocument["document"]["footer"];
     readonly legend: CanonicalDocument["legend"];
     readonly enumDefinitions: CanonicalDocument["enumDefinitions"];
+    readonly physicalTimebase?: PhysicalTimebase | undefined;
   }) => CommandResult | undefined;
 }
 
@@ -147,6 +148,12 @@ export function createEditorSurfaceCommandController(input: {
       else if (JSON.stringify(current) !== JSON.stringify(definition)) commands.push({ id: input.nextCommandId("enum_update"), type: "enum.update", enumId: definition.id, name: definition.name, entries: definition.entries });
     }
     for (const current of currentEnums) if (!nextById.has(current.id)) commands.push({ id: input.nextCommandId("enum_delete"), type: "enum.delete", enumId: current.id });
+    if (Object.hasOwn(update, "physicalTimebase")) {
+      const current = document.timeline.physicalTimebase;
+      const next = update.physicalTimebase;
+      const unchanged = current === undefined ? next === undefined : next !== undefined && current.referenceFrequencyHz === next.referenceFrequencyHz && current.unit === next.unit;
+      if (!unchanged) commands.push({ id: input.nextCommandId("timeline_physical_timebase"), type: "timeline.setPhysicalTimebase", ...(next === undefined ? {} : { physicalTimebase: next }) });
+    }
     return commands.length === 0 ? undefined : input.executeBatch(input.nextCommandId("document_properties"), commands);
   };
   return {

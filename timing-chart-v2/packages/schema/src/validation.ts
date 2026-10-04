@@ -70,6 +70,7 @@ const RULE_DESCRIPTORS: readonly CanonicalRuleDescriptor[] = [
   canonicalRule("INVALID_CLOCK_DUTY", "Clock duty must be finite and in range", "$.signals[*].generator.duty"),
   canonicalRule("INVALID_CLOCK_PERIOD", "Clock period must be a positive integer", "$.signals[*].generator.period"),
   canonicalRule("INVALID_LEGEND_ENTRY", "Legend entries must have valid labels, order, and roles", "$.legend.items[*]"),
+  canonicalRule("INVALID_PHYSICAL_TIMEBASE", "Physical timebase requires a positive finite frequency and SI unit", "$.timeline.physicalTimebase"),
   canonicalRule("INVALID_REFERENCE_CLOCK", "Reference clock must target a clock signal", "$.timeline.referenceClock"),
   canonicalRule("INVALID_STABLE_ID", "Entity identifiers must be stable IDs", "$.signals[*].id | $.signalGroups[*].id | $.annotations[*].id"),
   canonicalRule("INVALID_TIME_GROUP_RANGE", "Time Group must use a valid half-open range", "$.timeGroups[*]"),
@@ -232,6 +233,7 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
   for (const entry of canonicalEntityInventory(document)) registerId(entry.id, entry.path, entry.kind);
 
   if (document.timeline.end !== document.timeline.cycleCount) problems.push(problem("TIMELINE_END_MISMATCH", "$.timeline.end", "Canonical timeline end must equal cycleCount."));
+  if (document.timeline.physicalTimebase !== undefined && (!Number.isFinite(document.timeline.physicalTimebase.referenceFrequencyHz) || document.timeline.physicalTimebase.referenceFrequencyHz <= 0)) problems.push(problem("INVALID_PHYSICAL_TIMEBASE", "$.timeline.physicalTimebase", "Physical timebase frequency must be a positive finite number."));
 
   const signals = new Map<string, Signal>(document.signals.map((signal) => [signal.id, signal]));
   const transactionGroups = new Map((document.transactionGroups ?? []).map((group) => [group.id, group]));

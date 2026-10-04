@@ -1971,6 +1971,17 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       const changeSet: ChangeSet = { timelineSemantics: true, geometryScreenX: true, annotationPosition: annotationsForSignals(document, timingSignalIds(document)), transactionSemantics: document.transactions.map((item) => item.id) };
       return { ok: true, document: next, changeSet, inverseChangeSet: changeSet };
     }
+    case "timeline.setPhysicalTimebase": {
+      const value = command.physicalTimebase;
+      if (value !== undefined && (!Number.isFinite(value.referenceFrequencyHz) || value.referenceFrequencyHz <= 0 || !["s", "ms", "us", "ns", "ps", "fs"].includes(value.unit))) return fail("invalid", "INVALID_PHYSICAL_TIMEBASE", "$.physicalTimebase", "Physical timebase needs a positive finite frequency and supported SI unit.");
+      if (JSON.stringify(document.timeline.physicalTimebase) === JSON.stringify(value)) return fail("no-op", "NO_OP", "$.physicalTimebase", "Physical timebase is unchanged.");
+      const timeline = value === undefined
+        ? (() => { const { physicalTimebase: _removed, ...rest } = document.timeline; return rest; })()
+        : { ...document.timeline, physicalTimebase: value };
+      const measurementAnnotations = document.annotations.filter((annotation) => annotation.type === "measurement").map((annotation) => annotation.id);
+      const changeSet: ChangeSet = { timingDiagnosticsUnchanged: true, ...(measurementAnnotations.length > 0 ? { annotationStyle: measurementAnnotations } : {}) };
+      return { ok: true, document: { ...document, timeline }, changeSet, inverseChangeSet: changeSet };
+    }
     case "timeline.insert": {
       if (!Number.isInteger(command.at) || command.at < 0 || command.at > document.timeline.cycleCount || !Number.isInteger(command.count) || command.count < 1) return fail("invalid", "INVALID_TIMELINE_INSERT", "$", "Insert requires an integer boundary and positive integer count.");
       if (document.constraints.length > 0) return fail("invalid", "UNTYPED_CONSTRAINT_RIPPLE", "$.constraints", "Timeline ripple is blocked while untyped constraints exist.");

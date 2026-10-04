@@ -16,6 +16,24 @@ function extraSignal(id = "sig_extra"): Signal {
 }
 
 describe("pure Semantic Command planning", () => {
+  it("sets and clears the Document physical timebase as one reversible canonical change", () => {
+    const source = canonicalFixture();
+    const configured = planCommand(source, { id: commandId("cmd_timebase_set"), type: "timeline.setPhysicalTimebase", physicalTimebase: { referenceFrequencyHz: 100_000_000, unit: "ns" } });
+    expect(configured).toMatchObject({ ok: true, changeSet: { timingDiagnosticsUnchanged: true } });
+    if (!configured.ok) return;
+    expect(configured.document.timeline.physicalTimebase).toEqual({ referenceFrequencyHz: 100_000_000, unit: "ns" });
+    const history = new CommandHistorySession(source);
+    expect(history.execute({ id: commandId("cmd_timebase_history_set"), type: "timeline.setPhysicalTimebase", physicalTimebase: { referenceFrequencyHz: 100_000_000, unit: "ns" } }).ok).toBe(true);
+    expect(history.getSnapshot().document.timeline.physicalTimebase).toEqual({ referenceFrequencyHz: 100_000_000, unit: "ns" });
+    expect(history.undo().ok).toBe(true);
+    expect(history.getSnapshot().document.timeline).not.toHaveProperty("physicalTimebase");
+    expect(history.redo().ok).toBe(true);
+    expect(history.getSnapshot().document.timeline.physicalTimebase).toEqual({ referenceFrequencyHz: 100_000_000, unit: "ns" });
+    const rejected = planCommand(source, { id: commandId("cmd_timebase_bad"), type: "timeline.setPhysicalTimebase", physicalTimebase: { referenceFrequencyHz: -1, unit: "ns" } });
+    expect(rejected).toMatchObject({ ok: false, problems: [{ code: "INVALID_PHYSICAL_TIMEBASE" }] });
+    const cleared = planCommand(configured.document, { id: commandId("cmd_timebase_clear"), type: "timeline.setPhysicalTimebase" });
+    expect(cleared.ok && cleared.document.timeline).not.toHaveProperty("physicalTimebase");
+  });
   it("reports planner duration and multi-row reference invalidation counts", () => {
     const document = canonicalFixture();
     const before = commandPlannerMetrics();

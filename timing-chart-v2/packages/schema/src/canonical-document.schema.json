@@ -50,6 +50,15 @@
         "timeBase": { "const": "cycle" },
         "cycleCount": { "type": "integer", "minimum": 1 },
         "referenceClock": { "$ref": "#/$defs/stableId" },
+        "physicalTimebase": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["referenceFrequencyHz", "unit"],
+          "properties": {
+            "referenceFrequencyHz": { "type": "number" },
+            "unit": { "enum": ["s", "ms", "us", "ns", "ps", "fs"] }
+          }
+        },
         "edge": { "enum": ["rising", "falling"] },
         "labelAnchors": {
           "type": "array",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildDisplayTimeMapping, cursorDelta, displayCursorDelta, projectCursor } from "@timing-chart-v2/projection";
+import { buildDisplayTimeMapping, cursorDelta, displayCursorDelta, formatPhysicalTime, physicalTimeForCycles, projectCursor } from "@timing-chart-v2/projection";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 describe("semantic Cursor A/B", () => {
@@ -14,5 +14,11 @@ describe("semantic Cursor A/B", () => {
     expect(cursorDelta({ a: 1, b: 6 })).toEqual({ cycles: 5 });
     expect(projectCursor({ a: 1, b: 6 }, mapping)).toEqual({ a: 1, b: 3 });
     expect(displayCursorDelta({ a: 1, b: 6 }, mapping)).toEqual({ displayCycles: 2 });
+  });
+  it("converts source-cycle differences using the Document frequency and selected SI unit", () => {
+    const timebase = { referenceFrequencyHz: 100_000_000, unit: "ns" as const };
+    expect(physicalTimeForCycles(5, timebase)).toBeCloseTo(50);
+    expect(formatPhysicalTime(5, timebase)).toBe("50 ns");
+    expect(formatPhysicalTime(-5, timebase)).toBe("-50 ns");
   });
 });

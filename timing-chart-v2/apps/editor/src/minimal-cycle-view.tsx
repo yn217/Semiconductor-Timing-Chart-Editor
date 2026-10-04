@@ -16,6 +16,7 @@ import { useEditorDialogRuntime } from "./application/use-editor-dialog-runtime.
 import { HardwareHierarchyBrowser } from "./hardware-hierarchy-browser.js";
 import { SaveAsDialog } from "./save-as-dialog.js";
 import { DocumentProperties } from "./document-properties.js";
+import { formatPhysicalTime } from "@timing-chart-v2/projection";
 import { useEditorApplicationOwner } from "./application/use-editor-application-owner.js";
 import { useDocumentEntityIndexes } from "./application/use-document-entity-indexes.js";
 import { useEditorCommandRouter } from "./application/use-editor-command-router.js";
@@ -813,7 +814,7 @@ export function MinimalCycleView() {
     // string formatting stays out of EditorStatusBar per its own "pure
     // display" contract, so the readout is fully assembled here.
     cursorStatus: cursorA === undefined && cursorB === undefined ? undefined
-      : `Cursor: ${cursorA === undefined ? "A —" : `A ${cursorA}`} · ${cursorB === undefined ? "B —" : `B ${cursorB}`}${cursorDelta.cycles === undefined ? "" : ` · Δ ${cursorDelta.cycles} cycles`}`,
+      : `Cursor: ${cursorA === undefined ? "A —" : `A ${cursorA}`} · ${cursorB === undefined ? "B —" : `B ${cursorB}`}${cursorDelta.cycles === undefined ? "" : ` · Δ ${cursorDelta.cycles} cycles${snapshot.document.timeline.physicalTimebase ? ` (${formatPhysicalTime(cursorDelta.cycles, snapshot.document.timeline.physicalTimebase)})` : ""}`}`,
     // #407: textual counterpart to the CSS border indicator -- only
     // meaningful in Split (Cycle/Transaction each have exactly one pane).
     activePaneStatus: viewMode === "Split" ? `Active Pane: ${activePane === "transaction" ? "Transaction" : "Signal"}` : undefined,

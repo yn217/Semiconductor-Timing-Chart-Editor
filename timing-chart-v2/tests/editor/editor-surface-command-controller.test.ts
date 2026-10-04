@@ -73,6 +73,7 @@ describe("editor surface command controller", () => {
     const controller = createEditorSurfaceCommandController({ execute, executeBatch, nextCommandId: (operation) => `test_${operation}` as never });
     const document = {
       document: { title: "Before", header: { subtitle: "", description: "", notes: "", preconditions: [], constraints: [], exceptions: [] }, footer: { figureNumber: "", revision: "", text: "" } },
+      timeline: { physicalTimebase: undefined },
       legend: { show: true, orientation: "horizontal", usedRolesOnly: false, position: { x: 0, y: 0 }, items: [] },
     } as never;
 
@@ -93,6 +94,24 @@ describe("editor surface command controller", () => {
       footer: document.document.footer,
       legend: document.legend,
     })).toBeUndefined();
+    controller.updateDocumentProperties(document, {
+      title: document.document.title,
+      header: document.document.header,
+      footer: document.document.footer,
+      legend: document.legend,
+      physicalTimebase: { referenceFrequencyHz: 50_000_000, unit: "ns" },
+    });
+    expect(executeBatch).toHaveBeenLastCalledWith("test_document_properties", [expect.objectContaining({ type: "timeline.setPhysicalTimebase", physicalTimebase: { referenceFrequencyHz: 50_000_000, unit: "ns" } })]);
+    const configuredDocument = { ...document, timeline: { physicalTimebase: { referenceFrequencyHz: 50_000_000, unit: "ns" } } };
+    controller.updateDocumentProperties(configuredDocument, {
+      title: document.document.title,
+      header: document.document.header,
+      footer: document.document.footer,
+      legend: document.legend,
+      physicalTimebase: undefined,
+    });
+    expect(executeBatch).toHaveBeenLastCalledWith("test_document_properties", [expect.objectContaining({ type: "timeline.setPhysicalTimebase" })]);
+    expect(executeBatch.mock.lastCall?.[1][0]).not.toHaveProperty("physicalTimebase");
   });
 
   it("owns Bottom Transaction Editor command construction and batch routing", () => {

@@ -23,6 +23,18 @@ import { canonicalFixture } from "../fixtures/canonical.js";
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 describe("canonical v2 schema and roundtrip", () => {
+  it("persists an optional physical timebase without changing cycle coordinates", () => {
+    const document = clone(canonicalFixture());
+    document.timeline.physicalTimebase = { referenceFrequencyHz: 100_000_000, unit: "ns" };
+    expect(validateCanonicalDocument(document)).toEqual([]);
+    const reopened = parseDocument(serializeCanonicalDocument(document));
+    expect(reopened.ok).toBe(true);
+    if (reopened.ok) {
+      expect(reopened.document.timeline).toMatchObject({ end: document.timeline.end, cycleCount: document.timeline.cycleCount, physicalTimebase: document.timeline.physicalTimebase });
+    }
+    const invalid = { ...document, timeline: { ...document.timeline, physicalTimebase: { referenceFrequencyHz: 0, unit: "ns" } } };
+    expect(validateCanonicalDocument(invalid)).toContainEqual(expect.objectContaining({ code: "INVALID_PHYSICAL_TIMEBASE", path: "$.timeline.physicalTimebase" }));
+  });
   it("round-trips every authoritative current sample without semantic drift", () => {
     const repoRoot = resolve(import.meta.dirname, "../..");
     const currentDirectory = resolve(repoRoot, "samples/current");

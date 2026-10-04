@@ -72,6 +72,13 @@ export interface TimelineLabelAnchor {
   readonly ownerTimeGroupId?: TimeGroupId;
 }
 
+export type PhysicalTimeUnit = "s" | "ms" | "us" | "ns" | "ps" | "fs";
+/** Optional SI readout basis for source cycles; it never changes canonical cycle coordinates. */
+export interface PhysicalTimebase {
+  readonly referenceFrequencyHz: number;
+  readonly unit: PhysicalTimeUnit;
+}
+
 export interface Timeline {
   readonly start: 0;
   readonly end: number;
@@ -80,6 +87,7 @@ export interface Timeline {
   readonly referenceClock?: SignalId;
   readonly edge: "rising" | "falling";
   readonly labelAnchors: readonly TimelineLabelAnchor[];
+  readonly physicalTimebase?: PhysicalTimebase;
 }
 
 export type SignalRole = "input" | "output" | "internal";
@@ -364,7 +372,7 @@ export const CANONICAL_PROBLEM_CODES = [
   "BUS_WIDTH_OVERFLOW", "CHANGE_POINTS_NOT_STRICTLY_SORTED", "DUPLICATE_ID",
   "DUPLICATE_LABEL_ANCHOR_SOURCE", "DUPLICATE_ROW_MEMBERSHIP", "INVALID_ANCHOR_POINT", "INVALID_ANCHOR_THRESHOLD",
   "INVALID_ANCHOR_THRESHOLD_POINT", "INVALID_ANNOTATION_STYLE", "INVALID_BUS_LITERAL", "INVALID_LEGEND_ENTRY",
-  "INVALID_CLOCK_DUTY", "INVALID_CLOCK_PERIOD", "INVALID_REFERENCE_CLOCK", "INVALID_STABLE_ID", "INVALID_TIME_GROUP_RANGE", "INVALID_TRANSACTION_PHASE", "INVALID_TRANSACTION_TIME_SCALE", "INVALID_ENUM_DEFINITION", "INVALID_RESET_SEMANTICS",
+  "INVALID_CLOCK_DUTY", "INVALID_CLOCK_PERIOD", "INVALID_PHYSICAL_TIMEBASE", "INVALID_REFERENCE_CLOCK", "INVALID_STABLE_ID", "INVALID_TIME_GROUP_RANGE", "INVALID_TRANSACTION_PHASE", "INVALID_TRANSACTION_TIME_SCALE", "INVALID_ENUM_DEFINITION", "INVALID_RESET_SEMANTICS",
   "LABEL_ANCHOR_BOUNDARY_MISMATCH", "LABEL_ANCHOR_OWNER_MISMATCH", "MISSING_ANNOTATION_ANCHOR", "MISSING_CROSS_REFERENCE",
   "NON_FINITE_NUMBER", "NON_PERSISTENT_FIELD", "NON_TIMING_ANCHOR_TARGET", "ORPHAN_ROW", "SPACER_OWNER_MISMATCH",
   "TIME_GROUP_RESUME_BOUNDARY_MISMATCH", "TIME_GROUP_RESUME_OWNER_MISMATCH", "TIMELINE_END_MISMATCH", "TIMELINE_OUT_OF_RANGE",

@@ -38,6 +38,7 @@ import type {
   CommentRow,
   ValueSignal,
   EnumDefinition,
+  PhysicalTimebase,
 } from "@timing-chart-v2/schema";
 
 export type SignalValue = string | number;
@@ -140,6 +141,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "transaction.setTimeScale"; scale: TransactionTimeScale; clearShowSecondaryClock?: boolean }>
   | Readonly<{ id: CommandId; type: "timeline.setReferenceClock"; referenceClock?: SignalId }>
   | Readonly<{ id: CommandId; type: "timeline.setReferenceEdge"; edge: "rising" | "falling" }>
+  | Readonly<{ id: CommandId; type: "timeline.setPhysicalTimebase"; physicalTimebase?: PhysicalTimebase }>
   | Readonly<{ id: CommandId; type: "annotation.updateAnchor"; annotationId: AnnotationId; anchor: SemanticAnchor }>
   | Readonly<{ id: CommandId; type: "annotation.create"; annotation: Annotation }>
   | Readonly<{ id: CommandId; type: "annotation.bulkCreate"; annotations: readonly Annotation[]; groups?: readonly AnnotationGroup[] }>

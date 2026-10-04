@@ -1,5 +1,6 @@
 import { anchorTransitionFraction, anchorTransitionKind } from "@timing-chart-v2/schema";
 import type { Annotation, CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
+import { formatPhysicalTime } from "@timing-chart-v2/projection";
 import { allocateMeasurementLanes, findSourceAnchorGeometry, type LocalGeometryMap, type Point } from "@timing-chart-v2/geometry";
 import { rowsIntersectingVerticalViewport, type DisplayTimeMapping, type DisplayTimeViewport, type RenderProjection } from "@timing-chart-v2/projection";
 import type { AnnotationOverlayPrimitive } from "@timing-chart-v2/renderer";
@@ -91,14 +92,16 @@ export function indexedAnnotationsNearViewport(annotations: readonly Annotation[
   return { items: ordered.map((position) => annotations[position]!), indexEntriesVisited, wideNodesVisited, pinnedInjectedCount };
 }
 
-function measurementAnchorLabel(annotation: Pick<Annotation, "label" | "measurement" | "start" | "end">): string {
+function measurementAnchorLabel(annotation: Pick<Annotation, "label" | "measurement" | "start" | "end">, document: CanonicalDocument): string {
   if (!annotation.start || !annotation.end) return annotation.label;
   const start = anchorTransitionFraction(annotation.start);
   const end = anchorTransitionFraction(annotation.end);
-  if (start === undefined || end === undefined || annotation.measurement?.profile === "cycle") return `${annotation.label} · cycle anchors · Δ ${Math.abs(annotation.end.cycle - annotation.start.cycle)} cycles`;
+  const cycleDelta = Math.abs(annotation.end.cycle - annotation.start.cycle);
+  const timeDelta = document.timeline.physicalTimebase ? ` (${formatPhysicalTime(cycleDelta, document.timeline.physicalTimebase)})` : "";
+  if (start === undefined || end === undefined || annotation.measurement?.profile === "cycle") return `${annotation.label} · cycle anchors · Δ ${cycleDelta} cycles${timeDelta}`;
   const profile = annotation.measurement?.profile;
   const range = profile === "30-70" ? "30%→70%" : profile === "10-90" ? "10%→90%" : profile === "20-80" ? "20%→80%" : profile === "50%" ? "50%→50%" : `${Math.round(start * 100)}%→${Math.round(end * 100)}%`;
-  return `${annotation.label} · ${range} · ${annotation.measurement?.anchorKind ?? "threshold"} · Δ ${Math.abs(annotation.end.cycle - annotation.start.cycle)} cycles`;
+  return `${annotation.label} · ${range} · ${annotation.measurement?.anchorKind ?? "threshold"} · Δ ${cycleDelta} cycles${timeDelta}`;
 }
 
 export type AnnotationOverlayProjectionMetrics = Readonly<{ canonicalCount: number; candidateCount: number; resolvedCount: number; durationMs: number; indexEntriesVisited: number; pinnedInjectedCount: number }>;
@@ -233,7 +236,7 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
       id: annotation.id,
       type: annotation.type,
       shape,
-      label: annotation.type === "measurement" ? measurementAnchorLabel(annotation) : annotation.label,
+      label: annotation.type === "measurement" ? measurementAnchorLabel(annotation, document) : annotation.label,
       visible: annotation.visible,
       ...(annotation.opacity === undefined ? {} : { opacity: annotation.opacity }),
       ...(annotation.sourceSignalId === undefined ? {} : { sourceSignalId: annotation.sourceSignalId }),
