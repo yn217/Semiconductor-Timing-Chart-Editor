@@ -2537,6 +2537,23 @@
       "replacementTest": null
     },
     {
+      "file": "issue-431-physical-timebase.spec.ts",
+      "domain": "document-physical-timebase-cursor-readout",
+      "originIssue": 431,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Applying a positive Document reference frequency and SI display unit updates the Cursor ΔTime display while canonical cursor positions and cycle delta remain unchanged.",
+      "duplicateGroup": "document-physical-timebase-readout",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The contract crosses Document Properties, the semantic command, and the status projection. Schema/command unit tests cannot prove the production UI wires the chosen timebase into the existing cursor readout.",
+      "replacementTest": null
+    },
+    {
       "file": "issue-841-legend-bounds.spec.ts",
       "domain": "legend-bounds",
       "originIssue": 841,

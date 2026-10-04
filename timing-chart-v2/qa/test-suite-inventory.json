@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-04T11:59:12.191Z",
+  "generatedAt": "2026-10-04T13:59:07.598Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 413,
-  "caseCount": 1234,
-  "reviewedCaseCount": 1234,
+  "specFileCount": 414,
+  "caseCount": 1235,
+  "reviewedCaseCount": 1235,
   "curatedProfileCounts": {
     "integration": 626,
     "nightly": 238,
     "performance": 73,
-    "pr": 390,
+    "pr": 391,
     "visual": 180
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -10627,6 +10627,32 @@
         "nightly"
       ],
       "contractId": "enum-state-save-open"
+    },
+    {
+      "file": "issue-431-physical-timebase.spec.ts",
+      "suitePath": [],
+      "line": 6,
+      "title": "Document Properties physical timebase formats cursor delta without changing its source-cycle value",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "document-physical-timebase-cursor-readout",
+      "originIssue": 431,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Applying a positive Document reference frequency and SI display unit updates the Cursor ΔTime display while canonical cursor positions and cycle delta remain unchanged.",
+      "duplicateGroup": "document-physical-timebase-readout",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The contract crosses Document Properties, the semantic command, and the status projection. Schema/command unit tests cannot prove the production UI wires the chosen timebase into the existing cursor readout.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "document-physical-timebase-cursor-readout"
     },
     {
       "file": "issue-431-protocol-check-toggle.spec.ts",
@@ -33584,6 +33610,15 @@
       "reviewedCaseCount": 2,
       "originIssue": "431",
       "declaredTimeoutMs": 180,
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "issue-431-physical-timebase.spec.ts",
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
+      "originIssue": "431",
+      "declaredTimeoutMs": null,
       "candidateSignals": [],
       "semanticReviewStatus": "REVIEWED"
     },
