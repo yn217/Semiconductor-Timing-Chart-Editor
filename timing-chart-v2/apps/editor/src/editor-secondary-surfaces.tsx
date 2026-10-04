@@ -430,6 +430,10 @@ export function useEditorSecondarySurfaces(
       }
       onExpandAllGroups={() => input.timeline.setCollapsedGroups(new Set())}
       onOpenHierarchy={() => dialog.setHierarchyVisible(true)}
+      selectedSignalCount={input.selected.signalIds.size}
+      signalGroups={input.document.signalGroups}
+      onCreateGroupFromSelection={input.actions.createGroupFromSignalSelection}
+      onMoveSelectedSignalsToGroup={input.actions.moveSelectedSignalsToGroup}
       onCloseMoreMenu={dialog.closeTreeMoreMenu}
       timeScaleLabel={
         workspace.viewMode === "Transaction"

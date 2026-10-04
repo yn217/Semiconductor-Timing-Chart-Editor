@@ -21,6 +21,7 @@ import { createSelectionActions } from "./selection-actions.js";
 import { createBottomEditorActions } from "./bottom-editor-actions.js";
 import { transactionInsertion } from "../transaction-insertion.js";
 import { createRevealAIEntityAction, createSelectAIEntityAction } from "./ai-entity-reveal.js";
+import { createSelectionGroupActions } from "./selection-group-actions.js";
 
 export interface EditorActionsInput {
   readonly document: CanonicalDocument;
@@ -81,7 +82,7 @@ export interface EditorActionsInput {
   readonly documentTitle: string;
 }
 
-export interface EditorActions {
+export interface EditorActions extends ReturnType<typeof createSelectionGroupActions> {
   readonly selectedBookmarkId: BookmarkId | undefined;
   readonly selectedBookmark: Bookmark | undefined;
   readonly selectBookmark: (id: BookmarkId) => void;
@@ -484,6 +485,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     selectHierarchySignal,
     revealSelectedInHierarchy,
     createSignalGroup,
+    ...createSelectionGroupActions({ document: input.document, selection: input.selection, application: input.application, nextCommandId: input.nextCommandId, reportStatus: input.editActions.reportStatus }),
     addTreeEntity,
     moveTreeItemToGroup,
     registerBulkSignals,

@@ -99,6 +99,10 @@ export type SignalTreeColumnHeaderProps = {
   readonly onCollapseAllGroups: () => void;
   readonly onExpandAllGroups: () => void;
   readonly onOpenHierarchy: () => void;
+  readonly selectedSignalCount: number;
+  readonly signalGroups: readonly SignalGroup[];
+  readonly onCreateGroupFromSelection: () => void;
+  readonly onMoveSelectedSignalsToGroup: (groupId: GroupId) => void;
   readonly onCloseMoreMenu: () => void;
   readonly timeScaleLabel: string;
   // #451: when set, this header presents as Transaction Mode's own Tree
@@ -151,7 +155,7 @@ function TcScaleSelect({ cyclesPerTc, onChange }: { readonly cyclesPerTc: number
   </span>;
 }
 
-export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange, treeFilter, onTreeFilterChange, onClearTreeFilter, addMenuOpen, onToggleAddMenu, moreMenuOpen, onToggleMoreMenu, onAddEntity, onCloseAddMenu, onOpenBulkRegistration, onCollapseAllGroups, onExpandAllGroups, onOpenHierarchy, onCloseMoreMenu, timeScaleLabel, transactionMode }: SignalTreeColumnHeaderProps) {
+export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange, treeFilter, onTreeFilterChange, onClearTreeFilter, addMenuOpen, onToggleAddMenu, moreMenuOpen, onToggleMoreMenu, onAddEntity, onCloseAddMenu, onOpenBulkRegistration, onCollapseAllGroups, onExpandAllGroups, onOpenHierarchy, selectedSignalCount, signalGroups, onCreateGroupFromSelection, onMoveSelectedSignalsToGroup, onCloseMoreMenu, timeScaleLabel, transactionMode }: SignalTreeColumnHeaderProps) {
   useEffect(() => {
     if (!addMenuOpen && !moreMenuOpen) return;
     const frame = requestAnimationFrame(() => {
@@ -278,6 +282,12 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
         <button type="button" role="menuitem" onClick={() => { onCollapseAllGroups(); onCloseMoreMenu(); }}>Collapse All Groups</button>
         <button type="button" role="menuitem" onClick={() => { onExpandAllGroups(); onCloseMoreMenu(); }}>Expand All Groups</button>
         <button type="button" role="menuitem" onClick={() => { onClearTreeFilter(); onCloseMoreMenu(); }}>Clear Filter</button>
+        <hr role="separator" />
+        <button type="button" role="menuitem" data-testid="create-group-from-selection" disabled={selectedSignalCount === 0} onClick={() => { onCreateGroupFromSelection(); onCloseMoreMenu(); }}>Create Group from Selection{selectedSignalCount > 0 ? ` (${selectedSignalCount})` : ""}</button>
+        <div role="group" aria-label="Move selected signals to group">
+          <strong>Move selected to Group</strong>
+          {signalGroups.map((group) => <button type="button" role="menuitem" key={group.id} data-testid={`move-selected-to-group-${group.id}`} disabled={selectedSignalCount === 0} onClick={() => { onMoveSelectedSignalsToGroup(group.id); onCloseMoreMenu(); }}>{group.name}</button>)}
+        </div>
         <button type="button" role="menuitem" data-testid="hierarchy-open" onClick={() => { onOpenHierarchy(); onCloseMoreMenu(); }}>Signal Full Path List / Hierarchy…</button>
       </div>}
     </span>
