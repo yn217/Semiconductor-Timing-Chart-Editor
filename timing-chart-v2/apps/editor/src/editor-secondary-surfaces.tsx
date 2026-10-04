@@ -141,6 +141,8 @@ export interface EditorSecondarySurfacesInput {
     readonly viewMode: ViewMode;
     readonly setViewMode: (mode: ViewMode) => void;
     readonly activeContext: ActiveContext;
+    readonly focusLinkedSignals: boolean;
+    readonly setFocusLinkedSignals: (value: boolean) => void;
     readonly bottomTabs: readonly BottomTab[];
     readonly bottomTab: BottomTab;
     readonly setBottomTab: (tab: BottomTab) => void;
@@ -654,6 +656,8 @@ export function useEditorSecondarySurfaces(
       group={inspectorGroup}
       annotation={inspectorAnnotation}
       transaction={inspectorTransaction}
+      focusLinkedSignals={workspace.focusLinkedSignals}
+      onFocusLinkedSignalsChange={workspace.setFocusLinkedSignals}
       legendSelected={inspectorLegendSelected}
       bookmark={inspectorBookmark}
       collapsedGroup={

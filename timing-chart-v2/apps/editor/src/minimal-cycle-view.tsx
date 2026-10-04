@@ -138,6 +138,7 @@ export function MinimalCycleView() {
     pinnedBottomSelection, setPinnedBottomSelection,
     pinnedSignalIds, setPinnedSignalIds, getPinnedSignalIds,
     cursorA, cursorB, cursorDelta, setCursor, clearCursor, moveCursor, swapCursors,
+    focusLinkedSignals, setFocusLinkedSignals,
     activePane, setActivePane,
   } = workspace;
   const presentation = useEditorPresentationState({ hostRef: host, mode: viewMode, selection: selection.state, selectionRef: selection.refs.state });
@@ -606,7 +607,7 @@ export function MinimalCycleView() {
     bottom: { signal: bottomSignal, group: bottomGroup, annotation: bottomAnnotation, transaction: bottomTransaction, bookmark: bottomBookmark },
     timeline: { range: timelineRange, selectedCycle, collapsedGroupIds, setCollapsedGroups, toggleCollapsedGroup },
     setBottomVisible,
-    workspace: { viewMode, setViewMode, activeContext, bottomTabs, bottomTab, setBottomTab, selectBottomTab, onBottomTabKeyDown, followSelection, setFollowSelection: setFollowSelectionFromUi, bottomPinned, toggleBottomPin, treeFilter, setTreeFilter, treeTypeFilter, setTreeTypeFilter: (value) => setTreeTypeFilter(value), transactionTreeFilter, setTransactionTreeFilter, transactionTreeFilterMode, setTransactionTreeFilterMode, cyclesPerTc, setCyclesPerTc, setRibbonTab },
+    workspace: { viewMode, setViewMode, activeContext, focusLinkedSignals, setFocusLinkedSignals, bottomTabs, bottomTab, setBottomTab, selectBottomTab, onBottomTabKeyDown, followSelection, setFollowSelection: setFollowSelectionFromUi, bottomPinned, toggleBottomPin, treeFilter, setTreeFilter, treeTypeFilter, setTreeTypeFilter: (value) => setTreeTypeFilter(value), transactionTreeFilter, setTransactionTreeFilter, transactionTreeFilterMode, setTransactionTreeFilterMode, cyclesPerTc, setCyclesPerTc, setRibbonTab },
     dialog: { treeAddMenuOpen, setTreeAddMenuOpen, treeMoreMenuOpen, setTreeMoreMenuOpen, bulkRegistrationText, setBulkRegistrationText, bulkRegistrationGroupId, setBulkRegistrationGroupId, bulkRegistrationStatus, setBulkRegistrationStatus, setBulkRegistrationVisible, setHierarchyVisible, contextMenu, setContextMenu, closeTreeAddMenu, closeTreeMoreMenu, bottomResetToken, setBottomResetToken, inspectorResetToken, setInspectorResetToken, setInspectorVisible },
     annotationTargetSignalId,
     referenceClockName: referenceClockSignal?.display.name,
@@ -846,6 +847,7 @@ export function MinimalCycleView() {
       style: { "--gui-left-width": `${modeComposition.fixedLeftWidth ?? leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px`, "--gui-role-width": `${snapshot.document.layout.roleColumnWidth}px`, "--gui-signal-width": `${snapshot.document.layout.signalNameWidth}px`, "--gui-signal-align": snapshot.document.layout.signalNameAlign, "--gui-signal-split-upper-ratio": String(signalSplitRatio), "--transaction-tree-row-height": viewMode === "Transaction" ? "29px" : undefined } as React.CSSProperties,
       density, workspacePreset, inspectorVisible, bottomVisible, viewMode, rulerEnabled, minimapEnabled, signalTreeVisible,
       showSignalNames, showRoles, showAnnotations, showTransactions, showGroupBackground,
+      focusLinkedSignals: focusLinkedSignals && selectedTransaction !== undefined,
       layoutOverflow: snapshot.document.layout.overflow, leftPaneWidth, frozenPaneWidth, bottomHeight, inspectorWidth,
       cycleCount: snapshot.document.timeline.cycleCount, signalCount: snapshot.document.signals.length, transactionCount: snapshot.document.transactions.length,
     }}

@@ -101,3 +101,41 @@ test("Cycle/Transaction Split: linked Signal cross-highlight uses stable IDs and
   await expect(request).toHaveAttribute("data-transaction-linked", "true");
   await expect(lanes.locator("[data-transaction-id='txn_read0']")).toBeVisible();
 });
+
+for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
+  test(`Transaction Inspector can focus linked Signals without changing selection or document state at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await openSampleAInSplitMode(page);
+    const surface = page.getByTestId("cycle-surface");
+    const transactionId = "txn_read0";
+    await page.getByTestId("transaction-lanes").locator(`[data-transaction-id='${transactionId}']`).click();
+    const linkedRow = surface.locator("[data-role='frozen-row'][data-row-id='sig_request']");
+    const unrelatedRow = surface.locator("[data-role='frozen-row'][data-row-id='sig_reset_n']");
+    const linkedWave = surface.locator("[data-role='wave-owner'][data-signal-id='sig_request']");
+    const unrelatedWave = surface.locator("[data-role='wave-owner'][data-signal-id='sig_reset_n']");
+    await expect(linkedRow).toHaveAttribute("data-transaction-linked", "true");
+    await expect(unrelatedRow).toHaveAttribute("data-transaction-linked", "false");
+
+    const before = {
+      revision: await surface.getAttribute("data-canonical-revision"),
+      history: await page.getByTestId("history-status").innerText(),
+      dirty: await page.getByTestId("dirty-status").innerText(),
+    };
+    const focus = page.getByLabel("Focus linked signals");
+    await focus.check();
+    await expect(page.locator(".editor-shell")).toHaveAttribute("data-focus-linked-signals", "true");
+    await expect(linkedRow).toHaveCSS("opacity", "1");
+    await expect(unrelatedRow).toHaveCSS("opacity", "0.28");
+    await expect(linkedWave).toHaveCSS("opacity", "1");
+    await expect(unrelatedWave).toHaveCSS("opacity", "0.28");
+    await expect(page.getByTestId("transaction-lanes").locator(`[data-transaction-id='${transactionId}']`)).toBeVisible();
+    await expect(surface).toHaveAttribute("data-canonical-revision", before.revision!);
+    await expect(page.getByTestId("history-status")).toHaveText(before.history);
+    await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty);
+
+    await focus.uncheck();
+    await expect(page.locator(".editor-shell")).toHaveAttribute("data-focus-linked-signals", "false");
+    await expect(unrelatedRow).toHaveCSS("opacity", "1");
+    await expect(unrelatedWave).toHaveCSS("opacity", "1");
+  });
+}

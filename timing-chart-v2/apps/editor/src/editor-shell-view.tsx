@@ -18,6 +18,7 @@ export interface EditorShellViewModel {
   readonly showAnnotations: boolean;
   readonly showTransactions: boolean;
   readonly showGroupBackground: boolean;
+  readonly focusLinkedSignals: boolean;
   readonly layoutOverflow: string;
   readonly leftPaneWidth: number;
   readonly frozenPaneWidth: number;
@@ -52,6 +53,7 @@ export function EditorShellView({
     style, density, workspacePreset, inspectorVisible, bottomVisible, viewMode, rulerEnabled,
     minimapEnabled, signalTreeVisible, showSignalNames, showRoles, showAnnotations,
     showTransactions, showGroupBackground, layoutOverflow, leftPaneWidth,
+    focusLinkedSignals,
     frozenPaneWidth, bottomHeight, inspectorWidth, cycleCount, signalCount,
     transactionCount,
   } = viewModel;
@@ -80,6 +82,7 @@ export function EditorShellView({
     data-show-annotations={String(showAnnotations)}
     data-show-transactions={String(showTransactions)}
     data-show-group-background={String(showGroupBackground)}
+    data-focus-linked-signals={String(focusLinkedSignals)}
     data-layout-overflow={layoutOverflow}
     data-left-pane-width={leftPaneWidth}
     data-frozen-pane-width={frozenPaneWidth}

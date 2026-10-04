@@ -161,6 +161,9 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   // document save/open payloads or semantic commands.
   const [cursorA, setCursorA] = useState<SemanticCursor>();
   const [cursorB, setCursorB] = useState<SemanticCursor>();
+  // #431: explicitly dim unrelated waveform rows while inspecting a
+  // Transaction's linked Signals. This is presentation-only workspace state.
+  const [focusLinkedSignals, setFocusLinkedSignals] = useState(false);
   const [signalPinState, setSignalPinState] = useState(() => signalPinStateForEpoch<SignalId>(input.documentEpoch, []));
   const signalPinStateRef = useRef(signalPinState);
   const getPinnedSignalIds = useCallback((): readonly SignalId[] => pinnedSignalIdsForEpoch(signalPinStateRef.current, input.documentEpoch), [input.documentEpoch]);
@@ -298,6 +301,7 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
     density, setDensity,
     workspacePreset, setWorkspacePreset,
     cursorA, cursorB, cursorState, cursorDelta: cursorDelta(cursorState),
+    focusLinkedSignals, setFocusLinkedSignals,
     pinnedSignalIds, setPinnedSignalIds, getPinnedSignalIds,
     setCursor, clearCursor, moveCursor, swapCursors,
     waveformRestoreRef,
