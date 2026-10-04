@@ -164,14 +164,16 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   // #431: explicitly dim unrelated waveform rows while inspecting a
   // Transaction's linked Signals. This is presentation-only workspace state.
   const [focusLinkedSignals, setFocusLinkedSignals] = useState(false);
+  const documentEpochRef = useRef(input.documentEpoch);
+  documentEpochRef.current = input.documentEpoch;
   const [signalPinState, setSignalPinState] = useState(() => signalPinStateForEpoch<SignalId>(input.documentEpoch, []));
   const signalPinStateRef = useRef(signalPinState);
-  const getPinnedSignalIds = useCallback((): readonly SignalId[] => pinnedSignalIdsForEpoch(signalPinStateRef.current, input.documentEpoch), [input.documentEpoch]);
+  const getPinnedSignalIds = useCallback((): readonly SignalId[] => pinnedSignalIdsForEpoch(signalPinStateRef.current, documentEpochRef.current), []);
   const setPinnedSignalIds = useCallback((ids: readonly SignalId[]) => {
-    const next = signalPinStateForEpoch(input.documentEpoch, ids);
+    const next = signalPinStateForEpoch(documentEpochRef.current, ids);
     signalPinStateRef.current = next;
     setSignalPinState(next);
-  }, [input.documentEpoch]);
+  }, []);
   const previousDocumentEpochRef = useRef(input.documentEpoch);
   useEffect(() => {
     if (previousDocumentEpochRef.current === input.documentEpoch) return;
