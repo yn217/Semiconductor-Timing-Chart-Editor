@@ -3,7 +3,7 @@ import { flushSync } from "react-dom";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import { getRowLayoutSourceIndex, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
-import type { AnnotationId, CanonicalDocument, DocumentProblem, GroupId, SignalGroupStyle, SignalId, SpacerId, TransactionId } from "@timing-chart-v2/schema";
+import type { AnnotationId, CanonicalDocument, DocumentProblem, GroupId, SignalId, SpacerId, TransactionId } from "@timing-chart-v2/schema";
 import { UiCommandRegistry } from "@timing-chart-v2/ui";
 import type { EditorApplicationOwner } from "../application/use-editor-application-owner.js";
 import { useDocumentLifecycle } from "../application/use-document-lifecycle.js";
@@ -39,7 +39,8 @@ import { createTransactionPresentationRefreshRequester, shouldRefreshTransaction
 import { createTreeKeyboardController } from "./tree-keyboard-controller.js";
 import { TransitionArrowPicker } from "./transition-arrow-picker.js";
 import { createScrollOverlayRefreshOwner } from "./scroll-overlay-refresh-owner.js";
-import { refreshGroupStylePreview } from "./presentation-preview.js";
+import { createGroupStylePreviewOwner } from "./group-style-preview-owner.js";
+import { createCycleCanvasSelectionHandler } from "./cycle-canvas-selection.js";
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 type TimelineRange = Readonly<{ start: number; end: number }>;
@@ -148,7 +149,6 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     const geometryRegistry = runtime.geometry;
     const geometrySvgs = geometryRegistry.svgs;
     const geometryMaps = geometryRegistry.maps;
-    let groupStylePreviewGroupId: GroupId | undefined;
     let markOpenPhase: (phase: string, timestamp?: number) => void = () => undefined;
     const openPhaseTracker = createOpenPhaseTracker(rendererHost, undefined, () => {
       input.application.runPendingTimingDiagnostics(() => markOpenPhase("diagnostics-ready"));
@@ -432,12 +432,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     timelineRender = (reason) => {
       rendererHost.dataset.timelineRefreshReason = reason;
       if (reason === "group-style-preview") {
-        window = buildViewportWindow(viewportElement, sessionController.snapshot().document.timeline.referenceClock, input.presentation.getPinnedSignalIds());
-        projection = projectionCoordinator.project({ snapshot: sessionController.snapshot(), changeSet: {}, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
-        renderer.update(projection);
-        timelineRuntime.refreshRange(timelineRangeRef.current.start, timelineRangeRef.current.end);
-        timelineRuntime.refreshOverlays("group-style-preview");
-        publishState();
+        groupStylePreviewOwner.render(projection);
         return;
       }
       if (reason === "tree-filter") {
@@ -535,12 +530,8 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         gridLayerLower.current.style.transformOrigin = "0 0"; gridLayerLower.current.style.scale = `${timelineNavigation.getZoom()} 1`; // same CSS zoom as Upper's grid
       }
     };
-    input.presentation.groupStylePreviewRef.current = (groupId: GroupId, style: SignalGroupStyle | undefined) => {
-      if (!active) return;
-      groupStylePreviewGroupId = style === undefined ? undefined : groupId;
-      projectionCoordinator.setGroupStylePreview(groupId, style);
-      timelineRender("group-style-preview");
-    };
+    const groupStylePreviewOwner = createGroupStylePreviewOwner({ coordinator: projectionCoordinator, host: rendererHost, viewport: viewportElement, getSnapshot: () => sessionController.snapshot(), getPinnedRowIds: input.presentation.getPinnedSignalIds, getCollapsedGroupIds: () => [...collapsedGroupIdsRef.current], renderer, refreshRange: () => timelineRuntime.refreshRange(timelineRangeRef.current.start, timelineRangeRef.current.end), refreshOverlays: () => timelineRuntime.refreshOverlays("group-style-preview"), publishState, publishProjection: (nextWindow, nextProjection) => { window = nextWindow; projection = nextProjection; }, requestProjection: () => timelineRender("group-style-preview") });
+    input.presentation.groupStylePreviewRef.current = groupStylePreviewOwner.preview;
     timelineRuntime.attach();
     transactionBoundaryX.current = (cycle) => timelineGeometry.sourceBoundaryToLocalX(sessionController.snapshot().document, cycle);
     transactionSourceWindow.current = (sourceViewport) => {
@@ -630,11 +621,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     let acceptedCommandGeneration = 0;
     const detachApplicationHandler = application.attachAcceptedHandler((result, context) => {
       const commandGeneration = ++acceptedCommandGeneration;
-      const completedGroupStylePreview = groupStylePreviewGroupId;
-      if (completedGroupStylePreview !== undefined) {
-        projectionCoordinator.setGroupStylePreview(completedGroupStylePreview, undefined);
-        groupStylePreviewGroupId = undefined;
-      }
+      groupStylePreviewOwner.beginAcceptedCommand();
       delete rendererHost.dataset.editorIdle;
       delete rendererHost.dataset.cycleViewReady;
       let openingGenerationForCompletion: number | undefined;
@@ -683,9 +670,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       const annotationOnlyChange = isAnnotationOnlyChangeSet(changed);
       if (presentationOnlyChange) renderer.updatePresentation(projection);
       else if (!transactionOnlyChange && !annotationOnlyChange) renderer.update(projection);
-      if (completedGroupStylePreview !== undefined) {
-        refreshGroupStylePreview(rendererHost, completedGroupStylePreview, result.snapshot.document.signalGroups.find((group) => group.id === completedGroupStylePreview)?.style, false);
-      }
+      groupStylePreviewOwner.restoreCanonicalStyle(result.snapshot.document);
       signalSplitRuntimeRef.current?.onDocumentChanged(result);
       setTimelineRange((range) => {
         const start = Math.min(range.start, result.snapshot.document.timeline.cycleCount - 1);
@@ -911,24 +896,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       // frame so selection input is not held behind JSON serialization.
       requestAnimationFrame(() => publishState());
     };
-    const applyCanvasCycleSelection = (cycle: number, shiftKey: boolean) => {
-      const cycleCount = sessionController.snapshot().document.timeline.cycleCount;
-      if (cycle < 0 || cycle > cycleCount) return false;
-      selectedEdgeRef.current = undefined;
-      setRangeSelectionActive(true);
-      setSelectedCycle(cycle);
-      rendererHost.dataset.selectedCycle = String(cycle);
-      if (shiftKey) {
-        const anchor = timelineRangeRef.current.start;
-        setTimelineRange({ start: Math.min(anchor, cycle), end: Math.min(cycleCount, Math.max(anchor, cycle) + 1) });
-      } else if (cycle === cycleCount) {
-        setTimelineRange({ start: Math.max(0, cycle - 1), end: cycle });
-      } else {
-        setTimelineRange({ start: cycle, end: cycle + 1 });
-      }
-      publishState();
-      return true;
-    };
+    const applyCanvasCycleSelection = createCycleCanvasSelectionHandler({ getCycleCount: () => sessionController.snapshot().document.timeline.cycleCount, clearSelectedEdge: () => { selectedEdgeRef.current = undefined; }, setRangeSelectionActive, setSelectedCycle, getTimelineRange: () => timelineRangeRef.current, setTimelineRange, publishSelection: (cycle) => { rendererHost.dataset.selectedCycle = String(cycle); }, publishState });
     interactionHandle = attachTimelineSurfaceInteractions({
       rendererHost,
       viewportElement,
