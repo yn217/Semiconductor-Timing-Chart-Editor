@@ -393,11 +393,13 @@ export function buildTypedAnnotationProposal(document: CanonicalDocument, revisi
     const start = args.start;
     const end = args.end;
     const measurement = args.measurement;
+    const ghostTrace = args.ghostTrace;
     const supportedTypes: readonly AnnotationType[] = ["text", "callout", "verticalLine", "range", "bracket", "highlight", "marker", "measurement", "arrow", "dependency", "timingRegion", "ghostTrace", "rectangle", "ellipse", "connector", "textbox"];
     if (typeof type !== "string" || !supportedTypes.includes(type as AnnotationType)) return { ok: false, message: "propose_create_annotation requires a supported Annotation type." };
     if (typeof signalId !== "string" || !document.signals.some((signal) => signal.id === signalId && signal.type !== "commentRow")) return { ok: false, message: `Signal '${String(signalId ?? "")}' does not exist in the current document.` };
     if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || (start as number) < 0 || (end as number) <= (start as number) || (end as number) > document.timeline.cycleCount) return { ok: false, message: "propose_create_annotation requires integer source-cycle boundaries within the timeline with end > start." };
     if (measurement !== undefined && (type !== "measurement" || typeof measurement !== "object" || measurement === null || Array.isArray(measurement))) return { ok: false, message: "measurement options are only valid as an object for a Measurement Annotation." };
+    if (ghostTrace !== undefined && (type !== "ghostTrace" || typeof ghostTrace !== "object" || ghostTrace === null || Array.isArray(ghostTrace))) return { ok: false, message: "ghostTrace options are only valid as an object for a Ghost Trace Annotation." };
     let thresholdSpec: Parameters<typeof createAnnotation>[4] = undefined;
     if (measurement !== undefined) {
       const options = measurement as Record<string, unknown>;
@@ -424,8 +426,20 @@ export function buildTypedAnnotationProposal(document: CanonicalDocument, revisi
       }
     }
     const created = createAnnotation(type as AnnotationType, signalId as SignalId, { start: start as number, end: end as number }, document, thresholdSpec);
+    let annotationWithSemanticOptions = created;
+    if (ghostTrace !== undefined) {
+      const options = ghostTrace as Record<string, unknown>;
+      const sourceSignalId = options.sourceSignalId ?? signalId;
+      const traceOffsetCycles = options.traceOffsetCycles ?? 0;
+      const opacity = options.opacity ?? created.opacity;
+      if (Object.keys(options).some((key) => !["sourceSignalId", "traceOffsetCycles", "opacity"].includes(key))) return { ok: false, message: "ghostTrace options contain an unsupported field." };
+      if (typeof sourceSignalId !== "string" || !document.signals.some((signal) => signal.id === sourceSignalId && signal.type !== "commentRow")) return { ok: false, message: `Ghost Trace source Signal '${String(sourceSignalId)}' does not exist in the current document.` };
+      if (typeof traceOffsetCycles !== "number" || !Number.isFinite(traceOffsetCycles)) return { ok: false, message: "Ghost Trace traceOffsetCycles must be finite." };
+      if (opacity !== undefined && (typeof opacity !== "number" || !Number.isFinite(opacity) || opacity < 0 || opacity > 1)) return { ok: false, message: "Ghost Trace opacity must be between 0 and 1." };
+      annotationWithSemanticOptions = { ...created, sourceSignalId: sourceSignalId as SignalId, traceOffsetCycles, ...(opacity === undefined ? {} : { opacity }) };
+    }
     const label = args.label;
-    const annotation = typeof label === "string" && label.trim() ? { ...created, label: label.trim() } : created;
+    const annotation = typeof label === "string" && label.trim() ? { ...annotationWithSemanticOptions, label: label.trim() } : annotationWithSemanticOptions;
     return { ok: true, proposal: proposal(revision, `Create ${annotation.type} Annotation ${annotation.label}`, [command({ type: "annotation.create", annotation }, "typed_create_annotation")]) };
   }
   const annotationId = args.annotationId;

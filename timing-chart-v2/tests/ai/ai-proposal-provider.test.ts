@@ -313,6 +313,35 @@ describe("deterministic AI proposal provider", () => {
     expect(document.annotations).toHaveLength(0);
   });
 
+  it("creates Ghost Trace proposals with an independently selected stable source Signal and validates semantics", () => {
+    const document = canonicalFixture();
+    const result = buildTypedAnnotationProposal(document, 35, "propose_create_annotation", {
+      type: "ghostTrace", signalId: "sig_data", start: 2, end: 6, label: "Previous request",
+      ghostTrace: { sourceSignalId: "sig_clk", traceOffsetCycles: -3, opacity: 0.4 },
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.proposal.commands[0]).toMatchObject({
+      type: "annotation.create",
+      annotation: {
+        type: "ghostTrace", label: "Previous request", sourceSignalId: "sig_clk", traceOffsetCycles: -3, opacity: 0.4,
+        start: { signalId: "sig_data", cycle: 2 }, end: { signalId: "sig_data", cycle: 5 },
+      },
+    });
+    expect(buildTypedAnnotationProposal(document, 36, "propose_create_annotation", {
+      type: "ghostTrace", signalId: "sig_data", start: 2, end: 6,
+      ghostTrace: { sourceSignalId: "missing_signal" },
+    })).toMatchObject({ ok: false, message: expect.stringContaining("does not exist") });
+    expect(buildTypedAnnotationProposal(document, 37, "propose_create_annotation", {
+      type: "ghostTrace", signalId: "sig_data", start: 2, end: 6,
+      ghostTrace: { traceOffsetCycles: Number.NaN },
+    })).toMatchObject({ ok: false, message: expect.stringContaining("must be finite") });
+    expect(buildTypedAnnotationProposal(document, 38, "propose_create_annotation", {
+      type: "ghostTrace", signalId: "sig_data", start: 2, end: 6,
+      ghostTrace: { opacity: 1.1 },
+    })).toMatchObject({ ok: false, message: expect.stringContaining("between 0 and 1") });
+    expect(document.annotations).toHaveLength(0);
+  });
+
   it("returns a revisioned semantic proposal without mutating the source document", () => {
     const document = canonicalFixture();
     const result = deterministicMockAIProposalProvider.propose({ document, revision: 7, query: "rename selected signal to DATA_RENAMED", selectedSignalId: "sig_data" as never });
