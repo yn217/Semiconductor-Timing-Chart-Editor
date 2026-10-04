@@ -8,7 +8,7 @@ import { InlineNameInput } from "../inline-name-input.js";
 import { registerActiveGestureCancel } from "./active-gesture-cancellation.js";
 import { mergeTransactionFoldRanges, transactionFoldBoundariesInWindow, transactionFoldContainingCycle, transactionFoldContainingEndBoundary, transactionFoldRangesIntersecting, transactionVisibleSegments, type TransactionFoldRange } from "./transaction-fold-index.js";
 import { bookmarksOutsideFolds, hiddenBookmarkFoldSummaries, indexTransactionIntervals, INITIAL_TRANSACTION_SOURCE_WINDOW, nextTransactionVerticalWindow, retainTransactionSourceWindow, transactionFoldRepresentativeIntervals, transactionGeometryGuidesInSourceWindow, transactionIntervalsOutsideFolds, type TransactionIntervalIndex, type TransactionSourceWindowState, type TransactionVerticalWindow } from "./transaction-virtual-index.js";
-import { TRANSACTION_LANE_ROW_HEIGHT as LANE_ROW_HEIGHT, transactionLaneBandHeights, transactionLaneBandsInVerticalWindow } from "./transaction-lane-layout.js";
+import { TRANSACTION_LANE_ROW_HEIGHT as LANE_ROW_HEIGHT, transactionGroupHeadersInVerticalWindow, transactionLaneBandHeights, transactionLaneBandsInVerticalWindow } from "./transaction-lane-layout.js";
 
 const GROUP_HEADER_HEIGHT = 24;
 let transactionLanesMountSerial = 0;
@@ -646,7 +646,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   const virtualTop = Math.max(0, virtualWindow.top - virtualOverscan);
   const virtualBottom = Math.min(totalHeight, virtualWindow.top + virtualWindow.height + virtualOverscan);
   const isVisible = (top: number, height: number) => top < virtualBottom && top + height > virtualTop;
-  const visibleGroupHeaders = groupHeaders.filter((header) => isVisible(header.labelTop, GROUP_HEADER_HEIGHT));
+  const visibleGroupHeaders = transactionGroupHeadersInVerticalWindow(groupHeaders, virtualTop, virtualBottom, GROUP_HEADER_HEIGHT).headers;
   const selectedLaneKey = selectedId === undefined ? undefined : currentKeys.get(selectedId);
   const laneWindow = transactionLaneBandsInVerticalWindow(laneBands, virtualTop, virtualBottom, selectedLaneKey === undefined ? undefined : laneBandByKey.get(selectedLaneKey));
   const visibleLaneBands = laneWindow.bands;

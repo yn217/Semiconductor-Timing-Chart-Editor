@@ -14,6 +14,33 @@ export type TransactionVerticalBand = Readonly<{
   labelHeight: number;
 }>;
 
+/** Select intersecting ordered Group Headers with a binary seek and a bounded visible-range walk. */
+export function transactionGroupHeadersInVerticalWindow<T extends Readonly<{ labelTop: number }>>(
+  headers: readonly T[],
+  start: number,
+  end: number,
+  headerHeight: number,
+): Readonly<{ headers: readonly T[]; visits: number }> {
+  if (headers.length === 0 || !(end > start) || !(headerHeight > 0)) return { headers: [], visits: 0 };
+  let low = 0;
+  let high = headers.length;
+  let visits = 0;
+  while (low < high) {
+    visits += 1;
+    const middle = low + Math.floor((high - low) / 2);
+    if (headers[middle]!.labelTop + headerHeight <= start) low = middle + 1;
+    else high = middle;
+  }
+  const visible: T[] = [];
+  for (let index = low; index < headers.length; index += 1) {
+    const header = headers[index]!;
+    visits += 1;
+    if (header.labelTop >= end) break;
+    if (header.labelTop + headerHeight > start) visible.push(header);
+  }
+  return { headers: visible, visits };
+}
+
 /** Select vertically intersecting, ordered non-overlapping Lane bands without scanning the full Lane domain. */
 export function transactionLaneBandsInVerticalWindow<T extends TransactionVerticalBand>(
   bands: readonly T[],
