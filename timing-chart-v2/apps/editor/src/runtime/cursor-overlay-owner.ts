@@ -44,6 +44,17 @@ export class CursorOverlayOwner {
     const scrollTargets = [input.viewport, input.viewportLower].filter((item): item is HTMLDivElement => item !== null);
     const refresh = () => this.refresh();
     const refreshLayout = () => this.refreshLayout();
+    let pendingScrollRefresh: number | undefined;
+    const refreshAfterScrollPresentation = () => {
+      // In Cycle, the timeline scroller is nested under the waveform host while
+      // the ruler is its sibling. The viewport capture listener runs before the
+      // scroller's handler updates ruler.translate, so read geometry next frame.
+      if (pendingScrollRefresh !== undefined) return;
+      pendingScrollRefresh = requestAnimationFrame(() => {
+        pendingScrollRefresh = undefined;
+        refresh();
+      });
+    };
     const deferredUpdate = requestAnimationFrame(refreshLayout);
     const rulerResizeObserver = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(refreshLayout);
     for (const ruler of [input.ruler, input.rulerLower].filter((item): item is HTMLDivElement => item !== null)) rulerResizeObserver?.observe(ruler);
@@ -101,11 +112,12 @@ export class CursorOverlayOwner {
       viewport.addEventListener("pointerdown", onPointerDown, true);
       dragHandlers.push([viewport, onPointerDown]);
     }
-    for (const target of scrollTargets) target.addEventListener("scroll", refresh, { passive: true, capture: true });
+    for (const target of scrollTargets) target.addEventListener("scroll", refreshAfterScrollPresentation, { passive: true, capture: true });
     window.addEventListener("resize", refreshLayout);
     const disconnect = () => {
-      for (const target of scrollTargets) target.removeEventListener("scroll", refresh, true);
+      for (const target of scrollTargets) target.removeEventListener("scroll", refreshAfterScrollPresentation, true);
       cancelAnimationFrame(deferredUpdate);
+      if (pendingScrollRefresh !== undefined) cancelAnimationFrame(pendingScrollRefresh);
       rulerResizeObserver?.disconnect();
       for (const [target, handler] of dragHandlers) target.removeEventListener("pointerdown", handler, true);
       window.removeEventListener("resize", refreshLayout);
