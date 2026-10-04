@@ -16504,6 +16504,24 @@
       "decision": "MOVE_LAYER",
       "reason": "The 1280x720 case already covers the same stateful mode-context journey in the PR profile. This 1672x941 copy has no width-specific geometry, clipping, or overflow assertion, so retain it in integration rather than running the expensive 90-second journey twice in the normal PR gate.",
       "replacementTest": "issue-440-mode-context-coherence.spec.ts — Bookmark Inspector target does not survive Cycle -> Transaction at 1280x720"
+    },
+    {
+      "file": "find-replace-journey.spec.ts",
+      "title": "Find & Replace previews, renames all matches in one step and undoes at 1672x941",
+      "domain": "find-replace-wide-viewport",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Find & Replace previews view-only, renames all matches in one History entry, Undo restores them, and ribbon floating panels reopen visibly.",
+      "duplicateGroup": "find-replace",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "MOVE_LAYER",
+      "reason": "The 1280x720 case retains the same full Replace All preview/commit/Undo journey in the normal PR profile. This wide copy contains no viewport-specific layout assertion, so preserve it in integration instead of duplicating the expensive user journey in the PR gate.",
+      "replacementTest": "find-replace-journey.spec.ts — Find & Replace previews, renames all matches in one step and undoes at 1280x720"
     }
   ]
 }

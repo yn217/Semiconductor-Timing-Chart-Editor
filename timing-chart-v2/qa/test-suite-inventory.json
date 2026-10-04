@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-04T07:13:17.183Z",
+  "generatedAt": "2026-10-04T07:15:41.601Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -15,10 +15,10 @@
   "caseCount": 1221,
   "reviewedCaseCount": 1221,
   "curatedProfileCounts": {
-    "integration": 621,
+    "integration": 622,
     "nightly": 230,
     "performance": 67,
-    "pr": 388,
+    "pr": 387,
     "visual": 180
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -6207,7 +6207,7 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": "find-replace",
+      "domain": "find-replace-wide-viewport",
       "originIssue": null,
       "type": "USER_JOURNEY",
       "costClass": "MEDIUM",
@@ -6215,14 +6215,14 @@
       "primaryContract": "Find & Replace previews view-only, renames all matches in one History entry, Undo restores them, and ribbon floating panels reopen visibly.",
       "duplicateGroup": "find-replace",
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "decision": "KEEP",
-      "reason": "Acceptance journey for the Find & Replace plan plus the reopen regression; no other spec exercises Replace All/Undo.",
-      "replacementTest": null,
+      "decision": "MOVE_LAYER",
+      "reason": "The 1280x720 case retains the same full Replace All preview/commit/Undo journey in the normal PR profile. This wide copy contains no viewport-specific layout assertion, so preserve it in integration instead of duplicating the expensive user journey in the PR gate.",
+      "replacementTest": "find-replace-journey.spec.ts — Find & Replace previews, renames all matches in one step and undoes at 1280x720",
       "reviewStatus": "REVIEWED",
       "profiles": [
-        "pr"
+        "integration"
       ],
-      "contractId": "find-replace"
+      "contractId": "find-replace-wide-viewport"
     },
     {
       "file": "find-replace-journey.spec.ts",
