@@ -12,6 +12,7 @@ export type BookmarkId = StableId<"bookmark">;
 export type TimeGroupId = StableId<"time-group">;
 export type LabelAnchorId = StableId<"label-anchor">;
 export type ConstraintId = StableId<"constraint">;
+export type ScenarioId = StableId<"scenario">;
 export type CommandId = StableId<"command">;
 
 export type JsonPrimitive = string | number | boolean | null;
@@ -346,6 +347,50 @@ export interface Layout {
 }
 
 export interface CheckSettings { readonly enabledCategories?: readonly string[] }
+
+/**
+ * Scenario storage model introduced for #431. Shared Signal identity and
+ * presentation definitions live once at Document scope; changing waveform
+ * events or timing entities is scoped to one Scenario.
+ */
+export type ScenarioSignalDefinition =
+  | Omit<ValueSignal, "values" | "resetSemantics">
+  | Omit<ClockSignal, "generator" | "enable" | "edgeCounter">
+  | CommentRow;
+
+export type ScenarioSignalState =
+  | Readonly<{ kind: "values"; values: readonly SignalValueChange[]; resetSemantics?: ResetSemantics }>
+  | Readonly<{ kind: "clock"; generator: ClockGenerator; enable?: readonly SignalValueChange[]; edgeCounter: EdgeCounterSettings }>;
+
+export interface TimingScenario {
+  readonly id: ScenarioId;
+  readonly name: string;
+  readonly timeline: Omit<Timeline, "physicalTimebase">;
+  /** Keyed by Document-wide SignalId; comment rows have no timing state. */
+  readonly signalStates: Readonly<Partial<Record<SignalId, ScenarioSignalState>>>;
+  readonly bookmarks: readonly Bookmark[];
+  readonly timeGroups: readonly TimeGroup[];
+  readonly annotations: readonly Annotation[];
+  readonly annotationGroups: readonly AnnotationGroup[];
+  readonly transactions: readonly Transaction[];
+  readonly transactionGroups?: readonly TransactionGroup[];
+  readonly transactionTimeScale?: TransactionTimeScale;
+  readonly constraints: readonly Constraint[];
+}
+
+/** Scenario-aware v3 storage shape; parser/serializer activation is a follow-up slice. */
+export interface ScenarioDocumentModel {
+  readonly formatVersion: 3;
+  readonly document: DocumentMetadata;
+  readonly physicalTimebase?: PhysicalTimebase;
+  readonly signalGroups: readonly SignalGroup[];
+  readonly signalDefinitions: readonly ScenarioSignalDefinition[];
+  readonly enumDefinitions?: readonly EnumDefinition[];
+  readonly scenarios: readonly TimingScenario[];
+  readonly legend: Legend;
+  readonly layout: Layout;
+  readonly checkSettings: CheckSettings;
+}
 
 export interface CanonicalDocument {
   readonly formatVersion: 2;
