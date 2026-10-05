@@ -59,6 +59,9 @@ describe("Scenario canonical model adapter", () => {
 
     const extra = { ...model, scenarios: [{ ...scenario, signalStates: { ...scenario.signalStates, orphan_signal: { kind: "values", values: [] } } }] };
     expect(validateScenarioDocumentModel(extra)).toContainEqual(expect.objectContaining({ code: "UNKNOWN_SCENARIO_SIGNAL_STATE", path: "$.scenarios[0].signalStates.orphan_signal" }));
+
+    const duplicateTruth = { ...model, signalDefinitions: model.signalDefinitions.map((signal) => signal.id === "sig_data" ? { ...signal, values: [{ id: "duplicate_value", start: 0, value: 0 }] } : signal) };
+    expect(validateScenarioDocumentModel(duplicateTruth)).toContainEqual(expect.objectContaining({ code: "SCENARIO_MODEL_UNKNOWN_FIELD", path: "$.signalDefinitions[1].values" }));
   });
 
   it("rejects duplicate scenario-owned stable IDs across scenarios", () => {

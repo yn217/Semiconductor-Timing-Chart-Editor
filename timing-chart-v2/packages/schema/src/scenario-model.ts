@@ -152,7 +152,12 @@ export function validateScenarioDocumentModel(input: unknown): readonly Document
       problems.push({ code: "INVALID_STABLE_ID", path: `$.signalDefinitions[${index}].id`, message: "Signal definition must have a valid stable ID." });
       return;
     }
-    rejectUnknownKeys(definition, ["id", "name", "type", "role", "source", "display", "values", "generator", "enable", "edgeCounter", "width", "displayFormat", "enumId", "resetSemantics", "title", "body", "spacingBefore", "spacingAfter"], `$.signalDefinitions[${index}]`, problems);
+    const definitionFields = definition.type === "clock"
+      ? ["id", "name", "type", "role", "source", "display", "spacingBefore", "spacingAfter"]
+      : definition.type === "commentRow"
+        ? ["id", "name", "type", "role", "source", "display", "spacingBefore", "spacingAfter", "title", "body"]
+        : ["id", "name", "type", "role", "source", "display", "spacingBefore", "spacingAfter", "width", "displayFormat", "enumId"];
+    rejectUnknownKeys(definition, definitionFields, `$.signalDefinitions[${index}]`, problems);
     const previous = definitions.get(definition.id);
     if (previous) problems.push({ code: "DUPLICATE_ID", path: `$.signalDefinitions[${index}].id`, message: `Signal ID '${definition.id}' is duplicated.` , entityId: definition.id });
     else definitions.set(definition.id, definition);
