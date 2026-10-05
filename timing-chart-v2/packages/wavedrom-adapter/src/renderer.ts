@@ -150,6 +150,7 @@ interface MarkupCacheEntry {
   readonly semanticValuesBytes: number;
   readonly svgMarkupBytes: number;
   references: number;
+  svgImageMarkup?: string;
   parsedSvgByDocument?: WeakMap<Document, SVGElement>;
   valueLabelTemplatesByDocument?: WeakMap<Document, readonly Readonly<{ template: SVGElement; segmentStart: number; segmentEnd: number }>[]>;
   svgImageResourcesByDocument?: Map<Document, SvgImageResource>;
@@ -316,6 +317,30 @@ function createWaveImageSvg(rootAttributes: Readonly<Record<string, string>>, ow
     svg.append(label);
   }
   return svg;
+}
+
+function appendTextOverlays(imageSvg: SVGElement, sourceSvg: SVGElement, omitValueLabels: boolean): void {
+  if (typeof sourceSvg.querySelector !== "function" || typeof sourceSvg.querySelectorAll !== "function") return;
+  const ownerDocument = imageSvg.ownerDocument;
+  const sourceStyle = sourceSvg.querySelector("style");
+  if (sourceStyle) imageSvg.append(sourceStyle.cloneNode(true));
+  for (const sourceText of Array.from(sourceSvg.querySelectorAll("text"))) {
+    if (omitValueLabels && sourceText.hasAttribute("data-value-label-index")) continue;
+    const ancestors: Element[] = [];
+    for (let ancestor: Element | null = sourceText.parentElement; ancestor && ancestor !== sourceSvg; ancestor = ancestor.parentElement) ancestors.unshift(ancestor);
+    let parent: Element = imageSvg;
+    for (const ancestor of ancestors) {
+      const group = ownerDocument.createElementNS("http://www.w3.org/2000/svg", "g");
+      for (const attribute of Array.from(ancestor.attributes)) {
+        if (attribute.name.toLowerCase() !== "id") group.setAttribute(attribute.name, attribute.value);
+      }
+      parent.append(group);
+      parent = group;
+    }
+    const text = sourceText.cloneNode(true) as SVGElement;
+    text.removeAttribute("id");
+    parent.append(text);
+  }
 }
 
 function isSvgGeometryDebugMode(): boolean {
@@ -526,7 +551,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     const useSharedSvgImage = !isSvgGeometryDebugMode()
       && typeof ownerDocument.createElementNS === "function";
     const imageUrl = useSharedSvgImage ? this.#svgImageUrl(cacheEntry, ownerDocument) : undefined;
-    const canUseImageWithoutParsedTree = imageUrl !== undefined && !shareLabels;
+    const canUseImageWithoutParsedTree = imageUrl !== undefined && !shareLabels && !/<text(?:\s|>)/i.test(markup);
     let svg: Element | null;
     let parsedSvg: SVGElement | undefined;
     if (cachedSvg && useSharedSvgImage) {
@@ -578,6 +603,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
         const imageOwnerSvg = canUseImageWithoutParsedTree
           ? svg as SVGElement
           : createWaveImageSvg(safetyCacheEntry.rootAttributes, ownerDocument, imageUrl, renderIndex, shareLabels ? waveJson.data : [], shareLabels ? semanticValues : [], labelTemplates ?? []);
+        if (parsedSvg && /<text(?:\s|>)/i.test(markup)) appendTextOverlays(imageOwnerSvg, parsedSvg, shareLabels);
         svg = imageOwnerSvg;
         // Start decoding now, but don't serialize independent owner decodes
         // behind WaveRenderScheduler's per-owner preparation jobs. The batch
@@ -821,7 +847,8 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     const resources = entry.svgImageResourcesByDocument ??= new Map<Document, SvgImageResource>();
     const cached = resources.get(ownerDocument);
     if (cached) return cached.url;
-    const resource = { url: URL.createObjectURL(new Blob([entry.markup], { type: "image/svg+xml;charset=utf-8" })) };
+    const imageMarkup = entry.svgImageMarkup ??= entry.markup.replace(/<\/svg>\s*$/i, "<style>path,line,polyline,polygon,rect,circle,ellipse,use{vector-effect:non-scaling-stroke!important}text{visibility:hidden!important}</style></svg>");
+    const resource = { url: URL.createObjectURL(new Blob([imageMarkup], { type: "image/svg+xml;charset=utf-8" })) };
     resources.set(ownerDocument, resource);
     this.#imageObjectUrlsCreated += 1;
     return resource.url;

@@ -3,10 +3,9 @@ import type { Page } from "@playwright/test";
 /**
  * Semantic probe for a Signal's rendered WaveDrom artifact.
  *
- * The wave SVG is installed into the page as a blob `<image>`, so its `<text>`, `<use>` and `gmark_*` nodes are NOT in the page DOM and a
- * locator such as `svg text[data-value-label-index]` finds nothing. This helper fetches the blob, parses its SVG source and returns what
- * the user can observe — cycle boundaries, transition shapes and value labels — already mapped to SCREEN coordinates (using the image's
- * on-screen box and viewBox), so specs compare them with ruler ticks / bars without depending on how the artifact is delivered.
+ * Wave geometry remains in a blob `<image>` while text glyphs are mirrored as SVG overlays so the editor can counter-scale them during
+ * horizontal zoom. This helper reads the blob's semantic geometry and maps cycle boundaries, transitions, and label anchors to SCREEN
+ * coordinates using the image's on-screen box and viewBox; glyph fidelity itself should be measured from the visible overlay DOM.
  */
 export interface WaveLabel { readonly index: number; readonly text: string; /** The visible glyph text only (excludes the accessible <title> child that `text` also contains). */ readonly shownText: string; readonly x: number; readonly y: number; readonly mode: string | null }
 /** Artifact-space (unscaled) value-label facts: layout mode, the cycle segment it fits, its anchor X and its accessible name/title. */

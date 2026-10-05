@@ -440,7 +440,7 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     expect(installed.renderStages?.svgSafetyDomWalkMs).toBe(0);
   });
 
-  it("avoids parsing a second full SVG tree for image-backed waves without shared labels", async () => {
+  it("parses one cached SVG template for image text overlays and reuses it for geometry", async () => {
     const adapter = new ProductionWaveDromAdapter();
     const expectedRootAttributes = renderWaveJsonMarkupWithMetrics({ wave: "01.." }).rootAttributes;
     const nodes: Array<{ localName: string; attrs: Map<string, string>; children: unknown[] }> = [];
@@ -486,9 +486,9 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     try {
       const prepared = await adapter.prepareWave(signalId("sig_image_fast_path"), { wave: "01.." }, ownerDocument);
 
-      expect(ownerDocument.createElement).not.toHaveBeenCalled();
-      expect(prepared.renderStages?.templateParseMs).toBe(0);
-      expect(prepared.geometrySvg).toBeUndefined();
+      expect(ownerDocument.createElement).toHaveBeenCalledTimes(1);
+      expect(prepared.renderStages?.templateParseMs).toBeGreaterThan(0);
+      expect(prepared.geometrySvg).toBeDefined();
       expect(prepared.svg.localName).toBe("svg");
       expect(prepared.svg.querySelector("image[data-wave-svg-image]")).not.toBeNull();
       for (const [name, value] of Object.entries(expectedRootAttributes)) {

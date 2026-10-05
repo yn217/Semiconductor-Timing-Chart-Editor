@@ -11,8 +11,6 @@ test("keeps text glyph aspect ratio and X-axis alignment constant across Zoom le
   const surface = host.locator("[data-role='timing-chart-surface']");
   const ruler = page.getByTestId("cycle-ruler");
   const tick0 = ruler.locator("[data-cycle='0']");
-  // Wave artifacts are blob images: read labels/shapes through the semantic wave probe (screen coordinates), not the page DOM.
-  const stretch = async () => { const wave = await readWave(page, "sig_cycle_data"); return (wave.box.width / wave.box.height) / (wave.intrinsic.width / wave.intrinsic.height); };
   const tabs = page.locator(".ribbon-tabs");
   const ribbon = page.getByTestId("ribbon");
   await tabs.getByRole("button", { name: "View", exact: true }).click();
@@ -23,14 +21,16 @@ test("keeps text glyph aspect ratio and X-axis alignment constant across Zoom le
   };
 
   const tickAspectAt100 = await aspect(tick0);
-  const stretchAt100 = await stretch();
+  const valueLabel = surface.locator("svg[data-wave-owner='sig_cycle_data'] text[data-value-label-index]").first();
+  await expect(valueLabel).toBeVisible();
+  const glyphAspectAt100 = await aspect(valueLabel);
 
   const checkAt = async (label: string) => {
     await expect(page.getByTestId("zoom-status")).toHaveText(label);
     // font/glyph aspect ratio must never change with zoom
     expect(await aspect(tick0)).toBeCloseTo(tickAspectAt100, 3);
-    // value labels are part of the wave artifact: it must keep its intrinsic aspect (a non-uniform CSS scale stretches glyphs)
-    expect(await stretch(), "wave artifact aspect vs intrinsic (1 = glyphs not stretched)").toBeCloseTo(stretchAt100, 2);
+    // Measure the actual visible SVG glyph; the full waveform artifact correctly changes aspect as timeline X zoom changes.
+    expect(await aspect(valueLabel), "visible value-label glyph aspect must not change with X zoom").toBeCloseTo(glyphAspectAt100, 2);
     // the REQUEST signal's 0->1 transition (rendered "use" element index 6, at cycle 3)
     // must stay aligned with the ruler's cycle-3 tick at every zoom level
     const cycle3X = (await ruler.locator("[data-cycle='3']").boundingBox())!.x;
@@ -86,9 +86,15 @@ test("uses measured WaveDrom screen scale for text while keeping geometry aligne
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  // Semantic result: the label "A5" is present in the wave artifact at a measurable screen position, and the artifact is not stretched
-  // relative to the document's presentation X scale (labels counter-scale; geometry follows the scale).
+  // Semantic result: the label "A5" is visible and its glyph stays un-stretched while geometry follows presentation X scale.
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  const visibleLabel = host.locator("svg[data-wave-owner='sig_cycle_data'] text[data-value-label-index]").filter({ hasText: "A5" }).first();
+  await expect(visibleLabel).toBeVisible();
+  const aspect = async (locator: Locator) => {
+    const box = (await locator.boundingBox())!;
+    return box.width / box.height;
+  };
+  const glyphAspectAt100 = await aspect(visibleLabel);
   for (let step = 0; step < 4; step += 1) await page.getByTestId("ribbon").getByRole("button", { name: "Zoom in" }).click();
   await expect(page.getByTestId("zoom-status")).toHaveText("200%");
   const wave = await readWave(page, "sig_cycle_data");
@@ -96,9 +102,12 @@ test("uses measured WaveDrom screen scale for text while keeping geometry aligne
   expect(label, "value label A5 is present in the wave artifact").toBeDefined();
   const presentationScale = Number.parseFloat(await host.evaluate((element) => getComputedStyle(element).getPropertyValue("--presentation-x-scale")));
   expect(presentationScale).toBeGreaterThan(0);
-  const stretch = (wave.box.width / wave.box.height) / (wave.intrinsic.width / wave.intrinsic.height);
-  expect(stretch, "wave artifact (labels + geometry) must not be distorted by the presentation scale").toBeCloseTo(1, 2);
+  expect(await aspect(visibleLabel), "visible value-label glyph aspect must remain intrinsic at 200%").toBeCloseTo(glyphAspectAt100, 2);
   expect(label!.x).toBeGreaterThan(wave.box.left);
+  const waveImage = host.locator("svg[data-wave-owner='sig_cycle_data'] image[data-wave-svg-image]");
+  const imageMarkup = await waveImage.evaluate(async (image) => await (await fetch(image.getAttribute("href")!)).text());
+  expect(imageMarkup).toContain("vector-effect:non-scaling-stroke");
+  expect(imageMarkup).toContain("visibility:hidden");
 });
 
 test("keeps the cycle ruler sticky and clipped to the time domain during vertical and horizontal scroll", async ({ page }) => {
