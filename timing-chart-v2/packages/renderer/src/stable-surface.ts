@@ -150,6 +150,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     const existingConnectedOwner = [...this.#waveOwners.values()].find((owner) => owner.isConnected);
     let sharedSourceWindow = existingConnectedOwner ? this.#readSourceWindow(existingConnectedOwner) : undefined;
     let sharedSourceWindowResolved = existingConnectedOwner !== undefined;
+    const prefetchScrollTop = layers.root.closest<HTMLElement>(".cycle-viewport")?.scrollTop ?? 0;
     const frozenLayer = this.#syncFrozenLayer(layers);
     assertCrossSurfaceInvariant(projection);
     this.#diagnostics = { ...this.#diagnostics, projectionUpdates: this.#diagnostics.projectionUpdates + 1, mountedRows: projection.mountedRowIds.length };
@@ -305,7 +306,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
           owner.dataset.renderedSourceWindowEnd !== String(sourceWindow.end));
       if (isNew || this.#dirtyWaves.has(signalId) || sourceWindowChanged) this.#queueWave(signalId, owner);
     }
-    this.#updateWavePrefetchPlan(projection, mounted);
+    this.#updateWavePrefetchPlan(projection, mounted, sharedSourceWindow, prefetchScrollTop);
     const waveOwnerCacheLimit = Math.max(32, mounted.size * 4);
     for (const [signalId, owner] of this.#waveOwners) {
       if (this.#waveOwners.size <= waveOwnerCacheLimit) break;
@@ -577,7 +578,12 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#prefetchAttempted.clear();
   }
 
-  #updateWavePrefetchPlan(projection: RenderProjection, mounted: ReadonlySet<WaveSignalId>): void {
+  #updateWavePrefetchPlan(
+    projection: RenderProjection,
+    mounted: ReadonlySet<WaveSignalId>,
+    sourceWindow: Readonly<{ start: number; end: number }> | undefined,
+    scrollTop: number,
+  ): void {
     const layers = this.#layers;
     if (!layers || !this.#provider.prefetchWaveBatch) return;
     const viewMode = layers.root.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode;
@@ -609,8 +615,6 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       this.#prefetchSignalIds = ids;
       this.#prefetchIndexBySignal = indexBySignal;
     }
-    const viewport = layers.root.closest<HTMLElement>(".cycle-viewport");
-    const scrollTop = viewport?.scrollTop ?? 0;
     const direction = this.#lastPrefetchScrollTop === undefined || scrollTop >= this.#lastPrefetchScrollTop ? 1 : -1;
     this.#lastPrefetchScrollTop = scrollTop;
     const mountedIndexes = [...mounted].map((id) => this.#prefetchIndexBySignal.get(id)).filter((index): index is number => index !== undefined);
@@ -631,10 +635,6 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     if (candidates.length === 0) candidates = direction > 0
       ? this.#prefetchSignalIds.slice(Math.max(0, first - count), first)
       : this.#prefetchSignalIds.slice(last + 1, last + 1 + count);
-    const sourceOwner = projection.mountedSignalIds.map((id) => this.#waveOwners.get(id)).find((owner) => owner?.isConnected);
-    const sourceWindow = this.#sourceWindowSnapshotResolved
-      ? this.#sourceWindowSnapshot
-      : sourceOwner ? this.#readSourceWindow(sourceOwner) : undefined;
     if (!sourceWindow || sourceWindow.end <= sourceWindow.start) {
       this.#prefetchPlan = [];
       this.#diagnostics = { ...this.#diagnostics, wavePrefetchOwnerCount: 0 };
