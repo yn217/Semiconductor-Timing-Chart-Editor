@@ -14,10 +14,9 @@ export type BulkRegistrationPreviewState<GroupId> = {
 /** Owns dialog and popup-menu visibility/draft state: the Context Menu, the
  * Tree Add/More header menus, every modal dialog's visibility flag, the
  * Bulk Signal Registration form fields, and the Rename dialog's draft/error
- * fields. This is presentation-only state -- the effects that wire it to
- * focus-restore, Escape handling, and menu keyboard navigation stay in
- * minimal-cycle-view.tsx (Step 12 material), since they compose this state
- * with Document Lifecycle's pending-action/compatibility-preview state. */
+ * fields. The focus restoration and keyboard-navigation lifecycle is composed
+ * by `useEditorInteractionLifecycle`, keeping that imperative behavior out of
+ * the root view. */
 export function useDialogMenuState<GroupId>() {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | undefined>();
   const [treeAddMenuOpen, setTreeAddMenuOpen] = useState(false);

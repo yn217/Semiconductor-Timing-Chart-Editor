@@ -41,10 +41,10 @@ import { useTimelineSurfaceRuntime } from "./runtime/use-timeline-surface-runtim
 import { useEditorSecondarySurfaces } from "./editor-secondary-surfaces.js";
 import { createEditorExportController } from "./application/editor-export-controller.js";
 import type { TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { attachMenuKeyboardNavigation } from "./runtime/interaction-controller.js";
 import { refreshRendererOverlays } from "./runtime/render-coordinator.js";
 import { useEditorDomBridgeEffects } from "./runtime/use-editor-dom-bridge-effects.js";
 import { resolveEditorStartupDocument } from "./workspace/editor-startup-document.js";
+import { useEditorInteractionLifecycle } from "./workspace/use-editor-interaction-lifecycle.js";
 
 export function MinimalCycleView() {
   const { visualReference, initialDocument, productTemplate, initialViewMode } = resolveEditorStartupDocument(typeof window !== "undefined" ? window.location.search : undefined);
@@ -168,7 +168,6 @@ export function MinimalCycleView() {
     if (typeof window !== "undefined" && modeComposition.persistsAsDefault) window.localStorage.setItem("timing-chart-v2.view-mode", viewMode);
   }, [viewMode]);
   const modeComposition = composeMode(viewMode);
-  const bottomTabs = modeComposition.bottomTabs;
   const workspaceActions = useEditorWorkspaceActions({
     workspacePreset,
     setWorkspacePreset,
@@ -184,7 +183,7 @@ export function MinimalCycleView() {
     setFrozenPaneWidth,
     setInspectorWidth,
     setBottomHeight,
-    bottomTabs,
+    bottomTabs: modeComposition.bottomTabs,
   });
   const { applyWorkspacePreset, resetWorkspaceLayout, selectBottomTab, onBottomTabKeyDown } = workspaceActions;
   // Keep the transient splitter independent, but never let it collapse the
@@ -235,7 +234,7 @@ export function MinimalCycleView() {
       // Bottom panel into a tab that the current mode does not expose; that
       // would make aria-labelledby point at a nonexistent tab while rendering
       // the corresponding hidden-mode editor.
-      if (preferredTab !== undefined && bottomTabs.includes(preferredTab)) setBottomTab(preferredTab);
+      if (preferredTab !== undefined && modeComposition.bottomTabs.includes(preferredTab)) setBottomTab(preferredTab);
     },
   });
   const viewMetricsOwnerRef = useRef<ViewMetricsOwner | null>(null);
@@ -297,32 +296,7 @@ export function MinimalCycleView() {
     setSelectedCycle,
   } = timelinePresentation;
   const { collapsedGroupIdsRef, applyCollapsedGroupsRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, groupStylePreviewRef } = timelinePresentation.refs;
-  const treeFocusRowIdRef = useRef<string | undefined>(undefined);
-  const menuOriginRef = useRef<HTMLElement | null>(null);
-  const suppressCanvasClickRef = useRef(false);
-  const restoreMenuFocus = () => {
-    const origin = menuOriginRef.current;
-    menuOriginRef.current = null;
-    if (origin?.isConnected) requestAnimationFrame(() => {
-      if (!origin.hasAttribute("tabindex")) origin.setAttribute("tabindex", "-1");
-      origin.focus({ preventScroll: true });
-    });
-  };
-  const closeContextMenu = () => { setContextMenu(undefined); };
-  const closeTreeAddMenu = () => { setTreeAddMenuOpen(false); };
-  const closeTreeMoreMenu = () => { setTreeMoreMenuOpen(false); };
-  const previousMenuOpenRef = useRef(false);
-  useEffect(() => {
-    const menuOpen = contextMenu !== undefined || treeAddMenuOpen || treeMoreMenuOpen;
-    if (previousMenuOpenRef.current && !menuOpen) restoreMenuFocus();
-    previousMenuOpenRef.current = menuOpen;
-  }, [contextMenu, treeAddMenuOpen, treeMoreMenuOpen]);
-  useEffect(() => {
-    const selector = contextMenu ? ".context-menu" : treeAddMenuOpen ? ".tree-add-menu" : treeMoreMenuOpen ? ".tree-header-menu" : undefined;
-    const menu = selector ? document.querySelector<HTMLElement>(selector) : undefined;
-    menu?.querySelector<HTMLButtonElement>("button[role='menuitem']:not(:disabled)")?.focus();
-    return attachMenuKeyboardNavigation(document, closeContextMenu, closeTreeAddMenu, closeTreeMoreMenu);
-  }, [contextMenu, treeAddMenuOpen, treeMoreMenuOpen]);
+  const [treeFocusRowIdRef, menuOriginRef, suppressCanvasClickRef, closeContextMenu, closeTreeAddMenu, closeTreeMoreMenu] = useEditorInteractionLifecycle(contextMenu, treeAddMenuOpen, treeMoreMenuOpen, setContextMenu, setTreeAddMenuOpen, setTreeMoreMenuOpen);
   const clipboardStatus = editActions.status;
   const clipboardAvailable = editActions.available;
   const refreshPlayhead = useRef<() => void>(() => undefined);
@@ -610,7 +584,7 @@ export function MinimalCycleView() {
     bottom: { signal: bottomSignal, group: bottomGroup, annotation: bottomAnnotation, transaction: bottomTransaction, bookmark: bottomBookmark },
     timeline: { range: timelineRange, selectedCycle, collapsedGroupIds, setCollapsedGroups, toggleCollapsedGroup },
     setBottomVisible,
-    workspace: { viewMode, setViewMode, activeContext, focusLinkedSignals, setFocusLinkedSignals, bottomTabs, bottomTab, setBottomTab, selectBottomTab, onBottomTabKeyDown, followSelection, setFollowSelection: setFollowSelectionFromUi, bottomPinned, toggleBottomPin, treeFilter, setTreeFilter, treeTypeFilter, setTreeTypeFilter: (value) => setTreeTypeFilter(value), transactionTreeFilter, setTransactionTreeFilter, transactionTreeFilterMode, setTransactionTreeFilterMode, cyclesPerTc, setCyclesPerTc, setRibbonTab },
+    workspace: { viewMode, setViewMode, activeContext, focusLinkedSignals, setFocusLinkedSignals, bottomTabs: modeComposition.bottomTabs, bottomTab, setBottomTab, selectBottomTab, onBottomTabKeyDown, followSelection, setFollowSelection: setFollowSelectionFromUi, bottomPinned, toggleBottomPin, treeFilter, setTreeFilter, treeTypeFilter, setTreeTypeFilter: (value) => setTreeTypeFilter(value), transactionTreeFilter, setTransactionTreeFilter, transactionTreeFilterMode, setTransactionTreeFilterMode, cyclesPerTc, setCyclesPerTc, setRibbonTab },
     dialog: { treeAddMenuOpen, setTreeAddMenuOpen, treeMoreMenuOpen, setTreeMoreMenuOpen, bulkRegistrationText, setBulkRegistrationText, bulkRegistrationGroupId, setBulkRegistrationGroupId, bulkRegistrationStatus, setBulkRegistrationStatus, setBulkRegistrationVisible, setHierarchyVisible, contextMenu, setContextMenu, closeTreeAddMenu, closeTreeMoreMenu, bottomResetToken, setBottomResetToken, inspectorResetToken, setInspectorResetToken, setInspectorVisible },
     annotationTargetSignalId,
     referenceClockName: referenceClockSignal?.display.name,
