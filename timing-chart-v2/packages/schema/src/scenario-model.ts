@@ -18,6 +18,13 @@ import { validateCanonicalDocument } from "./validation.js";
 
 const DEFAULT_SCENARIO_ID = "scenario_default" as ScenarioId;
 
+function rejectUnknownKeys(value: object, allowed: readonly string[], path: string, problems: DocumentProblem[]): void {
+  const accepted = new Set(allowed);
+  for (const key of Object.keys(value)) {
+    if (!accepted.has(key)) problems.push({ code: "SCENARIO_MODEL_UNKNOWN_FIELD", path: `${path}.${key}`, message: `Unknown Scenario model field '${key}'.` });
+  }
+}
+
 function definitionOf(signal: Signal): ScenarioSignalDefinition {
   if (signal.type === "clock") {
     const { generator: _generator, enable: _enable, edgeCounter: _edgeCounter, ...definition } = signal;
@@ -129,6 +136,7 @@ export function validateScenarioDocumentModel(input: unknown): readonly Document
     return [{ code: "SCENARIO_MODEL_SHAPE", path: "$", message: "Scenario document must be an object." }];
   }
   const model = input as Record<string, unknown>;
+  rejectUnknownKeys(model, ["formatVersion", "document", "physicalTimebase", "signalGroups", "signalDefinitions", "enumDefinitions", "scenarios", "legend", "layout", "checkSettings"], "$", problems);
   if (model.formatVersion !== 3) problems.push({ code: "SCENARIO_MODEL_VERSION", path: "$.formatVersion", message: "Scenario model formatVersion must be 3." });
   if (!Array.isArray(model.signalDefinitions)) problems.push({ code: "SCENARIO_MODEL_SHAPE", path: "$.signalDefinitions", message: "signalDefinitions must be an array." });
   if (!Array.isArray(model.scenarios) || model.scenarios.length === 0) {
@@ -144,6 +152,7 @@ export function validateScenarioDocumentModel(input: unknown): readonly Document
       problems.push({ code: "INVALID_STABLE_ID", path: `$.signalDefinitions[${index}].id`, message: "Signal definition must have a valid stable ID." });
       return;
     }
+    rejectUnknownKeys(definition, ["id", "name", "type", "role", "source", "display", "values", "generator", "enable", "edgeCounter", "width", "displayFormat", "enumId", "resetSemantics", "title", "body", "spacingBefore", "spacingAfter"], `$.signalDefinitions[${index}]`, problems);
     const previous = definitions.get(definition.id);
     if (previous) problems.push({ code: "DUPLICATE_ID", path: `$.signalDefinitions[${index}].id`, message: `Signal ID '${definition.id}' is duplicated.` , entityId: definition.id });
     else definitions.set(definition.id, definition);
@@ -175,6 +184,7 @@ export function validateScenarioDocumentModel(input: unknown): readonly Document
       problems.push({ code: "SCENARIO_MODEL_SHAPE", path: `$.scenarios[${scenarioIndex}]`, message: "Scenario entry must be an object." });
       return;
     }
+    rejectUnknownKeys(scenario, ["id", "name", "timeline", "signalStates", "bookmarks", "timeGroups", "annotations", "annotationGroups", "transactions", "transactionGroups", "transactionTimeScale", "constraints"], `$.scenarios[${scenarioIndex}]`, problems);
     if (typeof scenario.id !== "string" || !isStableId(scenario.id)) {
       problems.push({ code: "INVALID_STABLE_ID", path: `$.scenarios[${scenarioIndex}].id`, message: "Scenario must have a valid stable ID." });
     } else {
@@ -217,6 +227,9 @@ export function validateScenarioDocumentModel(input: unknown): readonly Document
         problems.push({ code: "UNKNOWN_SCENARIO_SIGNAL_STATE", path: `$.scenarios[${scenarioIndex}].signalStates.${stateId}`, message: `Scenario state references unknown or non-timing Signal '${stateId}'.`, entityId: stateId });
       } else if (!stateMap[stateId] || typeof stateMap[stateId] !== "object" || (definition.type === "clock" ? (stateMap[stateId] as { kind?: unknown }).kind !== "clock" : (stateMap[stateId] as { kind?: unknown }).kind !== "values")) {
         problems.push({ code: "SCENARIO_SIGNAL_STATE_KIND", path: `$.scenarios[${scenarioIndex}].signalStates.${stateId}`, message: `Scenario state kind does not match Signal '${stateId}'.`, entityId: stateId });
+      } else {
+        const state = stateMap[stateId] as Record<string, unknown>;
+        rejectUnknownKeys(state, definition.type === "clock" ? ["kind", "generator", "enable", "edgeCounter"] : ["kind", "values", "resetSemantics"], `$.scenarios[${scenarioIndex}].signalStates.${stateId}`, problems);
       }
     }
 

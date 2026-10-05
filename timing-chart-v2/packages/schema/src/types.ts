@@ -510,3 +510,7 @@ export type ParsedCanonicalDocument = Readonly<{
 export type ParseDocumentResult =
   | ParsedCanonicalDocument
   | Readonly<{ ok: false; kind: "syntax" | "unsupported-version" | "validation"; problems: readonly DocumentProblem[]; sourceFormatVersion?: number; raw?: unknown }>;
+
+export type ParseScenarioDocumentResult =
+  | Readonly<{ ok: true; model: ScenarioDocumentModel; validated: true }>
+  | Readonly<{ ok: false; kind: "syntax" | "unsupported-version" | "validation"; problems: readonly DocumentProblem[]; sourceFormatVersion?: number }>;

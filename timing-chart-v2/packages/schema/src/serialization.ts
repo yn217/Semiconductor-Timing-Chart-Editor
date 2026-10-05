@@ -1,8 +1,9 @@
 import { migrateThroughRegistry } from "./migration.js";
 import { validateCanonicalDocument } from "./validation.js";
 import { scanJsonSyntax } from "./json-syntax.js";
-import type { CanonicalDocument, DocumentProblem, MigrationWarning, ParseDocumentResult } from "./types.js";
+import type { CanonicalDocument, DocumentProblem, MigrationWarning, ParseDocumentResult, ParseScenarioDocumentResult, ScenarioDocumentModel } from "./types.js";
 import { validateDocumentInputBytes, validateDocumentInputComplexity, validateDocumentResourceBudget } from "./resource-budget.js";
+import { validateScenarioDocumentModel } from "./scenario-model.js";
 
 const trustedParsedDocuments = new WeakSet<object>();
 
@@ -123,6 +124,41 @@ export function parseDocument(input: string | unknown): ParseDocumentResult {
   // normalizeDocument owns the post-parse complexity gate. Running it here as
   // well traversed every JSON node twice on the production string-Open path.
   return normalizeOwnedDocument(parsed, true);
+}
+
+/** Parse the opt-in Scenario v3 storage model without changing the v1/v2 editor Open boundary. */
+export function parseScenarioDocumentModel(input: string | unknown): ParseScenarioDocumentResult {
+  let value = input;
+  if (typeof input === "string") {
+    const byteProblems = validateDocumentInputBytes(utf8ByteLength(input));
+    if (byteProblems.length > 0) return { ok: false, kind: "validation", problems: byteProblems };
+    try { value = JSON.parse(input) as unknown; }
+    catch (error) { return { ok: false, kind: "syntax", problems: [syntaxProblem(error, input)] }; }
+  }
+  const complexityProblems = validateDocumentInputComplexity(value);
+  if (complexityProblems.length > 0) return { ok: false, kind: "validation", problems: complexityProblems };
+  if (typeof input !== "string") value = cloneUnknown(value);
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return { ok: false, kind: "validation", problems: [{ code: "DOCUMENT_ROOT", path: "$", message: "Document root must be an object." }] };
+  }
+  const version = (value as { formatVersion?: unknown }).formatVersion;
+  if (!Number.isInteger(version)) return { ok: false, kind: "validation", problems: [{ code: "FORMAT_VERSION", path: "$.formatVersion", message: "formatVersion must be an integer." }] };
+  if (version !== 3) return { ok: false, kind: "unsupported-version", sourceFormatVersion: version as number, problems: [{ code: "UNSUPPORTED_FORMAT_VERSION", path: "$.formatVersion", message: `Scenario document format version ${String(version)} is not supported by the Scenario v3 reader.` }] };
+  const problems = validateScenarioDocumentModel(value);
+  return problems.length > 0
+    ? { ok: false, kind: "validation", sourceFormatVersion: 3, problems }
+    : { ok: true, model: value as ScenarioDocumentModel, validated: true };
+}
+
+/** Serialize the opt-in Scenario v3 model after the same structural, semantic and budget gates. */
+export function serializeScenarioDocumentModel(model: ScenarioDocumentModel, indent = 2): string {
+  const problems = validateScenarioDocumentModel(model);
+  if (problems.length > 0) {
+    const error = new Error(`Cannot serialize invalid Scenario document (${problems.length} problem(s)).`);
+    Object.assign(error, { name: "ScenarioDocumentSerializationError", problems });
+    throw error;
+  }
+  return `${JSON.stringify(sortObjectKeys(model), null, indent)}\n`;
 }
 
 /**

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { scenarioModelFromV2, projectScenarioAsV2, validateScenarioDocumentModel } from "../../packages/schema/src/scenario-model.js";
 import { validateCanonicalDocument } from "../../packages/schema/src/validation.js";
+import { parseDocument, parseScenarioDocumentModel, serializeScenarioDocumentModel } from "../../packages/schema/src/serialization.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 describe("Scenario canonical model adapter", () => {
@@ -66,5 +67,14 @@ describe("Scenario canonical model adapter", () => {
     const second = { ...first, id: "scenario_second" as typeof first.id, name: "Scenario 2" };
     const duplicateAcrossScenarios = { ...model, scenarios: [first, second] };
     expect(validateScenarioDocumentModel(duplicateAcrossScenarios)).toContainEqual(expect.objectContaining({ code: "DUPLICATE_ID", entityId: "bookmark_shared" }));
+  });
+
+  it("round-trips the opt-in v3 JSON boundary without changing the v2 parser contract", () => {
+    const model = scenarioModelFromV2(canonicalFixture());
+    const saved = serializeScenarioDocumentModel(model);
+    expect(parseScenarioDocumentModel(saved)).toEqual({ ok: true, model, validated: true });
+    expect(parseScenarioDocumentModel("{" )).toMatchObject({ ok: false, kind: "syntax" });
+    expect(parseScenarioDocumentModel(JSON.stringify({ ...model, hiddenPayload: true }))).toMatchObject({ ok: false, kind: "validation", problems: [expect.objectContaining({ code: "SCENARIO_MODEL_UNKNOWN_FIELD" })] });
+    expect(parseDocument(saved)).toMatchObject({ ok: false, kind: "unsupported-version", sourceFormatVersion: 3 });
   });
 });
