@@ -102,6 +102,9 @@ export function useEditorSecondarySurfaces(
     ? `multi:${inspectorSignalIds.size}`
     : inspectorLegendSelected ? "legend" : inspectorSignal?.id ?? inspectorGroup?.id ?? inspectorAnnotation?.id ?? inspectorTransaction?.id ?? inspectorBookmark?.id ?? "none";
   const { aiBridgeStatus, ...aiAssistantPanel } = useEditorAiAssistantModel({
+    scenarioModel: input.scenario.model,
+    activeScenarioId: input.scenario.activeScenarioId,
+    onGenerateHandshakeScenarios: input.scenario.generateHandshakeScenarios,
     document: input.document,
     validationDiagnostics: input.validationDiagnostics,
     documentEpoch: input.documentEpoch,

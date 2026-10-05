@@ -18,6 +18,7 @@ import type {
   TransactionId,
   ValueSignal,
   DocumentProblem,
+  SignalValueChange,
 } from "./types.js";
 import { canonicalEntityInventory, type CanonicalEntityKind } from "./canonical-inventory.js";
 import { DOCUMENT_RESOURCE_BUDGET, validateDocumentResourceBudget, validateDocumentInputComplexity } from "./resource-budget.js";
@@ -273,6 +274,205 @@ export function duplicateScenario(document: ScenarioDocumentModel, scenarioId: S
   const problems = validateScenarioDocumentModel(next);
   if (problems.length > 0) throw new Error(`Scenario duplication produced an invalid model: ${problems.map(({ code, path }) => `${code} at ${path}`).join(", ")}.`);
   return next;
+}
+
+export type HandshakeMissingCaseKind = "ack-before-request" | "request-before-ack" | "same-cycle" | "backpressure" | "consecutive-transfer" | "stable-data-while-stalled" | "reset-during-transaction" | "x-propagation";
+export interface HandshakeMissingCaseSuggestion {
+  readonly key: string;
+  readonly constraintId: ConstraintId;
+  readonly kind: HandshakeMissingCaseKind;
+  readonly title: string;
+  readonly detail: string;
+  readonly requestSignalId: SignalId;
+  readonly acknowledgeSignalId: SignalId;
+  readonly stableSignalIds: readonly SignalId[];
+  readonly resetSignalId?: SignalId;
+  readonly unknownSignalId?: SignalId;
+}
+
+const handshakeCaseDuration: Readonly<Record<HandshakeMissingCaseKind, number>> = {
+  "ack-before-request": 5,
+  "request-before-ack": 4,
+  "same-cycle": 2,
+  backpressure: 5,
+  "consecutive-transfer": 4,
+  "stable-data-while-stalled": 5,
+  "reset-during-transaction": 4,
+  "x-propagation": 5,
+};
+
+const handshakeCaseStart = (scenario: TimingScenario): number => scenario.timeline.start;
+
+const handshakeId = (data: unknown, keys: readonly string[]): SignalId | undefined => {
+  if (data === null || typeof data !== "object" || Array.isArray(data)) return undefined;
+  const record = data as Record<string, unknown>;
+  for (const key of keys) if (typeof record[key] === "string" && record[key]) return record[key] as SignalId;
+  return undefined;
+};
+
+function handshakeCaseConstraints(scenario: TimingScenario): readonly HandshakeMissingCaseSuggestion[] {
+  const suggestions: HandshakeMissingCaseSuggestion[] = [];
+  for (const constraint of scenario.constraints) {
+    if (constraint.type.toLowerCase() !== "handshake") continue;
+    const requestSignalId = handshakeId(constraint.data, ["requestSignalId", "request", "reqSignalId", "req"]);
+    const acknowledgeSignalId = handshakeId(constraint.data, ["acknowledgeSignalId", "ackSignalId", "acknowledge", "ack"]);
+    if (!requestSignalId || !acknowledgeSignalId) continue;
+    const stableSignalIds = handshakeSignalIds(constraint.data, ["stableSignalIds", "dataSignalIds", "stableSignals", "dataSignals"]);
+    const resetSignalId = handshakeId(constraint.data, ["resetSignalId"]);
+    const prefix = `handshake:${constraint.id}:`;
+    const cases: readonly Readonly<{ kind: HandshakeMissingCaseKind; title: string; detail: string }>[] = [
+      { kind: "ack-before-request", title: "Acknowledge before request", detail: "READY asserts before VALID." },
+      { kind: "request-before-ack", title: "Request before acknowledge", detail: "VALID asserts, then waits for READY." },
+      { kind: "same-cycle", title: "Request and acknowledge together", detail: "VALID and READY assert on the same source cycle." },
+      { kind: "backpressure", title: "Backpressure", detail: "VALID stays asserted for multiple cycles before READY." },
+      { kind: "consecutive-transfer", title: "Consecutive transfers", detail: "Two separated request/acknowledge handshakes occur back-to-back." },
+      ...(stableSignalIds.length > 0 ? [{ kind: "stable-data-while-stalled" as const, title: "Stable data while stalled", detail: "Configured stable Signals hold their value until acknowledge." }] : []),
+      ...(resetSignalId ? [{ kind: "reset-during-transaction" as const, title: "Reset during transaction", detail: "The explicitly configured Reset asserts while a request is outstanding." }] : []),
+      ...[{ kind: "x-propagation" as const, title: "X propagation", detail: "An unknown value propagates on a logic Handshake endpoint." }],
+    ];
+    for (const item of cases) {
+      const unknownSignalId = item.kind === "x-propagation" ? requestSignalId : undefined;
+      suggestions.push({ ...item, key: `${prefix}${item.kind}`, constraintId: constraint.id, requestSignalId, acknowledgeSignalId, stableSignalIds,
+        ...(item.kind === "reset-during-transaction" && resetSignalId ? { resetSignalId } : {}),
+        ...(unknownSignalId === undefined ? {} : { unknownSignalId }),
+      });
+    }
+  }
+  return suggestions;
+}
+
+function handshakeSignalIds(data: unknown, keys: readonly string[]): SignalId[] {
+  if (data === null || typeof data !== "object" || Array.isArray(data)) return [];
+  const record = data as Record<string, unknown>;
+  for (const key of keys) {
+    const value = record[key];
+    if (Array.isArray(value)) return value.filter((item): item is SignalId => typeof item === "string") as SignalId[];
+    if (typeof value === "string") return [value as SignalId];
+  }
+  return [];
+}
+
+/** Offer deterministic missing cases only for explicit Handshake constraints; signal identity and polarity come from the constraint. */
+export function listHandshakeMissingCaseSuggestions(document: ScenarioDocumentModel, scenarioId: ScenarioId): readonly HandshakeMissingCaseSuggestion[] {
+  const scenario = document.scenarios.find((item) => item.id === scenarioId);
+  if (!scenario) throw new Error(`Scenario '${scenarioId}' does not exist.`);
+  const supportedTypes = new Set(["binary", "logic"]);
+  return handshakeCaseConstraints(scenario).filter((suggestion) => {
+    const request = document.signalDefinitions.find((signal) => signal.id === suggestion.requestSignalId);
+    const acknowledge = document.signalDefinitions.find((signal) => signal.id === suggestion.acknowledgeSignalId);
+    const requestState = scenario.signalStates[suggestion.requestSignalId];
+    const acknowledgeState = scenario.signalStates[suggestion.acknowledgeSignalId];
+    const reset = suggestion.resetSignalId === undefined ? undefined : document.signalDefinitions.find((signal) => signal.id === suggestion.resetSignalId);
+    const resetState = suggestion.resetSignalId === undefined ? undefined : scenario.signalStates[suggestion.resetSignalId];
+    const unknown = suggestion.unknownSignalId === undefined ? undefined : document.signalDefinitions.find((signal) => signal.id === suggestion.unknownSignalId);
+    const start = handshakeCaseStart(scenario);
+    return start + handshakeCaseDuration[suggestion.kind] <= scenario.timeline.end
+      && request !== undefined && acknowledge !== undefined && supportedTypes.has(request.type) && supportedTypes.has(acknowledge.type)
+      && requestState?.kind === "values" && acknowledgeState?.kind === "values"
+      && (suggestion.resetSignalId === undefined || reset !== undefined && supportedTypes.has(reset.type) && resetState?.kind === "values")
+      && (suggestion.unknownSignalId === undefined || unknown?.type === "logic")
+      && suggestion.stableSignalIds.every((id) => scenario.signalStates[id]?.kind === "values");
+  });
+}
+
+function activeLevel(constraint: TimingScenario["constraints"][number], keys: readonly string[]): number {
+  if (constraint.data === undefined) return 1;
+  for (const key of keys) if (constraint.data[key] === "active-low") return 0;
+  return 1;
+}
+
+function replaceSignalSpan(state: ScenarioSignalState, start: number, end: number, events: readonly SignalValueChange[]): ScenarioSignalState {
+  if (state.kind !== "values") return state;
+  const values = [...state.values.filter((change) => change.start < start || change.start >= end), ...events].sort((left, right) => left.start - right.start);
+  return { ...state, values };
+}
+
+function valueAt(state: ScenarioSignalState, cycle: number): string | number | undefined {
+  if (state.kind !== "values") return undefined;
+  let value: string | number | undefined;
+  for (const event of state.values) {
+    if (event.start > cycle) break;
+    value = event.value;
+  }
+  return value ?? state.values[0]?.value;
+}
+
+function applyHandshakeCase(scenario: TimingScenario, suggestion: HandshakeMissingCaseSuggestion): TimingScenario {
+  const start = handshakeCaseStart(scenario);
+  const requestState = scenario.signalStates[suggestion.requestSignalId];
+  const acknowledgeState = scenario.signalStates[suggestion.acknowledgeSignalId];
+  if (requestState?.kind !== "values" || acknowledgeState?.kind !== "values") throw new Error("Handshake case requires value-signal request and acknowledge states.");
+  const constraint = scenario.constraints.find((item) => item.id === suggestion.constraintId);
+  if (!constraint) throw new Error("Handshake case constraint no longer exists in its Scenario.");
+  const requestActive = activeLevel(constraint, ["requestPolarity", "requestActiveLevel"]);
+  const acknowledgeActive = activeLevel(constraint, ["acknowledgePolarity", "ackPolarity", "ackActiveLevel"]);
+  const requestIdle = requestActive === 1 ? 0 : 1;
+  const acknowledgeIdle = acknowledgeActive === 1 ? 0 : 1;
+  const events = (cycles: readonly Readonly<{ cycle: number; value: number | string }>[]) => cycles.map(({ cycle, value }) => ({ start: cycle, value }));
+  const cases: Record<HandshakeMissingCaseKind, Readonly<{ request: readonly Readonly<{ cycle: number; value: number | string }>[]; acknowledge: readonly Readonly<{ cycle: number; value: number | string }>[]; end: number }>> = {
+    "ack-before-request": { request: [{ cycle: start + 2, value: requestActive }, { cycle: start + 4, value: requestIdle }], acknowledge: [{ cycle: start, value: acknowledgeActive }, { cycle: start + 3, value: acknowledgeIdle }], end: start + 5 },
+    "request-before-ack": { request: [{ cycle: start, value: requestActive }, { cycle: start + 3, value: requestIdle }], acknowledge: [{ cycle: start + 2, value: acknowledgeActive }, { cycle: start + 3, value: acknowledgeIdle }], end: start + 4 },
+    "same-cycle": { request: [{ cycle: start, value: requestActive }, { cycle: start + 1, value: requestIdle }], acknowledge: [{ cycle: start, value: acknowledgeActive }, { cycle: start + 1, value: acknowledgeIdle }], end: start + 2 },
+    backpressure: { request: [{ cycle: start, value: requestActive }, { cycle: start + 4, value: requestIdle }], acknowledge: [{ cycle: start + 3, value: acknowledgeActive }, { cycle: start + 4, value: acknowledgeIdle }], end: start + 5 },
+    "consecutive-transfer": { request: [{ cycle: start, value: requestActive }, { cycle: start + 1, value: requestIdle }, { cycle: start + 2, value: requestActive }, { cycle: start + 3, value: requestIdle }], acknowledge: [{ cycle: start, value: acknowledgeActive }, { cycle: start + 1, value: acknowledgeIdle }, { cycle: start + 2, value: acknowledgeActive }, { cycle: start + 3, value: acknowledgeIdle }], end: start + 4 },
+    "stable-data-while-stalled": { request: [{ cycle: start, value: requestActive }, { cycle: start + 4, value: requestIdle }], acknowledge: [{ cycle: start + 3, value: acknowledgeActive }, { cycle: start + 4, value: acknowledgeIdle }], end: start + 5 },
+    "reset-during-transaction": { request: [{ cycle: start, value: requestActive }, { cycle: start + 3, value: requestIdle }], acknowledge: [{ cycle: start, value: acknowledgeIdle }], end: start + 4 },
+    "x-propagation": { request: [{ cycle: start, value: requestActive }, { cycle: start + 1, value: "X" }, { cycle: start + 2, value: requestIdle }], acknowledge: [{ cycle: start, value: acknowledgeIdle }], end: start + 5 },
+  };
+  const selected = cases[suggestion.kind];
+  if (selected.end > scenario.timeline.end) throw new Error("Timeline is too short for this Handshake case.");
+  let signalStates = { ...scenario.signalStates };
+  signalStates[suggestion.requestSignalId] = replaceSignalSpan(requestState, start, selected.end, events(selected.request));
+  signalStates[suggestion.acknowledgeSignalId] = replaceSignalSpan(acknowledgeState, start, selected.end, events(selected.acknowledge));
+  if (suggestion.kind === "reset-during-transaction") {
+    if (!suggestion.resetSignalId) throw new Error("Reset case requires an explicitly configured Reset Signal ID.");
+    const resetState = signalStates[suggestion.resetSignalId];
+    if (resetState?.kind !== "values") throw new Error("Reset case requires a value-signal Reset state.");
+    const resetActive = activeLevel(constraint, ["resetPolarity"]);
+    signalStates[suggestion.resetSignalId] = replaceSignalSpan(resetState, start, selected.end, events([{ cycle: start + 2, value: resetActive === 1 ? 1 : 0 }, { cycle: start + 3, value: resetActive === 1 ? 0 : 1 }]));
+  }
+  if (suggestion.kind === "stable-data-while-stalled") {
+    for (const id of suggestion.stableSignalIds) {
+      const state = signalStates[id];
+      const held = state ? valueAt(state, start) : undefined;
+      if (state?.kind !== "values" || held === undefined) throw new Error(`Stable Signal '${id}' has no value to hold during the generated stall.`);
+      signalStates[id] = replaceSignalSpan(state, start, selected.end, [{ start, value: held }]);
+    }
+  }
+  return { ...scenario, name: `${scenario.name} · ${suggestion.title}`, signalStates };
+}
+
+/** Apply only explicitly selected proposals to fresh, independent Scenarios; the input model remains untouched. */
+export function createScenariosFromHandshakeSuggestions(
+  document: ScenarioDocumentModel,
+  scenarioId: ScenarioId,
+  selectedKeys: readonly string[],
+): Readonly<{ document: ScenarioDocumentModel; createdScenarioIds: readonly ScenarioId[] }> {
+  const available = listHandshakeMissingCaseSuggestions(document, scenarioId);
+  const selected = [...new Set(selectedKeys)].map((key) => {
+    const suggestion = available.find((item) => item.key === key);
+    if (!suggestion) throw new Error(`Unknown or unsupported Handshake case suggestion '${key}'.`);
+    return suggestion;
+  });
+  if (selected.length === 0) throw new Error("Select at least one Handshake case suggestion.");
+  let next = document;
+  const createdScenarioIds: ScenarioId[] = [];
+  for (const suggestion of selected) {
+    const sourceScenario = next.scenarios.find((scenario) => scenario.id === scenarioId);
+    const sourceConstraintIndex = sourceScenario?.constraints.findIndex((constraint) => constraint.id === suggestion.constraintId) ?? -1;
+    if (sourceConstraintIndex < 0) throw new Error("Handshake case constraint no longer exists in its Scenario.");
+    const duplicated = duplicateScenario(next, scenarioId, `${document.scenarios.find((item) => item.id === scenarioId)!.name} · ${suggestion.title}`);
+    const created = duplicated.scenarios.find((candidate) => !next.scenarios.some((existing) => existing.id === candidate.id));
+    if (!created) throw new Error("Selected Handshake case did not create a Scenario.");
+    const copiedConstraint = created.constraints[sourceConstraintIndex];
+    if (!copiedConstraint) throw new Error("Duplicated Scenario is missing its Handshake constraint.");
+    const generated = applyHandshakeCase(created, { ...suggestion, constraintId: copiedConstraint.id });
+    next = { ...duplicated, scenarios: duplicated.scenarios.map((candidate) => candidate.id === created.id ? generated : candidate) };
+    const problems = validateScenarioDocumentModel(next);
+    if (problems.length > 0) throw new Error(`Generated Handshake Scenario is invalid (${problems.map((problem) => problem.code).join(", ")}).`);
+    createdScenarioIds.push(created.id);
+  }
+  return { document: next, createdScenarioIds };
 }
 
 /**

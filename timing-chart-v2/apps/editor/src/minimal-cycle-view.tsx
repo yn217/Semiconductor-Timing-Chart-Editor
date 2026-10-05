@@ -587,7 +587,7 @@ export function MinimalCycleView() {
     closeTreeMoreMenu,
   });
   const secondarySurfaces = useEditorSecondarySurfaces({
-    document: snapshot.document,
+    scenario: { model: scenarioModel, activeScenarioId, generateHandshakeScenarios: application.generateHandshakeScenarios }, document: snapshot.document,
     changeSet: lastChangeSet,
     validationDiagnostics,
     validationPending,

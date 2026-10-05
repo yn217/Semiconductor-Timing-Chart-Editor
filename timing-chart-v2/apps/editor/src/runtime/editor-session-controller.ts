@@ -49,6 +49,11 @@ export class EditorSessionController {
     return this.session.deleteScenario(scenarioId);
   }
 
+  addGeneratedScenarios(model: ScenarioDocumentModel, createdScenarioIds: readonly ScenarioId[]): ReturnType<ScenarioCommandHistorySession["addGeneratedScenarios"]> {
+    if (!(this.session instanceof ScenarioCommandHistorySession)) throw new Error("Generated Scenarios require a Scenario-aware document session.");
+    return this.session.addGeneratedScenarios(model, createdScenarioIds);
+  }
+
   activeScenarioId(): ScenarioId | undefined {
     return this.session instanceof ScenarioCommandHistorySession ? this.session.activeScenarioId() : undefined;
   }

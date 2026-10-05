@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-05T11:50:41.017Z",
+  "generatedAt": "2026-10-05T12:14:38.926Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 416,
-  "caseCount": 1240,
-  "reviewedCaseCount": 1240,
+  "specFileCount": 417,
+  "caseCount": 1241,
+  "reviewedCaseCount": 1241,
   "curatedProfileCounts": {
-    "integration": 628,
+    "integration": 629,
     "nightly": 238,
     "performance": 73,
-    "pr": 396,
+    "pr": 397,
     "visual": 180
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -10706,6 +10706,33 @@
         "nightly"
       ],
       "contractId": "enum-state-save-open"
+    },
+    {
+      "file": "issue-431-handshake-missing-cases.spec.ts",
+      "suitePath": [],
+      "line": 16,
+      "title": "Handshake missing cases are suggestions until selected, then save and undo as one Scenario batch",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "scenario-handshake-coverage",
+      "originIssue": 431,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Handshake coverage suggestions are derived from explicit stable-ID constraints without mutation; only selected cases create independent Scenarios, grouped in one Undo/Redo unit and preserved by Save/Open.",
+      "duplicateGroup": "scenario-handshake-generation",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Protects the production user journey from explicit Handshake constraint through opt-in Scenario generation, one-step History, and v3 persistence. Deterministic schema and session tests do not cover the approval/UI/save boundary.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr",
+        "integration"
+      ],
+      "contractId": "scenario-handshake-coverage"
     },
     {
       "file": "issue-431-physical-timebase.spec.ts",
@@ -33789,6 +33816,15 @@
       "reviewedCaseCount": 2,
       "originIssue": "431",
       "declaredTimeoutMs": 180,
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "issue-431-handshake-missing-cases.spec.ts",
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
+      "originIssue": "431",
+      "declaredTimeoutMs": 60,
       "candidateSignals": [],
       "semanticReviewStatus": "REVIEWED"
     },

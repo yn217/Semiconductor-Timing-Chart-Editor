@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ScenarioCommandHistorySession } from "../../packages/history/src/scenario-session.js";
-import { projectScenarioAsV2, scenarioModelFromV2 } from "../../packages/schema/src/scenario-model.js";
+import { createScenariosFromHandshakeSuggestions, projectScenarioAsV2, scenarioModelFromV2 } from "../../packages/schema/src/scenario-model.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 describe("ScenarioCommandHistorySession", () => {
@@ -79,5 +79,31 @@ describe("ScenarioCommandHistorySession", () => {
     expect(session.undo().ok).toBe(true);
     expect(session.scenarioModel().scenarios).toHaveLength(2);
     expect(session.activeScenarioId()).toBe(duplicateId);
+  });
+
+  it("records a selected Handshake generation batch as one Undo/Redo unit", () => {
+    const source = canonicalFixture();
+    const template = source.signals[1]!;
+    if (template.type !== "bus") throw new Error("fixture DATA must be a bus");
+    const { width: _width, displayFormat: _displayFormat, ...binaryTemplate } = template;
+    const request = { ...binaryTemplate, id: "sig_req" as typeof template.id, name: "REQ", type: "binary" as const, values: [{ start: 0, value: 0 }] };
+    const acknowledge = { ...binaryTemplate, id: "sig_ack" as typeof template.id, name: "ACK", type: "binary" as const, values: [{ start: 0, value: 0 }] };
+    const v2 = { ...source, timeline: { ...source.timeline, end: 12, cycleCount: 12 }, signals: [source.signals[0]!, request, acknowledge], signalGroups: [{ ...source.signalGroups[0]!, rows: [source.signals[0]!.id, request.id, acknowledge.id] }], constraints: [{ id: "constraint_handshake" as never, type: "handshake", data: { requestSignalId: request.id, acknowledgeSignalId: acknowledge.id } }] };
+    const model = scenarioModelFromV2(v2);
+    const active = model.scenarios[0]!;
+    const generated = createScenariosFromHandshakeSuggestions(model, active.id, ["handshake:constraint_handshake:same-cycle", "handshake:constraint_handshake:backpressure"]);
+    const session = new ScenarioCommandHistorySession(model);
+    session.addGeneratedScenarios(generated.document, generated.createdScenarioIds);
+    expect(session.scenarioModel().scenarios).toHaveLength(3);
+    expect(session.activeScenarioId()).toBe(generated.createdScenarioIds[1]);
+    expect(session.historyState()).toMatchObject({ undoDepth: 1, redoDepth: 0, dirty: true });
+
+    expect(session.undo().ok).toBe(true);
+    expect(session.scenarioModel()).toEqual(model);
+    expect(session.activeScenarioId()).toBe(active.id);
+    expect(session.historyState()).toMatchObject({ undoDepth: 0, redoDepth: 1, dirty: false });
+    expect(session.redo().ok).toBe(true);
+    expect(session.scenarioModel()).toEqual(generated.document);
+    expect(session.activeScenarioId()).toBe(generated.createdScenarioIds[1]);
   });
 });

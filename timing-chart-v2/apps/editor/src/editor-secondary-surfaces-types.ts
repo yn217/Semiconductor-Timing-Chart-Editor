@@ -1,7 +1,7 @@
 import type { Dispatch, KeyboardEvent, MutableRefObject, ReactNode, RefObject, SetStateAction } from "react";
 import type { ChangeSet, CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { HistoryState } from "@timing-chart-v2/history";
-import type { Annotation, AnnotationId, Bookmark, CanonicalDocument, CommandId, DocumentProblem, GroupId, Signal, SignalGroup, SignalGroupStyle, SignalId, Transaction, TransactionGroup, TransactionId } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationId, Bookmark, CanonicalDocument, CommandId, DocumentProblem, GroupId, ScenarioDocumentModel, ScenarioId, Signal, SignalGroup, SignalGroupStyle, SignalId, Transaction, TransactionGroup, TransactionId } from "@timing-chart-v2/schema";
 import type { UiCommandRegistry } from "@timing-chart-v2/ui";
 import type { EditorApplicationOwner } from "./application/use-editor-application-owner.js";
 import type { EditorActions } from "./application/use-editor-actions.js";
@@ -15,6 +15,7 @@ type Setter<T> = Dispatch<SetStateAction<T>>;
 type Ref<T> = RefObject<T | null>;
 
 export interface EditorSecondarySurfacesInput {
+  readonly scenario: Readonly<{ model: ScenarioDocumentModel | undefined; activeScenarioId: ScenarioId | undefined; generateHandshakeScenarios: (scenarioId: ScenarioId, selectedKeys: readonly string[]) => readonly ScenarioId[] }>;
   readonly setBottomVisible: (visible: boolean) => void;
   readonly document: CanonicalDocument;
   readonly changeSet: ChangeSet;

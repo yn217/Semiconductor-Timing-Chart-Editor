@@ -16684,6 +16684,25 @@
       "replacementTest": "issue-840-stale-cycle-context.spec.ts — Cycle range and cursor status remain truthful after switching to the Transaction time axis at 1280x720"
     },
     {
+      "file": "issue-431-handshake-missing-cases.spec.ts",
+      "title": "Handshake missing cases are suggestions until selected, then save and undo as one Scenario batch",
+      "domain": "scenario-handshake-coverage",
+      "originIssue": 431,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Handshake coverage suggestions are derived from explicit stable-ID constraints without mutation; only selected cases create independent Scenarios, grouped in one Undo/Redo unit and preserved by Save/Open.",
+      "duplicateGroup": "scenario-handshake-generation",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr",
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "Protects the production user journey from explicit Handshake constraint through opt-in Scenario generation, one-step History, and v3 persistence. Deterministic schema and session tests do not cover the approval/UI/save boundary.",
+      "replacementTest": null
+    },
+    {
       "file": "issue-431-scenario-lifecycle.spec.ts",
       "title": "Enable Scenarios migrates the current v2 document as one dirty Scenario",
       "domain": "scenario-v3-lifecycle-and-persistence",

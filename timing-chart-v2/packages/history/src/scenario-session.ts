@@ -5,7 +5,7 @@ import { CommandHistorySession } from "./session.js";
 import { HISTORY_RETENTION_POLICY, type HistoryMetrics, type HistoryState, type RecordedAction } from "./types.js";
 
 interface ScenarioHistoryEntry {
-  readonly action: RecordedAction | Readonly<{ type: "scenario.rename" | "scenario.duplicate" | "scenario.delete"; scenarioId: ScenarioId }>;
+  readonly action: RecordedAction | Readonly<{ type: "scenario.rename" | "scenario.duplicate" | "scenario.delete"; scenarioId: ScenarioId }> | Readonly<{ type: "scenario.generate"; scenarioIds: readonly ScenarioId[] }>;
   readonly before: ScenarioDocumentModel;
   readonly after: ScenarioDocumentModel;
   readonly beforeActiveScenarioId: ScenarioId;
@@ -96,6 +96,15 @@ export class ScenarioCommandHistorySession {
     const next = deleteScenario(this.#model, scenarioId);
     const active = this.#activeScenarioId === scenarioId ? next.scenarios[Math.min(this.#model.scenarios.findIndex((scenario) => scenario.id === scenarioId), next.scenarios.length - 1)]!.id : this.#activeScenarioId;
     return this.#acceptModelMutation({ type: "scenario.delete", scenarioId }, next, active);
+  }
+
+  /** Accept a user-selected batch of generated Scenario candidates as one exact Undo step. */
+  addGeneratedScenarios(model: ScenarioDocumentModel, createdScenarioIds: readonly ScenarioId[]): CanonicalSnapshot {
+    if (createdScenarioIds.length === 0) throw new Error("At least one generated Scenario is required.");
+    for (const id of createdScenarioIds) if (this.#model.scenarios.some((scenario) => scenario.id === id)) throw new Error(`Generated Scenario '${id}' already exists.`);
+    const activeScenarioId = createdScenarioIds.at(-1)!;
+    if (!model.scenarios.some((scenario) => scenario.id === activeScenarioId)) throw new Error("The generated model must contain its final selected Scenario.");
+    return this.#acceptModelMutation({ type: "scenario.generate", scenarioIds: [...createdScenarioIds] }, model, activeScenarioId);
   }
 
   metrics(): CanonicalSessionMetrics {

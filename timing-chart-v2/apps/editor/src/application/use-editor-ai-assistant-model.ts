@@ -3,11 +3,14 @@ import type { ComponentProps } from "react";
 import { AIOperationPanel } from "../ai-operation-panel.js";
 import type { AIBridgeStatus, AIBridgeViewOperation, AISelectionEntityType } from "../ai-bridge-client.js";
 import type { AIViewIntent } from "../ai-proposal-provider.js";
-import type { DocumentProblem } from "@timing-chart-v2/schema";
+import type { DocumentProblem, ScenarioDocumentModel, ScenarioId } from "@timing-chart-v2/schema";
 
 type PanelProps = ComponentProps<typeof AIOperationPanel>;
 
 export function useEditorAiAssistantModel(input: Pick<PanelProps, "document" | "validationDiagnostics" | "documentEpoch" | "revision" | "mode" | "selectedSignalId" | "selectedGroupId" | "selectedAnnotationId" | "selectedTransactionId" | "range" | "onCommand"> & {
+  readonly scenarioModel: ScenarioDocumentModel | undefined;
+  readonly activeScenarioId: ScenarioId | undefined;
+  readonly onGenerateHandshakeScenarios: NonNullable<PanelProps["onGenerateHandshakeScenarios"]>;
   readonly onCommandBatch: NonNullable<PanelProps["onCommandBatch"]>;
   readonly getZoom: NonNullable<PanelProps["getZoom"]>;
   readonly onFitAll: () => void;
@@ -27,6 +30,9 @@ export function useEditorAiAssistantModel(input: Pick<PanelProps, "document" | "
     input.setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("ai-proposal:")), ...nextDiagnostics]);
   };
   const panelProps = {
+    ...(input.scenarioModel === undefined ? {} : { scenarioModel: input.scenarioModel }),
+    ...(input.activeScenarioId === undefined ? {} : { activeScenarioId: input.activeScenarioId }),
+    onGenerateHandshakeScenarios: input.onGenerateHandshakeScenarios,
     document: input.document,
     validationDiagnostics: input.validationDiagnostics,
     documentEpoch: input.documentEpoch,

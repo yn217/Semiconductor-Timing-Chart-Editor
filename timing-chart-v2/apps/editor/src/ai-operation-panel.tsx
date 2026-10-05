@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRef, type ReactNode } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import { planCommand } from "@timing-chart-v2/commands";
-import { validateCanonicalDocument, type CanonicalDocument, type DocumentProblem, type GroupId, type SignalId } from "@timing-chart-v2/schema";
+import { listHandshakeMissingCaseSuggestions, validateCanonicalDocument, type CanonicalDocument, type DocumentProblem, type GroupId, type ScenarioDocumentModel, type ScenarioId, type SignalId } from "@timing-chart-v2/schema";
 import { buildTypedProposal, buildTypedProposalBatch, deterministicMockAIProposalProvider, type AIProposal, type AIProposalProvider, type AIViewIntent } from "./ai-proposal-provider.js";
 import { probeAIBridge, useAIBridgeClient, type AIBridgeStatus, type AIBridgeViewOperation, type AISelectionEntityType } from "./ai-bridge-client.js";
 import { buildAIClientConfig, buildAIMcpEndpoint, type AIClientSetup } from "./ai-connection-guide.js";
@@ -169,7 +169,7 @@ function scopeViolationMessage(scope: AIScope, document: CanonicalDocument, comm
   return undefined;
 }
 
-export function AIOperationPanel({ document, validationDiagnostics, documentEpoch, revision, mode, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, range, onCommand, onCommandBatch, onViewIntent, onViewOperation, onSetSelection, onRevealEntity, onDiagnostic, icon, provider = deterministicMockAIProposalProvider, bridgeHost, bridgePort, bridgeEnabled, onBridgeEnabledChange, bridgeToken, onBridgeTokenChange, onBridgeStatusChange, getZoom }: { readonly document: CanonicalDocument; readonly validationDiagnostics: readonly DocumentProblem[]; readonly documentEpoch: number; readonly revision: number; readonly mode: "Cycle" | "Transaction" | "Combined"; readonly selectedSignalId: SignalId | undefined; readonly selectedGroupId: GroupId | undefined; readonly selectedAnnotationId: string | undefined; readonly selectedTransactionId: string | undefined; readonly range: Readonly<{ start: number; end: number }> | undefined; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onCommandBatch?: (commands: readonly SemanticCommand[]) => CommandResult; readonly onViewIntent?: (intent: AIViewIntent) => void; readonly onViewOperation?: (operation: AIBridgeViewOperation, args: Readonly<Record<string, unknown>>) => void; readonly onSetSelection?: (target: Readonly<{ entityType: AISelectionEntityType; entityId: string }>) => void; readonly onRevealEntity?: (target: Readonly<{ entityType: AISelectionEntityType; entityId: string }>) => void; readonly onDiagnostic?: (diagnostic: DocumentProblem | readonly DocumentProblem[] | undefined) => void; readonly icon: ReactNode; readonly provider?: AIProposalProvider; readonly bridgeHost: string; readonly bridgePort: number; readonly bridgeEnabled: boolean; readonly onBridgeEnabledChange: (enabled: boolean) => void; readonly bridgeToken: string; readonly onBridgeTokenChange: (token: string) => void; readonly onBridgeStatusChange?: (status: AIBridgeStatus) => void; readonly getZoom?: () => number }) {
+export function AIOperationPanel({ document, validationDiagnostics, documentEpoch, revision, mode, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, range, scenarioModel, activeScenarioId, onGenerateHandshakeScenarios, onCommand, onCommandBatch, onViewIntent, onViewOperation, onSetSelection, onRevealEntity, onDiagnostic, icon, provider = deterministicMockAIProposalProvider, bridgeHost, bridgePort, bridgeEnabled, onBridgeEnabledChange, bridgeToken, onBridgeTokenChange, onBridgeStatusChange, getZoom }: { readonly document: CanonicalDocument; readonly validationDiagnostics: readonly DocumentProblem[]; readonly documentEpoch: number; readonly revision: number; readonly mode: "Cycle" | "Transaction" | "Combined"; readonly selectedSignalId: SignalId | undefined; readonly selectedGroupId: GroupId | undefined; readonly selectedAnnotationId: string | undefined; readonly selectedTransactionId: string | undefined; readonly range: Readonly<{ start: number; end: number }> | undefined; readonly scenarioModel?: ScenarioDocumentModel; readonly activeScenarioId?: ScenarioId; readonly onGenerateHandshakeScenarios?: (scenarioId: ScenarioId, selectedKeys: readonly string[]) => readonly ScenarioId[]; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onCommandBatch?: (commands: readonly SemanticCommand[]) => CommandResult; readonly onViewIntent?: (intent: AIViewIntent) => void; readonly onViewOperation?: (operation: AIBridgeViewOperation, args: Readonly<Record<string, unknown>>) => void; readonly onSetSelection?: (target: Readonly<{ entityType: AISelectionEntityType; entityId: string }>) => void; readonly onRevealEntity?: (target: Readonly<{ entityType: AISelectionEntityType; entityId: string }>) => void; readonly onDiagnostic?: (diagnostic: DocumentProblem | readonly DocumentProblem[] | undefined) => void; readonly icon: ReactNode; readonly provider?: AIProposalProvider; readonly bridgeHost: string; readonly bridgePort: number; readonly bridgeEnabled: boolean; readonly onBridgeEnabledChange: (enabled: boolean) => void; readonly bridgeToken: string; readonly onBridgeTokenChange: (token: string) => void; readonly onBridgeStatusChange?: (status: AIBridgeStatus) => void; readonly getZoom?: () => number }) {
   const [query, setQuery] = useState("");
   const [preview, setPreview] = useState<AIProposal>();
   const [validatedRevision, setValidatedRevision] = useState<number>();
@@ -184,6 +184,8 @@ export function AIOperationPanel({ document, validationDiagnostics, documentEpoc
   const [copyStatus, setCopyStatus] = useState("");
   const [localBridgeFound, setLocalBridgeFound] = useState<boolean>();
   const [activityLog, setActivityLog] = useState<readonly ActivityEntry[]>([]);
+  const [selectedMissingCases, setSelectedMissingCases] = useState<ReadonlySet<string>>(() => new Set());
+  const missingCaseSuggestions = useMemo(() => scenarioModel && activeScenarioId ? listHandshakeMissingCaseSuggestions(scenarioModel, activeScenarioId) : [], [scenarioModel, activeScenarioId]);
   const previousDocumentEpochRef = useRef(documentEpoch);
   // Activity entries outlive the retention window: the retained array is a
   // view, not an identity allocator.  Keeping the sequence outside the
@@ -389,6 +391,31 @@ export function AIOperationPanel({ document, validationDiagnostics, documentEpoc
   return <section className="ai-operation-panel" data-testid="ai-operation-panel">
     <div className="ai-query-row">{icon}<label>Semantic query<input aria-label="AI semantic query" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="rename selected signal to REQ" /></label><button type="button" onClick={() => buildPreview()}>Preview</button><button type="button" data-testid="ai-connect-external" onClick={() => { setSettingsOpen(true); setConnectionGuideOpen(true); }}>Connect External AI</button><button type="button" data-testid="ai-settings-toggle" aria-expanded={settingsOpen} onClick={() => setSettingsOpen((value) => !value)}>Settings</button></div>
     <div className="ai-scope">Scope: <label>{" "}<select aria-label="AI context scope" data-testid="ai-scope-select" value={scope} onChange={(event) => setScope(event.target.value as AIScope)}><option value="selection">Selection</option><option value="current-view">Current View</option><option value="document">Document</option></select></label> · Revision: {revision} · Canonical read-only query · Allowed to edit: {scopeLabel(scope)}</div>
+    <section aria-label="Handshake missing-case suggestions" data-testid="handshake-case-suggestions">
+      <h4>Handshake coverage suggestions</h4>
+      <p>Suggestions use the active Scenario’s explicit Handshake constraints. Nothing changes until selected cases are added as Scenarios.</p>
+      {!scenarioModel || !activeScenarioId
+        ? <span>Enable Scenarios to create approved missing-case Scenarios.</span>
+        : missingCaseSuggestions.length === 0
+          ? <span>No supported Handshake constraints found. Add a Handshake constraint with binary or logic request and acknowledge Signals.</span>
+          : <>
+            <ul>{missingCaseSuggestions.map((suggestion) => <li key={suggestion.key}>
+              <label><input type="checkbox" aria-label={suggestion.title} checked={selectedMissingCases.has(suggestion.key)} onChange={(event) => setSelectedMissingCases((current) => { const next = new Set(current); if (event.target.checked) next.add(suggestion.key); else next.delete(suggestion.key); return next; })} />{suggestion.title}</label>
+              <small>{suggestion.detail}</small>
+            </li>)}</ul>
+            <button type="button" data-testid="create-selected-handshake-scenarios" disabled={selectedMissingCases.size === 0 || onGenerateHandshakeScenarios === undefined} onClick={() => {
+              try {
+                const ids = onGenerateHandshakeScenarios?.(activeScenarioId, [...selectedMissingCases]);
+                if (!ids?.length) return;
+                setSelectedMissingCases(new Set());
+                setStatus(`${ids.length} selected Handshake Scenario${ids.length === 1 ? "" : "s"} created · one Undo step`);
+                logActivity("proposal", `Generate ${ids.length} Handshake missing-case Scenario${ids.length === 1 ? "" : "s"}`, "Selected suggestions added · one History entry");
+              } catch (error) {
+                setStatus(error instanceof Error ? error.message : "Selected Handshake cases could not be added.");
+              }
+            }}>Create selected Scenarios</button>
+          </>}
+    </section>
     {settingsOpen && <div className="ai-settings" data-testid="ai-settings">
       <h4>AI Settings</h4>
       <fieldset>

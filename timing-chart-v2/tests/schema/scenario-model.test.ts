@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { scenarioModelFromV2, projectScenarioAsV2, updateScenarioModelFromV2Projection, validateScenarioDocumentModel, renameScenario, deleteScenario, duplicateScenario } from "../../packages/schema/src/scenario-model.js";
+import { scenarioModelFromV2, projectScenarioAsV2, updateScenarioModelFromV2Projection, validateScenarioDocumentModel, renameScenario, deleteScenario, duplicateScenario, listHandshakeMissingCaseSuggestions, createScenariosFromHandshakeSuggestions } from "../../packages/schema/src/scenario-model.js";
 import { compareScenarioSignalStreams } from "../../packages/schema/src/scenario-comparison.js";
 import { validateCanonicalDocument } from "../../packages/schema/src/validation.js";
 import { parseDocument, parseScenarioDocumentModel, serializeScenarioDocumentModel } from "../../packages/schema/src/serialization.js";
@@ -177,5 +177,51 @@ describe("Scenario canonical model adapter", () => {
     const model = { ...base, scenarios: [first, second] };
     expect(compareScenarioSignalStreams(model, first.id, second.id)).toEqual([{ signalId: "sig_data", ranges: [{ start: 2, end: 6 }] }]);
     expect(compareScenarioSignalStreams(model, first.id, first.id)).toEqual([]);
+  });
+
+  it("generates only explicitly selected Handshake cases from constraint-owned stable IDs", () => {
+    const source = canonicalFixture();
+    const template = source.signals[1]!;
+    if (template.type !== "bus") throw new Error("fixture DATA must be a bus");
+    const { width: _width, displayFormat: _displayFormat, ...binaryTemplate } = template;
+    const request = { ...binaryTemplate, id: "sig_req" as typeof template.id, name: "REQ", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 3, value: 1 }] };
+    const acknowledge = { ...binaryTemplate, id: "sig_ack" as typeof template.id, name: "ACK", type: "binary" as const, values: [{ start: 0, value: 0 }] };
+    const payload = { ...template, id: "sig_payload" as typeof template.id, name: "PAYLOAD", values: [{ start: 0, value: "00" }, { start: 5, value: "01" }] };
+    const handshake = { id: "constraint_handshake" as never, type: "handshake", data: { requestSignalId: request.id, acknowledgeSignalId: acknowledge.id, requestPolarity: "active-low", acknowledgePolarity: "active-low", stableSignalIds: [payload.id] } };
+    const v2 = { ...source, timeline: { ...source.timeline, end: 12, cycleCount: 12 }, signals: [source.signals[0]!, request, acknowledge, payload], signalGroups: [{ ...source.signalGroups[0]!, rows: [source.signals[0]!.id, request.id, acknowledge.id, payload.id] }], constraints: [handshake] };
+    const model = scenarioModelFromV2(v2);
+    const sourceScenario = model.scenarios[0]!;
+    const suggestions = listHandshakeMissingCaseSuggestions(model, sourceScenario.id);
+    expect(suggestions.map((item) => item.kind)).toEqual(["ack-before-request", "request-before-ack", "same-cycle", "backpressure", "consecutive-transfer", "stable-data-while-stalled"]);
+
+    const selected = suggestions.find((item) => item.kind === "same-cycle")!;
+    const result = createScenariosFromHandshakeSuggestions(model, sourceScenario.id, [selected.key]);
+    expect(model.scenarios).toHaveLength(1);
+    expect(result.document.scenarios).toHaveLength(2);
+    expect(result.createdScenarioIds).toHaveLength(1);
+    expect(result.document.scenarios[1]?.constraints[0]?.id).not.toBe(sourceScenario.constraints[0]?.id);
+    const generated = result.document.scenarios[1]!;
+    const reqValues = generated.signalStates[request.id]!;
+    const ackValues = generated.signalStates[acknowledge.id]!;
+    expect(reqValues).toMatchObject({ kind: "values", values: expect.arrayContaining([{ start: 0, value: 0 }, { start: 1, value: 1 }]) });
+    expect(ackValues).toMatchObject({ kind: "values", values: expect.arrayContaining([{ start: 0, value: 0 }, { start: 1, value: 1 }]) });
+    expect(validateScenarioDocumentModel(result.document)).toEqual([]);
+    expect(() => createScenariosFromHandshakeSuggestions(model, sourceScenario.id, ["unknown"])).toThrow("Unknown or unsupported");
+
+    const logicRequest = { ...request, type: "logic" as const };
+    const reset = { ...binaryTemplate, id: "sig_reset" as typeof template.id, name: "RESET", type: "binary" as const, values: [{ start: 0, value: 0 }] };
+    const extendedHandshake = { ...handshake, data: { ...handshake.data, resetSignalId: reset.id, resetPolarity: "active-low" } };
+    const extendedV2 = { ...v2, signals: [source.signals[0]!, logicRequest, acknowledge, payload, reset], signalGroups: [{ ...source.signalGroups[0]!, rows: [source.signals[0]!.id, logicRequest.id, acknowledge.id, payload.id, reset.id] }], constraints: [extendedHandshake] };
+    const extendedModel = scenarioModelFromV2(extendedV2);
+    const extendedScenario = extendedModel.scenarios[0]!;
+    const extendedSuggestions = listHandshakeMissingCaseSuggestions(extendedModel, extendedScenario.id);
+    expect(extendedSuggestions.map((item) => item.kind)).toContain("reset-during-transaction");
+    expect(extendedSuggestions.map((item) => item.kind)).toContain("x-propagation");
+    const extendedGenerated = createScenariosFromHandshakeSuggestions(extendedModel, extendedScenario.id, ["handshake:constraint_handshake:x-propagation", "handshake:constraint_handshake:reset-during-transaction"]);
+    const xScenario = extendedGenerated.document.scenarios[1]!;
+    const resetScenario = extendedGenerated.document.scenarios[2]!;
+    expect(xScenario.signalStates[logicRequest.id]).toMatchObject({ kind: "values", values: expect.arrayContaining([{ start: 1, value: "X" }]) });
+    expect(resetScenario.signalStates[reset.id]).toMatchObject({ kind: "values", values: expect.arrayContaining([{ start: 2, value: 0 }, { start: 3, value: 1 }]) });
+    expect(validateScenarioDocumentModel(extendedGenerated.document)).toEqual([]);
   });
 });

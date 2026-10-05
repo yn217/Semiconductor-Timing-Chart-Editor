@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import type { ChangeSet, CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import { deriveTimingDiagnostics, deriveTimingDiagnosticsIfInputsChanged, type CanonicalSnapshot, type TimingDiagnostic } from "@timing-chart-v2/core";
 import type { HistoryState } from "@timing-chart-v2/history";
-import { validateCanonicalDocument, type CanonicalDocument, type CommandId, type DocumentProblem, type ParsedCanonicalDocument, type ScenarioDocumentModel, type ScenarioId } from "@timing-chart-v2/schema";
+import { createScenariosFromHandshakeSuggestions, validateCanonicalDocument, type CanonicalDocument, type CommandId, type DocumentProblem, type ParsedCanonicalDocument, type ScenarioDocumentModel, type ScenarioId } from "@timing-chart-v2/schema";
 import { buildCommandRejectionDiagnostics } from "../command-diagnostics.js";
 import { EditorApplicationRuntime } from "../runtime/editor-application-runtime.js";
 
@@ -193,6 +193,14 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     const current = runtime.session.deleteScenario(scenarioId);
     publishScenarioSnapshot(current, true, false, "scenario.delete");
   }, [publishScenarioSnapshot, runtime]);
+  const generateHandshakeScenarios = useCallback((scenarioId: ScenarioId, selectedKeys: readonly string[]) => {
+    const currentModel = runtime.session.scenarioModel();
+    if (!currentModel) throw new Error("Enable Scenario storage before generating Handshake cases.");
+    const generated = createScenariosFromHandshakeSuggestions(currentModel, scenarioId, selectedKeys);
+    const current = runtime.session.addGeneratedScenarios(generated.document, generated.createdScenarioIds);
+    publishScenarioSnapshot(current, true, false, "scenario.generate-handshake-cases");
+    return generated.createdScenarioIds;
+  }, [publishScenarioSnapshot, runtime]);
   const runPendingTimingDiagnostics = useCallback((onComplete?: () => void) => {
     const pending = pendingOpenDiagnosticsRef.current;
     if (!pending) { onComplete?.(); return; }
@@ -256,6 +264,7 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     renameScenario,
     duplicateScenario,
     deleteScenario,
+    generateHandshakeScenarios,
     runPendingTimingDiagnostics,
     publishHistory,
     setProblem,
