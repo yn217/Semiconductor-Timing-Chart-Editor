@@ -1106,7 +1106,7 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
     }
     // Update semantic kind even when this stable DOM node's content signature
     // is unchanged; virtualized rows can be reused across view projections.
-    shell.dataset.rowKind = row.kind;
+    if (shell.dataset.rowKind !== row.kind) shell.dataset.rowKind = row.kind;
     if (shell.dataset.groupStart !== String(groupStart)) shell.dataset.groupStart = String(groupStart);
     if (surface === "left" && (row.kind === "timing" || row.kind === "spacer")) {
       const branch = shell.querySelector<HTMLElement>("[data-role='tree-branch']");
