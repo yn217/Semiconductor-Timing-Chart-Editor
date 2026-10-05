@@ -90,6 +90,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   #prefetchAttempted = new Set<string>();
   #lastPrefetchScrollTop: number | undefined;
   readonly #rowY = new Map<string, number>();
+  #canonicalGroupStartRowIdsSource: readonly string[] | undefined;
+  #firstTimingRowByGroup: ReadonlyMap<string, string> = new Map();
   #canonicalSignalIdsSource: readonly WaveSignalId[] | undefined;
   #canonicalSignalIdSet = new Set<WaveSignalId>();
   #documentRowIdsSource: readonly string[] | undefined;
@@ -153,6 +155,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#diagnostics = { ...this.#diagnostics, projectionUpdates: this.#diagnostics.projectionUpdates + 1, mountedRows: projection.mountedRowIds.length };
     const rows = this.#indexedRows(projection.rowLayout, false);
     const navigationRows = this.#indexedRows(projection.navigationRowLayout, true);
+    const shellFirstTimingRowByGroup = this.#getFirstTimingRows(projection.canonicalRowIds, navigationRows);
     const documentRowIdsChanged = this.#documentRowIdsSource !== projection.canonicalRowIds;
     if (documentRowIdsChanged) {
       this.#documentRowIdsSource = projection.canonicalRowIds;
@@ -170,7 +173,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     }
     this.#diagnostics = { ...this.#diagnostics, rowsVisited: visitedRowIds.size, documentEpoch: this.#documentEpoch, rowYSize: this.#rowY.size, rowYStaleCount: 0, rowYPrunePasses: this.#rowYPrunePasses };
     this.#counters = { ...this.#counters, rowPositionUpdates: this.#counters.rowPositionUpdates + changedRows.size };
-    const shellStats = [syncShellLayer(layers.left, this.#leftRows, projection.leftRowIds, navigationRows, "left"), ...(frozenLayer ? [syncShellLayer(frozenLayer, this.#frozenRows, projection.frozenLabelRowIds, rows, "frozen")] : []), syncShellLayer(layers.timing, this.#timingRows, projection.timingRowIds, rows, "timing")];
+    const shellStats = [syncShellLayer(layers.left, this.#leftRows, projection.leftRowIds, navigationRows, "left", shellFirstTimingRowByGroup), ...(frozenLayer ? [syncShellLayer(frozenLayer, this.#frozenRows, projection.frozenLabelRowIds, rows, "frozen", shellFirstTimingRowByGroup)] : []), syncShellLayer(layers.timing, this.#timingRows, projection.timingRowIds, rows, "timing", shellFirstTimingRowByGroup)];
     const headerStats = [syncGroupHeaderLayer(layers.left, this.#leftGroupHeaders, projection.mountedLeftGroupHeaderIds, projection.leftGroupHeaders, "left"), ...(frozenLayer ? [syncGroupHeaderLayer(frozenLayer, this.#frozenGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "frozen")] : []), syncGroupHeaderLayer(layers.timing, this.#timingGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "timing")];
     this.#diagnostics = { ...this.#diagnostics, domNodeCreates: this.#diagnostics.domNodeCreates + shellStats.concat(headerStats).reduce((sum, item) => sum + item.creates, 0), domNodeDestroys: this.#diagnostics.domNodeDestroys + shellStats.concat(headerStats).reduce((sum, item) => sum + item.destroys, 0), domNodeMoves: this.#diagnostics.domNodeMoves + shellStats.concat(headerStats).reduce((sum, item) => sum + item.moves, 0) };
     // The Left Tree shows every row (hidden signals and empty-group headers
@@ -321,9 +324,10 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     assertCrossSurfaceInvariant(projection);
     const rows = this.#indexedRows(projection.rowLayout, false);
     const navigationRows = this.#indexedRows(projection.navigationRowLayout, true);
-    syncShellLayer(layers.left, this.#leftRows, projection.leftRowIds, navigationRows, "left");
-    if (frozenLayer) syncShellLayer(frozenLayer, this.#frozenRows, projection.frozenLabelRowIds, rows, "frozen");
-    syncShellLayer(layers.timing, this.#timingRows, projection.timingRowIds, rows, "timing");
+    const firstTimingRowByGroup = this.#getFirstTimingRows(projection.canonicalRowIds, navigationRows);
+    syncShellLayer(layers.left, this.#leftRows, projection.leftRowIds, navigationRows, "left", firstTimingRowByGroup);
+    if (frozenLayer) syncShellLayer(frozenLayer, this.#frozenRows, projection.frozenLabelRowIds, rows, "frozen", firstTimingRowByGroup);
+    syncShellLayer(layers.timing, this.#timingRows, projection.timingRowIds, rows, "timing", firstTimingRowByGroup);
     for (const signalId of projection.mountedSignalIds) {
       const owner = this.#waveOwners.get(signalId);
       const row = rows.get(signalId);
@@ -336,6 +340,14 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     // #indexedRows() above owns these identity-cached indexes. Copying each
     // complete map here after every presentation-only edit duplicated O(rows)
     // work without changing the row lookup contents.
+  }
+
+  #getFirstTimingRows(rowIds: readonly string[], rows: ReadonlyMap<string, RowLayoutEntry>): ReadonlyMap<string, string> {
+    if (this.#canonicalGroupStartRowIdsSource !== rowIds) {
+      this.#canonicalGroupStartRowIdsSource = rowIds;
+      this.#firstTimingRowByGroup = firstTimingRows(rowIds, rows);
+    }
+    return this.#firstTimingRowByGroup;
   }
 
   updateViewport(projection: RenderProjection): void {
@@ -933,12 +945,20 @@ function groupStyleAppliesToSurface(extend: "label" | "waveform" | "both" | unde
   return scope === "both" || (scope === "waveform" ? isWaveform : !isWaveform);
 }
 
-function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, rowIds: readonly string[], rows: ReadonlyMap<string, RowLayoutEntry>, surface: string): { creates: number; destroys: number; moves: number } {
+function firstTimingRows(rowIds: readonly string[], rows: ReadonlyMap<string, RowLayoutEntry>): ReadonlyMap<string, string> {
+  const first = new Map<string, string>();
+  for (const rowId of rowIds) {
+    const row = rows.get(rowId);
+    if (row?.kind === "timing" && !first.has(row.groupId)) first.set(row.groupId, row.rowId);
+  }
+  return first;
+}
+
+function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, rowIds: readonly string[], rows: ReadonlyMap<string, RowLayoutEntry>, surface: string, firstTimingRowByGroup: ReadonlyMap<string, string>): { creates: number; destroys: number; moves: number } {
   const active = new Set(rowIds);
   let creates = 0, destroys = 0, moves = 0;
   for (const [rowId, shell] of cache) if (!active.has(rowId)) { shell.remove(); cache.delete(rowId); destroys += 1; }
   const ordered: HTMLElement[] = [];
-  let previousGroupId: string | undefined;
   for (const rowId of rowIds) {
     const row = rows.get(rowId);
     if (!row) throw new Error(`Missing RowLayout for '${rowId}'.`);
@@ -951,7 +971,8 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
       creates += 1;
     }
     if (!shell.hasAttribute("aria-selected")) shell.setAttribute("aria-selected", "false");
-    const signature = `${row.kind}\u0000${row.name}\u0000${row.commentTitle ?? ""}\u0000${row.commentBody ?? ""}\u0000${row.groupId}\u0000${row.groupName}\u0000${row.role ?? ""}\u0000${row.instancePath?.join(".") ?? ""}\u0000${row.fullPath ?? ""}\u0000${row.pinned === true}\u0000${JSON.stringify(row.groupStyle ?? {})}\u0000${JSON.stringify(row.displayStyle ?? {})}\u0000${row.displayAlign ?? ""}\u0000${row.displayOverflow ?? ""}\u0000${row.visible}\u0000${row.groupId !== previousGroupId}`;
+    const groupStart = firstTimingRowByGroup.get(row.groupId) === row.rowId;
+    const signature = `${row.kind}\u0000${row.name}\u0000${row.commentTitle ?? ""}\u0000${row.commentBody ?? ""}\u0000${row.groupId}\u0000${row.groupName}\u0000${row.role ?? ""}\u0000${row.instancePath?.join(".") ?? ""}\u0000${row.fullPath ?? ""}\u0000${row.pinned === true}\u0000${JSON.stringify(row.groupStyle ?? {})}\u0000${JSON.stringify(row.displayStyle ?? {})}\u0000${row.displayAlign ?? ""}\u0000${row.displayOverflow ?? ""}\u0000${row.visible}`;
     const typedSignature = `${signature}\u0000${row.signalType ?? ""}`;
     if (shell.dataset.shellSignature !== typedSignature) {
       shell.dataset.kind = row.kind;
@@ -974,7 +995,6 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
       else shell.style.removeProperty("--group-background");
       shell.style.removeProperty("opacity");
       if (groupStyleApplies && row.groupStyle?.border) shell.style.setProperty("--group-border", row.groupStyle.border); else shell.style.removeProperty("--group-border");
-      shell.dataset.groupStart = String(row.groupId !== previousGroupId);
       shell.dataset.instancePath = row.instancePath?.join(".") ?? "";
       shell.dataset.fullPath = row.fullPath ?? row.name;
       if (row.role) shell.dataset.signalRole = row.role; else delete shell.dataset.signalRole;
@@ -983,7 +1003,7 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
         shell.draggable = true;
         shell.setAttribute("aria-grabbed", "false");
       }
-      populateShell(shell, row, surface, row.groupId !== previousGroupId);
+      populateShell(shell, row, surface);
       shell.dataset.shellSignature = typedSignature;
       if (surface === "left" && row.kind === "timing") {
         const visibility = shell.querySelector<HTMLElement>("[data-role='tree-visibility']");
@@ -997,9 +1017,13 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
     // Update semantic kind even when this stable DOM node's content signature
     // is unchanged; virtualized rows can be reused across view projections.
     shell.dataset.rowKind = row.kind;
+    if (shell.dataset.groupStart !== String(groupStart)) shell.dataset.groupStart = String(groupStart);
+    if (surface === "left" && (row.kind === "timing" || row.kind === "spacer")) {
+      const branch = shell.querySelector<HTMLElement>("[data-role='tree-branch']");
+      if (branch && branch.draggable !== groupStart) branch.draggable = groupStart;
+    }
     place(shell, row);
     ordered.push(shell);
-    previousGroupId = row.groupId;
   }
   const currentRows = Array.from(layer.children).filter((child) => !(child as HTMLElement).dataset.groupHeader);
   const existingRows = new Set(currentRows);
@@ -1023,7 +1047,7 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
   return { creates, destroys, moves };
 }
 
-function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string, groupStart: boolean): void {
+function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string): void {
   if (surface === "timing") {
     if (row.kind !== "comment") return;
     const comment = shell.ownerDocument.createElement("span");
@@ -1043,7 +1067,6 @@ function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string,
     const branch = document.createElement("span");
     branch.dataset.role = "tree-branch";
     branch.dataset.groupId = row.groupId;
-    branch.draggable = groupStart;
     branch.textContent = "";
     const label = document.createElement("span");
     label.dataset.role = "tree-spacer-label";
@@ -1062,7 +1085,6 @@ function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string,
     const branch = document.createElement("span");
     branch.dataset.role = "tree-branch";
     branch.dataset.groupId = row.groupId;
-    branch.draggable = groupStart;
     branch.textContent = "";
     const name = document.createElement("span");
     name.dataset.role = "tree-signal-name";
