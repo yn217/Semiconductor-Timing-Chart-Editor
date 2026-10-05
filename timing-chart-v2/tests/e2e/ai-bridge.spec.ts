@@ -417,6 +417,9 @@ test("propose_rename_signal targets a stable Signal ID and still requires human 
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  // The assertion below targets Cycle's frozen Signal row; do not rely on the
+  // startup mode, which may be Transaction in the production workspace.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
   await page.getByRole("button", { name: "Ask or edit with the AI Assistant" }).click();
   const ai = page.getByTestId("ai-operation-panel");
@@ -496,6 +499,9 @@ test("the Editor session and pending AI proposal survive Bottom tab switches, th
   await expect(ai).toContainText("Rename REQUEST to REQ_STALE");
   await ai.getByTestId("ai-validate").click();
   await expect(ai.getByTestId("ai-status")).toContainText("Preview is out of date");
+  // The edit above intentionally switched to Transaction mode; frozen rows
+  // are Cycle-only DOM, so restore Cycle before asserting that projection.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toContainText("REQUEST");
   await expect(host).toHaveAttribute("data-canonical-revision", String(Number(beforeRevision) + 1));
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
