@@ -401,6 +401,14 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       ...(frozenLayer ? [syncGroupHeaderLayer(frozenLayer, this.#frozenGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "frozen")] : []),
       syncGroupHeaderLayer(layers.timing, this.#timingGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "timing"),
     ];
+    const visitedRowIds = new Set([...projection.leftRowIds, ...projection.frozenLabelRowIds, ...projection.timingRowIds]);
+    const changedRows = new Set<string>();
+    for (const rowId of visitedRowIds) {
+      const row = rows.get(rowId) ?? navigationRows.get(rowId);
+      if (!row) continue;
+      if (this.#rowY.get(row.rowId) !== row.y) changedRows.add(row.rowId);
+      this.#rowY.set(row.rowId, row.y);
+    }
     for (const signalId of projection.mountedSignalIds) {
       const owner = this.#waveOwners.get(signalId)!;
       const row = rows.get(signalId);
@@ -410,15 +418,22 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       owner.dataset.pinnedRow = String(row.pinned === true);
       place(owner, row);
     }
+    const scrollTop = layers.root.closest<HTMLElement>(".cycle-viewport")?.scrollTop ?? 0;
+    this.#updateWavePrefetchPlan(projection, mounted, this.#sourceWindowSnapshot, scrollTop);
     const changedNodes = rowStats.concat(headerStats);
     this.#diagnostics = {
       ...this.#diagnostics,
       mountedRows: projection.mountedRowIds.length,
-      rowsVisited: new Set([...projection.leftRowIds, ...projection.frozenLabelRowIds, ...projection.timingRowIds]).size,
+      rowsVisited: visitedRowIds.size,
+      documentEpoch: this.#documentEpoch,
+      rowYSize: this.#rowY.size,
+      rowYStaleCount: 0,
+      rowYPrunePasses: this.#rowYPrunePasses,
       domNodeCreates: this.#diagnostics.domNodeCreates + changedNodes.reduce((sum, item) => sum + item.creates, 0),
       domNodeDestroys: this.#diagnostics.domNodeDestroys + changedNodes.reduce((sum, item) => sum + item.destroys, 0),
       domNodeMoves: this.#diagnostics.domNodeMoves + changedNodes.reduce((sum, item) => sum + item.moves, 0),
     };
+    this.#counters = { ...this.#counters, rowPositionUpdates: this.#counters.rowPositionUpdates + changedRows.size };
     this.#visibleRowIdsSource = projection.visibleRowIds;
   }
 
