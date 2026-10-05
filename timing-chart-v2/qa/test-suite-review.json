@@ -16682,6 +16682,44 @@
       "decision": "MOVE_LAYER",
       "reason": "The 1280x720 case retains this full-fixture mode-switch/status journey in the PR profile. The wide copy checks the same status semantics and nonzero Transaction bars without a width-specific clipping, overflow, or pane-geometry assertion, so keep the second viewport in integration.",
       "replacementTest": "issue-840-stale-cycle-context.spec.ts — Cycle range and cursor status remain truthful after switching to the Transaction time axis at 1280x720"
+    },
+    {
+      "file": "issue-431-scenario-lifecycle.spec.ts",
+      "title": "Enable Scenarios migrates the current v2 document as one dirty Scenario",
+      "domain": "scenario-v3-lifecycle-and-persistence",
+      "originIssue": 431,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A v2 document can opt into Scenario storage, Scenario switching stays view-only, selected comparisons use shared Signal IDs, management participates in Undo/Redo, and v3 Save/Open preserves Scenario data.",
+      "duplicateGroup": "scenario-v3-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr",
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "This is the focused production journey for the new v3 document lifecycle: it crosses migration, active projection, History, comparison, and production Save/Open. Pure schema/session tests do not replace the UI and persistence boundary; the two-case run remains short enough for the PR tier.",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-431-scenario-lifecycle.spec.ts",
+      "title": "Scenario v3 switches as view state and management survives Undo/Redo and Save/Open",
+      "domain": "scenario-v3-lifecycle-and-persistence",
+      "originIssue": 431,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A v3 document switches and compares Scenarios without Canonical/History/Dirty changes; rename/duplicate/delete use exact Undo/Redo; Save/Open preserves Scenario data and returns to the documented initial Scenario.",
+      "duplicateGroup": "scenario-v3-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr",
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "This is the focused production journey for the new v3 document lifecycle: it crosses active projection, view-only switching, History, comparison, and production Save/Open. Pure schema/session tests do not replace the UI and persistence boundary; the two-case run remains short enough for the PR tier.",
+      "replacementTest": null
     }
   ]
 }

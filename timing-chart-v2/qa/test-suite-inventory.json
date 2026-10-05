@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-04T21:45:36.847Z",
+  "generatedAt": "2026-10-05T11:50:41.017Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 415,
-  "caseCount": 1238,
-  "reviewedCaseCount": 1238,
+  "specFileCount": 416,
+  "caseCount": 1240,
+  "reviewedCaseCount": 1240,
   "curatedProfileCounts": {
-    "integration": 626,
+    "integration": 628,
     "nightly": 238,
     "performance": 73,
-    "pr": 394,
+    "pr": 396,
     "visual": 180
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -10785,6 +10785,60 @@
         "nightly"
       ],
       "contractId": "check-category-toggle"
+    },
+    {
+      "file": "issue-431-scenario-lifecycle.spec.ts",
+      "suitePath": [],
+      "line": 11,
+      "title": "Enable Scenarios migrates the current v2 document as one dirty Scenario",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "scenario-v3-lifecycle-and-persistence",
+      "originIssue": 431,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A v2 document can opt into Scenario storage, Scenario switching stays view-only, selected comparisons use shared Signal IDs, management participates in Undo/Redo, and v3 Save/Open preserves Scenario data.",
+      "duplicateGroup": "scenario-v3-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is the focused production journey for the new v3 document lifecycle: it crosses migration, active projection, History, comparison, and production Save/Open. Pure schema/session tests do not replace the UI and persistence boundary; the two-case run remains short enough for the PR tier.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr",
+        "integration"
+      ],
+      "contractId": "scenario-v3-lifecycle-and-persistence"
+    },
+    {
+      "file": "issue-431-scenario-lifecycle.spec.ts",
+      "suitePath": [],
+      "line": 25,
+      "title": "Scenario v3 switches as view state and management survives Undo/Redo and Save/Open",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "scenario-v3-lifecycle-and-persistence",
+      "originIssue": 431,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A v3 document switches and compares Scenarios without Canonical/History/Dirty changes; rename/duplicate/delete use exact Undo/Redo; Save/Open preserves Scenario data and returns to the documented initial Scenario.",
+      "duplicateGroup": "scenario-v3-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is the focused production journey for the new v3 document lifecycle: it crosses active projection, view-only switching, History, comparison, and production Save/Open. Pure schema/session tests do not replace the UI and persistence boundary; the two-case run remains short enough for the PR tier.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr",
+        "integration"
+      ],
+      "contractId": "scenario-v3-lifecycle-and-persistence"
     },
     {
       "file": "issue-431-signal-pin.spec.ts",
@@ -33749,6 +33803,15 @@
     },
     {
       "file": "issue-431-protocol-check-toggle.spec.ts",
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
+      "originIssue": "431",
+      "declaredTimeoutMs": 120,
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "issue-431-scenario-lifecycle.spec.ts",
       "caseCount": 2,
       "reviewedCaseCount": 2,
       "originIssue": "431",
