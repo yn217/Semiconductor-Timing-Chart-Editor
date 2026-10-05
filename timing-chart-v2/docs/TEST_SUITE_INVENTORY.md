@@ -43,6 +43,18 @@ These are case-level observations recorded directly on case reviews. Inventory g
 | 6600 | `performance` | `local-geometry-dom-batch.spec.ts` | keeps WaveDrom DOM writes and Local Geometry reads inside one render batch |
 | 6400 | `integration` | `listener-lifecycle.spec.ts` | registers the Left Tree keydown handler exactly once per mount (no duplicate listener) |
 
+## PR profile runtime
+
+### PR profile run (2026-10-05, Windows)
+
+| Profile | Selected cases | Result | Wall time | Build time |
+| --- | ---: | --- | ---: | ---: |
+| `pr` (`npm run test:e2e:pr -- --reporter=line`) | 396 | 390 passed, 6 failed, 0 skipped, 0 flaky | 325.56 s (5m 25.56s) | 0 s (the command runs Playwright/Vite and does not build) |
+
+One full PR-profile run after the inventory pre-script completed. The per-spec output was not retained, so the ten slowest specs are not recorded here.
+
+Isolated reruns of the failing spec files reproduce six failing cases in four files: `icon-button-dialog-close.spec.ts` (outside click changes the selection), `issue-798-menu-exclusivity.spec.ts` at both viewports (header menu shows 10 items, test expects 4), `tree-keyboard.spec.ts` (`sig_cycle_ready` tree item not found), and `zoom-text-fidelity.spec.ts` (two cases; wave artifact stretch 0.5 / 2 instead of 1). All six fail identically on `f2d6803`, before the scenario commits, so they predate that work. Whether each is a stale test assumption or a product defect is not yet decided; no test was changed. `issue-738-hit-mapping-after-scale-scroll.spec.ts` was also reported failing in the profile run but passed in isolation (flaky candidate).
+
 ## Recorded spec-level runtimes
 
 These values were measured for a whole spec file and are deliberately not copied into the case-level runtime table.
