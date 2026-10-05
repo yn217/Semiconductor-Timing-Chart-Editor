@@ -39,9 +39,11 @@ export function reconcileViewportWaveOwners(input: {
       input.layer.append(owner);
     }
     if (!isNew) { input.owners.delete(signalId); input.owners.set(signalId, owner); }
-    owner.dataset.groupId = row.groupId;
-    owner.dataset.groupStart = String(firstTimingRowByGroup.get(row.groupId) === row.rowId);
-    owner.dataset.pinnedRow = String(row.pinned === true);
+    if (owner.dataset.groupId !== row.groupId) owner.dataset.groupId = row.groupId;
+    const groupStart = String(firstTimingRowByGroup.get(row.groupId) === row.rowId);
+    if (owner.dataset.groupStart !== groupStart) owner.dataset.groupStart = groupStart;
+    const pinnedRow = String(row.pinned === true);
+    if (owner.dataset.pinnedRow !== pinnedRow) owner.dataset.pinnedRow = pinnedRow;
     const transform = `translateY(${row.y}px)`;
     const height = `${row.height}px`;
     if (owner.style.transform !== transform) owner.style.transform = transform;

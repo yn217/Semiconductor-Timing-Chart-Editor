@@ -33,7 +33,9 @@ test("vertical viewport updates reuse unchanged Group header controls", async ({
     if (!header || !viewport || !timingLayer) throw new Error("Expected visible Group header, timing layer, and Cycle viewport");
     const initialChildren = [...header.childNodes];
     const initialSignature = header.dataset.presentationSignature;
+    const existingWaveOwners = [...document.querySelectorAll<HTMLElement>("[data-role='stable-waveform-surface'] > [data-role='wave-owner']")];
     const mutations: string[] = [];
+    const waveOwnerAttributeChanges: Array<{ signalId: string; attribute: string | null; oldValue: string | null; newValue: string | null }> = [];
     let timingNodesAddedOrRemoved = 0;
     const observer = new MutationObserver((records) => {
       for (const record of records.filter((entry) => entry.type === "childList")) {
@@ -45,6 +47,8 @@ test("vertical viewport updates reuse unchanged Group header controls", async ({
       timingNodesAddedOrRemoved += records.reduce((count, record) => count + record.addedNodes.length + record.removedNodes.length, 0);
     });
     timingObserver.observe(timingLayer, { childList: true });
+    const waveOwnerObserver = new MutationObserver((records) => { for (const record of records) waveOwnerAttributeChanges.push({ signalId: (record.target as HTMLElement).dataset.signalId ?? "", attribute: record.attributeName, oldValue: record.oldValue, newValue: (record.target as HTMLElement).getAttribute(record.attributeName ?? "") }); });
+    for (const owner of existingWaveOwners) waveOwnerObserver.observe(owner, { attributes: true, attributeOldValue: true, attributeFilter: ["data-group-id", "data-group-start", "data-pinned-row"] });
     viewport.scrollTop += 40;
     await new Promise<void>((resolve) => {
       let frames = 4;
@@ -53,6 +57,7 @@ test("vertical viewport updates reuse unchanged Group header controls", async ({
     });
     observer.disconnect();
     timingObserver.disconnect();
+    waveOwnerObserver.disconnect();
     return {
       scrollTop: viewport.scrollTop,
       childListChanges: mutations.length,
@@ -61,6 +66,7 @@ test("vertical viewport updates reuse unchanged Group header controls", async ({
       finalSignature: header.dataset.presentationSignature,
       sameChildNodes: initialChildren.length === header.childNodes.length && initialChildren.every((child, index) => header.childNodes[index] === child),
       timingNodesAddedOrRemoved,
+      waveOwnerAttributeChanges,
     };
   });
   expect(scrollEvidence.scrollTop).toBeGreaterThan(0);
@@ -69,6 +75,7 @@ test("vertical viewport updates reuse unchanged Group header controls", async ({
   expect(scrollEvidence.childListChanges, `unchanged Group header controls must not be reconstructed during scroll: ${JSON.stringify(scrollEvidence)}`).toBe(0);
   expect(scrollEvidence.sameChildNodes).toBe(true);
   expect(scrollEvidence.timingNodesAddedOrRemoved, "scroll must only add/remove newly entering or exiting timing rows").toBeLessThan(10);
+  expect(scrollEvidence.waveOwnerAttributeChanges, `unchanged mounted Wave owners must not receive redundant viewport metadata writes: ${JSON.stringify(scrollEvidence.waveOwnerAttributeChanges)}`).toHaveLength(0);
   const afterRenderer = await rendererSnapshot();
   expect(afterRenderer.projectionUpdates, "unchanged mounted Signal IDs must not run the full renderer projection update").toBe(beforeRenderer.projectionUpdates);
   expect(afterRenderer.waveBatchCount).toBe(beforeRenderer.waveBatchCount);

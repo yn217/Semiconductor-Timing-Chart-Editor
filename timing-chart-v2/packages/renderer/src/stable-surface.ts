@@ -281,9 +281,11 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       if (!isNew) { this.#waveOwners.delete(signalId); this.#waveOwners.set(signalId, owner); }
       const row = rows.get(signalId);
       if (row) {
-        owner.dataset.groupId = row.groupId;
-        owner.dataset.groupStart = String(firstTimingRowByGroup.get(row.groupId) === row.rowId);
-        owner.dataset.pinnedRow = String(row.pinned === true);
+        if (owner.dataset.groupId !== row.groupId) owner.dataset.groupId = row.groupId;
+        const groupStart = String(firstTimingRowByGroup.get(row.groupId) === row.rowId);
+        if (owner.dataset.groupStart !== groupStart) owner.dataset.groupStart = groupStart;
+        const pinnedRow = String(row.pinned === true);
+        if (owner.dataset.pinnedRow !== pinnedRow) owner.dataset.pinnedRow = pinnedRow;
         place(owner, row);
         const waveformStyle = parseWaveformStyle(row.displayStyle);
         applyWaveformStyle(owner, waveformStyle);
@@ -335,7 +337,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       const owner = this.#waveOwners.get(signalId);
       const row = rows.get(signalId);
       if (!owner || !row) continue;
-      owner.dataset.pinnedRow = String(row.pinned === true);
+      const pinnedRow = String(row.pinned === true);
+      if (owner.dataset.pinnedRow !== pinnedRow) owner.dataset.pinnedRow = pinnedRow;
       const waveformStyle = parseWaveformStyle(row.displayStyle);
       applyWaveformStyle(owner, waveformStyle);
       setCanvasWaveformColor(owner, waveformStyle.color);
