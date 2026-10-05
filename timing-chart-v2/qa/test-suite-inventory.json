@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-05T12:47:15.188Z",
+  "generatedAt": "2026-10-05T17:42:33.197Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -32583,7 +32583,7 @@
     {
       "file": "zoom-text-fidelity.spec.ts",
       "suitePath": [],
-      "line": 104,
+      "line": 113,
       "title": "keeps the cycle ruler sticky and clipped to the time domain during vertical and horizontal scroll",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -32609,7 +32609,7 @@
     {
       "file": "zoom-text-fidelity.spec.ts",
       "suitePath": [],
-      "line": 159,
+      "line": 168,
       "title": "keeps ruler clipping and frozen-column ownership through scroll positions and zoom presets",
       "project": "chromium",
       "timeoutMs": 30000,
