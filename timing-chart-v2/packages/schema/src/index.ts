@@ -21,3 +21,4 @@ export * from "./annotation-label-layout.js";
 export * from "./canonical-inventory.js";
 export * from "./signal-type-registry.js";
 export * from "./scenario-model.js";
+export * from "./scenario-comparison.js";

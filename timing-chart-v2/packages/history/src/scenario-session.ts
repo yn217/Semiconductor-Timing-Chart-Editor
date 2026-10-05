@@ -1,13 +1,15 @@
 import { type ChangeSet, type CommandResult, type SemanticCommand } from "@timing-chart-v2/commands";
 import type { CanonicalSessionMetrics, CanonicalSnapshot } from "@timing-chart-v2/core";
-import { projectScenarioAsV2, updateScenarioModelFromV2Projection, validateScenarioDocumentModel, type CanonicalDocument, type CommandId, type ScenarioDocumentModel, type ScenarioId } from "@timing-chart-v2/schema";
+import { deleteScenario, duplicateScenario, projectScenarioAsV2, renameScenario, updateScenarioModelFromV2Projection, validateScenarioDocumentModel, type CanonicalDocument, type CommandId, type ScenarioDocumentModel, type ScenarioId } from "@timing-chart-v2/schema";
 import { CommandHistorySession } from "./session.js";
 import { HISTORY_RETENTION_POLICY, type HistoryMetrics, type HistoryState, type RecordedAction } from "./types.js";
 
 interface ScenarioHistoryEntry {
-  readonly action: RecordedAction;
+  readonly action: RecordedAction | Readonly<{ type: "scenario.rename" | "scenario.duplicate" | "scenario.delete"; scenarioId: ScenarioId }>;
   readonly before: ScenarioDocumentModel;
   readonly after: ScenarioDocumentModel;
+  readonly beforeActiveScenarioId: ScenarioId;
+  readonly afterActiveScenarioId: ScenarioId;
   readonly changeSet: ChangeSet;
 }
 
@@ -78,6 +80,24 @@ export class ScenarioCommandHistorySession {
     return this.#publishSnapshot();
   }
 
+  renameScenario(scenarioId: ScenarioId, name: string): CanonicalSnapshot {
+    return this.#acceptModelMutation({ type: "scenario.rename", scenarioId }, renameScenario(this.#model, scenarioId, name), this.#activeScenarioId);
+  }
+
+  duplicateScenario(scenarioId: ScenarioId, name?: string): ScenarioId {
+    const next = duplicateScenario(this.#model, scenarioId, name);
+    const created = next.scenarios.find((scenario) => !this.#model.scenarios.some((current) => current.id === scenario.id));
+    if (!created) throw new Error("Scenario duplication did not create a new Scenario.");
+    this.#acceptModelMutation({ type: "scenario.duplicate", scenarioId }, next, created.id);
+    return created.id;
+  }
+
+  deleteScenario(scenarioId: ScenarioId): CanonicalSnapshot {
+    const next = deleteScenario(this.#model, scenarioId);
+    const active = this.#activeScenarioId === scenarioId ? next.scenarios[Math.min(this.#model.scenarios.findIndex((scenario) => scenario.id === scenarioId), next.scenarios.length - 1)]!.id : this.#activeScenarioId;
+    return this.#acceptModelMutation({ type: "scenario.delete", scenarioId }, next, active);
+  }
+
   metrics(): CanonicalSessionMetrics {
     const current = this.#activeProjection.metrics();
     return { validationRuns: this.#priorSessionMetrics.validationRuns + current.validationRuns, commits: this.#priorSessionMetrics.commits + current.commits };
@@ -89,6 +109,7 @@ export class ScenarioCommandHistorySession {
 
   historyMetrics(): HistoryMetrics { return Object.freeze({ ...this.#metrics }); }
   markClean(): void { this.#cleanModel = this.#model; }
+  markFormatMigrationDirty(): void { this.#cleanModel = freezeModel(cloneModel(this.#model)); }
 
   execute(command: SemanticCommand): CommandResult {
     this.#metrics = { ...this.#metrics, commandAttempts: this.#metrics.commandAttempts + 1 };
@@ -110,6 +131,7 @@ export class ScenarioCommandHistorySession {
     const entry = this.#undo.at(-1);
     if (!entry) return noHistory("Undo");
     this.#model = entry.before;
+    this.#activeScenarioId = entry.beforeActiveScenarioId;
     this.#undo.pop();
     this.#redo.push(entry);
     this.#metrics = { ...this.#metrics, undoOperations: this.#metrics.undoOperations + 1 };
@@ -122,6 +144,7 @@ export class ScenarioCommandHistorySession {
     const entry = this.#redo.at(-1);
     if (!entry) return noHistory("Redo");
     this.#model = entry.after;
+    this.#activeScenarioId = entry.afterActiveScenarioId;
     this.#redo.pop();
     this.#undo.push(entry);
     this.#metrics = { ...this.#metrics, redoOperations: this.#metrics.redoOperations + 1 };
@@ -161,11 +184,33 @@ export class ScenarioCommandHistorySession {
     }
     this.#model = after;
     this.#revision += 1;
-    this.#undo.push({ action, before, after, changeSet });
+    this.#undo.push({ action, before, after, beforeActiveScenarioId: this.#activeScenarioId, afterActiveScenarioId: this.#activeScenarioId, changeSet });
     this.#redo = [];
     this.#metrics = { ...this.#metrics, committedActions: this.#metrics.committedActions + 1 };
     this.#trimHistory();
     return { ok: true, snapshot: this.#publishSnapshot(), changeSet };
+  }
+
+  #acceptModelMutation(
+    action: Extract<ScenarioHistoryEntry["action"], { type: `scenario.${string}` }>,
+    next: ScenarioDocumentModel,
+    nextActiveScenarioId: ScenarioId,
+  ): CanonicalSnapshot {
+    if (next === this.#model && nextActiveScenarioId === this.#activeScenarioId) return this.#snapshot;
+    const before = this.#model;
+    const beforeActiveScenarioId = this.#activeScenarioId;
+    const owned = freezeModel(cloneModel(next));
+    const problems = validateScenarioDocumentModel(owned);
+    if (problems.length > 0) throw new Error(`Scenario operation produced an invalid document (${problems.map((item) => item.code).join(", ")}).`);
+    this.#model = owned;
+    this.#activeScenarioId = nextActiveScenarioId;
+    this.#revision += 1;
+    this.#resetActiveProjection();
+    this.#undo.push({ action, before, after: owned, beforeActiveScenarioId, afterActiveScenarioId: nextActiveScenarioId, changeSet: { fullDocumentReplace: true } });
+    this.#redo = [];
+    this.#metrics = { ...this.#metrics, committedActions: this.#metrics.committedActions + 1 };
+    this.#trimHistory();
+    return this.#snapshot;
   }
 
   #trimHistory(): void {

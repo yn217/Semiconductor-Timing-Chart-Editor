@@ -1,11 +1,11 @@
 import { useCallback, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import type { CommandHistorySession } from "@timing-chart-v2/history";
-import { validateDocumentResourceBudget, type CanonicalDocument, type DocumentProblem, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
+import { validateDocumentResourceBudget, type CanonicalDocument, type DocumentProblem, type ParsedCanonicalDocument, type ScenarioDocumentModel } from "@timing-chart-v2/schema";
+import type { ActiveEditorSession } from "../runtime/editor-session-controller.js";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
 import { commitDocumentReplacement } from "./document-replacement.js";
 import { documentIdFromRecentText, isLegacyRecentDocument, loadRecentDocument, recentRecordMatches, saveRecentDocument, type RecentDocumentIdentity, type RecentDocumentMetadata, type RecentDocumentRecord } from "./recent-document-storage.js";
-import { canonicalDocumentOf, createNewDocumentFromProductTemplate, decodeOpenDocumentBytes, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "../file-document-controller.js";
+import { canonicalDocumentOf, createNewDocumentFromProductTemplate, decodeOpenDocumentBytes, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseEditorDocument } from "../file-document-controller.js";
 
 const RECENT_KEY = "timing-chart-v2.recent";
 const RECENT_META_KEY = "timing-chart-v2.recent-meta";
@@ -44,7 +44,7 @@ export type CompatibilityPreview = Readonly<{ sourceFormatVersion: number; sourc
 
 export type DocumentReplacement = Readonly<{
   document: CanonicalDocument;
-  session: CommandHistorySession;
+  session: ActiveEditorSession;
   documentEpoch: number;
   migrationWarnings: readonly { code: string; path: string; message: string }[];
 }>;
@@ -57,6 +57,7 @@ type LifecycleEffects = Readonly<{
 
 type DocumentApplicationPort = Pick<EditorApplicationOwner,
   "history" | "runtime" | "replaceSession" | "publishHistory" | "setProblem" | "setRuntimeDiagnostics"
+  | "replaceScenarioSession"
 >;
 
 function openProblems(problems: readonly DocumentProblem[]): readonly DocumentProblem[] {
@@ -157,12 +158,29 @@ export function useDocumentLifecycle({
     return true;
   }, [application]);
 
+  const replaceScenarioDocument = useCallback((model: ScenarioDocumentModel) => {
+    let session!: ActiveEditorSession;
+    let documentEpoch = 0;
+    try {
+      flushSync(() => {
+        session = application.replaceScenarioSession(model);
+        documentEpoch = application.runtime.documentEpoch.advance();
+      });
+    } catch (error) {
+      application.setProblem(`The Scenario document could not be opened: ${error instanceof Error ? error.message : String(error)}`);
+      return false;
+    }
+    setCompatibilityPreview(undefined);
+    effectsRef.current?.applyReplacement({ document: session.getSnapshot().document as CanonicalDocument, session, documentEpoch, migrationWarnings: [] });
+    return true;
+  }, [application]);
+
   const openText = useCallback((text: string) => {
     const fileReadStartedAt = fileReadStartedAtRef.current;
     fileReadStartedAtRef.current = undefined;
     effectsRef.current?.beginOpenMeasurement(undefined, fileReadStartedAt);
     effectsRef.current?.markOpenPhase("file-read-complete");
-    const parsed = parseOpenDocument(text);
+    const parsed = parseEditorDocument(text);
     effectsRef.current?.markOpenPhase("parse-done");
     if (!parsed.ok) {
       if (parsed.kind === "unsupported-version") {
@@ -177,8 +195,10 @@ export function useDocumentLifecycle({
       return false;
     }
     effectsRef.current?.markOpenPhase("validate-done");
-    return replaceDocument(parsed, parsed.warnings);
-  }, [application, replaceDocument]);
+    return parsed.kind === "scenario"
+      ? replaceScenarioDocument(parsed.model)
+      : replaceDocument(parsed.document, parsed.document.warnings);
+  }, [application, replaceDocument, replaceScenarioDocument]);
 
   const performAction = useCallback((action: PendingDocumentAction) => {
     if (action.requestId !== requestIdRef.current) return false;
@@ -266,7 +286,7 @@ export function useDocumentLifecycle({
     let text: string;
     const serializeStartedAt = performance.now();
     try {
-      text = serializeSaveDocument(savedDocument);
+      text = application.runtime.session.serializeCurrentDocument();
       recordSaveMeasure("timing-chart-v2.save.serialize", serializeStartedAt, { characters: text.length });
     } catch (error) {
       recordSaveMeasure("timing-chart-v2.save.serialize", serializeStartedAt);

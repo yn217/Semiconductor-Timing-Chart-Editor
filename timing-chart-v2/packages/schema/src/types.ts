@@ -378,7 +378,7 @@ export interface TimingScenario {
   readonly constraints: readonly Constraint[];
 }
 
-/** Scenario-aware v3 storage shape; parser/serializer activation is a follow-up slice. */
+/** Scenario-aware v3 storage shape; all scenario-owned semantic collections have exactly one owner. */
 export interface ScenarioDocumentModel {
   readonly formatVersion: 3;
   readonly document: DocumentMetadata;

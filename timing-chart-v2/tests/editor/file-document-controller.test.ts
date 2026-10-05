@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { canonicalFixture } from "../fixtures/canonical.js";
-import { createNewDocumentFromProductTemplate, decodeOpenDocumentBytes, parseOpenDocument, serializeSaveDocument } from "../../apps/editor/src/file-document-controller.js";
+import { createNewDocumentFromProductTemplate, decodeOpenDocumentBytes, parseOpenDocument, parseEditorDocument, serializeSaveDocument } from "../../apps/editor/src/file-document-controller.js";
+import { scenarioModelFromV2, serializeScenarioDocumentModel } from "../../packages/schema/src/index.js";
 
 describe("file document controller boundaries", () => {
   it("creates a new document without mutating the base document", () => {
@@ -36,5 +37,15 @@ describe("file document controller boundaries", () => {
     const openedFromText = parseOpenDocument(text);
     expect(openedFromBytes).toEqual(openedFromText);
     expect(openedFromBytes.ok).toBe(true);
+  });
+
+  it("opens Scenario v3 through the editor boundary without projecting away Scenarios", () => {
+    const model = scenarioModelFromV2(canonicalFixture());
+    const second = { ...model.scenarios[0]!, id: "scenario_alt" as typeof model.scenarios[number]["id"], name: "Alternate" };
+    const text = serializeScenarioDocumentModel({ ...model, scenarios: [...model.scenarios, second] });
+    const parsed = parseEditorDocument(text);
+    expect(parsed).toMatchObject({ ok: true, kind: "scenario" });
+    if (parsed.ok && parsed.kind === "scenario") expect(parsed.model.scenarios).toHaveLength(2);
+    expect(parseOpenDocument(text)).toMatchObject({ ok: false, kind: "unsupported-version", sourceFormatVersion: 3 });
   });
 });

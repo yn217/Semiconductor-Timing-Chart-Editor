@@ -2,12 +2,12 @@ import { useCallback, useRef, useState } from "react";
 import type { ChangeSet, CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import { deriveTimingDiagnostics, deriveTimingDiagnosticsIfInputsChanged, type CanonicalSnapshot, type TimingDiagnostic } from "@timing-chart-v2/core";
 import type { HistoryState } from "@timing-chart-v2/history";
-import { validateCanonicalDocument, type CanonicalDocument, type CommandId, type DocumentProblem, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
+import { validateCanonicalDocument, type CanonicalDocument, type CommandId, type DocumentProblem, type ParsedCanonicalDocument, type ScenarioDocumentModel, type ScenarioId } from "@timing-chart-v2/schema";
 import { buildCommandRejectionDiagnostics } from "../command-diagnostics.js";
 import { EditorApplicationRuntime } from "../runtime/editor-application-runtime.js";
 
 type AcceptedCommandResult = Extract<CommandResult, { readonly ok: true }>;
-type AcceptedContext = Readonly<{ operation: string; command?: SemanticCommand; batchId?: CommandId; commandStartedAt: number; diagnosticsDurationMs?: number; diagnosticsRecomputed?: boolean }>;
+type AcceptedContext = Readonly<{ operation: string; command?: SemanticCommand; batchId?: CommandId; commandStartedAt: number; diagnosticsDurationMs?: number; diagnosticsRecomputed?: boolean; viewOnly?: boolean }>;
 type AcceptedHandler = (result: AcceptedCommandResult, context: AcceptedContext) => void;
 
 function withoutCommandRejectionDiagnostics(current: readonly DocumentProblem[]): readonly DocumentProblem[] {
@@ -142,6 +142,57 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     setRuntimeDiagnostics(diagnostics);
     return session;
   }, [runtime]);
+  const replaceScenarioSession = useCallback((model: ScenarioDocumentModel, diagnostics: readonly DocumentProblem[] = [], markDirty = false) => {
+    const session = runtime.session.replaceScenarioModel(model);
+    if (markDirty) runtime.session.markScenarioFormatMigrationDirty();
+    const current = session.getSnapshot();
+    setSnapshot(current);
+    setLastChangeSet({ fullDocumentReplace: true });
+    setHistory(session.historyState());
+    const generation = ++openDiagnosticsGenerationRef.current;
+    pendingOpenDiagnosticsCompletionRef.current = undefined;
+    pendingOpenDiagnosticsRef.current = { generation, document: current.document, revision: current.revision };
+    setValidationDiagnostics([]);
+    setValidationPending(true);
+    setProblem("");
+    setRuntimeDiagnostics(diagnostics);
+    return session;
+  }, [runtime]);
+  const publishScenarioSnapshot = useCallback((current: CanonicalSnapshot, fullReplacement: boolean, viewOnly: boolean, operation: string) => {
+    setSnapshot(current);
+    setLastChangeSet({ fullDocumentReplace: fullReplacement });
+    setHistory(runtime.session.current().historyState());
+    const diagnostics = deriveTimingDiagnostics(current.document);
+    timingDiagnosticsDocumentRef.current = current.document;
+    timingDiagnosticsRef.current = diagnostics;
+    openDiagnosticsGenerationRef.current += 1;
+    pendingOpenDiagnosticsRef.current = undefined;
+    pendingOpenDiagnosticsCompletionRef.current = undefined;
+    setValidationDiagnostics(diagnostics);
+    setValidationPending(false);
+    setProblem("");
+    acceptedHandlerRef.current?.({ ok: true, snapshot: current, changeSet: { fullDocumentReplace: fullReplacement } }, { operation, commandStartedAt: globalThis.performance.now(), viewOnly });
+  }, [runtime]);
+  const switchScenario = useCallback((scenarioId: ScenarioId) => {
+    if (runtime.session.scenarioModel() === undefined) return false;
+    const before = runtime.session.snapshot();
+    const current = runtime.session.switchScenario(scenarioId);
+    if (current !== before) publishScenarioSnapshot(current, true, true, "scenario.switch");
+    return true;
+  }, [publishScenarioSnapshot, runtime]);
+  const renameScenario = useCallback((scenarioId: ScenarioId, name: string) => {
+    const current = runtime.session.renameScenario(scenarioId, name);
+    publishScenarioSnapshot(current, true, false, "scenario.rename");
+  }, [publishScenarioSnapshot, runtime]);
+  const duplicateScenario = useCallback((scenarioId: ScenarioId) => {
+    const createdId = runtime.session.duplicateScenario(scenarioId);
+    publishScenarioSnapshot(runtime.session.snapshot(), true, false, "scenario.duplicate");
+    return createdId;
+  }, [publishScenarioSnapshot, runtime]);
+  const deleteScenario = useCallback((scenarioId: ScenarioId) => {
+    const current = runtime.session.deleteScenario(scenarioId);
+    publishScenarioSnapshot(current, true, false, "scenario.delete");
+  }, [publishScenarioSnapshot, runtime]);
   const runPendingTimingDiagnostics = useCallback((onComplete?: () => void) => {
     const pending = pendingOpenDiagnosticsRef.current;
     if (!pending) { onComplete?.(); return; }
@@ -200,6 +251,11 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     redo,
     attachAcceptedHandler,
     replaceSession,
+    replaceScenarioSession,
+    switchScenario,
+    renameScenario,
+    duplicateScenario,
+    deleteScenario,
     runPendingTimingDiagnostics,
     publishHistory,
     setProblem,

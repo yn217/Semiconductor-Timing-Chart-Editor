@@ -1,15 +1,17 @@
-import { CommandHistorySession } from "@timing-chart-v2/history";
-import type { CanonicalDocument, ParsedCanonicalDocument } from "@timing-chart-v2/schema";
+import { CommandHistorySession, ScenarioCommandHistorySession } from "@timing-chart-v2/history";
+import { serializeScenarioDocumentModel, serializeValidatedCanonicalDocument, type CanonicalDocument, type ParsedCanonicalDocument, type ScenarioDocumentModel, type ScenarioId } from "@timing-chart-v2/schema";
+
+export type ActiveEditorSession = CommandHistorySession | ScenarioCommandHistorySession;
 
 /** Owns the replaceable document session lifecycle for the editor runtime. */
 export class EditorSessionController {
-  private session: CommandHistorySession;
+  private session: ActiveEditorSession;
 
   constructor(document: CanonicalDocument) {
     this.session = new CommandHistorySession(document);
   }
 
-  current(): CommandHistorySession {
+  current(): ActiveEditorSession {
     return this.session;
   }
 
@@ -20,6 +22,49 @@ export class EditorSessionController {
   replace(document: CanonicalDocument | ParsedCanonicalDocument): CommandHistorySession {
     this.session = new CommandHistorySession(document);
     return this.session;
+  }
+
+  replaceScenarioModel(model: ScenarioDocumentModel, activeScenarioId?: ScenarioId): ScenarioCommandHistorySession {
+    this.session = new ScenarioCommandHistorySession(model, activeScenarioId);
+    return this.session;
+  }
+
+  switchScenario(scenarioId: ScenarioId): ReturnType<ScenarioCommandHistorySession["switchScenario"]> {
+    if (!(this.session instanceof ScenarioCommandHistorySession)) throw new Error("The current document does not use Scenario storage.");
+    return this.session.switchScenario(scenarioId);
+  }
+
+  renameScenario(scenarioId: ScenarioId, name: string): ReturnType<ScenarioCommandHistorySession["renameScenario"]> {
+    if (!(this.session instanceof ScenarioCommandHistorySession)) throw new Error("The current document does not use Scenario storage.");
+    return this.session.renameScenario(scenarioId, name);
+  }
+
+  duplicateScenario(scenarioId: ScenarioId, name?: string): ScenarioId {
+    if (!(this.session instanceof ScenarioCommandHistorySession)) throw new Error("The current document does not use Scenario storage.");
+    return this.session.duplicateScenario(scenarioId, name);
+  }
+
+  deleteScenario(scenarioId: ScenarioId): ReturnType<ScenarioCommandHistorySession["deleteScenario"]> {
+    if (!(this.session instanceof ScenarioCommandHistorySession)) throw new Error("The current document does not use Scenario storage.");
+    return this.session.deleteScenario(scenarioId);
+  }
+
+  activeScenarioId(): ScenarioId | undefined {
+    return this.session instanceof ScenarioCommandHistorySession ? this.session.activeScenarioId() : undefined;
+  }
+
+  markScenarioFormatMigrationDirty(): void {
+    if (!(this.session instanceof ScenarioCommandHistorySession)) throw new Error("The current document does not use Scenario storage.");
+    this.session.markFormatMigrationDirty();
+  }
+
+  scenarioModel(): ScenarioDocumentModel | undefined {
+    return this.session instanceof ScenarioCommandHistorySession ? this.session.scenarioModel() : undefined;
+  }
+
+  serializeCurrentDocument(): string {
+    const scenarioModel = this.scenarioModel();
+    return scenarioModel === undefined ? serializeValidatedCanonicalDocument(this.snapshot().document) : serializeScenarioDocumentModel(scenarioModel);
   }
 
   execute(command: Parameters<CommandHistorySession["execute"]>[0]): ReturnType<CommandHistorySession["execute"]> {

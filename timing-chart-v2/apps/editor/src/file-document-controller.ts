@@ -1,10 +1,24 @@
-import { isTrustedParsedCanonicalDocument, parseDocument, serializeValidatedCanonicalDocument, type CanonicalDocument, type DocumentProblem, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
+import { isTrustedParsedCanonicalDocument, parseDocument, parseScenarioDocumentModel, serializeValidatedCanonicalDocument, type CanonicalDocument, type DocumentProblem, type ParsedCanonicalDocument, type ScenarioDocumentModel } from "@timing-chart-v2/schema";
 
 export const MAX_OPEN_FILE_BYTES = 32 * 1024 * 1024;
 
 /** Pure Open boundary: parsing/migration stays independent of the editor shell. */
 export function parseOpenDocument(text: string): ReturnType<typeof parseDocument> {
   return parseDocument(text);
+}
+
+export type ParsedEditorDocument =
+  | Readonly<{ ok: true; kind: "canonical"; document: ParsedCanonicalDocument }>
+  | Readonly<{ ok: true; kind: "scenario"; model: ScenarioDocumentModel }>
+  | Exclude<ReturnType<typeof parseDocument>, { readonly ok: true }>;
+
+/** Shared production Open boundary for legacy/v2 and Scenario v3 documents. */
+export function parseEditorDocument(text: string): ParsedEditorDocument {
+  const canonical = parseDocument(text);
+  if (canonical.ok) return { ok: true, kind: "canonical", document: canonical };
+  if (canonical.kind !== "unsupported-version" || canonical.sourceFormatVersion !== 3) return canonical;
+  const scenario = parseScenarioDocumentModel(text);
+  return scenario.ok ? { ok: true, kind: "scenario", model: scenario.model } : scenario;
 }
 
 /** Decode bytes at the shared Open boundary, independent of how the bytes were obtained. */

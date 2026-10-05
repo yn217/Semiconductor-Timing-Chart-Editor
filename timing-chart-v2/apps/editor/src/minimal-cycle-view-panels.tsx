@@ -1,9 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { RefObject } from "react";
 import { getGestureHint, subscribeGestureHint } from "./runtime/active-gesture-cancellation.js";
 import { cycleUnitWord } from "./transaction-tc.js";
 import type { GroupId, SignalGroup, SpacerId } from "@timing-chart-v2/schema";
+import { compareScenarioSignalStreams, type ScenarioDocumentModel, type ScenarioId } from "@timing-chart-v2/schema";
 import { ContextMenuSurface } from "./context-menu-surface.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
 import { EditorIcon } from "./editor-icon.js";
@@ -39,12 +40,55 @@ export function ContextMenuPanel({ contextMenu, hasSelectedClipboard, clipboardA
 
 const VIEW_MODE_TITLE_LABEL: Record<"Cycle" | "Transaction" | "Split", string> = { Cycle: "Cycle View", Transaction: "Transaction View", Split: "Combined View" };
 
-export function MinimalCycleViewTitleBar({ title, dirty, viewMode }: { readonly title: string; readonly dirty: boolean; readonly viewMode: "Cycle" | "Transaction" | "Split" }) {
+export function MinimalCycleViewTitleBar({ title, dirty, viewMode, scenarios, scenarioModel, activeScenarioId, onScenarioChange, onScenarioEnable, onScenarioRename, onScenarioDuplicate, onScenarioDelete }: {
+  readonly title: string;
+  readonly dirty: boolean;
+  readonly viewMode: "Cycle" | "Transaction" | "Split";
+  readonly scenarios?: readonly Readonly<{ id: ScenarioId; name: string }>[];
+  readonly scenarioModel?: ScenarioDocumentModel;
+  readonly activeScenarioId?: ScenarioId;
+  readonly onScenarioChange?: (id: ScenarioId) => void;
+  readonly onScenarioEnable?: () => void;
+  readonly onScenarioRename?: (id: ScenarioId, name: string) => void;
+  readonly onScenarioDuplicate?: (id: ScenarioId) => void;
+  readonly onScenarioDelete?: (id: ScenarioId) => void;
+}) {
   // Historical showcase documents may include a view mode in their saved
   // title. Mode is workspace presentation, so do not let that stale suffix
   // contradict the live mode label or mutate the Canonical document title.
   const displayTitle = title.replace(/\s+(?:--|—)\s+(?:Cycle|Transaction|Combined)\s+Mode$/i, "").trim() || title;
-  return <header className="app-titlebar"><span className="appmark">∿</span><h1 data-testid="titlebar-document-title" aria-label={`${displayTitle}${dirty ? " (unsaved changes)" : ""}`}>{displayTitle}{dirty && <span className="document-dirty-indicator" data-testid="titlebar-unsaved-indicator" aria-label="Unsaved changes">*</span>}</h1><span className="save-state">{dirty ? "Modified" : "Saved"}</span><span className="view-title" data-testid="titlebar-view-title">{VIEW_MODE_TITLE_LABEL[viewMode]}</span></header>;
+  const activeScenario = scenarios?.find((scenario) => scenario.id === activeScenarioId);
+  const [scenarioName, setScenarioName] = useState(activeScenario?.name ?? "");
+  const [compareOpen, setCompareOpen] = useState(false);
+  const [comparisonScenarioId, setComparisonScenarioId] = useState<ScenarioId | undefined>(() => scenarios?.find((scenario) => scenario.id !== activeScenarioId)?.id);
+  useEffect(() => setScenarioName(activeScenario?.name ?? ""), [activeScenario?.id, activeScenario?.name]);
+  useEffect(() => {
+    if (comparisonScenarioId === activeScenarioId || !scenarios?.some((scenario) => scenario.id === comparisonScenarioId)) {
+      setComparisonScenarioId(scenarios?.find((scenario) => scenario.id !== activeScenarioId)?.id);
+    }
+  }, [activeScenarioId, comparisonScenarioId, scenarios]);
+  const differences = useMemo(() => scenarioModel && activeScenarioId && comparisonScenarioId
+    ? compareScenarioSignalStreams(scenarioModel, activeScenarioId, comparisonScenarioId)
+    : [], [scenarioModel, activeScenarioId, comparisonScenarioId]);
+  return <header className="app-titlebar"><span className="appmark">∿</span><h1 data-testid="titlebar-document-title" aria-label={`${displayTitle}${dirty ? " (unsaved changes)" : ""}`}>{displayTitle}{dirty && <span className="document-dirty-indicator" data-testid="titlebar-unsaved-indicator" aria-label="Unsaved changes">*</span>}</h1>
+    {scenarios ? <div className="scenario-controls" data-testid="scenario-controls" aria-label="Scenario controls">
+      <label>Scenario<select aria-label="Active Scenario" data-testid="active-scenario" value={activeScenarioId ?? ""} onChange={(event) => onScenarioChange?.(event.target.value as ScenarioId)}>{scenarios.map((scenario) => <option key={scenario.id} value={scenario.id}>{scenario.name}</option>)}</select></label>
+      <input aria-label="Scenario name" data-testid="scenario-name" value={scenarioName} onChange={(event) => setScenarioName(event.target.value)} />
+      <button type="button" data-testid="scenario-rename" disabled={!scenarioName.trim() || scenarioName === activeScenario?.name} onClick={() => activeScenarioId && onScenarioRename?.(activeScenarioId, scenarioName.trim())}>Rename</button>
+      <button type="button" data-testid="scenario-duplicate" onClick={() => activeScenarioId && onScenarioDuplicate?.(activeScenarioId)}>Duplicate</button>
+      <button type="button" data-testid="scenario-delete" disabled={scenarios.length <= 1} onClick={() => activeScenarioId && onScenarioDelete?.(activeScenarioId)}>Delete</button>
+      <button type="button" data-testid="scenario-compare-toggle" disabled={scenarios.length <= 1 || scenarioModel === undefined} aria-expanded={compareOpen} onClick={() => setCompareOpen((open) => !open)}>Compare</button>
+      {compareOpen && scenarioModel && <section className="scenario-comparison-popover" data-testid="scenario-comparison" aria-label="Scenario comparison">
+        <label>Compare {activeScenario?.name ?? "Scenario"} with<select aria-label="Compare with Scenario" data-testid="scenario-compare-target" value={comparisonScenarioId ?? ""} onChange={(event) => setComparisonScenarioId(event.target.value as ScenarioId)}>{scenarios.filter((scenario) => scenario.id !== activeScenarioId).map((scenario) => <option key={scenario.id} value={scenario.id}>{scenario.name}</option>)}</select></label>
+        <p>Different source-cycle ranges</p>
+        {differences.length === 0 ? <span data-testid="scenario-no-differences">No waveform differences</span> : <ul>{differences.map((difference) => {
+          const definition = scenarioModel.signalDefinitions.find((signal) => signal.id === difference.signalId);
+          const name = definition?.type === "commentRow" ? definition.display.name : definition?.display.name ?? difference.signalId;
+          return <li key={difference.signalId} data-scenario-difference-signal-id={difference.signalId}><strong>{name}</strong>{difference.ranges.map((range) => <span key={`${range.start}:${range.end}`}> cycles {range.start}–{range.end - 1}</span>)}</li>;
+        })}</ul>}
+      </section>}
+    </div> : onScenarioEnable ? <button type="button" data-testid="scenario-enable" onClick={onScenarioEnable}>Enable Scenarios</button> : null}
+    <span className="save-state">{dirty ? "Modified" : "Saved"}</span><span className="view-title" data-testid="titlebar-view-title">{VIEW_MODE_TITLE_LABEL[viewMode]}</span></header>;
 }
 
 export type RenameDialogProps = {

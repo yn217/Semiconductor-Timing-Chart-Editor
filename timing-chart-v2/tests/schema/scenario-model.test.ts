@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { scenarioModelFromV2, projectScenarioAsV2, updateScenarioModelFromV2Projection, validateScenarioDocumentModel, renameScenario, deleteScenario, duplicateScenario } from "../../packages/schema/src/scenario-model.js";
+import { compareScenarioSignalStreams } from "../../packages/schema/src/scenario-comparison.js";
 import { validateCanonicalDocument } from "../../packages/schema/src/validation.js";
 import { parseDocument, parseScenarioDocumentModel, serializeScenarioDocumentModel } from "../../packages/schema/src/serialization.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
@@ -162,5 +163,19 @@ describe("Scenario canonical model adapter", () => {
     expect(copy.annotations[0]?.sourceSignalId).toBe("sig_data");
     expect(copy.constraints[0]?.data).toEqual({ signalId: "sig_data" });
     expect(validateScenarioDocumentModel(duplicated)).toEqual([]);
+  });
+
+  it("reports changed source-cycle ranges by shared Signal ID without scanning cycle extent", () => {
+    const base = scenarioModelFromV2(canonicalFixture());
+    const first = base.scenarios[0]!;
+    const second = {
+      ...first,
+      id: "scenario_compare" as typeof first.id,
+      name: "Compare",
+      signalStates: { ...first.signalStates, sig_data: { kind: "values" as const, values: [{ start: 0, value: "00" }, { start: 2, value: "11" }, { start: 6, value: "A5" }] } },
+    };
+    const model = { ...base, scenarios: [first, second] };
+    expect(compareScenarioSignalStreams(model, first.id, second.id)).toEqual([{ signalId: "sig_data", ranges: [{ start: 2, end: 6 }] }]);
+    expect(compareScenarioSignalStreams(model, first.id, first.id)).toEqual([]);
   });
 });

@@ -50,4 +50,34 @@ describe("ScenarioCommandHistorySession", () => {
     expect(session.getSnapshot().document.signals.find((signal) => signal.id === "sig_data")?.name).toBe("DATA");
     expect(session.historyState()).toMatchObject({ undoDepth: 1, redoDepth: 1, dirty: true });
   });
+
+  it("records Scenario rename, duplicate, and delete as global Undo/Redo operations", () => {
+    const model = scenarioModelFromV2(canonicalFixture());
+    const original = model.scenarios[0]!;
+    const session = new ScenarioCommandHistorySession(model);
+
+    session.renameScenario(original.id, "Baseline");
+    expect(session.scenarioModel().scenarios[0]?.name).toBe("Baseline");
+    expect(session.historyState()).toMatchObject({ undoDepth: 1, dirty: true });
+    expect(session.undo().ok).toBe(true);
+    expect(session.scenarioModel().scenarios[0]?.name).toBe(original.name);
+    expect(session.redo().ok).toBe(true);
+    expect(session.scenarioModel().scenarios[0]?.name).toBe("Baseline");
+
+    const duplicateId = session.duplicateScenario(original.id);
+    expect(session.activeScenarioId()).toBe(duplicateId);
+    expect(session.scenarioModel().scenarios).toHaveLength(2);
+    expect(session.undo().ok).toBe(true);
+    expect(session.scenarioModel().scenarios).toHaveLength(1);
+    expect(session.activeScenarioId()).toBe(original.id);
+    expect(session.redo().ok).toBe(true);
+    expect(session.activeScenarioId()).toBe(duplicateId);
+
+    session.deleteScenario(duplicateId);
+    expect(session.scenarioModel().scenarios).toHaveLength(1);
+    expect(session.activeScenarioId()).toBe(original.id);
+    expect(session.undo().ok).toBe(true);
+    expect(session.scenarioModel().scenarios).toHaveLength(2);
+    expect(session.activeScenarioId()).toBe(duplicateId);
+  });
 });

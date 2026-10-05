@@ -96,6 +96,16 @@ button, input, select { font: inherit; font-size: var(--ds-font-size); }
 .view-title { margin-left: auto; color: #52647a; font-size: 11px; }
 .appmark { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 3px; background: #086fce; color: white; font-size: 17px; }
 .save-state { margin-left: 8px; color: #667488; font-size: 11px; }
+.scenario-controls { position: relative; display: flex; align-items: center; gap: 4px; min-width: 0; }
+.scenario-controls label { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: #52647a; }
+.scenario-controls select, .scenario-controls input { height: 24px; min-width: 72px; max-width: 150px; padding: 2px 5px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff; color: #243449; font: inherit; }
+.scenario-controls button, .app-titlebar > button[data-testid="scenario-enable"] { height: 24px; padding: 2px 7px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff; color: #243449; font-size: 11px; cursor: pointer; }
+.scenario-controls button:disabled { opacity: .5; cursor: default; }
+.scenario-comparison-popover { position: absolute; z-index: 40; top: calc(100% + 5px); right: 0; width: min(360px, 80vw); max-height: min(420px, 70vh); overflow: auto; padding: 10px; border: 1px solid #bac8d8; border-radius: 6px; background: #fff; box-shadow: 0 8px 24px #1f355322; color: #243449; font-size: 12px; }
+.scenario-comparison-popover > label { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; }
+.scenario-comparison-popover > p { margin: 8px 0 4px; color: #52647a; }
+.scenario-comparison-popover ul { margin: 4px 0 0; padding-inline-start: 20px; }
+.scenario-comparison-popover li { margin: 3px 0; }
 .view-mode { display: flex; align-items: center; gap: 0; margin-left: auto; height: 100%; font-size: 10px; }
 .view-mode span { margin-right: 7px; color: #69778a; }
 .view-mode button { height: 24px; padding: 0 10px; border: 1px solid #bdc8d6; background: white; }

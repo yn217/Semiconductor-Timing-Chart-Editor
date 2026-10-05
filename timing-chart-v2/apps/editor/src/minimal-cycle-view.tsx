@@ -3,7 +3,7 @@ import { startTransition, useEffect, useMemo, useRef } from "react";
 import type { RefObject } from "react";
 import type { CommandResult } from "@timing-chart-v2/commands";
 import { type Point } from "@timing-chart-v2/geometry";
-import { quickValueLiteral, quickValueOptions, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type GroupId, type SignalId, type TransactionGroup, type TransactionId } from "@timing-chart-v2/schema";
+import { quickValueLiteral, quickValueOptions, scenarioModelFromV2, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type GroupId, type ScenarioId, type SignalId, type TransactionGroup, type TransactionId } from "@timing-chart-v2/schema";
 import { ViewMetricsOwner } from "./runtime/view-metrics.js";
 import { ExportDialog } from "./export-dialog.js";
 import { downloadText } from "./download-text.js";
@@ -52,6 +52,8 @@ export function MinimalCycleView() {
   const documentLifecycle = useDocumentLifecycle({ application, productTemplate, persistText: downloadText });
   const exportController = useMemo(() => createEditorExportController(), []);
   const { snapshot, lastChangeSet, history, problem, validationDiagnostics, validationPending, runtimeDiagnostics, setProblem, setRuntimeDiagnostics } = application;
+  const scenarioModel = application.runtime.session.scenarioModel();
+  const activeScenarioId = application.runtime.session.activeScenarioId();
   const host = useRef<HTMLDivElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const ruler = useRef<HTMLDivElement>(null);
@@ -848,7 +850,33 @@ export function MinimalCycleView() {
       layoutOverflow: snapshot.document.layout.overflow, leftPaneWidth, frozenPaneWidth, bottomHeight, inspectorWidth,
       cycleCount: snapshot.document.timeline.cycleCount, signalCount: snapshot.document.signals.length, transactionCount: snapshot.document.transactions.length,
     }}
-    titleBar={<MinimalCycleViewTitleBar title={snapshot.document.document.title} dirty={history.dirty} viewMode={viewMode} />}
+    titleBar={<MinimalCycleViewTitleBar
+      title={snapshot.document.document.title}
+      dirty={history.dirty}
+      viewMode={viewMode}
+      {...(scenarioModel === undefined ? {} : { scenarios: scenarioModel.scenarios.map(({ id, name }) => ({ id, name })), scenarioModel })}
+      {...(activeScenarioId === undefined ? {} : { activeScenarioId })}
+      onScenarioEnable={() => {
+        try { application.replaceScenarioSession(scenarioModelFromV2(snapshot.document), [], true); }
+        catch (error) { setProblem(error instanceof Error ? error.message : String(error)); }
+      }}
+      onScenarioChange={(id: ScenarioId) => {
+        try { if (application.switchScenario(id)) selection.clear(); }
+        catch (error) { setProblem(error instanceof Error ? error.message : String(error)); }
+      }}
+      onScenarioRename={(id, name) => {
+        try { application.renameScenario(id, name); }
+        catch (error) { setProblem(error instanceof Error ? error.message : String(error)); }
+      }}
+      onScenarioDuplicate={(id) => {
+        try { application.duplicateScenario(id); selection.clear(); }
+        catch (error) { setProblem(error instanceof Error ? error.message : String(error)); }
+      }}
+      onScenarioDelete={(id) => {
+        try { application.deleteScenario(id); selection.clear(); }
+        catch (error) { setProblem(error instanceof Error ? error.message : String(error)); }
+      }}
+    />}
     ribbon={shellRibbon}
     workspace={shellWorkspace}
     dialogs={<EditorDialogLayer

@@ -1,8 +1,7 @@
 # Timing Document and Scenario Ownership
 
 This document defines the semantic ownership boundary for multiple timing
-scenarios. It is the design contract for implementing #431; it does not claim
-that the current v2 canonical schema already supports scenario editing.
+scenarios and the implementation contract for #431.
 
 ## Ownership policy
 
@@ -66,11 +65,21 @@ and must not dirty the document by itself.
 No feature may introduce a Scenario-local cycle scale or duplicate
 DisplayTimeMapping/TimeAxis authority. Any document-format version change must
 be accompanied by explicit migration, validation, resource-budget, and
-serialization tests before the Scenario editor is exposed.
+serialization tests.
 
 ## Implementation status
 
-This policy resolves the previously implicit shared-Signal-definition choice.
-It is an architecture contract, not implementation of the Scenario registry,
-switcher, duplication, rename/delete commands, or GUI. Those remain required
-production slices under #431.
+Scenario v3 is the single semantic owner for scenario-specific data. Existing
+v2 documents migrate to one Scenario; the editor can enable Scenario storage,
+switch the active Scenario as workspace state, and rename, duplicate, or delete
+Scenarios through the Scenario History owner. Scenario CRUD participates in
+Undo/Redo; switching alone leaves Canonical revision, History, and Dirty
+unchanged. Production Open/Save and Recent use the v3 model without projecting
+away inactive Scenarios. The title bar exposes the active Scenario controls.
+The comparison panel compares source-cycle event ranges across stable shared
+Signal IDs and reports changed Signal/range pairs as derived view state; it
+does not create another timeline or semantic owner.
+
+Focused schema, History, Open/Save-boundary and Chromium lifecycle tests cover
+these contracts. The broader UX epic still has independent acceptance items;
+this does not claim #431 is complete.

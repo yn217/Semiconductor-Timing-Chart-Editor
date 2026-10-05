@@ -715,8 +715,10 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
           if (!active || !rendererHost.isConnected || commandGeneration !== acceptedCommandGeneration) return;
           const idleAt = globalThis.performance.now();
           rendererHost.dataset.editorIdle = "true";
-          rendererHost.dataset.acceptedCommandCount = String(Number(rendererHost.dataset.acceptedCommandCount ?? "0") + 1);
-          rendererHost.dataset.lastApplyToIdleMs = String(Math.max(0, idleAt - context.commandStartedAt));
+          if (!context.viewOnly) {
+            rendererHost.dataset.acceptedCommandCount = String(Number(rendererHost.dataset.acceptedCommandCount ?? "0") + 1);
+            rendererHost.dataset.lastApplyToIdleMs = String(Math.max(0, idleAt - context.commandStartedAt));
+          }
           rendererHost.dataset.lastDiagnosticsDurationMs = String(context.diagnosticsDurationMs ?? 0);
           const diagnosticPasses = Number(rendererHost.dataset.timingDiagnosticsFullPasses ?? "0") + (context.diagnosticsRecomputed ? 1 : 0);
           const diagnosticReuses = Number(rendererHost.dataset.timingDiagnosticsReuses ?? "0") + (context.diagnosticsRecomputed ? 0 : 1);
