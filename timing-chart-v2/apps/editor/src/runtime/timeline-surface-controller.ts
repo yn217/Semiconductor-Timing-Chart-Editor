@@ -15,7 +15,7 @@ import { ViewMetricsOwner } from "./view-metrics.js";
 import { buildViewportWindow } from "./viewport-window.js";
 import { createEdgeCounterProjectionMetrics } from "./edge-counter-projection.js";
 import { TimelineGeometryOwner, usesFullDocumentWaveformWindow } from "./timeline-geometry-owner.js";
-import { annotationStylePatchIds, deriveRenderInvalidation, isAnnotationOnlyChangeSet } from "./render-invalidation.js";
+import { annotationStylePatchIds, deriveRenderInvalidation, isAnnotationOnlyChangeSet, requiresTimelineZoomRefresh } from "./render-invalidation.js";
 import { createTimelineViewportRuntime } from "./timeline-viewport-runtime.js";
 import { resolveTransactionSnapCycle } from "./interaction-controller.js";
 import { scheduleInitialTimelineRefresh } from "./document-lifecycle-controller.js";
@@ -700,7 +700,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         }
         if (refreshPlayheadNow) timelineRuntime.refreshPlayhead();
         if (refreshGridNow) timelineRuntime.refreshGrid();
-        timelineRuntime.setZoom(timelineNavigation.getZoom());
+        if (requiresTimelineZoomRefresh(changed)) timelineRuntime.setZoom(timelineNavigation.getZoom());
         if (refreshOverlaysNow) {
           if (stylePatchIds) timelineRuntime.refreshAnnotationStyles(stylePatchIds);
           else timelineRuntime.refreshOverlays();

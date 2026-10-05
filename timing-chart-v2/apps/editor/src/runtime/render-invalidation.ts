@@ -28,6 +28,21 @@ export function deriveRenderInvalidation(changeSet: ChangeSet, referenceSignalId
   return { snapDependenciesChanged, referenceWaveChanged, refreshRuler, refreshGrid, refreshOverlays };
 }
 
+/**
+ * Reapply the scaled DOM geometry only when a semantic change can alter the
+ * horizontal time presentation. Calling setZoom for every accepted command
+ * schedules full-width/scale writes and a viewport-resize notification, even
+ * for label, annotation-style, and other non-temporal edits.
+ */
+export function requiresTimelineZoomRefresh(changeSet: ChangeSet): boolean {
+  return changeSet.fullDocumentReplace === true
+    || changeSet.timelineSemantics === true
+    || changeSet.transactionTimeScale === true
+    || changeSet.geometryScreenX === true
+    || changeSet.timeGroupSemantics !== undefined
+    || changeSet.transactionSemantics !== undefined;
+}
+
 /** The renderer may patch these stable-ID owners without reconciling the full overlay set. */
 export function annotationStylePatchIds(changeSet: ChangeSet): readonly string[] | undefined {
   const ids = changeSet.annotationStyle;

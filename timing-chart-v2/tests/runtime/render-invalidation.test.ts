@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ChangeSet } from "@timing-chart-v2/commands";
-import { deriveRenderInvalidation } from "../../apps/editor/src/runtime/render-invalidation.js";
+import { deriveRenderInvalidation, requiresTimelineZoomRefresh } from "../../apps/editor/src/runtime/render-invalidation.js";
 
 describe("render invalidation owner", () => {
   it("keeps timeline/reference-wave changes on the shared refresh contract", () => {
@@ -46,5 +46,24 @@ describe("render invalidation owner", () => {
       refreshGrid: false,
       refreshOverlays: true,
     });
+  });
+
+  it("skips zoom DOM reapplication for edits that cannot change horizontal time geometry", () => {
+    expect(requiresTimelineZoomRefresh({ rowPresentation: ["sig_a"] } as ChangeSet)).toBe(false);
+    expect(requiresTimelineZoomRefresh({ annotationStyle: ["ann_a"], minimapOverview: true } as ChangeSet)).toBe(false);
+    expect(requiresTimelineZoomRefresh({ annotationPosition: ["ann_a"], minimapOverview: true } as ChangeSet)).toBe(false);
+  });
+
+  it("reapplies zoom for semantic changes that can alter horizontal time geometry", () => {
+    for (const changeSet of [
+      { fullDocumentReplace: true },
+      { timelineSemantics: true },
+      { transactionTimeScale: true },
+      { geometryScreenX: true },
+      { timeGroupSemantics: ["tg_a"] },
+      { transactionSemantics: ["txn_a"] },
+    ] satisfies ChangeSet[]) {
+      expect(requiresTimelineZoomRefresh(changeSet)).toBe(true);
+    }
   });
 });
