@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { scenarioModelFromV2, projectScenarioAsV2, validateScenarioDocumentModel } from "../../packages/schema/src/scenario-model.js";
+import { scenarioModelFromV2, projectScenarioAsV2, updateScenarioModelFromV2Projection, validateScenarioDocumentModel } from "../../packages/schema/src/scenario-model.js";
 import { validateCanonicalDocument } from "../../packages/schema/src/validation.js";
 import { parseDocument, parseScenarioDocumentModel, serializeScenarioDocumentModel } from "../../packages/schema/src/serialization.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
@@ -79,5 +79,36 @@ describe("Scenario canonical model adapter", () => {
     expect(parseScenarioDocumentModel("{" )).toMatchObject({ ok: false, kind: "syntax" });
     expect(parseScenarioDocumentModel(JSON.stringify({ ...model, hiddenPayload: true }))).toMatchObject({ ok: false, kind: "validation", problems: [expect.objectContaining({ code: "SCENARIO_MODEL_UNKNOWN_FIELD" })] });
     expect(parseDocument(saved)).toMatchObject({ ok: false, kind: "unsupported-version", sourceFormatVersion: 3 });
+  });
+
+  it("reconciles one v2 command projection without overwriting another scenario's value stream", () => {
+    const initial = scenarioModelFromV2(canonicalFixture());
+    const first = initial.scenarios[0]!;
+    const second = {
+      ...first,
+      id: "scenario_alt" as typeof first.id,
+      name: "Alternate",
+      signalStates: {
+        ...first.signalStates,
+        sig_data: { kind: "values" as const, values: [{ start: 0, value: "00" }, { start: 2, value: "22" }] },
+      },
+    };
+    const model = { ...initial, scenarios: [first, second] };
+    const base = projectScenarioAsV2(model, first.id);
+    const projection = {
+      ...base,
+      timeline: { ...base.timeline, physicalTimebase: { referenceFrequencyHz: 100_000_000, unit: "ns" as const } },
+      signals: base.signals.map((signal) => signal.id === "sig_data"
+        ? { ...signal, name: "RENAMED", values: [{ start: 0, value: "00" }, { start: 6, value: "B6" }] }
+        : signal),
+    };
+
+    const next = updateScenarioModelFromV2Projection(model, first.id, projection);
+    expect(next.signalDefinitions.find((signal) => signal.id === "sig_data")?.name).toBe("RENAMED");
+    expect(next.scenarios[0]?.signalStates.sig_data).toMatchObject({ kind: "values", values: [{ start: 0, value: "00" }, { start: 6, value: "B6" }] });
+    expect(next.scenarios[1]?.signalStates.sig_data).toMatchObject({ kind: "values", values: [{ start: 0, value: "00" }, { start: 2, value: "22" }] });
+    expect(projectScenarioAsV2(next, second.id).signals.find((signal) => signal.id === "sig_data")?.name).toBe("RENAMED");
+    expect(next.physicalTimebase).toEqual({ referenceFrequencyHz: 100_000_000, unit: "ns" });
+    expect(validateScenarioDocumentModel(next)).toEqual([]);
   });
 });

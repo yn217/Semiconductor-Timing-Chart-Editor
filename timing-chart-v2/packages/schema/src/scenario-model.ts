@@ -90,6 +90,56 @@ export function scenarioModelFromV2(document: CanonicalDocument): ScenarioDocume
   };
 }
 
+/**
+ * Reconcile one existing editor Canonical projection back into the v3 owner.
+ * Shared definitions/layout are refreshed document-wide; timing payload and
+ * semantic collections are replaced only for the edited Scenario.
+ */
+export function updateScenarioModelFromV2Projection(
+  model: ScenarioDocumentModel,
+  scenarioId: ScenarioId,
+  projection: CanonicalDocument,
+): ScenarioDocumentModel {
+  const existing = model.scenarios.find((scenario) => scenario.id === scenarioId);
+  if (!existing) throw new Error(`Scenario '${scenarioId}' does not exist.`);
+  const converted = scenarioModelFromV2(projection);
+  const projectedScenario = converted.scenarios[0]!;
+  const nextDefinitions = converted.signalDefinitions;
+  const nextScenario: TimingScenario = { ...projectedScenario, id: existing.id, name: existing.name };
+  const timingDefinitionIds = new Set(nextDefinitions.filter((definition) => definition.type !== "commentRow").map((definition) => definition.id));
+  const scenarios = model.scenarios.map((scenario) => {
+    if (scenario.id === scenarioId) return nextScenario;
+    const signalStates: Partial<Record<SignalId, ScenarioSignalState>> = {};
+    for (const signalId of timingDefinitionIds) {
+      const definition = nextDefinitions.find((item) => item.id === signalId)!;
+      const previous = scenario.signalStates[signalId];
+      const projectedState = projectedScenario.signalStates[signalId];
+      const expectedKind = definition.type === "clock" ? "clock" : "values";
+      signalStates[signalId] = previous?.kind === expectedKind ? previous : projectedState;
+    }
+    return { ...scenario, signalStates };
+  });
+  const next: ScenarioDocumentModel = {
+    formatVersion: 3,
+    document: converted.document,
+    ...(converted.physicalTimebase === undefined ? {} : { physicalTimebase: converted.physicalTimebase }),
+    signalGroups: converted.signalGroups,
+    signalDefinitions: nextDefinitions,
+    ...(converted.enumDefinitions === undefined ? {} : { enumDefinitions: converted.enumDefinitions }),
+    scenarios,
+    legend: converted.legend,
+    layout: converted.layout,
+    checkSettings: converted.checkSettings,
+  };
+  const problems = validateScenarioDocumentModel(next);
+  if (problems.length > 0) {
+    const error = new Error(`Scenario projection reconciliation produced an invalid model (${problems.length} problem(s)).`);
+    Object.assign(error, { name: "ScenarioProjectionReconciliationError", problems });
+    throw error;
+  }
+  return next;
+}
+
 /** Build the existing editor-facing canonical projection without duplicating persisted ownership. */
 export function projectScenarioAsV2(document: ScenarioDocumentModel, scenarioId: ScenarioId): CanonicalDocument {
   const scenario = document.scenarios.find((candidate) => candidate.id === scenarioId);
