@@ -3,6 +3,19 @@
   "consolidations": [
     {
       "from": {
+        "file": "mechanical-visual-diagnostics.spec.ts",
+        "title": "browser diagnostics detect injected clipping, overlap, duplication, and icon drift"
+      },
+      "to": {
+        "layer": "unit",
+        "file": "tests/harness/mechanical-diagnostics.test.ts",
+        "title": "emits stable findings for clipping, overlap, duplicate text, and icon alignment"
+      },
+      "protectedInvariant": "The mechanical visual analyzer reports clipping, overlap, duplicate-text, and icon-alignment findings for supplied geometry evidence.",
+      "reason": "The removed browser case creates only synthetic page content and calls the same pure analyzer; the Vitest replacement covers the same four negative categories without launching the production browser application."
+    },
+    {
+      "from": {
         "file": "full-gui.spec.ts",
         "title": "matches the locked desktop pane geometry at the Golden viewport"
       },

@@ -122,9 +122,18 @@ if (invalidReviewedCases.length) {
 const caseKeys = new Set(cases.map((test) => `${test.file}\n${test.title}`));
 for (const item of consolidationMap.consolidations) {
   const fromKey = `${item.from.file}\n${item.from.title}`;
-  const toKey = `${item.to.file}\n${item.to.title}`;
   if (caseKeys.has(fromKey)) throw new Error(`Consolidated source test still exists: ${item.from.file} — ${item.from.title}`);
-  if (!caseKeys.has(toKey)) throw new Error(`Consolidated replacement test is missing: ${item.to.file} — ${item.to.title}`);
+  if (item.to.layer != null && !["unit", "playwright"].includes(item.to.layer)) {
+    throw new Error(`Unsupported replacement test layer '${item.to.layer}' for ${item.to.file} — ${item.to.title}`);
+  }
+  if (item.to.layer === "unit") {
+    const replacementPath = resolve(root, item.to.file);
+    if (!existsSync(replacementPath)) throw new Error(`Unit replacement test file is missing: ${item.to.file}`);
+    if (!readFileSync(replacementPath, "utf8").includes(item.to.title)) throw new Error(`Unit replacement test is missing: ${item.to.file} — ${item.to.title}`);
+  } else {
+    const toKey = `${item.to.file}\n${item.to.title}`;
+    if (!caseKeys.has(toKey)) throw new Error(`Consolidated replacement test is missing: ${item.to.file} — ${item.to.title}`);
+  }
 }
 
 const fileAudit = new Map();
@@ -291,7 +300,7 @@ const markdown = [
   "",
   "## Consolidation/replacement map",
   "",
-  ...consolidationMap.consolidations.map((item) => `- \`${item.from.file}\` “${item.from.title}” → \`${item.to.file}\` “${item.to.title}”. **Invariant:** ${item.protectedInvariant} **Reason:** ${item.reason}`),
+  ...consolidationMap.consolidations.map((item) => `- \`${item.from.file}\` “${item.from.title}” → ${item.to.layer === "unit" ? "unit: " : ""}\`${item.to.file}\` “${item.to.title}”. **Invariant:** ${item.protectedInvariant} **Reason:** ${item.reason}`),
   "",
   "Per-case titles, source lines, project, timeout, tags, annotations, and classification fields are in [`qa/test-suite-inventory.json`](../qa/test-suite-inventory.json). Curated classifications are maintained in [`qa/test-suite-review.json`](../qa/test-suite-review.json) so regeneration does not erase review work.",
   "",

@@ -15,7 +15,14 @@ export async function computeSourceFingerprint(repositoryRoot) {
   const paths = output.toString("utf8").split("\0").filter(Boolean).filter(isSourcePath).sort();
   const entries = [];
   for (const path of paths) {
-    const contentHash = createHash("sha256").update(await readFile(resolve(repositoryRoot, path))).digest("hex");
+    let content;
+    try {
+      content = await readFile(resolve(repositoryRoot, path));
+    } catch (error) {
+      if (error?.code === "ENOENT") continue; // An unstaged tracked deletion is part of the working tree, not a fingerprinting failure.
+      throw error;
+    }
+    const contentHash = createHash("sha256").update(content).digest("hex");
     entries.push(`${path}\0${contentHash}\n`);
   }
   return createHash("sha256").update(entries.join(""), "utf8").digest("hex");

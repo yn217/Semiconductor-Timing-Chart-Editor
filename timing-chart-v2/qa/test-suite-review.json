@@ -9358,24 +9358,6 @@
       "replacementTest": null
     },
     {
-      "file": "mechanical-visual-diagnostics.spec.ts",
-      "title": "browser diagnostics detect injected clipping, overlap, duplication, and icon drift",
-      "domain": "mechanical-diagnostics-negative-fixture",
-      "originIssue": null,
-      "type": "IMPLEMENTATION_COUPLED",
-      "costClass": "SMALL",
-      "measuredRuntimeMs": null,
-      "primaryContract": "The mechanical visual analyzer recognizes four deliberately injected diagnostic categories and reports major findings with evidence.",
-      "duplicateGroup": "mechanical-diagnostics-unit-contract",
-      "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "profiles": [
-        "pr"
-      ],
-      "decision": "MOVE_LAYER",
-      "reason": "The case uses page.setContent and an in-memory synthetic DOM only; tests/harness/mechanical-diagnostics.test.ts already exercises the same negative categories directly at the harness unit layer, making this E2E wrapper duplicate coverage without testing the production app.",
-      "replacementTest": "tests/harness/mechanical-diagnostics.test.ts"
-    },
-    {
       "file": "minimal-cycle-view.spec.ts",
       "title": "derives the ruler from local geometry and keeps selection view-only",
       "domain": "cycle-ruler-geometry-selection-view-only",

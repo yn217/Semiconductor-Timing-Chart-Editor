@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 417 spec files and 1241 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 416 spec files and 1240 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1241/1241 cases reviewed.
+Semantic review progress: 1240/1240 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 629 |
 | `nightly` | 238 |
 | `performance` | 73 |
-| `pr` | 397 |
+| `pr` | 396 |
 | `visual` | 180 |
 
 ## Top recorded per-case runtimes
@@ -355,7 +355,6 @@ These values were measured for a whole spec file and are deliberately not copied
 | `measurement-export-matrix.spec.ts` | 1 | 1/1 reviewed |
 | `measurement-lane-stacking.spec.ts` | 3 | 3/3 reviewed |
 | `measurement-top-row-clip.spec.ts` | 2 | 2/2 reviewed |
-| `mechanical-visual-diagnostics.spec.ts` | 1 | 1/1 reviewed |
 | `minimal-cycle-view.spec.ts` | 3 | 3/3 reviewed |
 | `minimap-overview-performance.spec.ts` | 4 | 4/4 reviewed |
 | `minimap-viewport-closure.spec.ts` | 1 | 1/1 reviewed |
@@ -622,7 +621,6 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `measurement-anchor-drag.spec.ts` | explicitWait |
 | `measurement-export-matrix.spec.ts` | dataset |
 | `measurement-lane-stacking.spec.ts` | dataset |
-| `mechanical-visual-diagnostics.spec.ts` | geometryRead |
 | `minimal-cycle-view.spec.ts` | dataset, geometryRead |
 | `minimap-overview-performance.spec.ts` | querySelector, dataset |
 | `minimap-viewport-closure.spec.ts` | dataset, geometryRead |
@@ -695,6 +693,7 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 
 ## Consolidation/replacement map
 
+- `mechanical-visual-diagnostics.spec.ts` “browser diagnostics detect injected clipping, overlap, duplication, and icon drift” → unit: `tests/harness/mechanical-diagnostics.test.ts` “emits stable findings for clipping, overlap, duplicate text, and icon alignment”. **Invariant:** The mechanical visual analyzer reports clipping, overlap, duplicate-text, and icon-alignment findings for supplied geometry evidence. **Reason:** The removed browser case creates only synthetic page content and calls the same pure analyzer; the Vitest replacement covers the same four negative categories without launching the production browser application.
 - `full-gui.spec.ts` “matches the locked desktop pane geometry at the Golden viewport” → `gui-reference-v8.spec.ts` “matches the v8 shell contract without mutating canonical state”. **Invariant:** At the desktop reference viewport, ribbon/workspace/bottom/inspector geometry stays aligned to the approved shell dimensions. **Reason:** The v8 shell contract already measures the same reference viewport and was strengthened to assert workspace top, Bottom X/height, and Inspector X/width alongside shell geometry; the separate test only repeated those fixed coordinates.
 - `full-gui.spec.ts` “keeps the V1 Home Ribbon dense without horizontal scrolling” → `gui-reference-v8.spec.ts` “matches the v8 shell contract without mutating canonical state”. **Invariant:** The desktop Home Ribbon retains its intended height/group structure and does not introduce horizontal scrolling. **Reason:** The target already verifies the desktop Ribbon height, non-overflow, major-group count, title/tabs/status dimensions, and group visibility in the same production presentation contract.
 - `full-gui.spec.ts` “Left Signal/Group filter is positioned in the V1 pane header and remains DOM-only” → `left-tree-type-filter.spec.ts` “combines the Left Tree type and text filters without mutation at 1672px”. **Invariant:** Text filtering changes only Left Tree presentation, leaves Canonical/History untouched, and clearing the query restores rows while preserving type filter state. **Reason:** The retained type+text filter journey already verifies view-only state across both widths; it now uses the visible Clear signal tree filter control rather than only filling an empty string. Header placement remains checked by the v8 reference contract.

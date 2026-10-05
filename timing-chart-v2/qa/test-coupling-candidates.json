@@ -3377,17 +3377,6 @@
   "cls": 0
  },
  {
-  "file": "e2e\\mechanical-visual-diagnostics.spec.ts",
-  "score": 0,
-  "tests": 1,
-  "qs": 0,
-  "gcs": 0,
-  "ds": 0,
-  "contains": 0,
-  "css": 0,
-  "cls": 0
- },
- {
   "file": "e2e\\measurement-top-row-clip.spec.ts",
   "score": 0,
   "tests": 2,
