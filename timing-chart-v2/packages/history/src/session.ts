@@ -34,6 +34,7 @@ export const HISTORY_RETENTION_LIMIT = HISTORY_RETENTION_POLICY.maxEntries;
 
 export class CommandHistorySession implements CanonicalStore, SemanticCommandDispatcher, SemanticBatchDispatcher, HistoryController {
   readonly #documents: DocumentSession;
+  readonly #recordHistory: boolean;
   #undo: HistoryEntry[] = [];
   #redo: HistoryEntry[] = [];
   // The savepoint is an identity token, not a strong reference to an old
@@ -52,7 +53,8 @@ export class CommandHistorySession implements CanonicalStore, SemanticCommandDis
     retainedSnapshotEstimate: 0,
   };
 
-  constructor(initial: CanonicalDocument | ParsedCanonicalDocument) {
+  constructor(initial: CanonicalDocument | ParsedCanonicalDocument, options: { readonly recordHistory?: boolean } = {}) {
+    this.#recordHistory = options.recordHistory !== false;
     this.#documents = new DocumentSession(initial);
     this.#cleanDocumentIdentity = this.#documentIdentity(this.#documents.getSnapshot().document);
   }
@@ -161,6 +163,10 @@ export class CommandHistorySession implements CanonicalStore, SemanticCommandDis
         : scopedSignalChange?.kind === "role"
           ? this.#documents.commitSignalRoleChange(candidate, before.revision, scopedSignalChange.signalId)
           : this.#documents.commit(candidate, before.revision);
+      if (!this.#recordHistory) {
+        this.#historyMetrics = { ...this.#historyMetrics, committedActions: this.#historyMetrics.committedActions + 1 };
+        return { ok: true, snapshot: after, changeSet };
+      }
       const entry: HistoryEntry = {
         commandId: action.id,
         action,
