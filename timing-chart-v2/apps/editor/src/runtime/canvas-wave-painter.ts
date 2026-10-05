@@ -140,14 +140,21 @@ export function refreshWaveCanvasViewport(owner: HTMLElement): void {
 
 export function paintWaveCanvas(owner: HTMLElement, wave: WaveJsonSignal): void {
   let state = painted.get(owner);
+  let newCanvasPaintedBeforeInstall = false;
   if (!state || !owner.contains(state.canvas)) {
     if (state) disposeWaveCanvas(owner);
     const canvas = owner.ownerDocument.createElement("canvas");
     canvas.setAttribute("data-wave-canvas", "");
     canvas.style.cssText = `display:block;position:absolute;top:0;height:${ROW_HEIGHT}px;`;
+    const viewport = owner.closest<HTMLElement>(".cycle-viewport");
+    // Read owner/viewport geometry and paint while the new canvas is detached.
+    // Installing it first invalidates layout, then drawVisible() immediately
+    // asks for bounding boxes and forces that work synchronously for every
+    // newly virtualized Canvas owner entering the viewport.
+    drawVisible(owner, wave, canvas, viewport);
+    newCanvasPaintedBeforeInstall = true;
     owner.replaceChildren(canvas);
     owner.dataset.waveRenderer = "canvas";
-    const viewport = owner.closest<HTMLElement>(".cycle-viewport");
     let scheduler = viewport ? schedulers.get(viewport) : undefined;
     if (viewport && !scheduler) { scheduler = new ViewportScheduler(viewport); schedulers.set(viewport, scheduler); }
     const onRestyle = () => { const current = painted.get(owner); if (current) drawVisible(owner, current.wave, current.canvas, scheduler ? viewport ?? null : null); };
@@ -161,7 +168,7 @@ export function paintWaveCanvas(owner: HTMLElement, wave: WaveJsonSignal): void 
     if (scheduler) for (const other of [...scheduler.owners]) if (!other.isConnected) scheduler.release(other);
   }
   state.wave = wave;
-  drawVisible(owner, wave, state.canvas, owner.closest<HTMLElement>(".cycle-viewport"));
+  if (!newCanvasPaintedBeforeInstall) drawVisible(owner, wave, state.canvas, owner.closest<HTMLElement>(".cycle-viewport"));
   owner.dataset.waveRenderer = "canvas";
   owner.dataset.waveState = "ready";
 }

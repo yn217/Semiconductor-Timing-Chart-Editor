@@ -40,5 +40,11 @@ test("10k vertical scroll does not force layout in post-reconciliation prefetch 
     return Array.isArray(stack) && stack.some((frame) => (frame as { functionName?: string }).functionName === "#updateWavePrefetchPlan");
   });
   expect(prefetchLayoutReads, "prefetch planning must use viewport geometry captured before row DOM reconciliation").toHaveLength(0);
+  const canvasLayoutReads = events.filter((event) => {
+    if (event.name !== "LayoutInvalidationTracking" || !["Added to layout", "Size changed"].includes(String(event.args?.data?.reason))) return false;
+    const stack = event.args?.data?.stackTrace;
+    return Array.isArray(stack) && stack.some((frame) => (frame as { functionName?: string }).functionName === "drawVisible");
+  });
+  expect(canvasLayoutReads, "new Canvas owners must read viewport geometry before installing their canvas node").toHaveLength(0);
   await cdp.detach();
 });
