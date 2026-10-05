@@ -36,7 +36,11 @@ test(`peer menus replace each other at ${viewport.width}x${viewport.height}`, as
   // Contract: the new peer menu replaces the row context menu, rather than
   // leaving its stale target active behind the header menu.
   await expect(rowMenu).toHaveCount(0);
-  await expect(headerMenu.getByRole("menuitem")).toHaveCount(4);
+  // The header menu's group actions vary with the fixture's groups (7172de74 added
+  // Create Group / Move to Group), so assert its fixed actions rather than a count.
+  for (const name of ["Collapse All Groups", "Expand All Groups", "Clear Filter", "Signal Full Path List / Hierarchy…"]) {
+    await expect(headerMenu.getByRole("menuitem", { name, exact: true })).toHaveCount(1);
+  }
   await page.keyboard.press("Escape");
   await expect(headerMenu).toHaveCount(0);
   await expect(headerTrigger).toBeFocused();

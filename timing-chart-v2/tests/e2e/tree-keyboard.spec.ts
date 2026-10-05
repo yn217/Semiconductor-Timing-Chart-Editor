@@ -57,7 +57,9 @@ test("filters treeitems and repairs focus after collapse", async ({ page }) => {
   await filter.fill("REQUEST");
   const request = tree.locator("[role='treeitem'][data-row-id='sig_cycle_request']");
   await expect(request).toBeVisible();
-  await expect(tree.locator("[role='treeitem'][data-row-id='sig_cycle_ready']")).toHaveAttribute("hidden", "");
+  // Filtering is applied to canonical rows before virtualization (#1055), so
+  // non-matching rows are absent from the projected tree rather than hidden in DOM.
+  await expect(tree.locator("[role='treeitem'][data-row-id='sig_cycle_ready']")).toHaveCount(0);
   await request.focus();
   await request.press("ArrowUp");
   await expect(tree.locator("[data-role='left-group-header'][data-group-id='grp_cycle_control']")).toBeFocused();
