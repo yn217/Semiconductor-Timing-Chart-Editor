@@ -175,6 +175,38 @@ export function projectScenarioAsV2(document: ScenarioDocumentModel, scenarioId:
   };
 }
 
+/** Rename a Scenario without changing its semantic identity or owned data. */
+export function renameScenario(document: ScenarioDocumentModel, scenarioId: ScenarioId, name: string): ScenarioDocumentModel {
+  if (name.trim().length === 0) throw new Error("Scenario name must be a non-empty string.");
+  let found = false;
+  let changed = false;
+  const scenarios = document.scenarios.map((scenario) => {
+    if (scenario.id !== scenarioId) return scenario;
+    found = true;
+    if (scenario.name === name) return scenario;
+    changed = true;
+    return { ...scenario, name };
+  });
+  if (!found) throw new Error(`Scenario '${scenarioId}' does not exist.`);
+  if (!changed) return document;
+  const next = { ...document, scenarios };
+  const problems = validateScenarioDocumentModel(next);
+  if (problems.length > 0) throw new Error(`Scenario rename produced an invalid model (${problems.length} problem(s)).`);
+  return next;
+}
+
+/** Delete by stable ID; a valid Scenario document always retains one Scenario. */
+export function deleteScenario(document: ScenarioDocumentModel, scenarioId: ScenarioId): ScenarioDocumentModel {
+  const index = document.scenarios.findIndex((scenario) => scenario.id === scenarioId);
+  if (index < 0) throw new Error(`Scenario '${scenarioId}' does not exist.`);
+  if (document.scenarios.length === 1) throw new Error("Cannot delete the final Scenario in a Timing Document.");
+  const scenarios = document.scenarios.filter((scenario) => scenario.id !== scenarioId);
+  const next = { ...document, scenarios };
+  const problems = validateScenarioDocumentModel(next);
+  if (problems.length > 0) throw new Error(`Scenario deletion produced an invalid model (${problems.length} problem(s)).`);
+  return next;
+}
+
 /**
  * Validate the scenario-owned model through the existing v2 semantic contract.
  * This is an adapter boundary only; JSON parse/save activation remains separate.

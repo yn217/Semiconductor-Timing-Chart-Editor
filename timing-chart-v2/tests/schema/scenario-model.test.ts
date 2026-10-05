@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { scenarioModelFromV2, projectScenarioAsV2, updateScenarioModelFromV2Projection, validateScenarioDocumentModel } from "../../packages/schema/src/scenario-model.js";
+import { scenarioModelFromV2, projectScenarioAsV2, updateScenarioModelFromV2Projection, validateScenarioDocumentModel, renameScenario, deleteScenario } from "../../packages/schema/src/scenario-model.js";
 import { validateCanonicalDocument } from "../../packages/schema/src/validation.js";
 import { parseDocument, parseScenarioDocumentModel, serializeScenarioDocumentModel } from "../../packages/schema/src/serialization.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
@@ -110,5 +110,23 @@ describe("Scenario canonical model adapter", () => {
     expect(projectScenarioAsV2(next, second.id).signals.find((signal) => signal.id === "sig_data")?.name).toBe("RENAMED");
     expect(next.physicalTimebase).toEqual({ referenceFrequencyHz: 100_000_000, unit: "ns" });
     expect(validateScenarioDocumentModel(next)).toEqual([]);
+  });
+
+  it("renames and deletes Scenarios by stable ID while preserving the final Scenario", () => {
+    const initial = scenarioModelFromV2(canonicalFixture());
+    const first = initial.scenarios[0]!;
+    const second = { ...first, id: "scenario_alt" as typeof first.id, name: "Alternate" };
+    const model = { ...initial, scenarios: [first, second] };
+
+    const renamed = renameScenario(model, second.id, "Stress");
+    expect(renamed.scenarios.map(({ id, name }) => ({ id, name }))).toEqual([
+      { id: first.id, name: first.name },
+      { id: second.id, name: "Stress" },
+    ]);
+    expect(renamed.scenarios[1]).toEqual({ ...second, name: "Stress" });
+    expect(deleteScenario(renamed, first.id).scenarios).toEqual([{ ...second, name: "Stress" }]);
+    expect(() => renameScenario(model, second.id, "  ")).toThrow("non-empty");
+    expect(() => deleteScenario(initial, first.id)).toThrow("final Scenario");
+    expect(validateScenarioDocumentModel(deleteScenario(renamed, first.id))).toEqual([]);
   });
 });
