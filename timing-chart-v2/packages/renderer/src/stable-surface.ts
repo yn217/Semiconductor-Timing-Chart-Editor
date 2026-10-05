@@ -372,6 +372,56 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     }
   }
 
+  updateViewportRows(projection: RenderProjection): void {
+    const layers = this.#layers;
+    if (!layers) throw new Error("Timing chart renderer must be mounted before viewport update.");
+    const mounted = new Set(projection.mountedSignalIds);
+    const connectedOwners = [...this.#waveOwners].filter(([, owner]) => owner.isConnected);
+    if (connectedOwners.length !== mounted.size || connectedOwners.some(([signalId]) => !mounted.has(signalId))) {
+      this.update(projection);
+      return;
+    }
+
+    // Capture/update source-time windows before row-shell writes can invalidate
+    // layout. This retains horizontal-scroll waveform refresh behavior while
+    // keeping vertical row reconciliation out of the full owner/prefetch path.
+    this.updateViewport(projection);
+    const frozenLayer = this.#syncFrozenLayer(layers);
+    assertCrossSurfaceInvariant(projection);
+    const rows = this.#indexedRows(projection.rowLayout, false);
+    const navigationRows = this.#indexedRows(projection.navigationRowLayout, true);
+    const firstTimingRowByGroup = this.#getFirstTimingRows(projection.canonicalRowIds, navigationRows);
+    const rowStats = [
+      syncShellLayer(layers.left, this.#leftRows, projection.leftRowIds, navigationRows, "left", firstTimingRowByGroup),
+      ...(frozenLayer ? [syncShellLayer(frozenLayer, this.#frozenRows, projection.frozenLabelRowIds, rows, "frozen", firstTimingRowByGroup)] : []),
+      syncShellLayer(layers.timing, this.#timingRows, projection.timingRowIds, rows, "timing", firstTimingRowByGroup),
+    ];
+    const headerStats = [
+      syncGroupHeaderLayer(layers.left, this.#leftGroupHeaders, projection.mountedLeftGroupHeaderIds, projection.leftGroupHeaders, "left"),
+      ...(frozenLayer ? [syncGroupHeaderLayer(frozenLayer, this.#frozenGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "frozen")] : []),
+      syncGroupHeaderLayer(layers.timing, this.#timingGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "timing"),
+    ];
+    for (const signalId of projection.mountedSignalIds) {
+      const owner = this.#waveOwners.get(signalId)!;
+      const row = rows.get(signalId);
+      if (!row) continue;
+      owner.dataset.groupId = row.groupId;
+      owner.dataset.groupStart = String(firstTimingRowByGroup.get(row.groupId) === row.rowId);
+      owner.dataset.pinnedRow = String(row.pinned === true);
+      place(owner, row);
+    }
+    const changedNodes = rowStats.concat(headerStats);
+    this.#diagnostics = {
+      ...this.#diagnostics,
+      mountedRows: projection.mountedRowIds.length,
+      rowsVisited: new Set([...projection.leftRowIds, ...projection.frozenLabelRowIds, ...projection.timingRowIds]).size,
+      domNodeCreates: this.#diagnostics.domNodeCreates + changedNodes.reduce((sum, item) => sum + item.creates, 0),
+      domNodeDestroys: this.#diagnostics.domNodeDestroys + changedNodes.reduce((sum, item) => sum + item.destroys, 0),
+      domNodeMoves: this.#diagnostics.domNodeMoves + changedNodes.reduce((sum, item) => sum + item.moves, 0),
+    };
+    this.#visibleRowIdsSource = projection.visibleRowIds;
+  }
+
   counters(): Readonly<RenderCounters> {
     return Object.freeze({ ...this.#counters });
   }

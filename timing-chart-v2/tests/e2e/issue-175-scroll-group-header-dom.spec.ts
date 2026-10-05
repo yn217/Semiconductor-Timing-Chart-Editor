@@ -21,6 +21,11 @@ test("vertical viewport updates reuse unchanged Group header controls", async ({
   await expect(header).toBeVisible();
   const viewport = page.getByTestId("cycle-viewport");
   const before = await host.getAttribute("data-canonical-revision");
+  const beforeViewportStartY = await host.getAttribute("data-viewport-start-y");
+  const beforeMountedWaveIds = await host.locator("[data-role='stable-waveform-surface'] > [data-signal-id]").evaluateAll((owners) => owners.map((owner) => (owner as HTMLElement).dataset.signalId));
+  const rendererSnapshot = () => host.locator("[data-role='timing-chart-surface']").evaluate((element) =>
+    (element as HTMLElement & { requestPerformanceSnapshot: () => { projectionUpdates: number; waveBatchCount: number; waveRendersBySignalCount: number; localGeometryBuildsBySignalCount: number } }).requestPerformanceSnapshot());
+  const beforeRenderer = await rendererSnapshot();
   const scrollEvidence = await page.evaluate(async () => {
     const header = document.querySelector<HTMLElement>("[data-role='left-group-header'][data-group-id='grp_perf_0']");
     const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']");
@@ -40,7 +45,7 @@ test("vertical viewport updates reuse unchanged Group header controls", async ({
       timingNodesAddedOrRemoved += records.reduce((count, record) => count + record.addedNodes.length + record.removedNodes.length, 0);
     });
     timingObserver.observe(timingLayer, { childList: true });
-    viewport.scrollTop += 80;
+    viewport.scrollTop += 40;
     await new Promise<void>((resolve) => {
       let frames = 4;
       const next = () => { if (--frames === 0) resolve(); else requestAnimationFrame(next); };
@@ -59,9 +64,16 @@ test("vertical viewport updates reuse unchanged Group header controls", async ({
     };
   });
   expect(scrollEvidence.scrollTop).toBeGreaterThan(0);
+  expect(await host.getAttribute("data-viewport-start-y")).not.toBe(beforeViewportStartY);
+  expect(await host.locator("[data-role='stable-waveform-surface'] > [data-signal-id]").evaluateAll((owners) => owners.map((owner) => (owner as HTMLElement).dataset.signalId))).toEqual(beforeMountedWaveIds);
   expect(scrollEvidence.childListChanges, `unchanged Group header controls must not be reconstructed during scroll: ${JSON.stringify(scrollEvidence)}`).toBe(0);
   expect(scrollEvidence.sameChildNodes).toBe(true);
   expect(scrollEvidence.timingNodesAddedOrRemoved, "scroll must only add/remove newly entering or exiting timing rows").toBeLessThan(10);
+  const afterRenderer = await rendererSnapshot();
+  expect(afterRenderer.projectionUpdates, "unchanged mounted Signal IDs must not run the full renderer projection update").toBe(beforeRenderer.projectionUpdates);
+  expect(afterRenderer.waveBatchCount).toBe(beforeRenderer.waveBatchCount);
+  expect(afterRenderer.waveRendersBySignalCount).toBe(beforeRenderer.waveRendersBySignalCount);
+  expect(afterRenderer.localGeometryBuildsBySignalCount).toBe(beforeRenderer.localGeometryBuildsBySignalCount);
   expect(await host.getAttribute("data-canonical-revision")).toBe(before);
 
   await header.locator("[data-role='tree-collapse']").click();

@@ -202,6 +202,8 @@ export interface TimingChartRenderer {
   update(projection: RenderProjection): void;
   /** Refresh only bounded waveform windows when the row projection is unchanged. */
   updateViewport(projection: RenderProjection): void;
+  /** Reconcile virtualized row shells when the mounted waveform owner set is unchanged. */
+  updateViewportRows(projection: RenderProjection): void;
   /** Apply row/presentation changes without rebuilding waveform semantics. */
   updatePresentation(projection: RenderProjection): void;
   updateOverlays(primitives: readonly AnnotationOverlayPrimitive[]): void;
