@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { scenarioModelFromV2, projectScenarioAsV2, updateScenarioModelFromV2Projection, validateScenarioDocumentModel, renameScenario, deleteScenario } from "../../packages/schema/src/scenario-model.js";
+import { scenarioModelFromV2, projectScenarioAsV2, updateScenarioModelFromV2Projection, validateScenarioDocumentModel, renameScenario, deleteScenario, duplicateScenario } from "../../packages/schema/src/scenario-model.js";
 import { validateCanonicalDocument } from "../../packages/schema/src/validation.js";
 import { parseDocument, parseScenarioDocumentModel, serializeScenarioDocumentModel } from "../../packages/schema/src/serialization.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
@@ -128,5 +128,39 @@ describe("Scenario canonical model adapter", () => {
     expect(() => renameScenario(model, second.id, "  ")).toThrow("non-empty");
     expect(() => deleteScenario(initial, first.id)).toThrow("final Scenario");
     expect(validateScenarioDocumentModel(deleteScenario(renamed, first.id))).toEqual([]);
+  });
+
+  it("duplicates Scenario-owned identities and rewrites only their internal references", () => {
+    const base = scenarioModelFromV2(canonicalFixture());
+    const source = {
+      ...base.scenarios[0]!,
+      timeline: { ...base.scenarios[0]!.timeline, labelAnchors: [{ id: "anchor_resume" as never, source: 8, display: 2, ownerTimeGroupId: "time_group_parent" as never }] },
+      bookmarks: [{ id: "bookmark_one" as never, name: "One", start: 2 }],
+      timeGroups: [
+        { id: "time_group_parent" as never, name: "Parent", start: 2, end: 8, presentation: { collapsed: true, foldStyle: "axis-break" as const, resumeLabelAnchorId: "anchor_resume" as never } },
+        { id: "time_group_child" as never, parentId: "time_group_parent" as never, name: "Child", start: 3, end: 5 },
+      ],
+      annotations: [{ id: "annotation_one" as never, type: "measurement" as const, label: "M", visible: true, sourceSignalId: "sig_data" as never, start: { signalId: "sig_data" as never, cycle: 3, point: "transition-start" as const }, end: { signalId: "sig_data" as never, cycle: 5, point: "transition-end" as const } }],
+      annotationGroups: [{ id: "annotation_group_one" as never, name: "Measurements", annotationIds: ["annotation_one" as never] }],
+      transactionGroups: [{ id: "transaction_group_one" as never, name: "Bus", order: 0 }],
+      transactions: [{ id: "transaction_one" as never, name: "Read", start: 2, end: 5, groupId: "transaction_group_one" as never, linkedSignals: ["sig_data" as never] }],
+      constraints: [{ id: "constraint_one" as never, type: "latency", data: { signalId: "sig_data" } }],
+    };
+    const model = { ...base, scenarios: [source] };
+    const duplicated = duplicateScenario(model, source.id, "Stress");
+    const copy = duplicated.scenarios[1]!;
+
+    expect(copy.id).not.toBe(source.id);
+    expect(copy.name).toBe("Stress");
+    expect(copy.bookmarks[0]?.id).not.toBe(source.bookmarks[0]?.id);
+    expect(copy.timeGroups[1]?.parentId).toBe(copy.timeGroups[0]?.id);
+    expect(copy.timeline.labelAnchors[0]?.ownerTimeGroupId).toBe(copy.timeGroups[0]?.id);
+    expect(copy.timeGroups[0]?.presentation?.resumeLabelAnchorId).toBe(copy.timeline.labelAnchors[0]?.id);
+    expect(copy.annotationGroups[0]?.annotationIds[0]).toBe(copy.annotations[0]?.id);
+    expect(copy.transactions[0]?.groupId).toBe(copy.transactionGroups?.[0]?.id);
+    expect(copy.transactions[0]?.linkedSignals).toEqual(["sig_data"]);
+    expect(copy.annotations[0]?.sourceSignalId).toBe("sig_data");
+    expect(copy.constraints[0]?.data).toEqual({ signalId: "sig_data" });
+    expect(validateScenarioDocumentModel(duplicated)).toEqual([]);
   });
 });

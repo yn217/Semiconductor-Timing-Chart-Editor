@@ -1,6 +1,11 @@
 import type {
   CanonicalDocument,
+  AnnotationId,
+  AnnotationGroupId,
+  BookmarkId,
   ClockSignal,
+  ConstraintId,
+  LabelAnchorId,
   ScenarioDocumentModel,
   ScenarioSignalDefinition,
   ScenarioSignalState,
@@ -8,12 +13,15 @@ import type {
   SignalId,
   Signal,
   TimingScenario,
+  TimeGroupId,
+  TransactionGroupId,
+  TransactionId,
   ValueSignal,
   DocumentProblem,
 } from "./types.js";
 import { canonicalEntityInventory, type CanonicalEntityKind } from "./canonical-inventory.js";
 import { DOCUMENT_RESOURCE_BUDGET, validateDocumentResourceBudget, validateDocumentInputComplexity } from "./resource-budget.js";
-import { isStableId } from "./stable-id.js";
+import { isStableId, opaqueDerivedId } from "./stable-id.js";
 import { validateCanonicalDocument } from "./validation.js";
 
 const DEFAULT_SCENARIO_ID = "scenario_default" as ScenarioId;
@@ -204,6 +212,66 @@ export function deleteScenario(document: ScenarioDocumentModel, scenarioId: Scen
   const next = { ...document, scenarios };
   const problems = validateScenarioDocumentModel(next);
   if (problems.length > 0) throw new Error(`Scenario deletion produced an invalid model (${problems.length} problem(s)).`);
+  return next;
+}
+
+/**
+ * Duplicate one Scenario with fresh IDs for all Scenario-owned entities.
+ * Shared Signal IDs and references to them intentionally remain unchanged.
+ */
+export function duplicateScenario(document: ScenarioDocumentModel, scenarioId: ScenarioId, name?: string): ScenarioDocumentModel {
+  const source = document.scenarios.find((scenario) => scenario.id === scenarioId);
+  if (!source) throw new Error(`Scenario '${scenarioId}' does not exist.`);
+  const used = new Set<string>(document.scenarios.map((scenario) => scenario.id));
+  for (const scenario of document.scenarios) {
+    for (const item of canonicalEntityInventory(projectScenarioAsV2(document, scenario.id))) used.add(item.id);
+  }
+  const allocate = (kind: string, id: string): string => {
+    const next = opaqueDerivedId(`scenario-copy:${source.id}:${kind}:${id}`, used);
+    used.add(next);
+    return next;
+  };
+  const copiedScenarioId = allocate("scenario", source.id) as ScenarioId;
+  const timeGroupIds = new Map(source.timeGroups.map((item) => [item.id, allocate("timeGroup", item.id) as TimeGroupId]));
+  const labelAnchorIds = new Map(source.timeline.labelAnchors.map((item) => [item.id, allocate("labelAnchor", item.id) as LabelAnchorId]));
+  const bookmarkIds = new Map(source.bookmarks.map((item) => [item.id, allocate("bookmark", item.id) as BookmarkId]));
+  const annotationIds = new Map(source.annotations.map((item) => [item.id, allocate("annotation", item.id) as AnnotationId]));
+  const annotationGroupIds = new Map(source.annotationGroups.map((item) => [item.id, allocate("annotationGroup", item.id) as AnnotationGroupId]));
+  const transactionGroupIds = new Map((source.transactionGroups ?? []).map((item) => [item.id, allocate("transactionGroup", item.id) as TransactionGroupId]));
+  const transactionIds = new Map(source.transactions.map((item) => [item.id, allocate("transaction", item.id) as TransactionId]));
+  const constraintIds = new Map(source.constraints.map((item) => [item.id, allocate("constraint", item.id) as ConstraintId]));
+  const copied: TimingScenario = {
+    ...source,
+    id: copiedScenarioId,
+    name: name ?? `${source.name} Copy`,
+    timeline: {
+      ...source.timeline,
+      labelAnchors: source.timeline.labelAnchors.map((item) => ({
+        ...item,
+        id: labelAnchorIds.get(item.id)!,
+        ...(item.ownerTimeGroupId === undefined ? {} : { ownerTimeGroupId: timeGroupIds.get(item.ownerTimeGroupId) ?? item.ownerTimeGroupId }),
+      })),
+    },
+    timeGroups: source.timeGroups.map((item) => ({
+      ...item,
+      id: timeGroupIds.get(item.id)!,
+      ...(item.parentId === undefined ? {} : { parentId: timeGroupIds.get(item.parentId) ?? item.parentId }),
+      ...(item.presentation?.resumeLabelAnchorId === undefined ? {} : { presentation: { ...item.presentation, resumeLabelAnchorId: labelAnchorIds.get(item.presentation.resumeLabelAnchorId) ?? item.presentation.resumeLabelAnchorId } }),
+    })),
+    bookmarks: source.bookmarks.map((item) => ({ ...item, id: bookmarkIds.get(item.id)! })),
+    annotations: source.annotations.map((item) => ({ ...item, id: annotationIds.get(item.id)! })),
+    annotationGroups: source.annotationGroups.map((item) => ({ ...item, id: annotationGroupIds.get(item.id)!, annotationIds: item.annotationIds.map((id) => annotationIds.get(id) ?? id) })),
+    ...(source.transactionGroups === undefined ? {} : { transactionGroups: source.transactionGroups.map((item) => ({ ...item, id: transactionGroupIds.get(item.id)! })) }),
+    transactions: source.transactions.map((item) => ({
+      ...item,
+      id: transactionIds.get(item.id)!,
+      ...(item.groupId === undefined ? {} : { groupId: transactionGroupIds.get(item.groupId) ?? item.groupId }),
+    })),
+    constraints: source.constraints.map((item) => ({ ...item, id: constraintIds.get(item.id)! })),
+  };
+  const next = { ...document, scenarios: [...document.scenarios, copied] };
+  const problems = validateScenarioDocumentModel(next);
+  if (problems.length > 0) throw new Error(`Scenario duplication produced an invalid model: ${problems.map(({ code, path }) => `${code} at ${path}`).join(", ")}.`);
   return next;
 }
 
