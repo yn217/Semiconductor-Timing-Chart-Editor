@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { scenarioModelFromV2, projectScenarioAsV2 } from "../../packages/schema/src/scenario-model.js";
+import { scenarioModelFromV2, projectScenarioAsV2, validateScenarioDocumentModel } from "../../packages/schema/src/scenario-model.js";
 import { validateCanonicalDocument } from "../../packages/schema/src/validation.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
@@ -46,5 +46,25 @@ describe("Scenario canonical model adapter", () => {
       scenarios: [{ ...scenario, signalStates: { sig_clk: scenario.signalStates.sig_clk } }],
     };
     expect(() => projectScenarioAsV2(malformed, scenario.id)).toThrow("missing value state for 'sig_data'");
+  });
+
+  it("validates every scenario against shared signal definitions and the canonical contract", () => {
+    const model = scenarioModelFromV2(canonicalFixture());
+    expect(validateScenarioDocumentModel(model)).toEqual([]);
+
+    const scenario = model.scenarios[0]!;
+    const missing = { ...model, scenarios: [{ ...scenario, signalStates: { sig_clk: scenario.signalStates.sig_clk } }] };
+    expect(validateScenarioDocumentModel(missing)).toContainEqual(expect.objectContaining({ code: "MISSING_SCENARIO_SIGNAL_STATE", path: "$.scenarios[0].signalStates.sig_data" }));
+
+    const extra = { ...model, scenarios: [{ ...scenario, signalStates: { ...scenario.signalStates, orphan_signal: { kind: "values", values: [] } } }] };
+    expect(validateScenarioDocumentModel(extra)).toContainEqual(expect.objectContaining({ code: "UNKNOWN_SCENARIO_SIGNAL_STATE", path: "$.scenarios[0].signalStates.orphan_signal" }));
+  });
+
+  it("rejects duplicate scenario-owned stable IDs across scenarios", () => {
+    const model = scenarioModelFromV2(canonicalFixture());
+    const first = { ...model.scenarios[0]!, bookmarks: [{ id: "bookmark_shared", name: "Mark", start: 0 }] };
+    const second = { ...first, id: "scenario_second" as typeof first.id, name: "Scenario 2" };
+    const duplicateAcrossScenarios = { ...model, scenarios: [first, second] };
+    expect(validateScenarioDocumentModel(duplicateAcrossScenarios)).toContainEqual(expect.objectContaining({ code: "DUPLICATE_ID", entityId: "bookmark_shared" }));
   });
 });
