@@ -5,6 +5,7 @@ import { isWavePrefetchModeEligible, WavePrefetchLifecycle } from "./wave-prefet
 import { applyTextStyle, parseTextStyle, renderOverlay } from "./annotation-overlay-dom.js";
 import { groupBackgroundColor } from "./group-background.js";
 import { syncGroupHeaderLayer } from "./group-header-dom.js";
+import { reconcileViewportWaveOwners } from "./viewport-wave-owner-projection.js";
 
 export function isWaveMountRequestFresh(request: Pick<WaveMountRequest, "documentEpoch" | "isFresh">, currentDocumentEpoch: number): boolean {
   return (request.documentEpoch === undefined || request.documentEpoch === currentDocumentEpoch) && (request.isFresh?.() ?? true);
@@ -325,6 +326,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     assertCrossSurfaceInvariant(projection);
     const rows = this.#indexedRows(projection.rowLayout, false);
     const navigationRows = this.#indexedRows(projection.navigationRowLayout, true);
+    if (projection.mountedSignalIds.some((signalId) => !rows.has(signalId))) { this.update(projection); return; }
     const firstTimingRowByGroup = this.#getFirstTimingRows(projection.canonicalRowIds, navigationRows);
     syncShellLayer(layers.left, this.#leftRows, projection.leftRowIds, navigationRows, "left", firstTimingRowByGroup);
     if (frozenLayer) syncShellLayer(frozenLayer, this.#frozenRows, projection.frozenLabelRowIds, rows, "frozen", firstTimingRowByGroup);
@@ -372,20 +374,24 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     }
   }
 
-  updateViewportRows(projection: RenderProjection): void {
+  updateViewportProjection(projection: RenderProjection): void {
     const layers = this.#layers;
     if (!layers) throw new Error("Timing chart renderer must be mounted before viewport update.");
     const mounted = new Set(projection.mountedSignalIds);
-    const connectedOwners = [...this.#waveOwners].filter(([, owner]) => owner.isConnected);
-    if (connectedOwners.length !== mounted.size || connectedOwners.some(([signalId]) => !mounted.has(signalId))) {
+    if (projection.documentEpoch !== this.#documentEpoch
+      || projection.revision !== Number(layers.root.dataset.revision)
+      || projection.canonicalRowIds !== this.#documentRowIdsSource
+      || projection.canonicalSignalIds !== this.#canonicalSignalIdsSource
+      || projection.waveSignalIds.length > 0) {
       this.update(projection);
       return;
     }
 
-    // Capture/update source-time windows before row-shell writes can invalidate
-    // layout. This retains horizontal-scroll waveform refresh behavior while
-    // keeping vertical row reconciliation out of the full owner/prefetch path.
-    this.updateViewport(projection);
+    // Capture source-time geometry before row-shell writes can invalidate
+    // layout. Missing existing geometry is not safe to infer from the new DOM.
+    const sourceOwner = projection.mountedSignalIds.map((id) => this.#waveOwners.get(id)).find((owner) => owner?.isConnected);
+    if (!sourceOwner && projection.mountedSignalIds.length > 0) { this.update(projection); return; }
+    if (sourceOwner) this.#readSourceWindow(sourceOwner);
     const frozenLayer = this.#syncFrozenLayer(layers);
     assertCrossSurfaceInvariant(projection);
     const rows = this.#indexedRows(projection.rowLayout, false);
@@ -401,6 +407,21 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       ...(frozenLayer ? [syncGroupHeaderLayer(frozenLayer, this.#frozenGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "frozen")] : []),
       syncGroupHeaderLayer(layers.timing, this.#timingGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "timing"),
     ];
+    const waveOwnerStats = reconcileViewportWaveOwners({
+      layer: layers.waves,
+      projection,
+      rows,
+      owners: this.#waveOwners,
+      dirtyWaves: this.#dirtyWaves,
+      sourceWindow: this.#sourceWindowSnapshot,
+      queueWave: (signalId, owner) => this.#queueWave(signalId, owner),
+      initializeOwner: (owner, row) => {
+        const waveformStyle = parseWaveformStyle(row.displayStyle);
+        applyWaveformStyle(owner, waveformStyle);
+        setCanvasWaveformColor(owner, waveformStyle.color);
+        if (waveformStyle.color) owner.dataset.waveformStyleColor = waveformStyle.color;
+      },
+    });
     const visitedRowIds = new Set([...projection.leftRowIds, ...projection.frozenLabelRowIds, ...projection.timingRowIds]);
     const changedRows = new Set<string>();
     for (const rowId of visitedRowIds) {
@@ -408,15 +429,6 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       if (!row) continue;
       if (this.#rowY.get(row.rowId) !== row.y) changedRows.add(row.rowId);
       this.#rowY.set(row.rowId, row.y);
-    }
-    for (const signalId of projection.mountedSignalIds) {
-      const owner = this.#waveOwners.get(signalId)!;
-      const row = rows.get(signalId);
-      if (!row) continue;
-      owner.dataset.groupId = row.groupId;
-      owner.dataset.groupStart = String(firstTimingRowByGroup.get(row.groupId) === row.rowId);
-      owner.dataset.pinnedRow = String(row.pinned === true);
-      place(owner, row);
     }
     const scrollTop = layers.root.closest<HTMLElement>(".cycle-viewport")?.scrollTop ?? 0;
     this.#updateWavePrefetchPlan(projection, mounted, this.#sourceWindowSnapshot, scrollTop);
@@ -429,11 +441,21 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       rowYSize: this.#rowY.size,
       rowYStaleCount: 0,
       rowYPrunePasses: this.#rowYPrunePasses,
-      domNodeCreates: this.#diagnostics.domNodeCreates + changedNodes.reduce((sum, item) => sum + item.creates, 0),
+      domNodeCreates: this.#diagnostics.domNodeCreates + waveOwnerStats.created + changedNodes.reduce((sum, item) => sum + item.creates, 0),
       domNodeDestroys: this.#diagnostics.domNodeDestroys + changedNodes.reduce((sum, item) => sum + item.destroys, 0),
       domNodeMoves: this.#diagnostics.domNodeMoves + changedNodes.reduce((sum, item) => sum + item.moves, 0),
+      waveArtifactCacheMisses: this.#diagnostics.waveArtifactCacheMisses + waveOwnerStats.created,
+      waveArtifactCacheHits: this.#diagnostics.waveArtifactCacheHits + waveOwnerStats.cacheHits,
     };
     this.#counters = { ...this.#counters, rowPositionUpdates: this.#counters.rowPositionUpdates + changedRows.size };
+    const waveOwnerCacheLimit = Math.max(32, mounted.size * 4);
+    for (const [signalId, owner] of this.#waveOwners) {
+      if (this.#waveOwners.size <= waveOwnerCacheLimit) break;
+      if (mounted.has(signalId)) continue;
+      owner.remove(); releaseWaveOwnerForCacheEviction(this.#provider, signalId); this.#waveOwners.delete(signalId); this.#dirtyWaves.delete(signalId); this.#waveVersions.delete(signalId); this.#wavePending.delete(signalId);
+      this.#diagnostics = { ...this.#diagnostics, domNodeDestroys: this.#diagnostics.domNodeDestroys + 1, waveArtifactDisposals: this.#diagnostics.waveArtifactDisposals + 1 };
+    }
+    this.#diagnostics = { ...this.#diagnostics, mountedWaveOwners: [...this.#waveOwners.values()].filter((owner) => owner.isConnected).length, cachedWaveOwners: this.#waveOwners.size, waveOwnerCacheLimit, dirtyWaveSize: this.#dirtyWaves.size, waveVersionSize: this.#waveVersions.size, fullReplaceEpochResets: this.#fullReplaceEpochResets, diagnosticMapPrunePasses: this.#diagnosticMapPrunePasses };
     this.#visibleRowIdsSource = projection.visibleRowIds;
   }
 

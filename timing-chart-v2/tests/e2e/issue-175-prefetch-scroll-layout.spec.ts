@@ -21,6 +21,9 @@ test("10k vertical scroll does not force layout in post-reconciliation prefetch 
   ), { timeout: 90_000 }).toBe(true);
 
   const viewport = page.getByTestId("cycle-viewport");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const beforeRenderer = await surface.evaluate((element) => (element as HTMLElement & { requestPerformanceSnapshot: () => { projectionUpdates: number } }).requestPerformanceSnapshot());
+  const beforeOwnerIds = await surface.locator("[data-role='stable-waveform-surface'] > [data-signal-id]").evaluateAll((owners) => owners.map((owner) => (owner as HTMLElement).dataset.signalId));
   const cdp = await page.context().newCDPSession(page);
   const events: Array<{ name?: string; cat?: string; ph?: string; dur?: number; args?: { data?: Record<string, unknown> } }> = [];
   cdp.on("Tracing.dataCollected", ({ value }: { value: typeof events }) => events.push(...value));
@@ -34,6 +37,11 @@ test("10k vertical scroll does not force layout in post-reconciliation prefetch 
   await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   await cdp.send("Tracing.end");
   await completed;
+  await expect.poll(() => surface.locator("[data-role='wave-owner'][data-wave-state='pending']").count()).toBe(0);
+  const afterRenderer = await surface.evaluate((element) => (element as HTMLElement & { requestPerformanceSnapshot: () => { projectionUpdates: number } }).requestPerformanceSnapshot());
+  const afterOwnerIds = await surface.locator("[data-role='stable-waveform-surface'] > [data-signal-id]").evaluateAll((owners) => owners.map((owner) => (owner as HTMLElement).dataset.signalId));
+  expect(afterOwnerIds).not.toEqual(beforeOwnerIds);
+  expect(afterRenderer.projectionUpdates, "viewport-only row churn must not invoke the full document/owner update").toBe(beforeRenderer.projectionUpdates);
   const prefetchLayoutReads = events.filter((event) => {
     if (event.name !== "LayoutInvalidationTracking" || event.args?.data?.reason !== "Added to layout") return false;
     const stack = event.args.data.stackTrace;

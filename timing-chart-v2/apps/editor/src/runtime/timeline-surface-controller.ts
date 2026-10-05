@@ -470,8 +470,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
               else timelineGeometry.invalidateSnapIndex();
             }
             if (sameProjection) renderer.updateViewport(projection);
-            else if (!mountedSignalsChanged) renderer.updateViewportRows(projection);
-            else renderer.update(projection);
+            else renderer.updateViewportProjection(projection);
             if (!sameProjection) {
               const viewportStartY = String(window.viewportStartY);
               if (rendererHost.dataset.viewportStartY !== viewportStartY) rendererHost.dataset.viewportStartY = viewportStartY;
