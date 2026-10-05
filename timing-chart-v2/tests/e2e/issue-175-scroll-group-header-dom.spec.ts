@@ -150,3 +150,65 @@ test("scroll projection resolves source window before virtual row DOM changes", 
   expect(await page.getByTestId("history-status").textContent()).toBe(before.history);
   expect(await page.getByTestId("dirty-status").textContent()).toBe(before.dirty);
 });
+
+test("vertical scroll does not detach and reinsert rows that remain in the viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const document = generatePerformanceDocument({ signalCount: 1_000, cycleCount: 32, profile: "standard" });
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({
+    name: "issue-175-row-reconcile-scroll.tcd",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(document)),
+  });
+  await expect(page.locator(".app-titlebar h1")).toHaveText(document.document.title);
+  await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+
+  const evidence = await page.evaluate(async () => {
+    const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']");
+    const timingLayer = document.querySelector<HTMLElement>("[data-role='timing-semantic-rows']");
+    if (!viewport || !timingLayer) throw new Error("Expected Cycle viewport and timing row layer");
+    const rowIds = () => [...timingLayer.querySelectorAll<HTMLElement>(":scope > [data-role='timing-row']")]
+      .map((row) => row.dataset.rowId ?? "");
+    const before = rowIds();
+    const removed = new Map<string, number>();
+    const added = new Map<string, number>();
+    const observer = new MutationObserver((records) => {
+      for (const record of records) {
+        for (const node of record.removedNodes) {
+          const rowId = (node as HTMLElement).dataset?.role === "timing-row" ? (node as HTMLElement).dataset.rowId : undefined;
+          if (rowId) removed.set(rowId, (removed.get(rowId) ?? 0) + 1);
+        }
+        for (const node of record.addedNodes) {
+          const rowId = (node as HTMLElement).dataset?.role === "timing-row" ? (node as HTMLElement).dataset.rowId : undefined;
+          if (rowId) added.set(rowId, (added.get(rowId) ?? 0) + 1);
+        }
+      }
+    });
+    observer.observe(timingLayer, { childList: true });
+    viewport.scrollTop += 400;
+    await new Promise<void>((resolve) => {
+      let frames = 6;
+      const next = () => { if (--frames === 0) resolve(); else requestAnimationFrame(next); };
+      requestAnimationFrame(next);
+    });
+    observer.disconnect();
+    const after = rowIds();
+    const retained = new Set(before.filter((id) => after.includes(id)));
+    return {
+      beforeCount: before.length,
+      afterCount: after.length,
+      retainedCount: retained.size,
+      detachedRetainedIds: [...retained].filter((id) => (removed.get(id) ?? 0) > 0 || (added.get(id) ?? 0) > 0),
+      scrollTop: viewport.scrollTop,
+    };
+  });
+  expect(evidence.scrollTop).toBeGreaterThan(0);
+  expect(evidence.beforeCount).toBeGreaterThan(evidence.retainedCount);
+  expect(evidence.afterCount).toBeGreaterThan(evidence.retainedCount);
+  expect(evidence.retainedCount).toBeGreaterThan(0);
+  expect(evidence.detachedRetainedIds, `retained viewport rows must stay connected: ${JSON.stringify(evidence)}`).toEqual([]);
+});

@@ -62,23 +62,14 @@ export function syncGroupHeaderLayer(
     const y = (item: HTMLElement) => Number.parseFloat(item.style.transform.match(/translateY\((-?[0-9.]+)px\)/)?.[1] ?? "0");
     return y(left) - y(right);
   });
-  const current = Array.from(layer.children);
-  const existing = new Set(current);
-  const expectedExisting = combined.filter((shell) => existing.has(shell));
-  const preservesExistingOrder = current.length === expectedExisting.length
-    && current.every((shell, index) => shell === expectedExisting[index]);
-  if (preservesExistingOrder) {
-    for (let index = 0; index < combined.length; index += 1) {
-      const shell = combined[index]!;
-      if (existing.has(shell)) continue;
-      const nextExisting = combined.slice(index + 1).find((candidate) => existing.has(candidate));
-      layer.insertBefore(shell, nextExisting ?? null);
-      existing.add(shell);
+  let next = layer.firstElementChild;
+  for (const shell of combined) {
+    if (shell !== next) {
+      layer.insertBefore(shell, next);
       moves += 1;
+    } else {
+      next = next?.nextElementSibling ?? null;
     }
-  } else if (combined.length !== current.length || combined.some((shell, index) => current[index] !== shell)) {
-    layer.replaceChildren(...combined);
-    moves += combined.length;
   }
   return { creates, destroys, moves };
 }

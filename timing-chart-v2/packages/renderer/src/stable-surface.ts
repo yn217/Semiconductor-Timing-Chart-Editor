@@ -1115,24 +1115,14 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
     place(shell, row);
     ordered.push(shell);
   }
-  const currentRows = Array.from(layer.children).filter((child) => !(child as HTMLElement).dataset.groupHeader);
-  const existingRows = new Set(currentRows);
-  const expectedExistingRows = ordered.filter((shell) => existingRows.has(shell));
-  const preservesExistingOrder = currentRows.length === expectedExistingRows.length
-    && currentRows.every((shell, index) => shell === expectedExistingRows[index]);
-  if (preservesExistingOrder) {
-    for (let index = 0; index < ordered.length; index += 1) {
-      const shell = ordered[index]!;
-      if (existingRows.has(shell)) continue;
-      const nextExistingRow = ordered.slice(index + 1).find((candidate) => existingRows.has(candidate));
-      layer.insertBefore(shell, nextExistingRow ?? null);
-      existingRows.add(shell);
+  let nextRow = layer.firstElementChild;
+  for (const shell of ordered) {
+    while (nextRow && (nextRow as HTMLElement).dataset.groupHeader) nextRow = nextRow.nextElementSibling;
+    if (shell !== nextRow) {
+      layer.insertBefore(shell, nextRow);
       moves += 1;
     }
-  } else {
-    const currentHeaders = Array.from(layer.children).filter((child) => (child as HTMLElement).dataset.groupHeader);
-    layer.replaceChildren(...ordered, ...currentHeaders);
-    moves = ordered.length;
+    nextRow = shell.nextElementSibling;
   }
   return { creates, destroys, moves };
 }
