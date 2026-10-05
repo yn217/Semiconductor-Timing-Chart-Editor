@@ -9,13 +9,25 @@ export function createScrollOverlayRefreshOwner(input: {
   readonly refresh: () => void;
 }): ScrollOverlayRefreshOwner {
   let generation = 0;
+  let pending = false;
+  let latestRequestGeneration = 0;
+  let latestRequestEpoch = 0;
   return {
     request: () => {
-      const requestGeneration = ++generation;
-      const requestEpoch = input.getDocumentEpoch();
+      latestRequestGeneration = ++generation;
+      latestRequestEpoch = input.getDocumentEpoch();
+      // Scroll projection can publish once per frame while a Wave batch is
+      // still pending. Keep only the latest viewport request and share one
+      // renderer-idle continuation instead of queuing stale waiters that will
+      // all wake and discard themselves when that batch completes.
+      if (pending) return;
+      pending = true;
       void input.waitForRendererIdle().then(() => {
-        if (requestGeneration !== generation || !input.isActive() || !input.isDocumentEpochCurrent(requestEpoch)) return;
+        pending = false;
+        if (latestRequestGeneration !== generation || !input.isActive() || !input.isDocumentEpochCurrent(latestRequestEpoch)) return;
         input.refresh();
+      }, () => {
+        pending = false;
       });
     },
     invalidate: () => { generation += 1; },
