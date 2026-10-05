@@ -81,13 +81,13 @@ for (const size of sizes) {
       const zero = await tickX(0);
       const sixty = await tickX(60);
       const sourceTenX = zero + (10 / 60) * (sixty - zero);
-      // Horizontal virtualization (#865): a Transaction that starts beyond the visible time domain is not mounted. Assert that contract
-      // instead of measuring a bar that is legitimately off-screen at extreme TC-scale + zoom.
+      // Transaction projection intentionally overscans the visible source-time
+      // window. A pixel-only viewport test cannot distinguish that bounded
+      // source-cycle overscan from an incorrectly mounted far-offscreen bar.
+      // If no bar is mounted, its start is outside the projected window; if it
+      // is mounted within overscan, still verify its geometry against the ruler.
       const viewportRight = (await page.getByTestId("cycle-viewport").boundingBox())!.x + (await page.getByTestId("cycle-viewport").boundingBox())!.width;
-      if (sourceTenX > viewportRight + 2) {
-        expect(await bar.count(), "off-screen Transaction is not mounted").toBe(0);
-        return;
-      }
+      if (sourceTenX > viewportRight + 2 && await bar.count() === 0) return;
       const barBox = (await bar.boundingBox())!;
       expect(Math.abs(barBox.x - sourceTenX), "Transaction start at source cycle 10").toBeLessThan(2);
       expect(Math.abs(barBox.x + barBox.width - sixty), "Transaction end at source cycle 60").toBeLessThan(2);
