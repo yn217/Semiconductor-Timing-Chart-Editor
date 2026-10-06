@@ -315,12 +315,8 @@
 .event-row { display: grid; grid-template-columns: 20px 18px 24px 82px 56px 64px minmax(0, 1fr) minmax(160px, 1.4fr) 132px; align-items: center; min-height: var(--table-row-height); border-bottom: 1px solid #e1e6ed; }
 
 .event-row.selected:not(.event-columns) { background: #eaf3fb; box-shadow: inset 3px 0 #2c78bb; }
-/* Visual Quality Closure follow-up, Section 7: a row reads as plain text
-   at rest (Start/Value/Comment become <output>) -- inputs only exist
-   while it's the one row actually being edited. `.editing` layers an
-   amber inset border over whatever `.selected` already drew (editing a
-   row always selects it too), so the one row with live inputs is visibly
-   distinct from a merely-selected-but-read-only one. */
+/* Rows are always editable; `.editing` marks a row with an unapplied
+   Draft with an amber inset border over whatever `.selected` already drew. */
 .event-row.editing:not(.event-columns) { box-shadow: inset 3px 0 #c9962e; }
 
 .event-row:last-child { border-bottom: 0; }
@@ -335,9 +331,9 @@
 .event-columns > span:first-of-type { grid-column: 3; }
 
 .event-row output { overflow: hidden; text-overflow: ellipsis; font: 11px Consolas, monospace; color: #4f5e73; }
-/* A read-only row's Comment is prose, not data -- proportional type reads
-   better than the Consolas the numeric/value outputs share. */
-.event-row output.event-row-comment { font-family: var(--gui-font-family, inherit); color: #5c687c; }
+.event-row-value-cell { display: flex; align-items: center; gap: 6px; }
+.event-row-value-cell > :is(input, select) { flex: 1 1 auto; min-width: 0; }
+.event-row-value-cell > output { flex: 0 0 auto; }
 
 .event-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
 /* A row's own Draft dot -- distinct from the Generator/Inspector Draft

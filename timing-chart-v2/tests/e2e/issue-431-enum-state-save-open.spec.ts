@@ -49,7 +49,6 @@ for (const size of sizes) {
     // as labelled suggestions, while storing the numeric source value.
     await page.getByTestId("bottom-tabs").locator("[data-bottom-tab='Signal']").click();
     const transitionRow = page.locator("form.event-row[data-event-start='4']");
-    await transitionRow.getByRole("button", { name: "Edit transition at cycle 4" }).click();
     const enumValue = transitionRow.getByLabel("Value 4");
     await expect(enumValue).toHaveAttribute("list", "event-row-value-options-4");
     const enumSuggestions = page.locator("#event-row-value-options-4");
@@ -61,9 +60,9 @@ for (const size of sizes) {
     await expect(page.locator("#event-row-value-options-4 option[value='2']")).toHaveText("DONE");
     await expect(enumSuggestions.locator("option[value='7']")).toHaveText("7");
     await enumValue.fill("2");
-    await transitionRow.getByRole("button", { name: "Save", exact: true }).click();
+    await transitionRow.getByRole("button", { name: "Apply", exact: true }).click();
     await expect(surface).toHaveAttribute("data-editor-idle", "true");
-    await expect(page.getByTestId("event-row-value-4")).toHaveText("2");
+    await expect(transitionRow.getByLabel("Value 4")).toHaveValue("2");
     const editedLabels = await symbolicLabels();
     expect(editedLabels.join("|"), "choosing an Enum value renders its symbolic label").toContain("DONE");
 

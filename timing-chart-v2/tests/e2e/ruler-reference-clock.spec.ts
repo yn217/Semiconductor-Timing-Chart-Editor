@@ -61,9 +61,8 @@ test("keeps the Ruler alive across edits, Undo/Redo, and repeated Opens with a n
 
   // Event edit
   const row = page.getByTestId("signal-editor").locator("form.event-row").nth(1);
-  await row.getByRole("button", { name: /Edit transition/ }).click();
   await row.getByLabel("Value 4").selectOption("X");
-  await row.getByRole("button", { name: "Save" }).click();
+  await row.getByRole("button", { name: "Apply" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(ruler.locator("[data-cycle]")).toHaveCount(rulerCountA);
 

@@ -290,10 +290,9 @@ test("PR guard: 100x500 selection/reorder/edit/annotation/view hard invariants w
   const editBefore = await counters(page); const event = page.getByTestId("signal-editor").locator("form.event-row").first();
   const acceptedCommandsBeforeSignalEdit = Number(await host.getAttribute("data-accepted-command-count") ?? "0");
   const diagnosticsPassesBeforeSignalEdit = Number(await host.getAttribute("data-timing-diagnostics-full-passes") ?? "0");
-  await event.getByRole("button", { name: /Edit transition/ }).click();
   const valueEditor = event.getByLabel("Value 0");
   if (await valueEditor.evaluate((element) => element.tagName === "SELECT")) await valueEditor.selectOption("1"); else await valueEditor.fill("1");
-  await event.getByRole("button", { name: "Save" }).click(); await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await event.getByRole("button", { name: "Apply" }).click(); await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect.poll(async () => Number(await host.getAttribute("data-accepted-command-count") ?? "0")).toBeGreaterThan(acceptedCommandsBeforeSignalEdit);
   const signalEditLatency = await host.evaluate((element) => ({
     applyToIdleMs: Number((element as HTMLElement).dataset.lastApplyToIdleMs),
