@@ -57,6 +57,13 @@ JSONは低優先度で通常操作に必須としない。
 Signal選択 -> Signal、Annotation選択 -> Annotation。ただしPin / Follow Selection OFFで固定可能。
 Bottom panelは高さ変更・collapse可能。
 
+Signal Tree Pin is workspace-only presentation state keyed by stable Signal ID.
+It is not part of the canonical document, Save/Open data, export, Undo/Redo, or
+Dirty state. Pins remain active while the current document epoch is active;
+replacing/opening a document or reloading the application clears them. This is
+independent of Bottom Editor Pin/Follow Selection, which freezes the bottom
+context rather than a Signal row.
+
 ## 4. Signal Editor
 Event TableはStart/Value中心。End/Durationは計算表示でCanonical保存しない。
 Binary quick buttons: 0 / 1 / X / Z。
