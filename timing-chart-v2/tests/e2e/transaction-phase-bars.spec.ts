@@ -72,3 +72,24 @@ test("Phase-protected Transaction edge resize is rejected without a canonical ch
   await expect(inspector.getByLabel("Transaction end")).toHaveValue(beforeEnd);
   await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
 });
+
+test("Transaction Phase selection restores by stable Phase ID after mode remount", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await openTransactionSample(page);
+  const phase = page.locator(".transaction-phase-hit-target").first();
+  await expect(phase).toBeVisible();
+  const phaseId = await phase.getAttribute("data-phase-id");
+  expect(phaseId).toBeTruthy();
+  const revision = await page.getByTestId("revision-status").textContent();
+  const history = await page.getByTestId("history-status").textContent();
+  const dirty = await page.getByTestId("dirty-status").textContent();
+  await phase.click();
+  await expect(page.locator(`.transaction-phase-hit-target[data-phase-id="${phaseId}"]`)).toHaveAttribute("data-selected", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await expect(page.locator(`.transaction-phase-hit-target[data-phase-id="${phaseId}"]`)).toHaveAttribute("data-selected", "true");
+  await expect(page.getByTestId("revision-status")).toHaveText(revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
+});

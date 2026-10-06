@@ -39,6 +39,26 @@ const fail = (reason: "invalid" | "no-op", code: CommandPolicyCode, path: string
 const timingSignalIds = (document: CanonicalDocument) => document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
 const annotationIds = (document: CanonicalDocument) => document.annotations.map((annotation) => annotation.id);
 const plannerMetrics = { calls: 0, internalPlans: 0, durationMs: 0, affectedSignalCount: 0 };
+let transactionPhaseIdSequence = 0;
+
+function allocateTransactionPhaseId(usedIds: Set<string>): TransactionPhase["id"] {
+  let id: string;
+  do { transactionPhaseIdSequence += 1; id = `transactionPhase_command_${transactionPhaseIdSequence}`; } while (usedIds.has(id));
+  usedIds.add(id);
+  return id as TransactionPhase["id"];
+}
+
+function ownTransactionPhaseIds(phases: readonly TransactionPhase[], usedIds: Set<string>): readonly TransactionPhase[] {
+  return phases.map((phase) => {
+    const id = phase.id;
+    if (id && !usedIds.has(id)) { usedIds.add(id); return phase; }
+    return { ...phase, id: allocateTransactionPhaseId(usedIds) };
+  });
+}
+
+function duplicateTransactionPhases(phases: readonly TransactionPhase[], usedIds: Set<string>): readonly TransactionPhase[] {
+  return phases.map((phase) => ({ ...phase, id: allocateTransactionPhaseId(usedIds) }));
+}
 
 export function commandPlannerMetrics(): Readonly<typeof plannerMetrics> {
   return Object.freeze({ ...plannerMetrics });
@@ -1337,13 +1357,17 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       if (transaction.groupId !== undefined && !(document.transactionGroups ?? []).some((group) => group.id === transaction.groupId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.transaction.groupId", "Transaction Group does not exist.");
       const anchorIndex = command.afterTransactionId === undefined ? document.transactions.length - 1 : document.transactions.findIndex((item) => item.id === command.afterTransactionId);
       if (anchorIndex < 0 && command.afterTransactionId !== undefined) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.afterTransactionId", `Transaction '${command.afterTransactionId}' does not exist.`);
-      const transactions = [...document.transactions.slice(0, anchorIndex + 1), transaction, ...document.transactions.slice(anchorIndex + 1)];
+      const usedIds = new Set(canonicalEntityIds(document));
+      usedIds.add(transaction.id);
+      const normalizedTransaction = { ...transaction, ...(transaction.phases === undefined ? {} : { phases: ownTransactionPhaseIds(transaction.phases, usedIds) }) };
+      const transactions = [...document.transactions.slice(0, anchorIndex + 1), normalizedTransaction, ...document.transactions.slice(anchorIndex + 1)];
       const changeSet: ChangeSet = { transactionSemantics: [transaction.id], minimapOverview: true };
       return { ok: true, document: { ...document, transactions }, changeSet, inverseChangeSet: changeSet };
     }
     case "transaction.bulkCreate": {
       if (command.transactions.length === 0) return fail("no-op", "NO_OP", "$.transactions", "Bulk Transaction creation requires at least one item.");
       const ids = new Set(document.transactions.map((item) => item.id));
+      const usedIds = new Set(canonicalEntityIds(document));
       const signalIds = new Set(document.signals.map((item) => item.id));
       const groupIds = new Set((document.transactionGroups ?? []).map((item) => item.id));
       for (const [index, transaction] of command.transactions.entries()) {
@@ -1356,10 +1380,12 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
         if (transaction.linkedSignals?.some((id) => !signalIds.has(id))) return fail("invalid", "MISSING_CROSS_REFERENCE", `$.transactions[${index}].linkedSignals`, "Transaction links must target existing Signals.");
         if (transaction.groupId !== undefined && !groupIds.has(transaction.groupId)) return fail("invalid", "MISSING_CROSS_REFERENCE", `$.transactions[${index}].groupId`, "Transaction Group does not exist.");
         ids.add(transaction.id);
+        usedIds.add(transaction.id);
       }
-      const transactionSemantics = command.transactions.map((item) => item.id);
+      const normalizedTransactions = command.transactions.map((transaction) => ({ ...transaction, ...(transaction.phases === undefined ? {} : { phases: ownTransactionPhaseIds(transaction.phases, usedIds) }) }));
+      const transactionSemantics = normalizedTransactions.map((item) => item.id);
       const changeSet: ChangeSet = { transactionSemantics, minimapOverview: true };
-      return { ok: true, document: { ...document, transactions: [...document.transactions, ...command.transactions] }, changeSet, inverseChangeSet: changeSet };
+      return { ok: true, document: { ...document, transactions: [...document.transactions, ...normalizedTransactions] }, changeSet, inverseChangeSet: changeSet };
     }
     case "transaction.bulkDelete": {
       if (command.transactionIds.length === 0) return fail("no-op", "NO_OP", "$.transactionIds", "No Transactions were selected for deletion.");
@@ -1400,6 +1426,7 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       if (command.items.length === 0) return fail("no-op", "NO_OP", "$.items", "Bulk Transaction duplication requires at least one item.");
       const sourceById = new Map(document.transactions.map((item) => [item.id, item]));
       const allocatedIds = new Set(sourceById.keys());
+      const usedIds = new Set(canonicalEntityIds(document));
       const duplicates: Transaction[] = [];
       for (const [index, item] of command.items.entries()) {
         const source = sourceById.get(item.transactionId);
@@ -1409,7 +1436,8 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
         const name = item.name === undefined ? source.name : item.name.trim();
         if (!name) return fail("invalid", "INVALID_NAME", `$.items[${index}].name`, "Transaction name cannot be empty.");
         allocatedIds.add(item.newTransactionId);
-        duplicates.push({ ...source, id: item.newTransactionId, name });
+        usedIds.add(item.newTransactionId);
+        duplicates.push({ ...source, id: item.newTransactionId, name, ...(source.phases === undefined ? {} : { phases: duplicateTransactionPhases(source.phases, usedIds) }) });
       }
       const transactionSemantics = duplicates.map((item) => item.id);
       const changeSet: ChangeSet = { transactionSemantics, minimapOverview: true };
@@ -1422,7 +1450,9 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       if (document.transactions.some((item) => item.id === command.newTransactionId)) return fail("invalid", "DUPLICATE_ID", "$.newTransactionId", "Duplicate Transaction ID.");
       const name = command.name === undefined ? source.name : command.name.trim();
       if (!name) return fail("invalid", "INVALID_NAME", "$.name", "Transaction name cannot be empty.");
-      const duplicate: Transaction = { ...source, id: command.newTransactionId, name };
+      const usedIds = new Set(canonicalEntityIds(document));
+      usedIds.add(command.newTransactionId);
+      const duplicate: Transaction = { ...source, id: command.newTransactionId, name, ...(source.phases === undefined ? {} : { phases: duplicateTransactionPhases(source.phases, usedIds) }) };
       const changeSet: ChangeSet = { transactionSemantics: [duplicate.id], minimapOverview: true };
       return { ok: true, document: { ...document, transactions: [...document.transactions, duplicate] }, changeSet, inverseChangeSet: changeSet };
     }
@@ -1450,9 +1480,10 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       const transaction = document.transactions[index];
       if (!transaction) return fail("invalid", "TRANSACTION_NOT_FOUND", "$.transactionId", `Transaction '${command.transactionId}' does not exist.`);
       const phases = [...(transaction.phases ?? [])];
-      if (command.type === "transaction.phaseAdd") phases.push(command.phase);
+      const usedIds = new Set(canonicalEntityIds(document));
+      if (command.type === "transaction.phaseAdd") phases.push({ ...command.phase, id: typeof command.phase.id !== "string" || usedIds.has(command.phase.id) ? allocateTransactionPhaseId(usedIds) : command.phase.id });
       else if (command.phaseIndex < 0 || command.phaseIndex >= phases.length) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.phaseIndex", "Phase index is out of range.");
-      else if (command.type === "transaction.phaseUpdate") phases[command.phaseIndex] = command.phase;
+      else if (command.type === "transaction.phaseUpdate") phases[command.phaseIndex] = { ...command.phase, id: phases[command.phaseIndex]!.id };
       else phases.splice(command.phaseIndex, 1);
       const sorted = phases.slice().sort((a, b) => a.start - b.start || a.end - b.end || a.name.localeCompare(b.name));
       const phaseProblem = transactionPhasesProblem(sorted, transaction.start, transaction.end);
@@ -1479,13 +1510,14 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       const description = command.clearDescription ? undefined : command.description === undefined ? transaction.description : command.description;
       const visible = command.clearVisible ? undefined : command.visible === undefined ? transaction.visible : command.visible;
       if (transaction.name === name && transaction.start === command.start && transaction.end === command.end && (transaction.laneId ?? undefined) === (lane ?? undefined) && (transaction.groupId ?? undefined) === (groupId ?? undefined) && transaction.color === color && transaction.description === description && (transaction.visible ?? true) === (visible ?? true) && semanticEqual(transaction.phases ?? [], phases ?? [])) return fail("no-op", "NO_OP", "$", "Transaction is unchanged.");
-      const next: Transaction = { ...transaction, name, start: command.start, end: command.end, ...(lane === undefined ? {} : { laneId: lane }), ...(groupId === undefined ? {} : { groupId }), ...(color === undefined ? {} : { color }), ...(description === undefined ? {} : { description }), ...(visible === undefined ? {} : { visible }), ...(phases && phases.length > 0 ? { phases } : {}) };
+      const normalizedPhases = phases === undefined ? undefined : ownTransactionPhaseIds(phases, new Set([...canonicalEntityIds(document)].filter((id) => !transaction.phases?.some((phase) => phase.id === id))));
+      const next: Transaction = { ...transaction, name, start: command.start, end: command.end, ...(lane === undefined ? {} : { laneId: lane }), ...(groupId === undefined ? {} : { groupId }), ...(color === undefined ? {} : { color }), ...(description === undefined ? {} : { description }), ...(visible === undefined ? {} : { visible }), ...(normalizedPhases && normalizedPhases.length > 0 ? { phases: normalizedPhases } : {}) };
       if (lane === undefined) delete (next as { laneId?: string }).laneId;
       if (groupId === undefined) delete (next as { groupId?: string }).groupId;
       if (color === undefined) delete (next as { color?: string }).color;
       if (description === undefined) delete (next as { description?: string }).description;
       if (visible === undefined) delete (next as { visible?: boolean }).visible;
-      if (phases === undefined || phases.length === 0) delete (next as { phases?: readonly TransactionPhase[] }).phases;
+      if (normalizedPhases === undefined || normalizedPhases.length === 0) delete (next as { phases?: readonly TransactionPhase[] }).phases;
       const transactions = [...document.transactions]; transactions[index] = next;
       const changeSet: ChangeSet = { transactionSemantics: [transaction.id], minimapOverview: true };
       return { ok: true, document: { ...document, transactions }, changeSet, inverseChangeSet: changeSet };

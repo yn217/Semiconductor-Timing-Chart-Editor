@@ -364,6 +364,7 @@ export function useEditorSecondarySurfaces(
         zoom={input.zoom}
         selectedId={selected.transactionId}
         selectedIds={selected.transactionIds}
+        selectedPhaseId={input.selected.transactionPhaseId}
         {...(selected.bookmark?.id === undefined ? {} : { selectedBookmarkId: selected.bookmark.id })}
         filter={
           workspace.viewMode === "Transaction"
@@ -373,6 +374,7 @@ export function useEditorSecondarySurfaces(
         getBoundaryX={transactionBoundaryX}
         getVisibleSourceWindow={transactionVisibleSourceWindow}
         onSelect={input.actions.selectTransaction}
+        onSelectPhase={input.actions.selectTransactionPhase}
         onSnap={(clientX, surfaceLeft, horizontalScroll) =>
           refs.snapTransactionCycle.current(clientX, surfaceLeft, horizontalScroll)
         }

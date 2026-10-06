@@ -301,7 +301,7 @@ export function buildTypedTransactionProposal(document: CanonicalDocument, revis
       if (typeof item !== "object" || item === null) return { ok: false, message: `phases[${index}] must contain a name, start, and end.` };
       const phase = item as Record<string, unknown>;
       if (typeof phase.name !== "string" || !phase.name.trim() || !Number.isSafeInteger(phase.start) || !Number.isSafeInteger(phase.end) || (phase.start as number) < (start as number) || (phase.end as number) > (end as number) || (phase.end as number) <= (phase.start as number)) return { ok: false, message: `phases[${index}] must be a named, non-empty source-cycle range inside the Transaction.` };
-      phases.push({ name: phase.name.trim(), start: phase.start as number, end: phase.end as number });
+      phases.push({ id: nextEntityId("transactionPhase", document) as TransactionPhase["id"], name: phase.name.trim(), start: phase.start as number, end: phase.end as number });
     }
     const orderedPhases = [...phases].sort((a, b) => a.start - b.start || a.end - b.end);
     if (orderedPhases.some((phase, index) => index > 0 && phase.start < orderedPhases[index - 1]!.end)) return { ok: false, message: "Transaction Phases must not overlap." };
@@ -343,7 +343,7 @@ export function buildTypedTransactionProposal(document: CanonicalDocument, revis
     const start = args.startCycle;
     const end = args.endCycle;
     if (typeof name !== "string" || !name.trim() || !Number.isSafeInteger(start) || !Number.isSafeInteger(end) || (start as number) < transaction.start || (end as number) > transaction.end || (end as number) <= (start as number)) return { ok: false, message: `${tool} requires a name and integer source-cycle boundaries inside the Transaction.` };
-    const phase = { name: name.trim(), start: start as number, end: end as number };
+    const phase = { id: tool === "propose_update_phase" && Number.isSafeInteger(args.phaseIndex) ? transaction.phases?.[args.phaseIndex as number]?.id : nextEntityId("transactionPhase", document) as TransactionPhase["id"], name: name.trim(), start: start as number, end: end as number };
     if (tool === "propose_add_phase") return { ok: true, proposal: proposal(revision, `Add Phase ${phase.name} to ${transaction.name}`, [command({ type: "transaction.phaseAdd", transactionId: transaction.id, phase }, "typed_add_phase")]) };
     const phaseIndex = args.phaseIndex;
     if (!Number.isSafeInteger(phaseIndex) || (phaseIndex as number) < 0 || (phaseIndex as number) >= (transaction.phases?.length ?? 0)) return { ok: false, message: "propose_update_phase requires a phaseIndex that exists in the Transaction." };

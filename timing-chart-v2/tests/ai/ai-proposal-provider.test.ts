@@ -3,7 +3,7 @@ import { planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
 import { buildTypedAnnotationProposal, buildTypedBookmarkProposal, buildTypedProposalBatch, buildTypedSignalGroupProposal, buildTypedSignalProposal, buildTypedTimeGroupProposal, buildTypedTimelineProposal, buildTypedTransactionGroupProposal, buildTypedTransactionProposal, deterministicMockAIProposalProvider } from "../../apps/editor/src/ai-proposal-provider.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
-import type { AnnotationId, CommandId, GroupId, SignalId, TimeGroupId, TransactionGroupId, TransactionId } from "@timing-chart-v2/schema";
+import type { AnnotationId, CommandId, GroupId, SignalId, TimeGroupId, TransactionGroupId, TransactionId, TransactionPhaseId } from "@timing-chart-v2/schema";
 
 describe("deterministic AI proposal provider", () => {
   it("builds an ordered multi-operation proposal that applies and undoes as one atomic History action", () => {
@@ -203,13 +203,13 @@ describe("deterministic AI proposal provider", () => {
 
   it("maps Phase and linked-Signal proposals through stable Transaction/Signal IDs", () => {
     const base = canonicalFixture();
-    const document = { ...base, transactions: [{ id: "transaction_1" as TransactionId, name: "Read", start: 1, end: 7, phases: [{ name: "Address", start: 1, end: 3 }, { name: "Data", start: 3, end: 6 }], linkedSignals: ["sig_clk" as SignalId] }] };
+    const document = { ...base, transactions: [{ id: "transaction_1" as TransactionId, name: "Read", start: 1, end: 7, phases: [{ id: "phase_address" as TransactionPhaseId, name: "Address", start: 1, end: 3 }, { id: "phase_data" as TransactionPhaseId, name: "Data", start: 3, end: 6 }], linkedSignals: ["sig_clk" as SignalId] }] };
     const added = buildTypedTransactionProposal(document, 32, "propose_add_phase", { transactionId: "transaction_1", name: "Response", startCycle: 6, endCycle: 7 });
     expect(added.ok).toBe(true);
-    if (added.ok) expect(added.proposal.commands).toEqual([expect.objectContaining({ type: "transaction.phaseAdd", transactionId: "transaction_1", phase: { name: "Response", start: 6, end: 7 } })]);
+    if (added.ok) expect(added.proposal.commands).toEqual([expect.objectContaining({ type: "transaction.phaseAdd", transactionId: "transaction_1", phase: expect.objectContaining({ name: "Response", start: 6, end: 7, id: expect.stringMatching(/^transactionPhase_/) }) })]);
     const updated = buildTypedTransactionProposal(document, 32, "propose_update_phase", { transactionId: "transaction_1", phaseIndex: 1, name: "Payload", startCycle: 3, endCycle: 5 });
     expect(updated.ok).toBe(true);
-    if (updated.ok) expect(updated.proposal.commands).toEqual([expect.objectContaining({ type: "transaction.phaseUpdate", transactionId: "transaction_1", phaseIndex: 1, phase: { name: "Payload", start: 3, end: 5 } })]);
+    if (updated.ok) expect(updated.proposal.commands).toEqual([expect.objectContaining({ type: "transaction.phaseUpdate", transactionId: "transaction_1", phaseIndex: 1, phase: { id: "phase_data", name: "Payload", start: 3, end: 5 } })]);
     const deleted = buildTypedTransactionProposal(document, 32, "propose_delete_phase", { transactionId: "transaction_1", phaseIndex: 0 });
     expect(deleted.ok).toBe(true);
     if (deleted.ok) expect(deleted.proposal.commands).toEqual([expect.objectContaining({ type: "transaction.phaseDelete", transactionId: "transaction_1", phaseIndex: 0 })]);

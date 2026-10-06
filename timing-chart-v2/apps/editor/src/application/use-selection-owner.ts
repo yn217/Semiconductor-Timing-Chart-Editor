@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import type { AnnotationId, CanonicalDocument, GroupId, SignalId, SpacerId, TransactionId } from "@timing-chart-v2/schema";
+import type { AnnotationId, CanonicalDocument, GroupId, SignalId, SpacerId, TransactionId, TransactionPhaseId } from "@timing-chart-v2/schema";
 import { selectedTransactionsInDocumentOrder, transactionById } from "../runtime/transaction-selection-index.js";
 import { signalGroupSelectionIndex } from "../runtime/signal-group-selection-index.js";
 
@@ -11,6 +11,7 @@ export type SelectionState = Readonly<{
   annotationId: AnnotationId | undefined;
   annotationIds: ReadonlySet<AnnotationId>;
   transactionId: TransactionId | undefined;
+  transactionPhaseId: TransactionPhaseId | undefined;
   /** The document-wide Legend is a selectable singleton, not a deletable entity. */
   legendSelected: boolean;
   /** First-class bulk target set; transactionId remains the deterministic primary. */
@@ -42,6 +43,7 @@ function initialState(signalId: SignalId | undefined): SelectionState {
     annotationId: undefined,
     annotationIds: new Set(),
     transactionId: undefined,
+    transactionPhaseId: undefined,
     legendSelected: false,
     transactionIds: new Set(),
   };
@@ -127,6 +129,7 @@ export function useSelectionOwner(initialSignalId?: SignalId) {
       annotationId: { get current() { return stateRef.current.annotationId; } },
       annotationIds: { get current() { return stateRef.current.annotationIds; } },
       transactionId: { get current() { return stateRef.current.transactionId; } },
+      transactionPhaseId: { get current() { return stateRef.current.transactionPhaseId; } },
       legendSelected: { get current() { return stateRef.current.legendSelected; } },
       transactionIds: { get current() { return stateRef.current.transactionIds; } },
     },
@@ -153,6 +156,7 @@ export function useSelectionOwner(initialSignalId?: SignalId) {
       if (ids.size === 0) ids.add(transactionId);
       commit({ ...initialState(undefined), transactionId, transactionIds: ids }, "transaction");
     },
+    selectTransactionPhase: (transactionId: TransactionId, phaseId: TransactionPhaseId) => commit({ ...initialState(undefined), transactionId, transactionIds: new Set([transactionId]), transactionPhaseId: phaseId }, "transaction"),
     selectTransactions: (transactionIds: ReadonlySet<TransactionId>, primary?: TransactionId) => {
       const ids = new Set(transactionIds);
       const transactionId = primary && ids.has(primary) ? primary : [...ids][0];

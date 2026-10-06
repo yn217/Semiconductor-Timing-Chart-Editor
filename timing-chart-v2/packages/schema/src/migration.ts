@@ -14,6 +14,7 @@ import type {
   SignalValueChange,
   TimeGroup,
   Transaction,
+  TransactionPhaseId,
 } from "./types.js";
 
 type MutableRecord = Record<string, unknown>;
@@ -292,7 +293,7 @@ function normalizeTransaction(value: unknown, index: number, warnings: Migration
   const source = record(value);
   const phases = list(source.phases).map((phase, phaseIndex) => {
     const item = record(phase);
-    return { name: text(item.name), start: roundCycle(item.start, 0, warnings, `$.transactions[${index}].phases[${phaseIndex}].start`), end: roundCycle(item.end, 0, warnings, `$.transactions[${index}].phases[${phaseIndex}].end`) };
+    return { id: migrationId(item, "transactionPhase", phaseIndex, usedIds) as TransactionPhaseId, name: text(item.name), start: roundCycle(item.start, 0, warnings, `$.transactions[${index}].phases[${phaseIndex}].start`), end: roundCycle(item.end, 0, warnings, `$.transactions[${index}].phases[${phaseIndex}].end`) };
   });
   const result: MutableRecord = {
     id: migrationId(source, "transaction", index, usedIds),

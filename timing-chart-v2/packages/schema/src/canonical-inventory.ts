@@ -1,6 +1,6 @@
 import type { CanonicalDocument } from "./types.js";
 
-export type CanonicalEntityKind = "document" | "signal" | "signalGroup" | "spacer" | "annotation" | "annotationGroup" | "transaction" | "transactionGroup" | "enumDefinition" | "bookmark" | "timeGroup" | "labelAnchor" | "constraint";
+export type CanonicalEntityKind = "document" | "signal" | "signalGroup" | "spacer" | "annotation" | "annotationGroup" | "transaction" | "transactionPhase" | "transactionGroup" | "enumDefinition" | "bookmark" | "timeGroup" | "labelAnchor" | "constraint";
 export interface CanonicalEntityEntry { readonly id: string; readonly kind: CanonicalEntityKind; readonly path: string; }
 
 /** Single source of truth for every stable-ID canonical entity. */
@@ -13,7 +13,10 @@ export function canonicalEntityInventory(document: CanonicalDocument): readonly 
   });
   document.annotations.forEach((item, index) => entries.push({ id: item.id, kind: "annotation", path: `$.annotations[${index}].id` }));
   document.annotationGroups?.forEach((item, index) => entries.push({ id: item.id, kind: "annotationGroup", path: `$.annotationGroups[${index}].id` }));
-  document.transactions.forEach((item, index) => entries.push({ id: item.id, kind: "transaction", path: `$.transactions[${index}].id` }));
+  document.transactions.forEach((item, index) => {
+    entries.push({ id: item.id, kind: "transaction", path: `$.transactions[${index}].id` });
+    item.phases?.forEach((phase, phaseIndex) => entries.push({ id: phase.id, kind: "transactionPhase", path: `$.transactions[${index}].phases[${phaseIndex}].id` }));
+  });
   document.transactionGroups?.forEach((item, index) => entries.push({ id: item.id, kind: "transactionGroup", path: `$.transactionGroups[${index}].id` }));
   document.enumDefinitions?.forEach((item, index) => entries.push({ id: item.id, kind: "enumDefinition", path: `$.enumDefinitions[${index}].id` }));
   document.bookmarks.forEach((item, index) => entries.push({ id: item.id, kind: "bookmark", path: `$.bookmarks[${index}].id` }));
