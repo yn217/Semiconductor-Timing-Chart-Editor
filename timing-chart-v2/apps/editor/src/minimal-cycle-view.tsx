@@ -850,6 +850,16 @@ export function MinimalCycleView() {
         try { application.deleteScenario(id); selection.clear(); }
         catch (error) { setProblem(error instanceof Error ? error.message : String(error)); }
       }}
+      onRevealScenarioDifference={(signalId, sourceRange) => {
+        if (!snapshot.document.signals.some((signal) => signal.id === signalId)) return;
+        const start = Math.max(0, sourceRange.start);
+        const end = Math.min(snapshot.document.timeline.cycleCount, sourceRange.end);
+        if (end <= start) return;
+        selection.selectSignal(signalId);
+        setRangeSelectionActive(true);
+        setTimelineRange({ start, end });
+        timelineRuntimeRef.current?.navigateToCycle(start);
+      }}
     />}
     ribbon={shellRibbon}
     workspace={shellWorkspace}

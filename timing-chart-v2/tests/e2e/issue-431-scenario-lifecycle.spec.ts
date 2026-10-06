@@ -48,6 +48,17 @@ test("Scenario v3 switches as view state and management survives Undo/Redo and S
   await page.getByTestId("scenario-compare-toggle").click();
   await expect(page.getByTestId("scenario-comparison")).toBeVisible();
   await expect(page.locator(`[data-scenario-difference-signal-id='${valueSignalId}']`)).toBeVisible();
+  const revealDifference = page.locator(`[data-testid^='scenario-difference-reveal-${valueSignalId}-']`).first();
+  await expect(revealDifference).toBeVisible();
+  const differenceText = await page.locator(`[data-scenario-difference-signal-id='${valueSignalId}'] > span`).first().innerText();
+  const displayedRange = differenceText.match(/cycles\s+(\d+)–(\d+)/);
+  expect(displayedRange).not.toBeNull();
+  await revealDifference.click();
+  await expect(page.locator(`[data-role='frozen-row'][data-row-id='${valueSignalId}']`)).toHaveAttribute("data-selected", "true");
+  const revealedRange = page.getByTestId("range-selection-band");
+  await expect(revealedRange).toBeVisible();
+  await expect(revealedRange).toHaveAttribute("data-range-start", displayedRange![1]!);
+  await expect(revealedRange).toHaveAttribute("data-range-end", String(Number(displayedRange![2]!) + 1));
   await expectViewOnly(page, beforeSwitch, "Scenario comparison is derived view state");
 
   await page.getByTestId("scenario-name").fill("Stress");

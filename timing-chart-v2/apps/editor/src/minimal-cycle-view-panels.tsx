@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import type { RefObject } from "react";
 import { getGestureHint, subscribeGestureHint } from "./runtime/active-gesture-cancellation.js";
 import { cycleUnitWord } from "./transaction-tc.js";
-import type { GroupId, SignalGroup, SpacerId } from "@timing-chart-v2/schema";
+import type { GroupId, SignalGroup, SignalId, SpacerId } from "@timing-chart-v2/schema";
 import { compareScenarioSignalStreams, type ScenarioDocumentModel, type ScenarioId } from "@timing-chart-v2/schema";
 import { ContextMenuSurface } from "./context-menu-surface.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
@@ -40,7 +40,7 @@ export function ContextMenuPanel({ contextMenu, hasSelectedClipboard, clipboardA
 
 const VIEW_MODE_TITLE_LABEL: Record<"Cycle" | "Transaction" | "Split", string> = { Cycle: "Cycle View", Transaction: "Transaction View", Split: "Combined View" };
 
-export function MinimalCycleViewTitleBar({ title, dirty, viewMode, scenarios, scenarioModel, activeScenarioId, onScenarioChange, onScenarioEnable, onScenarioRename, onScenarioDuplicate, onScenarioDelete }: {
+export function MinimalCycleViewTitleBar({ title, dirty, viewMode, scenarios, scenarioModel, activeScenarioId, onScenarioChange, onScenarioEnable, onScenarioRename, onScenarioDuplicate, onScenarioDelete, onRevealScenarioDifference }: {
   readonly title: string;
   readonly dirty: boolean;
   readonly viewMode: "Cycle" | "Transaction" | "Split";
@@ -52,6 +52,7 @@ export function MinimalCycleViewTitleBar({ title, dirty, viewMode, scenarios, sc
   readonly onScenarioRename?: (id: ScenarioId, name: string) => void;
   readonly onScenarioDuplicate?: (id: ScenarioId) => void;
   readonly onScenarioDelete?: (id: ScenarioId) => void;
+  readonly onRevealScenarioDifference?: (signalId: SignalId, range: Readonly<{ start: number; end: number }>) => void;
 }) {
   // Historical showcase documents may include a view mode in their saved
   // title. Mode is workspace presentation, so do not let that stale suffix
@@ -84,7 +85,7 @@ export function MinimalCycleViewTitleBar({ title, dirty, viewMode, scenarios, sc
         {differences.length === 0 ? <span data-testid="scenario-no-differences">No waveform differences</span> : <ul>{differences.map((difference) => {
           const definition = scenarioModel.signalDefinitions.find((signal) => signal.id === difference.signalId);
           const name = definition?.type === "commentRow" ? definition.display.name : definition?.display.name ?? difference.signalId;
-          return <li key={difference.signalId} data-scenario-difference-signal-id={difference.signalId}><strong>{name}</strong>{difference.ranges.map((range) => <span key={`${range.start}:${range.end}`}> cycles {range.start}–{range.end - 1}</span>)}</li>;
+          return <li key={difference.signalId} data-scenario-difference-signal-id={difference.signalId}><strong>{name}</strong>{difference.ranges.map((range) => <span key={`${range.start}:${range.end}`}><span> cycles {range.start}–{range.end - 1}</span><button type="button" data-testid={`scenario-difference-reveal-${difference.signalId}-${range.start}`} aria-label={`Show difference for ${name}, cycles ${range.start} to ${range.end - 1}`} onClick={() => onRevealScenarioDifference?.(difference.signalId, range)}>Show in timeline</button></span>)}</li>;
         })}</ul>}
       </section>}
     </div> : onScenarioEnable ? <button type="button" data-testid="scenario-enable" onClick={onScenarioEnable}>Enable Scenarios</button> : null}
