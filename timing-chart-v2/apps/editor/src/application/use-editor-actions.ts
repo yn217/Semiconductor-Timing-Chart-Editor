@@ -36,8 +36,6 @@ export interface EditorActionsInput {
   readonly nextCommandId: (operation: string) => CommandId;
   readonly selection: SelectionOwner;
   readonly diagnostics: readonly DocumentProblem[];
-  readonly selectedCycleRef: MutableRefObject<number>;
-  readonly setSelectedCycle: (cycle: number) => void;
   readonly hostRef: MutableRefObject<HTMLDivElement | null>;
   readonly viewportRef: MutableRefObject<HTMLDivElement | null>;
   readonly application: EditorApplicationOwner;
@@ -158,8 +156,6 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
   const selection = input.selection;
   const diagnostics = input.diagnostics;
   const snapshot = { document: input.document };
-  const selectedCycleRef = input.selectedCycleRef;
-  const setSelectedCycle = input.setSelectedCycle;
   const host = input.hostRef;
   const viewport = input.viewportRef;
 
@@ -444,11 +440,9 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     });
     if (semanticCycle !== undefined) {
       const cycle = Math.max(0, Math.min(snapshot.document.timeline.cycleCount, semanticCycle));
-      selectedCycleRef.current = cycle;
-      setSelectedCycle(cycle);
-      if (host.current) host.current.dataset.selectedCycle = String(cycle);
+      input.navigation.navigateToCycle(cycle);
     }
-    if (target.kind === "timeline") viewport.current?.scrollTo({ left: 0, behavior: "smooth" });
+    else if (target.kind === "timeline") viewport.current?.scrollTo({ left: 0, behavior: "smooth" });
   };
   return {
     selectedBookmarkId,

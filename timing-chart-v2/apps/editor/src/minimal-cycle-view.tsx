@@ -430,8 +430,6 @@ export function MinimalCycleView() {
     nextCommandId,
     selection,
     diagnostics,
-    selectedCycleRef,
-    setSelectedCycle,
     hostRef: host,
     viewportRef: viewport,
     application,
