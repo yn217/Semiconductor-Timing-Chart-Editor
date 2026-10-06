@@ -76,8 +76,12 @@ test("dragging the dedicated splitter from left, center, and right resizes conti
 
 test("clamps splitter height to the supported minimum and maximum", async ({ page }) => {
   await page.goto("/");
+  const splitter = page.getByTestId("bottom-resizer");
+  const maximum = Number(await splitter.getAttribute("aria-valuemax"));
+  expect(maximum).toBeGreaterThanOrEqual(180);
+  expect(maximum).toBeLessThanOrEqual(420);
   await dragSplitter(page, 0.5, -1000);
-  await expect(page.locator(".editor-shell")).toHaveAttribute("data-bottom-height", "420");
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-bottom-height", String(maximum));
   await dragSplitter(page, 0.5, 1000);
   await expect(page.locator(".editor-shell")).toHaveAttribute("data-bottom-height", "180");
 });

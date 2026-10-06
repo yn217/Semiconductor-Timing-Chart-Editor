@@ -23,7 +23,7 @@ function TimelineHorizontalScrollbar({ viewport, viewMode, leftPaneWidth }: { re
 
 export interface EditorWorkspaceViewModel {
   readonly view: { readonly documentEpoch: number; readonly viewMode: string; readonly signalSplitEnabled: boolean; readonly signalSplitRatio: number; readonly gridEnabled: boolean; readonly snapEnabled: boolean; readonly rulerEnabled: boolean; readonly zoom?: number; readonly cursorPresentationRevision?: number; readonly cursor: { readonly a?: number; readonly b?: number; readonly deltaCycles?: number } };
-  readonly layout: { readonly leftPaneWidth: number; readonly frozenPaneMinWidth: number; readonly frozenPaneWidth: number; readonly bottomVisible: boolean; readonly bottomHeight: number; readonly inspectorVisible: boolean; readonly inspectorWidth: number };
+  readonly layout: { readonly leftPaneWidth: number; readonly frozenPaneMinWidth: number; readonly frozenPaneWidth: number; readonly bottomVisible: boolean; readonly bottomHeight: number; readonly bottomMaxHeight: number; readonly inspectorVisible: boolean; readonly inspectorWidth: number };
   readonly refs: { readonly viewport: RefObject<HTMLDivElement | null>; readonly gridLayer: RefObject<HTMLDivElement | null>; readonly ruler: RefObject<HTMLDivElement | null>; readonly host: RefObject<HTMLDivElement | null>; readonly viewportLower: RefObject<HTMLDivElement | null>; readonly rulerLower: RefObject<HTMLDivElement | null>; readonly hostLower: RefObject<HTMLDivElement | null>; readonly gridLayerLower: RefObject<HTMLDivElement | null> };
   readonly content: { readonly header: ReactNode; readonly transactionTree: ReactNode; readonly viewportContent: ReactNode; readonly viewportLegend: ReactNode; readonly leftRail?: ReactNode; readonly bottom: ReactNode; readonly inspector: ReactNode };
   readonly interactions: {
@@ -213,7 +213,7 @@ export function EditorWorkspaceView({
 }: EditorWorkspaceViewProps) {
   const { documentEpoch, viewMode, zoom, cursorPresentationRevision, cursor, signalSplitEnabled } = viewModel.view;
   const workspace = createWorkspaceOwnerPlan(viewModel);
-  const { bottomVisible, bottomHeight, inspectorVisible, inspectorWidth } = viewModel.layout;
+  const { bottomVisible, bottomHeight, bottomMaxHeight, inspectorVisible, inspectorWidth } = viewModel.layout;
   const { viewport, gridLayer, ruler, host, viewportLower, gridLayerLower, rulerLower, hostLower } = viewModel.refs;
   const { bottom, inspector } = viewModel.content;
   const { onBottomReset, onInspectorReset, onBottomKeyDown, onBottomPointerDown, onBottomPointerMove, onBottomPointerUp, onInspectorKeyDown, onInspectorPointerDown, onInspectorPointerMove, onInspectorPointerUp, onSetCursorAtCycle, resolveCursorCycleAtClientX, resolveCursorViewportXForCycle } = viewModel.interactions;
@@ -248,7 +248,7 @@ export function EditorWorkspaceView({
       {workspace.auxiliary}
     </section>
     {workspace.rail}
-    {bottomVisible && <div className="bottom-resize-track" data-testid="bottom-resizer" role="separator" aria-label="Resize bottom editor" aria-orientation="horizontal" aria-valuemin={180} aria-valuemax={420} aria-valuenow={bottomHeight} tabIndex={0} title="Drag to resize; double-click to reset" onDoubleClick={onBottomReset} onKeyDown={onBottomKeyDown} onPointerDown={onBottomPointerDown} onPointerMove={onBottomPointerMove} onPointerUp={onBottomPointerUp} onPointerCancel={onBottomPointerUp} />}
+    {bottomVisible && <div className="bottom-resize-track" data-testid="bottom-resizer" role="separator" aria-label="Resize bottom editor" aria-orientation="horizontal" aria-valuemin={180} aria-valuemax={bottomMaxHeight} aria-valuenow={bottomHeight} tabIndex={0} title="Drag to resize; double-click to reset" onDoubleClick={onBottomReset} onKeyDown={onBottomKeyDown} onPointerDown={onBottomPointerDown} onPointerMove={onBottomPointerMove} onPointerUp={onBottomPointerUp} onPointerCancel={onBottomPointerUp} />}
     {bottomVisible && bottom}
     <aside hidden={!inspectorVisible} className="inspector-shell" data-testid="inspector-shell"><div className="inspector-resize-handle" data-testid="inspector-resizer" role="separator" aria-label="Resize Inspector" aria-orientation="vertical" aria-valuemin={240} aria-valuemax={420} aria-valuenow={inspectorWidth} tabIndex={0} title="Drag to resize; double-click to reset" onDoubleClick={onInspectorReset} onKeyDown={onInspectorKeyDown} onPointerDown={onInspectorPointerDown} onPointerMove={onInspectorPointerMove} onPointerUp={onInspectorPointerUp} onPointerCancel={onInspectorPointerUp} />{inspector}</aside>
   </div>;

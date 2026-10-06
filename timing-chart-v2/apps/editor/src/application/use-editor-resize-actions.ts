@@ -1,6 +1,7 @@
 import type { KeyboardEvent, MutableRefObject, PointerEvent } from "react";
 import type { PaneResizeGesture, RatioResizeGesture, VerticalResizeGesture } from "../workspace/use-workspace-ui-state.js";
 import { LEFT_PANE_MAX_WIDTH, LEFT_PANE_MIN_WIDTH } from "../workspace/use-workspace-ui-state.js";
+import { clampBottomPanelHeight } from "../workspace/bottom-panel-sizing.js";
 
 export interface EditorResizeActionsInput {
   readonly bottomResizeRef: MutableRefObject<VerticalResizeGesture | undefined>;
@@ -29,7 +30,7 @@ export function useEditorResizeActions(input: EditorResizeActionsInput) {
   const moveBottomResize = (event: PointerEvent<HTMLDivElement>) => {
     const resize = input.bottomResizeRef.current;
     if (!resize) return;
-    const nextHeight = Math.max(180, Math.min(420, resize.startHeight - (event.clientY - resize.startY)));
+    const nextHeight = clampBottomPanelHeight(resize.startHeight - (event.clientY - resize.startY), 420);
     if (nextHeight !== input.bottomHeight) input.setBottomHeight(nextHeight);
   };
   const finishBottomResize = (event: PointerEvent<HTMLDivElement>) => {
@@ -42,7 +43,7 @@ export function useEditorResizeActions(input: EditorResizeActionsInput) {
     const delta = event.key === "ArrowUp" ? step : event.key === "ArrowDown" ? -step : 0;
     if (delta === 0) return;
     event.preventDefault();
-    input.setBottomHeight((current) => Math.max(180, Math.min(420, current + delta)));
+    input.setBottomHeight((current) => clampBottomPanelHeight(current + delta, 420));
   };
   const startSignalSplitResize = (event: PointerEvent<HTMLDivElement>) => {
     const container = event.currentTarget.parentElement;

@@ -35,6 +35,7 @@ import { deriveSelectionCapabilities, useSelectionOwner } from "./application/us
 import { useClipboardActions } from "./application/clipboard-actions.js";
 import { useTimelineNavigationOwner } from "./runtime/use-timeline-navigation-owner.js";
 import { useWorkspaceUiState } from "./workspace/use-workspace-ui-state.js";
+import { useBottomPanelSizing } from "./workspace/use-bottom-panel-sizing.js";
 import { useTimelinePresentationState } from "./workspace/use-timeline-presentation-state.js";
 import { useDialogMenuState } from "./workspace/use-dialog-menu-state.js";
 import { useTimelineSurfaceRuntime } from "./runtime/use-timeline-surface-runtime.js";
@@ -133,7 +134,7 @@ export function MinimalCycleView() {
     leftPaneWidth, setLeftPaneWidth, leftPaneResizeRef,
     frozenPaneWidth: frozenPaneWidthState, setFrozenPaneWidth, frozenPaneResizeRef,
     inspectorWidth, setInspectorWidth, inspectorResizeRef,
-    bottomHeight, setBottomHeight, bottomResizeRef,
+    bottomHeight, setBottomHeight: setRawBottomHeight, bottomResizeRef,
     treeFilter, setTreeFilter, transactionTreeFilter, setTransactionTreeFilter, transactionTreeFilterMode, setTransactionTreeFilterMode,
     treeTypeFilter, setTreeTypeFilter,
     followSelection, setFollowSelection, followSelectionRef,
@@ -144,6 +145,7 @@ export function MinimalCycleView() {
     focusLinkedSignals, setFocusLinkedSignals,
     activePane, setActivePane,
   } = workspace;
+  const { bottomMaxHeight, setBottomHeight, resetBottomHeight, ribbonProps: bottomRibbonProps } = useBottomPanelSizing(host, setRawBottomHeight, setBottomVisible, bottomVisible, bottomHeight);
   const presentation = useEditorPresentationState({ hostRef: host, mode: viewMode, selection: selection.state, selectionRef: selection.refs.state });
   const {
     arrowPickStatus, setArrowPickStatus,
@@ -646,7 +648,7 @@ export function MinimalCycleView() {
       showGroupBackground,
       signalTreeVisible,
       inspectorVisible,
-      bottomVisible,
+      ...bottomRibbonProps,
       arrowPickStatus,
       selectedSignalId: annotationTargetSignalId,
       selectedInsertionSignalId: selectedSignal?.id,
@@ -725,8 +727,6 @@ export function MinimalCycleView() {
       onExport: () => { dialogOriginLabelRef.current = "Export"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setExportVisible(true); },
       onToggleInspector: () => startTransition(() => setInspectorVisible((value) => !value)),
       onToggleBottom: () => startTransition(() => setBottomVisible((value) => !value)),
-      bottomHeight,
-      onSetBottomSize: (size: "hidden" | "compact" | "expanded") => { if (size === "hidden") { setBottomVisible(false); return; } setBottomVisible(true); setBottomHeight(size === "compact" ? 180 : 420); },
       onShowProblems: () => { setBottomTab("Problems"); setBottomVisible(true); },
       onOpenTimeline: () => setRibbonTab("Timeline"),
       onOpenBookmarks: () => { setBottomTab("Bookmarks"); setBottomVisible(true); },
@@ -746,14 +746,14 @@ export function MinimalCycleView() {
   };
   const shellWorkspace = {
     view: { documentEpoch, viewMode, signalSplitEnabled, signalSplitRatio, gridEnabled, snapEnabled, rulerEnabled, zoom, cursorPresentationRevision: treePresentationRevision + playheadPresentationRevision, cursor: { ...(cursorA === undefined ? {} : { a: cursorA }), ...(cursorB === undefined ? {} : { b: cursorB }), ...(cursorDelta.cycles === undefined ? {} : { deltaCycles: cursorDelta.cycles }) } },
-    layout: { leftPaneWidth, frozenPaneMinWidth, frozenPaneWidth, bottomVisible, bottomHeight, inspectorVisible, inspectorWidth },
+    layout: { leftPaneWidth, frozenPaneMinWidth, frozenPaneWidth, bottomVisible, bottomHeight, bottomMaxHeight, inspectorVisible, inspectorWidth },
     refs: { viewport, gridLayer, ruler, host, viewportLower, rulerLower, hostLower, gridLayerLower },
     content: { header: secondarySurfaces.workspaceHeader, transactionTree: secondarySurfaces.workspaceTransactionTree, viewportContent: secondarySurfaces.workspaceViewportContent, viewportLegend: secondarySurfaces.workspaceViewportLegend, leftRail: secondarySurfaces.workspaceLeftRail, bottom: secondarySurfaces.workspaceBottom, inspector: secondarySurfaces.workspaceInspector },
     interactions: {
       onInspectorKeyDown: resizeInspectorByKeyboard, onInspectorPointerDown: startInspectorResize, onInspectorPointerMove: moveInspectorResize, onInspectorPointerUp: finishInspectorResize,
       onLeftPaneKeyDown: resizeLeftPaneByKeyboard, onLeftPanePointerDown: startLeftPaneResize, onLeftPanePointerMove: moveLeftPaneResize, onLeftPanePointerUp: finishLeftPaneResize,
       onFrozenPaneKeyDown: resizeFrozenPaneByKeyboard, onFrozenPanePointerDown: startFrozenPaneResize, onFrozenPanePointerMove: moveFrozenPaneResize, onFrozenPanePointerUp: finishFrozenPaneResize,
-      onBottomReset: () => setBottomHeight(240), onInspectorReset: () => setInspectorWidth(297),
+      onBottomReset: resetBottomHeight, onInspectorReset: () => setInspectorWidth(297),
       onBottomKeyDown: resizeBottomByKeyboard, onBottomPointerDown: startBottomResize, onBottomPointerMove: moveBottomResize, onBottomPointerUp: finishBottomResize,
       onSignalSplitKeyDown: resizeSignalSplitByKeyboard, onSignalSplitPointerDown: startSignalSplitResize, onSignalSplitPointerMove: moveSignalSplitResize, onSignalSplitPointerUp: finishSignalSplitResize,
       onViewportKeyDown: onCursorKeyDown,

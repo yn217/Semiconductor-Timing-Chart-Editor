@@ -11,7 +11,7 @@ export type ViewRibbonContext = Readonly<{
   zoom: number; selectedCycle: number; cursorA: number | undefined; cursorB: number | undefined;
   gridEnabled: boolean; snapEnabled: boolean; rulerEnabled: boolean; minimapEnabled: boolean; signalSplitEnabled: boolean;
   showSignalNames: boolean; showRoles: boolean; showAnnotations: boolean; showTransactions: boolean; showGroupBackground: boolean;
-  signalTreeVisible: boolean; inspectorVisible: boolean; bottomVisible: boolean; bottomHeight: number;
+  signalTreeVisible: boolean; inspectorVisible: boolean; bottomVisible: boolean; bottomHeight: number; bottomMaxHeight: number;
   density: DensityMode; workspacePreset: WorkspacePreset;
   onToggleSignalSplit: () => void; onSetBottomSize: (size: "compact" | "expanded") => void;
   onSetCursorA: () => void; onSetCursorB: () => void; onClearCursors: () => void; onSwapCursors: () => void;
@@ -24,7 +24,7 @@ export type ViewRibbonContext = Readonly<{
 
 /** View-tab Ribbon groups (#615): Show, Panels, Guides, Zoom, Cursor, Workspace, Layout. */
 export function buildViewRibbonGroups(context: ViewRibbonContext): readonly RibbonGroupSpec[] {
-  const { viewMode, zoom, selectedCycle, cursorA, cursorB, gridEnabled, snapEnabled, rulerEnabled, minimapEnabled, signalSplitEnabled, showSignalNames, showRoles, showAnnotations, showTransactions, showGroupBackground, signalTreeVisible, inspectorVisible, bottomVisible, bottomHeight, density, workspacePreset, onToggleSignalSplit, onSetBottomSize, onSetCursorA, onSetCursorB, onClearCursors, onSwapCursors, onZoom, onSetZoom, onFitAll, onFitSelection, onToggleGrid, onToggleSnap, onToggleRuler, onToggleMinimap, onToggleSignalNames, onToggleRoles, onToggleAnnotations, onToggleTransactions, onToggleGroupBackground, onToggleSignalTree, onToggleInspector, onToggleBottom, onDensityChange, onWorkspacePresetChange, onResetLayout } = context;
+  const { viewMode, zoom, selectedCycle, cursorA, cursorB, gridEnabled, snapEnabled, rulerEnabled, minimapEnabled, signalSplitEnabled, showSignalNames, showRoles, showAnnotations, showTransactions, showGroupBackground, signalTreeVisible, inspectorVisible, bottomVisible, bottomHeight, bottomMaxHeight, density, workspacePreset, onToggleSignalSplit, onSetBottomSize, onSetCursorA, onSetCursorB, onClearCursors, onSwapCursors, onZoom, onSetZoom, onFitAll, onFitSelection, onToggleGrid, onToggleSnap, onToggleRuler, onToggleMinimap, onToggleSignalNames, onToggleRoles, onToggleAnnotations, onToggleTransactions, onToggleGroupBackground, onToggleSignalTree, onToggleInspector, onToggleBottom, onDensityChange, onWorkspacePresetChange, onResetLayout } = context;
   return [
     {
       id: "view-show", majorGroup: "Show", caption: "Show", items: [
@@ -48,7 +48,7 @@ export function buildViewRibbonGroups(context: ViewRibbonContext): readonly Ribb
         // not merely "closest to" (a manual drag in between shows neither
         // as selected, which is correct -- it's neither preset anymore).
         { kind: "custom", id: "bottom-size-compact", render: () => <DsRibbonToggleButton key="bottom-size-compact" dataTestId="view-panel-bottom-compact" ariaLabel="Bottom Compact" checked={bottomVisible && bottomHeight === 180} icon={<RibbonIcon name="i-panel-bottom-compact" />} onClick={() => onSetBottomSize("compact")}>Compact</DsRibbonToggleButton> },
-        { kind: "custom", id: "bottom-size-expanded", render: () => <DsRibbonToggleButton key="bottom-size-expanded" dataTestId="view-panel-bottom-expanded" ariaLabel="Bottom Expanded" checked={bottomVisible && bottomHeight === 420} icon={<RibbonIcon name="i-panel-bottom-expanded" />} onClick={() => onSetBottomSize("expanded")}>Expanded</DsRibbonToggleButton> },
+        { kind: "custom", id: "bottom-size-expanded", render: () => <DsRibbonToggleButton key="bottom-size-expanded" dataTestId="view-panel-bottom-expanded" ariaLabel="Bottom Expanded" checked={bottomVisible && bottomHeight === bottomMaxHeight} icon={<RibbonIcon name="i-panel-bottom-expanded" />} onClick={() => onSetBottomSize("expanded")}>Expanded</DsRibbonToggleButton> },
         { kind: "custom", id: "panel-tree", render: () => <DsRibbonToggleButton key="panel-tree" dataTestId="view-panel-tree" ariaLabel="Signal Tree" checked={signalTreeVisible} icon={<RibbonIcon name="i-panel-left" />} onClick={onToggleSignalTree}>Signal Tree</DsRibbonToggleButton> },
         { kind: "custom", id: "panel-minimap", render: () => <DsRibbonToggleButton key="panel-minimap" dataTestId="view-panel-minimap" ariaLabel="MiniMap" checked={minimapEnabled} icon={<RibbonIcon name="i-minimap" />} onClick={onToggleMinimap}>MiniMap</DsRibbonToggleButton> },
         // Named "Signal Split" (not just "Split") specifically to stay
