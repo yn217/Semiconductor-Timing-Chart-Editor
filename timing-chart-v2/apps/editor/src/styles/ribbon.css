@@ -99,9 +99,14 @@
 
 .ai-query-row input { width: 230px; }
 
-.ai-scope, .ai-preview, .ai-operation-panel > output, .ai-settings, .ai-activity-log { grid-column: 1 / -1; }
+.ai-scope, .ai-context-summary, .ai-preview, .ai-operation-panel > output, .ai-settings, .ai-activity-log { grid-column: 1 / -1; }
 
 .ai-scope { color: #5c6b7e; }
+
+.ai-context-summary { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; padding: 6px 8px; border: 1px solid #d6e0ea; border-radius: 4px; background: #f8fafc; }
+.ai-context-summary > div { display: flex; gap: 4px; min-width: 0; }
+.ai-context-summary dt { color: #68788b; font-weight: 650; }
+.ai-context-summary dd { overflow-wrap: anywhere; margin: 0; color: #26384d; }
 
 .ai-preview { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 5px; border: 1px solid #9ebbd8; background: #eef7ff; }
 

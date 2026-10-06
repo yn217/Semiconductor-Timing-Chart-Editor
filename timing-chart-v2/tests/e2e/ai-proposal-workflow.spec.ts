@@ -277,8 +277,14 @@ test("Scope switches between Selection / Current View / Document, and Current Vi
 
   const ai = await openAIAssistant(page);
   await expect(ai.getByTestId("ai-scope-select")).toHaveValue("document");
+  const context = ai.getByTestId("ai-context-summary");
+  await expect(context.locator("[data-context-field='document']")).toContainText("Sample");
+  await expect(context.locator("[data-context-field='view']")).toHaveText("Cycle");
+  await expect(context.locator("[data-context-field='selection']")).toHaveText("Signal: REQUEST (hidden)");
+  await expect(context.locator("[data-context-field='scope']")).toHaveText("Document");
 
   await ai.getByTestId("ai-scope-select").selectOption("current-view");
+  await expect(context.locator("[data-context-field='scope']")).toHaveText("Current View");
   await ai.getByLabel("AI semantic query").fill("rename selected signal to REQ");
   await ai.getByRole("button", { name: "Preview", exact: true }).click();
   await expect(ai.getByTestId("ai-status")).toContainText("hidden and outside the Current View scope");

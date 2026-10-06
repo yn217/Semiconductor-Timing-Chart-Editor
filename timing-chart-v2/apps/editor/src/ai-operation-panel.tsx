@@ -6,6 +6,7 @@ import { listHandshakeMissingCaseSuggestions, validateCanonicalDocument, type Ca
 import { buildTypedProposal, buildTypedProposalBatch, deterministicMockAIProposalProvider, type AIProposal, type AIProposalProvider, type AIViewIntent } from "./ai-proposal-provider.js";
 import { probeAIBridge, useAIBridgeClient, type AIBridgeStatus, type AIBridgeViewOperation, type AISelectionEntityType } from "./ai-bridge-client.js";
 import { buildAIClientConfig, buildAIMcpEndpoint, type AIClientSetup } from "./ai-connection-guide.js";
+import { buildAIContextSummary, type AIContextScope } from "./ai-context-summary.js";
 
 function proposalValidationProblems(document: CanonicalDocument, proposal: AIProposal): readonly DocumentProblem[] {
   if (proposal.kind === "view-only") return proposal.commands.length === 0 && proposal.viewIntent ? [] : [{ code: "AI_VIEW_INTENT_INVALID", path: "$.ai.proposal", message: "View-only proposals cannot contain document commands." }];
@@ -139,7 +140,7 @@ export function describeAIProposalCommands(document: CanonicalDocument, commands
 // status line claims). Document is the default -- it is the literal
 // pre-#395-PR5 behavior (no gating at all), so choosing a default other
 // than the narrowest option here is not a silent widening of anything.
-type AIScope = "selection" | "current-view" | "document";
+type AIScope = AIContextScope;
 const scopeLabel = (scope: AIScope): string => scope === "selection" ? "Selection" : scope === "current-view" ? "Current View" : "Document";
 
 function scopeViolationMessage(scope: AIScope, document: CanonicalDocument, command: SemanticCommand, selectedSignalId: SignalId | undefined, selectedGroupId: GroupId | undefined, selectedAnnotationId: string | undefined, selectedTransactionId: string | undefined): string | undefined {
@@ -186,6 +187,7 @@ export function AIOperationPanel({ document, validationDiagnostics, documentEpoc
   const [activityLog, setActivityLog] = useState<readonly ActivityEntry[]>([]);
   const [selectedMissingCases, setSelectedMissingCases] = useState<ReadonlySet<string>>(() => new Set());
   const missingCaseSuggestions = useMemo(() => scenarioModel && activeScenarioId ? listHandshakeMissingCaseSuggestions(scenarioModel, activeScenarioId) : [], [scenarioModel, activeScenarioId]);
+  const contextSummary = buildAIContextSummary({ document, mode, scope, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, range });
   const previousDocumentEpochRef = useRef(documentEpoch);
   // Activity entries outlive the retention window: the retained array is a
   // view, not an identity allocator.  Keeping the sequence outside the
@@ -391,6 +393,13 @@ export function AIOperationPanel({ document, validationDiagnostics, documentEpoc
   return <section className="ai-operation-panel" data-testid="ai-operation-panel">
     <div className="ai-query-row">{icon}<label>Semantic query<input aria-label="AI semantic query" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="rename selected signal to REQ" /></label><button type="button" onClick={() => buildPreview()}>Preview</button><button type="button" data-testid="ai-connect-external" onClick={() => { setSettingsOpen(true); setConnectionGuideOpen(true); }}>Connect External AI</button><button type="button" data-testid="ai-settings-toggle" aria-expanded={settingsOpen} onClick={() => setSettingsOpen((value) => !value)}>Settings</button></div>
     <div className="ai-scope">Scope: <label>{" "}<select aria-label="AI context scope" data-testid="ai-scope-select" value={scope} onChange={(event) => setScope(event.target.value as AIScope)}><option value="selection">Selection</option><option value="current-view">Current View</option><option value="document">Document</option></select></label> · Revision: {revision} · Canonical read-only query · Allowed to edit: {scopeLabel(scope)}</div>
+    <dl className="ai-context-summary" data-testid="ai-context-summary" aria-label="AI context summary">
+      <div><dt>Document</dt><dd data-context-field="document">{contextSummary.document}</dd></div>
+      <div><dt>View</dt><dd data-context-field="view">{contextSummary.view}</dd></div>
+      <div><dt>Selection</dt><dd data-context-field="selection">{contextSummary.selection}</dd></div>
+      <div><dt>Range</dt><dd data-context-field="range">{contextSummary.range}</dd></div>
+      <div><dt>Scope</dt><dd data-context-field="scope">{contextSummary.scope}</dd></div>
+    </dl>
     <section aria-label="Handshake missing-case suggestions" data-testid="handshake-case-suggestions">
       <h4>Handshake coverage suggestions</h4>
       <p>Suggestions use the active Scenario’s explicit Handshake constraints. Nothing changes until selected cases are added as Scenarios.</p>
