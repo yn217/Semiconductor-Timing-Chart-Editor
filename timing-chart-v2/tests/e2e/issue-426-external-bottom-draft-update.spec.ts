@@ -10,7 +10,6 @@ test("external event replacement never silently overwrites a dirty Bottom transi
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const editor = page.getByTestId("signal-editor");
   const row = editor.locator("form.event-row[data-event-start='3']");
-  await row.getByRole("button", { name: /Edit transition/ }).click();
   await row.getByLabel("Comment 3").fill("local unapplied draft");
   const revisionBefore = await host.getAttribute("data-canonical-revision");
 
@@ -20,13 +19,13 @@ test("external event replacement never silently overwrites a dirty Bottom transi
   await expect(host).not.toHaveAttribute("data-canonical-revision", revisionBefore!);
   await expect(row.getByTestId("event-row-draft-conflict-3")).toBeVisible();
   await expect(row.getByLabel("Comment 3")).toHaveValue("local unapplied draft");
-  await expect(row.getByRole("button", { name: "Save" })).toBeDisabled();
+  await expect(row.getByRole("button", { name: "Apply" })).toBeDisabled();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 
   await row.getByRole("button", { name: "Reload latest" }).click();
   await expect(row.getByLabel("Comment 3")).toHaveValue("external canonical update");
   await expect(row.getByTestId("event-row-draft-conflict-3")).toHaveCount(0);
-  await expect(row.getByRole("button", { name: "Save" })).toBeDisabled();
+  await expect(row.getByRole("button", { name: "Apply" })).toHaveCount(0);
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });
 

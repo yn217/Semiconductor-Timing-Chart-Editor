@@ -11,9 +11,8 @@ test("Review filters and navigates the shared Problems diagnostics without mutat
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const editor = page.getByTestId("signal-editor");
   const row = editor.locator("form.event-row").nth(1);
-  await row.getByRole("button", { name: /Edit transition/ }).click();
   await row.getByLabel("Start 3").fill("0");
-  await row.getByRole("button", { name: "Save" }).click();
+  await row.getByRole("button", { name: "Apply" }).click();
   await expect(page.getByTestId("problems-status")).toHaveText("Problems: 1");
 
   const before = {
