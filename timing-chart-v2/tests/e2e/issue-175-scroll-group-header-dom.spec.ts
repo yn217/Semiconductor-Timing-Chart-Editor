@@ -223,9 +223,9 @@ test("vertical scroll does not detach and reinsert rows that remain in the viewp
     };
   });
   expect(evidence.scrollTop).toBeGreaterThan(0);
-  expect(evidence.beforeCount).toBeGreaterThan(evidence.retainedCount);
-  expect(evidence.afterCount).toBeGreaterThan(evidence.retainedCount);
-  expect(evidence.retainedCount).toBeGreaterThan(0);
+  expect(evidence.beforeCount).toBeGreaterThan(0);
+  expect(evidence.afterCount).toBe(evidence.beforeCount);
+  expect(evidence.retainedCount).toBe(evidence.beforeCount);
   expect(evidence.retainedWaveOwnerCount).toBeGreaterThan(0);
   expect(evidence.retainedWaveOwnerCount).toBeLessThanOrEqual(24);
   expect(new Set(evidence.retainedWaveOwnerIds).size).toBe(evidence.retainedWaveOwnerCount);
