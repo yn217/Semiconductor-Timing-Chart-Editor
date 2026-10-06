@@ -55,6 +55,15 @@ test("Scenario v3 switches as view state and management survives Undo/Redo and S
   const overlayStart = await differenceOverlay.getAttribute("data-source-start");
   const overlayEnd = await differenceOverlay.getAttribute("data-source-end");
   expect(Number(overlayEnd)).toBeGreaterThan(Number(overlayStart));
+  await page.getByRole("button", { name: "Combined", exact: true }).click();
+  await expect(differenceOverlay).toBeVisible();
+  const combinedOverlayBox = await differenceOverlay.boundingBox();
+  const combinedBoundaryBox = await page.locator(`.cycle-tick[data-source-cycle="${overlayStart}"]`).boundingBox();
+  expect(combinedOverlayBox).not.toBeNull();
+  expect(combinedBoundaryBox).not.toBeNull();
+  expect(Math.abs(combinedOverlayBox!.x - combinedBoundaryBox!.x)).toBeLessThanOrEqual(0.5);
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
+  await expect(differenceOverlay).toBeVisible();
   await page.getByTestId("scenario-compare-toggle").click();
   await expect(page.locator("[data-role='scenario-difference-overlay']")).toHaveCount(0);
   await page.getByTestId("scenario-compare-toggle").click();
