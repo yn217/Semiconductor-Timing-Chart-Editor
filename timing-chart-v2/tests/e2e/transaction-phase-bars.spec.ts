@@ -86,6 +86,9 @@ test("Transaction Phase selection restores by stable Phase ID after mode remount
   const dirty = await page.getByTestId("dirty-status").textContent();
   await phase.click();
   await expect(page.locator(`.transaction-phase-hit-target[data-phase-id="${phaseId}"]`)).toHaveAttribute("data-selected", "true");
+  const transactionId = await phase.getAttribute("data-phase-transaction-id");
+  expect(transactionId).toBeTruthy();
+  await expect(page.locator(`[data-transaction-id="${transactionId}"]`)).toHaveAttribute("data-selected", "true");
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await expect(page.locator(`.transaction-phase-hit-target[data-phase-id="${phaseId}"]`)).toHaveAttribute("data-selected", "true");
