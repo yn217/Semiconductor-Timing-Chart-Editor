@@ -23,6 +23,16 @@ import { canonicalFixture } from "../fixtures/canonical.js";
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 describe("canonical v2 schema and roundtrip", () => {
+  it("persists Legend canvas-corner mode and offset through Save/Open serialization", () => {
+    const source = canonicalFixture();
+    const document = { ...source, legend: { ...source.legend, positionMode: "canvas-corner" as const, corner: "bottom-right" as const, position: { x: 14, y: 22 } } };
+    expect(validateCanonicalDocument(document)).toEqual([]);
+    const reopened = parseDocument(serializeCanonicalDocument(document));
+    expect(reopened.ok).toBe(true);
+    if (!reopened.ok) return;
+    expect(reopened.document.legend).toMatchObject({ positionMode: "canvas-corner", corner: "bottom-right", position: { x: 14, y: 22 } });
+    expect(serializeCanonicalDocument(reopened.document)).toBe(serializeCanonicalDocument(document));
+  });
   it("persists an optional physical timebase without changing cycle coordinates", () => {
     const document = clone(canonicalFixture());
     document.timeline.physicalTimebase = { referenceFrequencyHz: 100_000_000, unit: "ns" };

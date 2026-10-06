@@ -481,6 +481,8 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
         orientation: legendSource.orientation === "vertical" ? "vertical" : "horizontal",
         usedRolesOnly: bool(legendSource.usedRolesOnly, legendSource.items === undefined || legendSource.items === "usedRolesOnly"),
         position: { x: number(legendPosition.x, 0), y: number(legendPosition.y, 0) },
+        positionMode: legendSource.positionMode === "canvas-corner" ? "canvas-corner" : "free",
+        ...(legendSource.corner === "top-left" || legendSource.corner === "top-right" || legendSource.corner === "bottom-left" || legendSource.corner === "bottom-right" ? { corner: legendSource.corner } : {}),
         ...(() => { const style = jsonObject(legendSource.style); return style ? { style } : {}; })(),
         ...(Array.isArray(legendSource.items) ? { items: structuredJson(legendSource.items) as NonNullable<CanonicalDocument["legend"]["items"]> } : {}),
       },

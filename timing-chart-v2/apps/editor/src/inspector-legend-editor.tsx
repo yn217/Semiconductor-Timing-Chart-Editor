@@ -22,10 +22,12 @@ export function InspectorLegendEditor({ document, viewport, commands, onCancel, 
   const [show, setShow] = useState(legend.show);
   const [orientation, setOrientation] = useState(legend.orientation);
   const [usedRolesOnly, setUsedRolesOnly] = useState(legend.usedRolesOnly);
-  const latestDraft = { x, y, show, orientation, usedRolesOnly };
+  const [positionMode, setPositionMode] = useState<NonNullable<Legend["positionMode"]>>(legend.positionMode ?? "free");
+  const [corner, setCorner] = useState<NonNullable<Legend["corner"]>>(legend.corner ?? "top-left");
+  const latestDraft = { x, y, show, orientation, usedRolesOnly, positionMode, corner };
   const baseRef = useRef(latestDraft);
   const [externalConflict, setExternalConflict] = useState(false);
-  const canonicalDraft = { x: String(legend.position.x), y: String(legend.position.y), show: legend.show, orientation: legend.orientation, usedRolesOnly: legend.usedRolesOnly };
+  const canonicalDraft = { x: String(legend.position.x), y: String(legend.position.y), show: legend.show, orientation: legend.orientation, usedRolesOnly: legend.usedRolesOnly, positionMode: legend.positionMode ?? "free", corner: legend.corner ?? "top-left" };
   useEffect(() => {
     const resolution = reconcileExternalDraftFields(baseRef.current, latestDraft, canonicalDraft);
     if (resolution.value.x !== x) setX(resolution.value.x as string);
@@ -33,17 +35,19 @@ export function InspectorLegendEditor({ document, viewport, commands, onCancel, 
     if (resolution.value.show !== show) setShow(resolution.value.show as boolean);
     if (resolution.value.orientation !== orientation) setOrientation(resolution.value.orientation as Legend["orientation"]);
     if (resolution.value.usedRolesOnly !== usedRolesOnly) setUsedRolesOnly(resolution.value.usedRolesOnly as boolean);
+    if (resolution.value.positionMode !== positionMode) setPositionMode(resolution.value.positionMode as NonNullable<Legend["positionMode"]>);
+    if (resolution.value.corner !== corner) setCorner(resolution.value.corner as NonNullable<Legend["corner"]>);
     baseRef.current = resolution.base;
     const conflict = resolution.conflicts.length > 0;
     setExternalConflict((current) => current === conflict ? current : conflict);
-  }, [legend.position.x, legend.position.y, legend.show, legend.orientation, legend.usedRolesOnly]);
+  }, [legend.position.x, legend.position.y, legend.show, legend.orientation, legend.usedRolesOnly, legend.positionMode, legend.corner]);
 
   const positionX = Number(x);
   const positionY = Number(y);
   const valid = x.trim() !== "" && y.trim() !== "" && Number.isFinite(positionX) && Number.isFinite(positionY);
-  const changed = valid && (positionX !== legend.position.x || positionY !== legend.position.y || show !== legend.show || orientation !== legend.orientation || usedRolesOnly !== legend.usedRolesOnly);
+  const changed = valid && (positionX !== legend.position.x || positionY !== legend.position.y || show !== legend.show || orientation !== legend.orientation || usedRolesOnly !== legend.usedRolesOnly || positionMode !== (legend.positionMode ?? "free") || corner !== (legend.corner ?? "top-left"));
   const reloadLatest = () => {
-    setX(canonicalDraft.x); setY(canonicalDraft.y); setShow(canonicalDraft.show); setOrientation(canonicalDraft.orientation); setUsedRolesOnly(canonicalDraft.usedRolesOnly);
+    setX(canonicalDraft.x); setY(canonicalDraft.y); setShow(canonicalDraft.show); setOrientation(canonicalDraft.orientation); setUsedRolesOnly(canonicalDraft.usedRolesOnly); setPositionMode(canonicalDraft.positionMode); setCorner(canonicalDraft.corner);
     baseRef.current = canonicalDraft;
     setExternalConflict(false);
   };
@@ -59,23 +63,23 @@ export function InspectorLegendEditor({ document, viewport, commands, onCancel, 
     const size = overlay
       ? { width: overlay.getBoundingClientRect().width, height: overlay.getBoundingClientRect().height }
       : content ? measureLegendSize(content, orientation, effectiveLegendEntries(document)) : { width: 0, height: 0 };
-    const position = show && geometry
+    const position = show && geometry && positionMode === "free"
       ? clampLegendToVisibleSurface({ x: positionX, y: positionY }, size, geometry)
       : { x: positionX, y: positionY };
     if (
       position.x === legend.position.x && position.y === legend.position.y &&
-      show === legend.show && orientation === legend.orientation && usedRolesOnly === legend.usedRolesOnly
+      show === legend.show && orientation === legend.orientation && usedRolesOnly === legend.usedRolesOnly && positionMode === (legend.positionMode ?? "free") && corner === (legend.corner ?? "top-left")
     ) {
       setX(String(position.x));
       setY(String(position.y));
-      baseRef.current = { x: String(position.x), y: String(position.y), show, orientation, usedRolesOnly };
+      baseRef.current = { x: String(position.x), y: String(position.y), show, orientation, usedRolesOnly, positionMode, corner };
       setExternalConflict(false);
       return;
     }
-    const next: Legend = { ...legend, show, orientation, usedRolesOnly, position };
+    const next: Legend = { ...legend, show, orientation, usedRolesOnly, position, positionMode, ...(positionMode === "canvas-corner" ? { corner } : {}) };
     const result = commands.updateLegend(next);
     if (result.ok) {
-      const applied = { x: String(position.x), y: String(position.y), show, orientation, usedRolesOnly };
+      const applied = { x: String(position.x), y: String(position.y), show, orientation, usedRolesOnly, positionMode, corner };
       setX(applied.x);
       setY(applied.y);
       baseRef.current = applied;
@@ -92,6 +96,8 @@ export function InspectorLegendEditor({ document, viewport, commands, onCancel, 
         <PropertyToggle label="Show" ariaLabel="Legend show" checked={show} onChange={setShow} />
         <PropertyToggle label="Used roles only" ariaLabel="Legend used roles only" checked={usedRolesOnly} onChange={setUsedRolesOnly} />
         <label>Orientation<select aria-label="Legend orientation" value={orientation} onChange={(event) => setOrientation(event.target.value as Legend["orientation"])}><option value="horizontal">Horizontal</option><option value="vertical">Vertical</option></select></label>
+        <label>Position mode<select aria-label="Legend position mode" value={positionMode} onChange={(event) => setPositionMode(event.target.value as NonNullable<Legend["positionMode"]>)}><option value="free">Free position</option><option value="canvas-corner">Canvas corner + offset</option></select></label>
+        {positionMode === "canvas-corner" && <label>Canvas corner<select aria-label="Legend canvas corner" value={corner} onChange={(event) => setCorner(event.target.value as NonNullable<Legend["corner"]>)}><option value="top-left">Top left</option><option value="top-right">Top right</option><option value="bottom-left">Bottom left</option><option value="bottom-right">Bottom right</option></select></label>}
         <div className="inspector-property-pair">
           <label>X<input aria-label="Legend X" type="number" value={x} onChange={(event) => setX(event.target.value)} /></label>
           <label>Y<input aria-label="Legend Y" type="number" value={y} onChange={(event) => setY(event.target.value)} /></label>

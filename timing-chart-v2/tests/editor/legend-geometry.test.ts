@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { clampLegendToVisibleSurface, legendContainingBlockOffset, legendLocalPointFromClient } from "../../apps/editor/src/legend-geometry.js";
+import { legendOffsetFromCanvasPosition, resolveLegendPosition } from "@timing-chart-v2/schema";
 
 describe("Legend document-overlay geometry", () => {
   it("converts pointer coordinates through the visible document origin and scroll", () => {
@@ -32,5 +33,18 @@ describe("Legend document-overlay geometry", () => {
       { width: 900, height: 700 },
       { scrollLeft: 20, scrollTop: 10, clientWidth: 600, clientHeight: 300 },
     )).toEqual({ x: 20, y: 10 });
+  });
+
+  it("resolves each canvas-corner anchor from persisted offsets and inverts drag positions", () => {
+    const plot = { x: 0, y: 0, width: 800, height: 500 };
+    const size = { width: 160, height: 40 };
+    for (const corner of ["top-left", "top-right", "bottom-left", "bottom-right"] as const) {
+      const legend = { positionMode: "canvas-corner" as const, corner, position: { x: 12, y: 18 } };
+      const point = resolveLegendPosition(legend, plot, size);
+      expect(point.x).toBe(corner.endsWith("right") ? 628 : 12);
+      expect(point.y).toBe(corner.startsWith("bottom") ? 442 : 18);
+      expect(legendOffsetFromCanvasPosition(legend, point, plot, size)).toEqual(legend.position);
+    }
+    expect(resolveLegendPosition({ positionMode: "free", position: { x: 36, y: 48 } }, plot, size)).toEqual({ x: 36, y: 48 });
   });
 });

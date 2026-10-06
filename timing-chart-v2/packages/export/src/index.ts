@@ -1,7 +1,7 @@
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { allocateMeasurementLanes } from "@timing-chart-v2/geometry";
 import { buildDisplayTimeMapping, calculateRowLayout, remapValueChangesToDisplay, resolveSourcePosition, type DisplayTimeMapping } from "@timing-chart-v2/projection";
-import { ANNOTATION_LABEL_LINE_HEIGHT, ANNOTATION_LABEL_MAX_WIDTH, MAX_MEASUREMENT_LANE, anchorTransitionFraction, anchorTransitionKind, effectiveLegendEntries, resolveEdgeCounterMarker, valueSignalWaveDomain, wrapAnnotationLabel, type Annotation, type CanonicalDocument, type ClockSignal, type JsonObject, type MeasurementProfile, type MeasurementLayout, type Signal, type SignalId, type ValueSignal } from "@timing-chart-v2/schema";
+import { ANNOTATION_LABEL_LINE_HEIGHT, ANNOTATION_LABEL_MAX_WIDTH, MAX_MEASUREMENT_LANE, anchorTransitionFraction, anchorTransitionKind, effectiveLegendEntries, resolveEdgeCounterMarker, resolveLegendPosition, valueSignalWaveDomain, wrapAnnotationLabel, type Annotation, type CanonicalDocument, type ClockSignal, type JsonObject, type MeasurementProfile, type MeasurementLayout, type Signal, type SignalId, type ValueSignal } from "@timing-chart-v2/schema";
 import { renderWaveJsonMarkup, toWaveJson, toWaveJsonMappedClock, toWaveJsonWindow, WaveDromAdapterError, WAVEDROM_VERSION, type WaveJsonSignal } from "@timing-chart-v2/wavedrom-adapter";
 
 export interface ExportSettings {
@@ -804,7 +804,11 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
     if (checkpoint()) yield;
   }
   const page = settings.page ? pageLayout(settings.page, contentWidth, contentHeight) : undefined;
-  return Object.freeze({ width: page?.width ?? contentWidth, height: page?.height ?? contentHeight, waveforms, labels, annotations, transactions, groupBands, axisBreaks, edgeCounters, legend, legendPosition: document.legend.position, legendOrientation: document.legend.orientation, ruler: { start: range.start, end: range.end, x: LABEL_WIDTH, cycleWidth, ticks }, documentLayout, ...(page === undefined ? {} : { page }) });
+  const legendSize = document.legend.orientation === "vertical"
+    ? { width: 180, height: 24 + legend.length * 14 }
+    : { width: Math.max(80, legend.length * 80 + 24), height: 24 };
+  const legendPosition = resolveLegendPosition(document.legend, { x: LABEL_WIDTH, y: waveTop, width: contentWidth - LABEL_WIDTH, height: Math.max(0, contentHeight - waveTop) }, legendSize);
+  return Object.freeze({ width: page?.width ?? contentWidth, height: page?.height ?? contentHeight, waveforms, labels, annotations, transactions, groupBands, axisBreaks, edgeCounters, legend, legendPosition, legendOrientation: document.legend.orientation, ruler: { start: range.start, end: range.end, x: LABEL_WIDTH, cycleWidth, ticks }, documentLayout, ...(page === undefined ? {} : { page }) });
 }
 
 /** Synchronous deterministic scene API retained for pure callers and tests. */

@@ -139,6 +139,15 @@ describe("deterministic document export", () => {
     expect(svg).not.toContain(`<text x="12" y="${scene.height - 12}">`);
   });
 
+  it("exports a canvas-corner Legend using the plot bounds and persisted offset", () => {
+    const base = canonicalFixture();
+    const document = { ...base, legend: { ...base.legend, show: true, positionMode: "canvas-corner" as const, corner: "top-right" as const, position: { x: 12, y: 18 } } };
+    const scene = buildExportScene(document, { format: "svg", scope: "document" });
+    expect(scene.legendPosition.x).toBeGreaterThan(document.legend.position.x);
+    expect(scene.legendPosition.y).toBeGreaterThanOrEqual(document.legend.position.y);
+    expect(renderExportSvg(scene)).toContain(`transform="translate(${scene.legendPosition.x} ${scene.legendPosition.y})"`);
+  });
+
   it("preserves vertical Legend orientation in SVG export", () => {
     const base = canonicalFixture();
     const labels = ["Input", "Output"];

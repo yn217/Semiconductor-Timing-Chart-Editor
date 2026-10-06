@@ -333,6 +333,9 @@ export interface Legend {
   readonly orientation: "horizontal" | "vertical";
   readonly usedRolesOnly: boolean;
   readonly position: PixelOffset;
+  /** `free` uses timeline-local absolute coordinates; `canvas-corner` uses a plot-corner anchor plus position offset. */
+  readonly positionMode?: "free" | "canvas-corner";
+  readonly corner?: "top-left" | "top-right" | "bottom-left" | "bottom-right";
   readonly items?: readonly LegendEntry[];
   readonly style?: JsonObject;
 }
