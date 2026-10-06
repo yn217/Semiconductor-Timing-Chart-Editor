@@ -105,6 +105,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   #documentRowIdsSource: readonly string[] | undefined;
   #visibleRowIdsSource: readonly string[] | undefined;
   #documentEpoch = 0;
+  #shellBandRevision = 0;
   #rowYPrunePasses = 0;
   #fullReplaceEpochResets = 0;
   #diagnosticMapPrunePasses = 0;
@@ -185,6 +186,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     const shellStats = [syncShellLayer(layers.left, this.#leftRows, projection.leftRowIds, navigationRows, "left", shellFirstTimingRowByGroup), ...(frozenLayer ? [syncShellLayer(frozenLayer, this.#frozenRows, projection.frozenLabelRowIds, rows, "frozen", shellFirstTimingRowByGroup)] : []), syncShellLayer(layers.timing, this.#timingRows, projection.timingRowIds, rows, "timing", shellFirstTimingRowByGroup)];
     const headerStats = [syncGroupHeaderLayer(layers.left, this.#leftGroupHeaders, projection.mountedLeftGroupHeaderIds, projection.leftGroupHeaders, "left"), ...(frozenLayer ? [syncGroupHeaderLayer(frozenLayer, this.#frozenGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "frozen")] : []), syncGroupHeaderLayer(layers.timing, this.#timingGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "timing")];
     this.#diagnostics = { ...this.#diagnostics, domNodeCreates: this.#diagnostics.domNodeCreates + shellStats.concat(headerStats).reduce((sum, item) => sum + item.creates, 0), domNodeDestroys: this.#diagnostics.domNodeDestroys + shellStats.concat(headerStats).reduce((sum, item) => sum + item.destroys, 0), domNodeMoves: this.#diagnostics.domNodeMoves + shellStats.concat(headerStats).reduce((sum, item) => sum + item.moves, 0) };
+    this.#shellBandRevision = projection.shellBandRevision ?? 0;
     // The Left Tree shows every row (hidden signals and empty-group headers
     // included) and can legitimately need more vertical space than
     // Frozen/Timing (which excludes hidden rows and never grows for an
@@ -348,6 +350,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     syncShellLayer(layers.left, this.#leftRows, projection.leftRowIds, navigationRows, "left", firstTimingRowByGroup);
     if (frozenLayer) syncShellLayer(frozenLayer, this.#frozenRows, projection.frozenLabelRowIds, rows, "frozen", firstTimingRowByGroup);
     syncShellLayer(layers.timing, this.#timingRows, projection.timingRowIds, rows, "timing", firstTimingRowByGroup);
+    this.#shellBandRevision = projection.shellBandRevision ?? this.#shellBandRevision;
     for (const signalId of projection.mountedSignalIds) {
       const owner = this.#waveOwners.get(signalId);
       const row = rows.get(signalId);
@@ -412,19 +415,21 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     if (sourceOwner) this.#readSourceWindow(sourceOwner);
     const frozenLayer = this.#syncFrozenLayer(layers);
     assertCrossSurfaceInvariant(projection);
+    const reconcileRowShells = projection.shellBandRevision === undefined || projection.shellBandRevision !== this.#shellBandRevision;
     const rows = this.#indexedRows(projection.rowLayout, false);
     const navigationRows = this.#indexedRows(projection.navigationRowLayout, true);
     const firstTimingRowByGroup = this.#getFirstTimingRows(projection.canonicalRowIds, navigationRows);
-    const rowStats = [
+    const rowStats = reconcileRowShells ? [
       syncShellLayer(layers.left, this.#leftRows, projection.leftRowIds, navigationRows, "left", firstTimingRowByGroup),
       ...(frozenLayer ? [syncShellLayer(frozenLayer, this.#frozenRows, projection.frozenLabelRowIds, rows, "frozen", firstTimingRowByGroup)] : []),
       syncShellLayer(layers.timing, this.#timingRows, projection.timingRowIds, rows, "timing", firstTimingRowByGroup),
-    ];
-    const headerStats = [
+    ] : [];
+    const headerStats = reconcileRowShells ? [
       syncGroupHeaderLayer(layers.left, this.#leftGroupHeaders, projection.mountedLeftGroupHeaderIds, projection.leftGroupHeaders, "left"),
       ...(frozenLayer ? [syncGroupHeaderLayer(frozenLayer, this.#frozenGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "frozen")] : []),
       syncGroupHeaderLayer(layers.timing, this.#timingGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "timing"),
-    ];
+    ] : [];
+    if (reconcileRowShells) this.#shellBandRevision = projection.shellBandRevision ?? this.#shellBandRevision;
     const waveOwnerStats = reconcileViewportWaveOwners({
       layer: layers.waves,
       projection,
@@ -443,7 +448,25 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         if (waveformStyle.color) owner.dataset.waveformStyleColor = waveformStyle.color;
       },
     });
-    const visitedRowIds = new Set([...projection.leftRowIds, ...projection.frozenLabelRowIds, ...projection.timingRowIds]);
+    const visitedRowIds = new Set<string>();
+    if (reconcileRowShells) {
+      for (const rowId of [...projection.leftRowIds, ...projection.frozenLabelRowIds, ...projection.timingRowIds]) visitedRowIds.add(rowId);
+    } else {
+      // Sticky rows track the exact viewport while ordinary shells stay in
+      // the stable band. Update only those few row positions during scroll.
+      for (const row of projection.rowLayout) if (row.pinned) {
+        const shell = this.#frozenRows.get(row.rowId);
+        const timing = this.#timingRows.get(row.rowId);
+        if (shell) place(shell, row);
+        if (timing) place(timing, row);
+        visitedRowIds.add(row.rowId);
+      }
+      for (const row of projection.navigationRowLayout) if (row.pinned) {
+        const shell = this.#leftRows.get(row.rowId);
+        if (shell) place(shell, row);
+        visitedRowIds.add(row.rowId);
+      }
+    }
     const changedRows = new Set<string>();
     for (const rowId of visitedRowIds) {
       const row = rows.get(rowId) ?? navigationRows.get(rowId);

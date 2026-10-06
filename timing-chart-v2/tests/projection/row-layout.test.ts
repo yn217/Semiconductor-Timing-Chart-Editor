@@ -427,6 +427,26 @@ describe("RowLayout and projection invariants", () => {
     expect(projection.waveSignalIds).toEqual(["sig_clk", "sig_data"]);
   });
 
+  it("separates exact viewport candidates from the wider stable row-shell band", () => {
+    const document = generatePerformanceDocument({ signalCount: 1_000, cycleCount: 32, profile: "standard" });
+    const service = new DefaultProjectionService();
+    const snapshot = { revision: 0, document } as CanonicalSnapshot;
+    const viewport = { viewportStartY: 100, viewportEndY: 200, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [], stickyRowIds: [] } as const;
+    const shellViewport = { ...viewport, viewportStartY: 0, viewportEndY: 300 };
+    const first = service.project({ snapshot, changeSet: { fullDocumentReplace: true }, viewport, shellViewport });
+
+    expect(first.mountedRowIds.length).toBeGreaterThan(first.viewportRowIds!.length);
+    expect(first.leftRowIds.length).toBeGreaterThan(first.viewportRowIds!.length);
+    expect(first.mountedSignalIds).toEqual(first.viewportRowIds!.filter((id) => document.signals.some((signal) => signal.id === id)));
+
+    const nextViewport = { ...viewport, viewportStartY: 120, viewportEndY: 220 };
+    const next = service.project({ snapshot, changeSet: {}, viewport: nextViewport, shellViewport, previous: first });
+    expect(next.mountedRowIds).toBe(first.mountedRowIds);
+    expect(next.leftRowIds).toBe(first.leftRowIds);
+    expect(next.viewportRowIds).not.toEqual(first.viewportRowIds);
+    expect(next.mountedSignalIds).toEqual(next.viewportRowIds!.filter((id) => document.signals.some((signal) => signal.id === id)));
+  });
+
   it("mounts a newly inserted stable row during a row-order update", () => {
     const service = new DefaultProjectionService();
     const beforeDocument = canonicalFixture();

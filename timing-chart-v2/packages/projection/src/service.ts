@@ -143,9 +143,11 @@ export class DefaultProjectionService implements ProjectionService {
     }
     this.#fullVisibleRowScans += layout.visibleRows.length;
     const visibleRowIds = this.#visibleRowIds;
-    const viewportStart = request.viewport.viewportStartY - request.viewport.overscanBefore;
-    const viewportEnd = request.viewport.viewportEndY + request.viewport.overscanAfter;
     const pinned = new Set(request.viewport.pinnedRowIds);
+    const shellViewport = request.shellViewport ?? request.viewport;
+    const shellStart = shellViewport.viewportStartY - shellViewport.overscanBefore;
+    const shellEnd = shellViewport.viewportEndY + shellViewport.overscanAfter;
+    const shellPinned = new Set(shellViewport.pinnedRowIds);
     // A full-document Open/New rebuilds the canonical layout, but rows that
     // were already mounted and still exist in the replacement document remain
     // valid viewport retention candidates. Keeping those IDs avoids making a
@@ -154,14 +156,19 @@ export class DefaultProjectionService implements ProjectionService {
     // through the newly-built layout and preserving virtualization for new
     // offscreen rows.
     const preservePreviousRows = request.changeSet.rowOrder !== undefined || request.changeSet.fullDocumentReplace === true;
-    const mountedRowsOrdered = mountRows(layout, request.viewport, pinned, preservePreviousRows ? (request.previous?.mountedRowIds ?? []) : [], this.#rowIndexById, undefined, undefined, preservePreviousRows);
-    const mountedNavigationRows = mountRows(navigationLayout, request.viewport, pinned, preservePreviousRows ? (request.previous?.leftRowIds ?? []) : [], this.#navigationRowIndexById, undefined, undefined, preservePreviousRows);
-    const mountedGroupHeaders = selectIntersectingHeaders(layout.groupHeaders, viewportStart, viewportEnd, undefined, (visited) => { this.#groupHeadersVisited += visited; });
-    const mountedLeftGroupHeaders = selectIntersectingHeaders(navigationLayout.groupHeaders, viewportStart, viewportEnd, undefined, (visited) => { this.#groupHeadersVisited += visited; });
-    const mountedRowIds = mergeIds(mountedRowsOrdered.map((row) => row.rowId), mountedNavigationRows.map((row) => row.rowId));
-    this.#lastMountedRange = [mountedRowsOrdered[0]?.y ?? 0, mountedRowsOrdered.at(-1) ? mountedRowsOrdered.at(-1)!.y + mountedRowsOrdered.at(-1)!.height : 0];
+    const mountedRowsOrdered = mountRows(layout, request.viewport, pinned, preservePreviousRows ? (request.previous?.viewportRowIds ?? request.previous?.mountedRowIds ?? []) : [], this.#rowIndexById, undefined, undefined, preservePreviousRows);
+    const mountedNavigationRows = mountRows(navigationLayout, request.viewport, pinned, preservePreviousRows ? (request.previous?.viewportRowIds ?? request.previous?.leftRowIds ?? []) : [], this.#navigationRowIndexById, undefined, undefined, preservePreviousRows);
+    const shellRows = shellViewport === request.viewport ? mountedRowsOrdered : mountRows(layout, shellViewport, shellPinned, preservePreviousRows ? (request.previous?.mountedRowIds ?? []) : [], this.#rowIndexById, undefined, undefined, preservePreviousRows);
+    const shellNavigationRows = shellViewport === request.viewport ? mountedNavigationRows : mountRows(navigationLayout, shellViewport, shellPinned, preservePreviousRows ? (request.previous?.leftRowIds ?? []) : [], this.#navigationRowIndexById, undefined, undefined, preservePreviousRows);
+    const mountedGroupHeaders = selectIntersectingHeaders(layout.groupHeaders, shellStart, shellEnd, undefined, (visited) => { this.#groupHeadersVisited += visited; });
+    const mountedLeftGroupHeaders = selectIntersectingHeaders(navigationLayout.groupHeaders, shellStart, shellEnd, undefined, (visited) => { this.#groupHeadersVisited += visited; });
+    const mountedRowIds = mergeIds(shellRows.map((row) => row.rowId), shellNavigationRows.map((row) => row.rowId));
+    const viewportRowIds = mergeIds(mountedRowsOrdered.map((row) => row.rowId), mountedNavigationRows.map((row) => row.rowId));
+    this.#lastMountedRange = [shellRows[0]?.y ?? 0, shellRows.at(-1) ? shellRows.at(-1)!.y + shellRows.at(-1)!.height : 0];
     const mountedMetadata = classifyMountedRows(mountedRowsOrdered);
-    const { mountedSignalIds, timingRowIds, frozenLabelRowIds } = mountedMetadata;
+    const shellMetadata = classifyMountedRows(shellRows);
+    const { mountedSignalIds } = mountedMetadata;
+    const { timingRowIds, frozenLabelRowIds } = shellMetadata;
     const pinnedRows = projectPinnedRows({ visibleRowLayout: layout.visibleRows, rowLayout: layout.navigationRows, navigationRowLayout: navigationLayout.navigationRows, stickyRowIds: request.viewport.stickyRowIds ?? [], viewportStartY: request.viewport.viewportStartY, leadingHeaderHeight: layout.groupHeaders[0]?.height ?? 0 });
     const canonicalSignalIds = this.#canonicalSignalIdsFor(document);
     const requestedWaves = request.changeSet.fullDocumentReplace
@@ -173,7 +180,8 @@ export class DefaultProjectionService implements ProjectionService {
       canonicalRowIds: layout.canonicalRowIds,
       visibleRowIds,
       mountedRowIds,
-      leftRowIds: mountedNavigationRows.map((row) => row.rowId),
+      viewportRowIds,
+      leftRowIds: shellNavigationRows.map((row) => row.rowId),
       frozenLabelRowIds,
       timingRowIds,
       rowLayout: pinnedRows.rowLayout,
@@ -192,6 +200,9 @@ export class DefaultProjectionService implements ProjectionService {
       matchingSignalCount: navigationLayout.matchingSignalCount,
       transform: request.previous?.transform ?? defaultTransform,
       collapsedGroupIds,
+      pinnedRowIds: request.viewport.pinnedRowIds,
+      stickyRowIds: request.viewport.stickyRowIds ?? [],
+      shellViewport,
     };
   }
 
@@ -283,25 +294,39 @@ export class DefaultProjectionService implements ProjectionService {
   #projectViewportOnly(request: ProjectionRequest, layout: RowLayoutResult): RenderProjection {
     const navigationLayout = this.#navigationLayout!;
     const onStep = () => { this.#viewportBinarySearchSteps += 1; };
-    const mountedRows = mountRows(layout, request.viewport, new Set(request.viewport.pinnedRowIds), request.previous!.mountedRowIds, this.#rowIndexById, onStep, (visited) => { this.#viewportRowsVisited += visited; });
-    const mountedNavigationRows = mountRows(navigationLayout, request.viewport, new Set(request.viewport.pinnedRowIds), request.previous!.leftRowIds, this.#navigationRowIndexById, onStep);
-    const start = request.viewport.viewportStartY - request.viewport.overscanBefore;
-    const end = request.viewport.viewportEndY + request.viewport.overscanAfter;
-    const mountedGroupHeaders = selectIntersectingHeaders(layout.groupHeaders, start, end, onStep, (visited) => { this.#groupHeadersVisited += visited; });
-    const mountedLeftGroupHeaders = selectIntersectingHeaders(navigationLayout.groupHeaders, start, end, onStep, (visited) => { this.#groupHeadersVisited += visited; });
-    const mountedRowIds = mergeIds(mountedRows.map((row) => row.rowId), mountedNavigationRows.map((row) => row.rowId));
-    this.#lastMountedRange = [mountedRows[0]?.y ?? 0, mountedRows.at(-1) ? mountedRows.at(-1)!.y + mountedRows.at(-1)!.height : 0];
-    const { mountedSignalIds, timingRowIds, frozenLabelRowIds } = classifyMountedRows(mountedRows);
-    const pinnedRows = projectPinnedRows({ visibleRowLayout: layout.visibleRows, rowLayout: layout.navigationRows, navigationRowLayout: navigationLayout.navigationRows, stickyRowIds: request.viewport.stickyRowIds ?? [], viewportStartY: request.viewport.viewportStartY, leadingHeaderHeight: layout.groupHeaders[0]?.height ?? 0 });
+    const shellViewport = request.shellViewport ?? request.viewport;
+    const previous = request.previous!;
+    const reuseShellBand = request.viewport.stickyRowIds?.length === 0
+      && previous.shellViewport !== undefined
+      && sameVerticalWindow(previous.shellViewport, shellViewport);
+    const mountedRows = mountRows(layout, request.viewport, new Set(request.viewport.pinnedRowIds), request.previous!.viewportRowIds ?? request.previous!.mountedRowIds, this.#rowIndexById, onStep, (visited) => { this.#viewportRowsVisited += visited; });
+    const mountedNavigationRows = mountRows(navigationLayout, request.viewport, new Set(request.viewport.pinnedRowIds), request.previous!.viewportRowIds ?? request.previous!.leftRowIds, this.#navigationRowIndexById, onStep);
+    const shellRows = reuseShellBand ? undefined : (shellViewport === request.viewport ? mountedRows : mountRows(layout, shellViewport, new Set(shellViewport.pinnedRowIds), previous.mountedRowIds, this.#rowIndexById, onStep, (visited) => { this.#viewportRowsVisited += visited; }));
+    const shellNavigationRows = reuseShellBand ? undefined : (shellViewport === request.viewport ? mountedNavigationRows : mountRows(navigationLayout, shellViewport, new Set(shellViewport.pinnedRowIds), previous.leftRowIds, this.#navigationRowIndexById, onStep));
+    const shellStart = shellViewport.viewportStartY - shellViewport.overscanBefore;
+    const shellEnd = shellViewport.viewportEndY + shellViewport.overscanAfter;
+    const mountedGroupHeaderIds = reuseShellBand ? previous.mountedGroupHeaderIds : selectIntersectingHeaders(layout.groupHeaders, shellStart, shellEnd, onStep, (visited) => { this.#groupHeadersVisited += visited; }).map((row) => row.rowId);
+    const mountedLeftGroupHeaderIds = reuseShellBand ? previous.mountedLeftGroupHeaderIds : selectIntersectingHeaders(navigationLayout.groupHeaders, shellStart, shellEnd, onStep, (visited) => { this.#groupHeadersVisited += visited; }).map((row) => row.rowId);
+    const mountedRowIds = reuseShellBand ? previous.mountedRowIds : mergeIds(shellRows!.map((row) => row.rowId), shellNavigationRows!.map((row) => row.rowId));
+    const viewportRowIds = mergeIds(mountedRows.map((row) => row.rowId), mountedNavigationRows.map((row) => row.rowId));
+    this.#lastMountedRange = reuseShellBand ? this.#lastMountedRange : [shellRows![0]?.y ?? 0, shellRows!.at(-1) ? shellRows!.at(-1)!.y + shellRows!.at(-1)!.height : 0];
+    const { mountedSignalIds } = classifyMountedRows(mountedRows);
+    const shellMetadata = reuseShellBand
+      ? { timingRowIds: previous.timingRowIds, frozenLabelRowIds: previous.frozenLabelRowIds }
+      : classifyMountedRows(shellRows!);
+    const pinnedRows = reuseShellBand
+      ? { rowLayout: previous.rowLayout, navigationRowLayout: previous.navigationRowLayout, pinnedRowIds: previous.stickyRowIds ?? [] }
+      : projectPinnedRows({ visibleRowLayout: layout.visibleRows, rowLayout: layout.navigationRows, navigationRowLayout: navigationLayout.navigationRows, stickyRowIds: request.viewport.stickyRowIds ?? [], viewportStartY: request.viewport.viewportStartY, leadingHeaderHeight: layout.groupHeaders[0]?.height ?? 0 });
     return {
-      ...request.previous!,
+      ...previous,
       revision: request.snapshot.revision,
       mountedRowIds,
-      leftRowIds: mountedNavigationRows.map((row) => row.rowId),
-      frozenLabelRowIds,
-      timingRowIds,
-      mountedGroupHeaderIds: mountedGroupHeaders.map((row) => row.rowId),
-      mountedLeftGroupHeaderIds: mountedLeftGroupHeaders.map((row) => row.rowId),
+      viewportRowIds,
+      leftRowIds: reuseShellBand ? previous.leftRowIds : shellNavigationRows!.map((row) => row.rowId),
+      frozenLabelRowIds: shellMetadata.frozenLabelRowIds,
+      timingRowIds: shellMetadata.timingRowIds,
+      mountedGroupHeaderIds,
+      mountedLeftGroupHeaderIds,
       mountedSignalIds,
       rowLayout: pinnedRows.rowLayout,
       navigationRowLayout: pinnedRows.navigationRowLayout,
@@ -312,10 +337,24 @@ export class DefaultProjectionService implements ProjectionService {
       signalTreeTypeFilter: request.signalTreeTypeFilter ?? "all",
       matchingSignalCount: navigationLayout.matchingSignalCount,
       waveSignalIds: [],
+      pinnedRowIds: request.viewport.pinnedRowIds,
+      stickyRowIds: request.viewport.stickyRowIds ?? [],
+      shellViewport,
       transform: request.previous!.transform,
       collapsedGroupIds: request.previous!.collapsedGroupIds,
     };
   }
+}
+
+function sameVerticalWindow(left: VirtualizationWindow, right: VirtualizationWindow): boolean {
+  return left.viewportStartY === right.viewportStartY
+    && left.viewportEndY === right.viewportEndY
+    && left.overscanBefore === right.overscanBefore
+    && left.overscanAfter === right.overscanAfter
+    && left.pinnedRowIds.length === right.pinnedRowIds.length
+    && left.pinnedRowIds.every((id, index) => id === right.pinnedRowIds[index])
+    && (left.stickyRowIds ?? []).length === (right.stickyRowIds ?? []).length
+    && (left.stickyRowIds ?? []).every((id, index) => id === (right.stickyRowIds ?? [])[index]);
 }
 
 function classifyMountedRows(rows: readonly RowLayoutEntry[]): { readonly mountedSignalIds: readonly SignalId[]; readonly timingRowIds: readonly RowLayoutEntry["rowId"][]; readonly frozenLabelRowIds: readonly RowLayoutEntry["rowId"][] } {

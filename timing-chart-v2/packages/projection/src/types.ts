@@ -44,6 +44,11 @@ export interface RenderProjection {
   readonly navigationRowLayout: readonly RowLayoutEntry[];
   readonly visibleRowIds: readonly RowId[];
   readonly mountedRowIds: readonly RowId[];
+  /** Exact viewport candidates; shell rows may be retained in a wider stable mount band. */
+  readonly viewportRowIds?: readonly RowId[];
+  /** Changes only when the bounded DOM row-shell mount band is rebuilt. */
+  readonly shellBandRevision?: number;
+  readonly shellViewport?: VirtualizationWindow;
   readonly leftRowIds: readonly RowId[];
   readonly frozenLabelRowIds: readonly RowId[];
   readonly timingRowIds: readonly RowId[];
@@ -64,6 +69,8 @@ export interface RenderProjection {
   readonly matchingSignalCount: number;
   readonly transform: ViewTransform;
   readonly collapsedGroupIds: readonly GroupId[];
+  readonly pinnedRowIds?: readonly RowId[];
+  readonly stickyRowIds?: readonly RowId[];
 }
 
 export interface VirtualizationWindow {
@@ -80,6 +87,8 @@ export interface ProjectionRequest {
   readonly snapshot: CanonicalSnapshot;
   readonly changeSet: ChangeSet;
   readonly viewport: VirtualizationWindow;
+  /** Stable lightweight row-shell window; waveform owners still use `viewport`. */
+  readonly shellViewport?: VirtualizationWindow;
   readonly previous?: RenderProjection;
   readonly collapsedGroupIds?: readonly GroupId[];
   readonly signalTreeFilter?: string;
