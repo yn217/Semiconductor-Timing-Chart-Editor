@@ -6,7 +6,7 @@ import { listHandshakeMissingCaseSuggestions, validateCanonicalDocument, type Ca
 import { buildTypedProposal, buildTypedProposalBatch, deterministicMockAIProposalProvider, type AIProposal, type AIProposalProvider, type AIViewIntent } from "./ai-proposal-provider.js";
 import { probeAIBridge, useAIBridgeClient, type AIBridgeStatus, type AIBridgeViewOperation, type AISelectionEntityType } from "./ai-bridge-client.js";
 import { buildAIClientConfig, buildAIMcpEndpoint, type AIClientSetup } from "./ai-connection-guide.js";
-import { buildAIContextSummary, type AIContextScope } from "./ai-context-summary.js";
+import { buildAIContextSummary, resolveAIContextSelection, type AIContextScope } from "./ai-context-summary.js";
 
 function proposalValidationProblems(document: CanonicalDocument, proposal: AIProposal): readonly DocumentProblem[] {
   if (proposal.kind === "view-only") return proposal.commands.length === 0 && proposal.viewIntent ? [] : [{ code: "AI_VIEW_INTENT_INVALID", path: "$.ai.proposal", message: "View-only proposals cannot contain document commands." }];
@@ -187,7 +187,8 @@ export function AIOperationPanel({ document, validationDiagnostics, documentEpoc
   const [activityLog, setActivityLog] = useState<readonly ActivityEntry[]>([]);
   const [selectedMissingCases, setSelectedMissingCases] = useState<ReadonlySet<string>>(() => new Set());
   const missingCaseSuggestions = useMemo(() => scenarioModel && activeScenarioId ? listHandshakeMissingCaseSuggestions(scenarioModel, activeScenarioId) : [], [scenarioModel, activeScenarioId]);
-  const contextSummary = buildAIContextSummary({ document, mode, scope, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, range });
+  const liveSelection = resolveAIContextSelection(document, { selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId });
+  const contextSummary = buildAIContextSummary({ document, mode, scope, ...liveSelection, range });
   const previousDocumentEpochRef = useRef(documentEpoch);
   // Activity entries outlive the retention window: the retained array is a
   // view, not an identity allocator.  Keeping the sequence outside the
@@ -237,9 +238,9 @@ export function AIOperationPanel({ document, validationDiagnostics, documentEpoc
   };
   const buildPreview = (queryOverride?: string, actor: ActivityEntry["actor"] = "user") => {
     const effectiveQuery = queryOverride ?? query;
-    let result = provider.propose({ document, revision, query: effectiveQuery, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, range });
+    let result = provider.propose({ document, revision, query: effectiveQuery, ...liveSelection, range });
     if (result.ok) {
-      const violation = result.proposal.commands.map((proposedCommand) => scopeViolationMessage(scope, document, proposedCommand, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId)).find((message) => message !== undefined);
+      const violation = result.proposal.commands.map((proposedCommand) => scopeViolationMessage(scope, document, proposedCommand, liveSelection.selectedSignalId, liveSelection.selectedGroupId, liveSelection.selectedAnnotationId, liveSelection.selectedTransactionId)).find((message) => message !== undefined);
       if (violation) result = { ok: false, message: violation };
     }
     if (!result.ok) { onDiagnostic?.({ code: "AI_PROPOSAL_UNAVAILABLE", path: "$.ai.query", message: result.message, severity: "error", operation: "ai.proposal.preview", operationLabel: "Build AI proposal", source: "ai", stage: "validate", recommendation: "Adjust the request or select the required editor object, then preview again.", detail: "ai-proposal:preview" }); setPreview(undefined); setValidatedRevision(undefined); setStatus(result.message); logActivity("read-only", effectiveQuery, `Preview unavailable · ${result.message}`, actor); return result; }
@@ -327,7 +328,7 @@ export function AIOperationPanel({ document, validationDiagnostics, documentEpoc
   const onProposeTypedEdit = (tool: string, args: Readonly<Record<string, unknown>>): { readonly error: string } | { readonly summary: string; readonly baseRevision: number; readonly kind: string; readonly requiresApproval: true; readonly message: string } => {
     let result = buildTypedProposal(document, revision, tool, args);
     if (result.ok) {
-      const violation = result.proposal.commands.map((proposedCommand) => scopeViolationMessage(scope, document, proposedCommand, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId)).find((message) => message !== undefined);
+      const violation = result.proposal.commands.map((proposedCommand) => scopeViolationMessage(scope, document, proposedCommand, liveSelection.selectedSignalId, liveSelection.selectedGroupId, liveSelection.selectedAnnotationId, liveSelection.selectedTransactionId)).find((message) => message !== undefined);
       if (violation) result = { ok: false, message: violation };
     }
     if (!result.ok) return { error: result.message };
@@ -344,7 +345,7 @@ export function AIOperationPanel({ document, validationDiagnostics, documentEpoc
     if (baseRevision !== revision) return { error: `Stale proposal baseRevision ${baseRevision}; current document revision is ${revision}. Regenerate the proposal from the current document.` };
     const result = buildTypedProposalBatch(document, revision, operations);
     if (!result.ok) return { error: result.message };
-    const violation = result.proposal.commands.map((proposedCommand) => scopeViolationMessage(scope, document, proposedCommand, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId)).find((message) => message !== undefined);
+    const violation = result.proposal.commands.map((proposedCommand) => scopeViolationMessage(scope, document, proposedCommand, liveSelection.selectedSignalId, liveSelection.selectedGroupId, liveSelection.selectedAnnotationId, liveSelection.selectedTransactionId)).find((message) => message !== undefined);
     if (violation) return { error: violation };
     onDiagnostic?.(undefined);
     setPreview(result.proposal);
@@ -382,12 +383,12 @@ export function AIOperationPanel({ document, validationDiagnostics, documentEpoc
     return {
       zoom: getZoom?.() ?? 1,
       cycleCount: document.timeline.cycleCount,
-      selection: { selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId },
+      selection: liveSelection,
       elementMap,
     };
   };
-  const onGetViewContext = () => ({ mode, range, zoom: getZoom?.(), selection: { selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId } });
-  const bridgeStatus = useAIBridgeClient(bridgeEnabled, bridgeHost, bridgePort, bridgeToken, { document, validationDiagnostics, documentEpoch, revision, mode, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, onViewIntent, onViewOperation, onSetSelection, onRevealEntity, onProposeEdit, onProposeTypedEdit, onSubmitProposal, onGetViewportSnapshot, onGetViewContext });
+  const onGetViewContext = () => ({ mode, range, zoom: getZoom?.(), selection: liveSelection });
+  const bridgeStatus = useAIBridgeClient(bridgeEnabled, bridgeHost, bridgePort, bridgeToken, { document, validationDiagnostics, documentEpoch, revision, mode, ...liveSelection, onViewIntent, onViewOperation, onSetSelection, onRevealEntity, onProposeEdit, onProposeTypedEdit, onSubmitProposal, onGetViewportSnapshot, onGetViewContext });
   useEffect(() => { onBridgeStatusChange?.(bridgeStatus); }, [bridgeStatus, onBridgeStatusChange]);
 
   return <section className="ai-operation-panel" data-testid="ai-operation-panel">

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAIContextSummary } from "../../apps/editor/src/ai-context-summary.js";
+import { buildAIContextSummary, resolveAIContextSelection } from "../../apps/editor/src/ai-context-summary.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 describe("AI context summary", () => {
@@ -35,5 +35,15 @@ describe("AI context summary", () => {
       range: undefined,
     });
     expect(summary).toMatchObject({ view: "Combined", selection: "Signal: DATA (hidden)", range: "None", scope: "Current View" });
+  });
+
+  it("removes stale stable IDs before they can be sent to a provider or bridge", () => {
+    const document = canonicalFixture();
+    expect(resolveAIContextSelection(document, {
+      selectedSignalId: "deleted-signal" as typeof document.signals[number]["id"],
+      selectedGroupId: "deleted-group" as typeof document.signalGroups[number]["id"],
+      selectedAnnotationId: "deleted-annotation",
+      selectedTransactionId: "deleted-transaction",
+    })).toEqual({ selectedSignalId: undefined, selectedGroupId: undefined, selectedAnnotationId: undefined, selectedTransactionId: undefined });
   });
 });
