@@ -49,7 +49,7 @@ export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "
   const previousModeRef = useRef<"Cycle" | "Transaction" | "Split">(viewMode);
   const activeModeRef = useRef(viewMode);
   activeModeRef.current = viewMode;
-  const zoomStateFrameRef = useRef<number | undefined>(undefined);
+  const cancelZoomStateRef = useRef<(() => void) | undefined>(undefined);
   const scrollRestoreFrameRef = useRef<number | undefined>(undefined);
   const applyZoomRef = useRef<(zoom: number) => void>(() => undefined);
   const fitSelectionRef = useRef<() => void>(() => undefined);
@@ -58,7 +58,7 @@ export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "
   const navigateToCycleRef = useRef<(cycle: number) => void>(() => undefined);
 
   useEffect(() => () => {
-    if (zoomStateFrameRef.current !== undefined) cancelAnimationFrame(zoomStateFrameRef.current);
+    cancelZoomStateRef.current?.();
     if (scrollRestoreFrameRef.current !== undefined) cancelAnimationFrame(scrollRestoreFrameRef.current);
   }, []);
 
@@ -143,15 +143,20 @@ export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "
           const activeMode = activeModeRef.current;
           modePresentationRef.current.setZoom(activeMode, nextZoom);
           context.viewMetrics.update({ zoom: nextZoom, viewportWidth: context.viewport.clientWidth });
-          // The DOM presentation is already updated synchronously by the
-          // zoom controller. Defer the non-critical React status/ribbon state
-          // to the next frame so large documents can paint the interaction
-          // before rebuilding the owner tree.
-          if (zoomStateFrameRef.current !== undefined) cancelAnimationFrame(zoomStateFrameRef.current);
-          zoomStateFrameRef.current = requestAnimationFrame(() => {
-            zoomStateFrameRef.current = undefined;
-            startTransition(() => setZoomState(nextZoom));
+          // The zoom controller publishes the DOM presentation in the next
+          // frame. Defer the non-critical React status/ribbon state until
+          // after that frame has painted (#175: a frame callback queued from
+          // the same input would run in the zoom frame itself), so large
+          // documents paint the interaction before rebuilding the owner tree.
+          cancelZoomStateRef.current?.();
+          let timer: ReturnType<typeof setTimeout> | undefined;
+          const frame = requestAnimationFrame(() => {
+            timer = setTimeout(() => {
+              cancelZoomStateRef.current = undefined;
+              startTransition(() => setZoomState(nextZoom));
+            }, 0);
           });
+          cancelZoomStateRef.current = () => { cancelAnimationFrame(frame); if (timer !== undefined) clearTimeout(timer); };
         },
       });
       applyZoomRef.current = (next) => { zoomRef.current = applyZoom(next); };
