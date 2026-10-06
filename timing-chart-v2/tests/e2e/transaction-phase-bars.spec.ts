@@ -37,6 +37,32 @@ for (const width of [1280, 1672]) test(`Transaction phases follow semantic durat
   await page.screenshot({ path: resolve(visualArtifactRoot(), `transaction-phases-${width}.png`) });
 });
 
+test("Transaction phase selection is accessible, visible, and view-only", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await openTransactionSample(page);
+
+  const phase = page.locator("[data-phase-select][data-phase-name='Read Data'][data-phase-start='20'][data-phase-end='50']");
+  const visualSegment = page.locator(".transaction-phases small[data-phase-selected='true'][title^='Read Data']");
+  const before = {
+    revision: await host.getAttribute("data-canonical-revision"),
+    history: await page.getByTestId("history-status").textContent(),
+    dirty: await page.getByTestId("dirty-status").textContent(),
+  };
+  await phase.focus();
+  await expect(phase).toHaveAttribute("aria-pressed", "false");
+  await page.keyboard.press("Space");
+  await expect(phase).toHaveAttribute("aria-pressed", "true");
+  await expect(phase).toHaveAttribute("data-phase-selected", "true");
+  await expect(visualSegment).toBeVisible();
+  expect(await visualSegment.evaluate((element) => getComputedStyle(element).boxShadow)).not.toBe("none");
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(before.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+});
+
 test("Phase-protected Transaction edge resize is rejected without a canonical change", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");
