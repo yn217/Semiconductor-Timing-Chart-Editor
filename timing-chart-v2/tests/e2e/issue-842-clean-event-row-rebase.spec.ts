@@ -10,7 +10,6 @@ test("clean mounted EventRow rebases through external replacement and Undo/Redo"
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const editor = page.getByTestId("signal-editor");
   const row = editor.locator("form.event-row[data-event-start='3']");
-  await row.getByRole("button", { name: /Edit transition/ }).click();
   await expect(row.getByLabel("Comment 3")).toHaveValue("");
 
   await editor.getByTestId("event-import-action").click();
@@ -24,7 +23,7 @@ test("clean mounted EventRow rebases through external replacement and Undo/Redo"
   await expect(row.getByLabel("Value 3")).toHaveValue("X");
   await expect(row.getByLabel("Comment 3")).toHaveValue("external canonical update");
   await expect(row.getByTestId("event-row-draft-conflict-3")).toHaveCount(0);
-  await expect(row.getByRole("button", { name: "Save" })).toBeDisabled();
+  await expect(row.getByRole("button", { name: "Apply" })).toHaveCount(0);
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();

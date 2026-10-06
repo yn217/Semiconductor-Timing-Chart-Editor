@@ -480,16 +480,16 @@ test("inserts cycles with full semantic ripple and one Undo entry", async ({ pag
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(page.getByTestId("cycle-ruler").locator("[data-cycle='25']")).toHaveCount(1);
   const editor = page.getByTestId("signal-editor");
-  await expect(editor.getByTestId("event-row-start-5")).toHaveText("5");
-  await expect(editor.getByTestId("event-row-start-9")).toHaveText("9");
+  await expect(editor.getByTestId("event-row-start-5")).toHaveValue("5");
+  await expect(editor.getByTestId("event-row-start-9")).toHaveValue("9");
   const countersAfter = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   expect(countersAfter.waveDromRenders).toBe(countersBefore.waveDromRenders + 8);
   expect(countersAfter.localGeometryBuilds).toBe(countersBefore.localGeometryBuilds + 8);
 
   await page.getByTestId("editor-undo").click();
   await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 2");
-  await expect(editor.getByTestId("event-row-start-3")).toHaveText("3");
-  await expect(editor.getByTestId("event-row-start-7")).toHaveText("7");
+  await expect(editor.getByTestId("event-row-start-3")).toHaveValue("3");
+  await expect(editor.getByTestId("event-row-start-7")).toHaveValue("7");
 });
 
 test("allows ordinary timeline insertion with the default uncontrolled periodic Clock", async ({ page }) => {
@@ -584,8 +584,8 @@ test("preserves a timeline transform exactly through Save/Open", async ({ page }
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const editor = page.getByTestId("signal-editor");
-  await expect(editor.getByTestId("event-row-start-5")).toHaveText("5");
-  await expect(editor.getByTestId("event-row-start-9")).toHaveText("9");
+  await expect(editor.getByTestId("event-row-start-5")).toHaveValue("5");
+  await expect(editor.getByTestId("event-row-start-9")).toHaveValue("9");
 });
 
 test("deletes a half-open range and preserves the active value at the join", async ({ page }) => {
@@ -600,9 +600,9 @@ test("deletes a half-open range and preserves the active value at the join", asy
   await page.getByRole("button", { name: "Delete range" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const editor = page.getByTestId("signal-editor");
-  await expect(editor.getByTestId("event-row-start-2")).toHaveText("2");
-  await expect(editor.getByTestId("event-row-value-2")).toHaveText("1");
-  await expect(editor.getByTestId("event-row-start-5")).toHaveText("5");
+  await expect(editor.getByTestId("event-row-start-2")).toHaveValue("2");
+  await expect(editor.getByLabel("Value 2")).toHaveValue("1");
+  await expect(editor.getByTestId("event-row-start-5")).toHaveValue("5");
   // Deleting a range shrinks cycleCount from 24 to 22; the new terminal boundary at cycle 22 must
   // resolve and render, not be silently omitted the way an unresolvable terminal geometry point once
   // caused (see ruler-terminal-boundary.spec.ts).
@@ -1136,10 +1136,10 @@ test("duplicates the selected cycle state range at a destination in one commit",
   await page.getByRole("button", { name: "Duplicate to" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const editor = page.getByTestId("signal-editor");
-  await expect(editor.getByTestId("event-row-start-9")).toHaveText("9");
-  await expect(editor.getByTestId("event-row-value-9")).toHaveText("1");
-  await expect(editor.getByTestId("event-row-start-10")).toHaveText("10");
-  await expect(editor.getByTestId("event-row-value-10")).toHaveText("0");
+  await expect(editor.getByTestId("event-row-start-9")).toHaveValue("9");
+  await expect(editor.getByLabel("Value 9")).toHaveValue("1");
+  await expect(editor.getByTestId("event-row-start-10")).toHaveValue("10");
+  await expect(editor.getByLabel("Value 10")).toHaveValue("0");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(page.getByTestId("cycle-ruler").locator("[data-cycle='25']")).toHaveCount(1);
 });
@@ -1155,10 +1155,10 @@ test("moves the selected range by cycle permutation without changing timeline le
   await page.getByRole("button", { name: "Move to" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const editor = page.getByTestId("signal-editor");
-  await expect(editor.getByTestId("event-row-start-2")).toHaveText("2");
-  await expect(editor.getByTestId("event-row-start-5")).toHaveText("5");
-  await expect(editor.getByTestId("event-row-start-9")).toHaveText("9");
-  await expect(editor.getByTestId("event-row-start-10")).toHaveText("10");
+  await expect(editor.getByTestId("event-row-start-2")).toHaveValue("2");
+  await expect(editor.getByTestId("event-row-start-5")).toHaveValue("5");
+  await expect(editor.getByTestId("event-row-start-9")).toHaveValue("9");
+  await expect(editor.getByTestId("event-row-start-10")).toHaveValue("10");
   await expect(page.getByTestId("cycle-ruler").locator("[data-cycle='23']")).toHaveCount(1);
   // Moving a range within the timeline does not change cycleCount (still 24); the terminal boundary
   // tick at cycle 24 must resolve and render like every other tick.

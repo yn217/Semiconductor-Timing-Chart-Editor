@@ -37,9 +37,8 @@ test("uses HDL sized-literal truncation consistently through edit, Undo/Redo and
   })).toBe(2);
 
   const eventRow = page.locator("form.event-row[data-event-start='0']");
-  await eventRow.getByRole("button", { name: "Edit transition at cycle 0" }).click();
   await eventRow.getByLabel("Value 0").fill("4'hFF");
-  await eventRow.getByRole("button", { name: "Save", exact: true }).click();
+  await eventRow.getByRole("button", { name: "Apply", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(value0).toHaveText("0xF");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");

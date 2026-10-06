@@ -49,9 +49,8 @@ test("Insert Ribbon and Left Tree Add menu never offer Pulse; Event is still a r
   const editor = page.getByTestId("signal-editor");
   await expect(editor).toContainText("EVENT_9 · Event");
   const eventFirstRow = editor.locator("form.event-row").first();
-  await eventFirstRow.getByRole("button", { name: /Edit transition/ }).click();
   await eventFirstRow.getByLabel("Value 0").fill("RISE");
-  await eventFirstRow.getByRole("button", { name: "Save" }).click();
+  await eventFirstRow.getByRole("button", { name: "Apply" }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
 
   await page.getByTestId("editor-undo").click();
@@ -92,9 +91,8 @@ test("loads, edits, persists and exports a legacy Pulse Signal without breaking 
   // domain (0/1/X/Z/D/U) -- the Value field is a real <select>, not free
   // text, so this is `selectOption`, not `fill`.
   const pulseFirstRow = editor.locator("form.event-row").first();
-  await pulseFirstRow.getByRole("button", { name: /Edit transition/ }).click();
   await pulseFirstRow.getByLabel("Value 0").selectOption("1");
-  await pulseFirstRow.getByRole("button", { name: "Save" }).click();
+  await pulseFirstRow.getByRole("button", { name: "Apply" }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await page.getByTestId("editor-undo").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");

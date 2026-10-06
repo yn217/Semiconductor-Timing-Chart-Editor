@@ -10,7 +10,6 @@ test("recycled Event Table rows keep the visible edit bound to its Signal and tr
   await page.getByRole("treeitem", { name: /REQUEST/ }).first().click();
   await page.getByRole("tab", { name: "Signal", exact: true }).click();
   const requestRow = page.locator("form.event-row[data-event-start='3']");
-  await requestRow.getByRole("button", { name: /Edit transition/ }).click();
   await requestRow.getByLabel("Comment 3").fill("draft stays with REQUEST cycle 3");
 
   const eventTable = page.locator(".event-table-scroll");
@@ -19,12 +18,12 @@ test("recycled Event Table rows keep the visible edit bound to its Signal and tr
 
   await page.getByRole("treeitem", { name: /READY/ }).first().click();
   await expect(page.locator(".editor-selection")).toHaveText("READY · Signal");
-  await expect(page.locator("form.event-row[data-event-start='3'] input[aria-label='Comment 3']")).toHaveCount(0);
+  await expect.poll(() => page.locator(".event-table input[aria-label^='Comment']").evaluateAll((inputs) => inputs.some((input) => (input as HTMLInputElement).value === "draft stays with REQUEST cycle 3"))).toBe(false);
 
   await page.getByRole("treeitem", { name: /REQUEST/ }).first().click();
   await expect(page.locator(".editor-selection")).toHaveText("REQUEST · Signal");
   const restoredRow = page.locator("form.event-row[data-event-start='3']");
-  await expect(restoredRow.getByRole("button", { name: /Edit transition/ })).toBeVisible();
-  await expect(restoredRow.getByLabel("Comment 3")).toHaveCount(0);
+  await expect(restoredRow.getByRole("button", { name: "Apply" })).toHaveCount(0);
+  await expect(restoredRow.getByLabel("Comment 3")).not.toHaveValue("draft stays with REQUEST cycle 3");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
