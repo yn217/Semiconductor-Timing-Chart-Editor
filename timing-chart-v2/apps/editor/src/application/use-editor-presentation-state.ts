@@ -14,7 +14,8 @@ export function useEditorPresentationState(input: { readonly hostRef: MutableRef
   const snapEnabledRef = useRef(true);
   snapEnabledRef.current = snapEnabled;
   const [rulerEnabled, setRulerEnabled] = useState(true);
-  const [minimapEnabled, setMinimapEnabled] = useState(true);
+  // CAD/EDA canvases prioritize chart area; MiniMap remains available via View when requested.
+  const [minimapEnabled, setMinimapEnabled] = useState(false);
   const [showSignalNames, setShowSignalNames] = useState(true);
   const [showRoles, setShowRoles] = useState(true);
   const [showAnnotations, setShowAnnotations] = useState(true);

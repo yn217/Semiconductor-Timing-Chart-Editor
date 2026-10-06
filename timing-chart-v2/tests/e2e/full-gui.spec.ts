@@ -550,6 +550,7 @@ test("filters the Signal/Group tree by display name, path, role, or group withou
 test("View controls expose geometry-backed Grid/Snap and a pannable MiniMap viewport", async ({ page }) => {
   await ready(page);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("view-panel-minimap").click();
   const grid = page.getByTestId("geometry-grid");
   await expect(grid).toHaveAttribute("data-grid-enabled", "true");
   await expect(grid.locator("[data-role='geometry-grid-line']")).toHaveCount(25);
@@ -577,13 +578,14 @@ test("View controls expose functional Ruler and MiniMap visibility toggles witho
   };
   await page.getByTestId("ruler-toggle").uncheck();
   const minimapToggle = page.getByTestId("view-panel-minimap");
-  await minimapToggle.click();
   await expect(minimapToggle).toHaveAttribute("aria-pressed", "false");
-  await expect(page.getByTestId("cycle-ruler")).toBeHidden();
   await expect(page.getByTestId("minimap")).toBeHidden();
+  await minimapToggle.click();
+  await expect(minimapToggle).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("cycle-ruler")).toBeHidden();
+  await expect(page.getByTestId("minimap")).toBeVisible();
   await page.screenshot({ path: ".tmp_gui_reference/gui-batch-view-toggles-1280x720.png", animations: "disabled" });
   await page.getByTestId("ruler-toggle").check();
-  await minimapToggle.click();
   await expect(minimapToggle).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("cycle-ruler")).toBeVisible();
   await expect(page.getByTestId("minimap")).toBeVisible();
@@ -597,6 +599,8 @@ test("View controls expose functional Ruler and MiniMap visibility toggles witho
 
 test("MiniMap renders a derived waveform overview for every canonical row without mutation", async ({ page }) => {
   await ready(page);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("view-panel-minimap").click();
   const host = page.getByTestId("cycle-surface");
   const surface = host.locator("[data-role='timing-chart-surface']");
   const before = {
@@ -615,6 +619,8 @@ test("MiniMap renders a derived waveform overview for every canonical row withou
 
 test("MiniMap viewport drag pans the real viewport without canonical or render mutation", async ({ page }) => {
   await ready(page);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("view-panel-minimap").click();
   const host = page.getByTestId("cycle-surface");
   const viewport = page.getByTestId("cycle-viewport");
   const minimap = page.getByTestId("minimap");
