@@ -1,5 +1,10 @@
 /* Waveform ownership boundary. */
 
+/* #175: the renderer host publishes --presentation-x-scale for readers of the
+   host; non-inherited so a Zoom step does not restyle the whole surface. Wave
+   text reads --wave-label-x-scale from its own layer instead. */
+@property --presentation-x-scale { syntax: "<number>"; inherits: false; initial-value: 1; }
+
 
 /* Migrated from legacy.css; 8 complete rule blocks retain their declarations. */
 
@@ -13,7 +18,7 @@
 
 .surface-host [data-role="wave-owner"][data-wave-error]::after { position: absolute; inset: 4px auto 4px 6px; display: flex; align-items: center; max-width: min(240px, calc(100% - 12px)); overflow: hidden; padding: 0 8px; border: 1px solid #d6a04a; border-radius: 3px; background: #fff8e8; color: #704b12; content: "Waveform unavailable"; font: 11px/1.2 system-ui, sans-serif; text-overflow: ellipsis; white-space: nowrap; }
 
-.surface-host [data-role="stable-waveform-surface"] svg text { transform-box: fill-box; transform-origin: 50% 50%; scale: calc(1 / var(--presentation-x-scale, 1)) 1; }
+.surface-host [data-role="stable-waveform-surface"] svg text { transform-box: fill-box; transform-origin: 50% 50%; scale: calc(1 / var(--wave-label-x-scale, 1)) 1; }
 
 .editor-shell .surface-host [data-role="wave-owner"] { width: var(--wave-width, 640px); }
 

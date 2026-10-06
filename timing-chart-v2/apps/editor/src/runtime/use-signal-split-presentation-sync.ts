@@ -1,4 +1,5 @@
 import { timelineScrollOwner } from "./timeline-scroll-owner.js";
+import { publishWaveLabelScale } from "./timeline-presentation-refresh.js";
 import { useEffect } from "react";
 import type { TimelineSurfaceRuntimeInput } from "./timeline-surface-controller.js";
 export function useSignalSplitPresentationSync(input: TimelineSurfaceRuntimeInput): void {
@@ -31,6 +32,7 @@ export function useSignalSplitPresentationSync(input: TimelineSurfaceRuntimeInpu
         const scale = host.current.style.getPropertyValue("--presentation-x-scale");
         if (scale) {
           hostLower.current.style.setProperty("--presentation-x-scale", scale);
+          publishWaveLabelScale(hostLower.current, Number(scale));
         }
       }
     };
