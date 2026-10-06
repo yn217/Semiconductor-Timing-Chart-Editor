@@ -1,6 +1,6 @@
 import type { RenderProjection, RowLayoutEntry } from "@timing-chart-v2/projection";
 import { createLeftTreeIcon, createRoleBadge } from "./tree-row-dom.js";
-import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnosticSummary, RendererDiagnostics, RendererRowIdentitySnapshot, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveMountBatchItem, WaveMountRequest, WavePrefetchRequest, WaveSignalId } from "./types.js";
+import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnosticSummary, RendererDiagnostics, RendererRowIdentitySnapshot, ScenarioDifferenceOverlayPrimitive, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveMountBatchItem, WaveMountRequest, WavePrefetchRequest, WaveSignalId } from "./types.js";
 import { isWavePrefetchModeEligible, WavePrefetchLifecycle } from "./wave-prefetch-lifecycle.js";
 import { applyTextStyle, parseTextStyle, renderOverlay } from "./annotation-overlay-dom.js";
 import { groupBackgroundColor } from "./group-background.js";
@@ -56,6 +56,7 @@ interface Layers {
   frozen: HTMLElement | undefined;
   readonly timing: HTMLElement;
   readonly waves: HTMLElement;
+  readonly scenarioDifferences: HTMLElement;
   readonly overlays: HTMLElement;
   readonly interactive: HTMLElement;
 }
@@ -78,6 +79,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   readonly #connectedWaveOwnerIds = new Set<WaveSignalId>();
   readonly #recentWaveSignalIds: WaveSignalId[] = [];
   readonly #overlayOwners = new Map<string, HTMLElement>();
+  readonly #scenarioDifferenceOwners = new Map<string, HTMLElement>();
   readonly #overlaySignatures = new Map<string, string>();
   readonly #edgeCounterOwners = new Map<string, HTMLElement>();
   readonly #dirtyWaves = new Set<WaveSignalId>();
@@ -132,6 +134,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     const frozen = this.#cyclePresentationActive(host) ? element(host, "div", "frozen-label-rows") : undefined;
     const timing = element(host, "div", "timing-semantic-rows");
     const waves = element(host, "div", "stable-waveform-surface");
+    const scenarioDifferences = element(host, "div", "scenario-difference-overlay-surface");
     const overlays = element(host, "div", "annotation-overlay-surface");
     const interactive = element(host, "div", "interactive-overlay-surface");
     left.setAttribute("role", "tree");
@@ -140,12 +143,12 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     // #625: the time-domain layers live in one TimelineViewport wrapper (`display: contents` except in Cycle mode, where CSS makes
     // it the horizontal scroll owner so the fixed columns are never inside a horizontal overflow box).
     const timelineViewport = element(host, "div", "timeline-viewport");
-    for (const layer of [timing, waves, overlays, interactive]) timelineViewport.append(layer);
+    for (const layer of [timing, waves, scenarioDifferences, overlays, interactive]) timelineViewport.append(layer);
     root.append(left);
     if (frozen) root.append(frozen);
     root.append(timelineViewport);
     host.replaceChildren(root);
-    this.#layers = { root, left, frozen, timing, waves, overlays, interactive };
+    this.#layers = { root, left, frozen, timing, waves, scenarioDifferences, overlays, interactive };
     Object.defineProperty(root, "requestPerformanceSnapshot", { configurable: true, value: () => this.diagnostics() });
     Object.defineProperty(root, "requestRowIdentitySnapshot", { configurable: true, value: () => this.rowIdentitySnapshot() });
     this.#publishCounters();
@@ -602,6 +605,34 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#publishCounters();
   }
 
+  updateScenarioDifferences(primitives: readonly ScenarioDifferenceOverlayPrimitive[]): void {
+    const layer = this.#layers?.scenarioDifferences;
+    if (!layer) throw new Error("Timing chart renderer must be mounted before Scenario comparison overlay update.");
+    const active = new Set(primitives.map((primitive) => primitive.key));
+    for (const [key, owner] of this.#scenarioDifferenceOwners) {
+      if (active.has(key)) continue;
+      owner.remove();
+      this.#scenarioDifferenceOwners.delete(key);
+    }
+    for (const primitive of primitives) {
+      let owner = this.#scenarioDifferenceOwners.get(primitive.key);
+      if (!owner) {
+        owner = element(layer.ownerDocument, "div", "scenario-difference-overlay");
+        owner.dataset.role = "scenario-difference-overlay";
+        owner.dataset.scenarioDifferenceId = primitive.key;
+        owner.setAttribute("aria-hidden", "true");
+        this.#scenarioDifferenceOwners.set(primitive.key, owner);
+        layer.append(owner);
+      }
+      owner.dataset.signalId = primitive.signalId;
+      owner.dataset.sourceStart = String(primitive.sourceStart);
+      owner.dataset.sourceEnd = String(primitive.sourceEnd);
+      owner.style.transform = `translate3d(${primitive.x}px, ${primitive.y}px, 0)`;
+      owner.style.width = `${primitive.width}px`;
+      owner.style.height = `${primitive.height}px`;
+    }
+  }
+
   patchOverlays(primitives: readonly AnnotationOverlayPrimitive[]): number {
     const layers = this.#layers;
     if (!layers) throw new Error("Timing chart renderer must be mounted before overlay update.");
@@ -693,6 +724,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#timingRows.clear();
     this.#overlayOwners.clear();
     this.#overlaySignatures.clear();
+    this.#scenarioDifferenceOwners.clear();
     this.#edgeCounterOwners.clear();
     this.#rowY.clear();
     this.#canonicalSignalIdsSource = undefined;

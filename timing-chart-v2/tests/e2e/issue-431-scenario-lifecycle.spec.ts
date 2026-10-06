@@ -48,6 +48,17 @@ test("Scenario v3 switches as view state and management survives Undo/Redo and S
   await page.getByTestId("scenario-compare-toggle").click();
   await expect(page.getByTestId("scenario-comparison")).toBeVisible();
   await expect(page.locator(`[data-scenario-difference-signal-id='${valueSignalId}']`)).toBeVisible();
+  const differenceOverlay = page.locator(`[data-role='scenario-difference-overlay'][data-signal-id='${valueSignalId}']`).first();
+  await expect(differenceOverlay).toBeVisible();
+  await expect(differenceOverlay).not.toHaveAttribute("data-annotation-id", /.*/);
+  expect(Number.parseFloat(await differenceOverlay.evaluate((element) => getComputedStyle(element).width))).toBeGreaterThan(0);
+  const overlayStart = await differenceOverlay.getAttribute("data-source-start");
+  const overlayEnd = await differenceOverlay.getAttribute("data-source-end");
+  expect(Number(overlayEnd)).toBeGreaterThan(Number(overlayStart));
+  await page.getByTestId("scenario-compare-toggle").click();
+  await expect(page.locator("[data-role='scenario-difference-overlay']")).toHaveCount(0);
+  await page.getByTestId("scenario-compare-toggle").click();
+  await expect(differenceOverlay).toBeVisible();
   const revealDifference = page.locator(`[data-testid^='scenario-difference-reveal-${valueSignalId}-']`).first();
   await expect(revealDifference).toBeVisible();
   const differenceText = await page.locator(`[data-scenario-difference-signal-id='${valueSignalId}'] > span`).first().innerText();

@@ -4,7 +4,7 @@ import type { RefObject } from "react";
 import { getGestureHint, subscribeGestureHint } from "./runtime/active-gesture-cancellation.js";
 import { cycleUnitWord } from "./transaction-tc.js";
 import type { GroupId, SignalGroup, SignalId, SpacerId } from "@timing-chart-v2/schema";
-import { compareScenarioSignalStreams, type ScenarioDocumentModel, type ScenarioId } from "@timing-chart-v2/schema";
+import { compareScenarioSignalStreams, type ScenarioDocumentModel, type ScenarioId, type ScenarioSignalDifference } from "@timing-chart-v2/schema";
 import { ContextMenuSurface } from "./context-menu-surface.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
 import { EditorIcon } from "./editor-icon.js";
@@ -40,7 +40,7 @@ export function ContextMenuPanel({ contextMenu, hasSelectedClipboard, clipboardA
 
 const VIEW_MODE_TITLE_LABEL: Record<"Cycle" | "Transaction" | "Split", string> = { Cycle: "Cycle View", Transaction: "Transaction View", Split: "Combined View" };
 
-export function MinimalCycleViewTitleBar({ title, dirty, viewMode, scenarios, scenarioModel, activeScenarioId, onScenarioChange, onScenarioEnable, onScenarioRename, onScenarioDuplicate, onScenarioDelete, onRevealScenarioDifference }: {
+export function MinimalCycleViewTitleBar({ title, dirty, viewMode, scenarios, scenarioModel, activeScenarioId, onScenarioChange, onScenarioEnable, onScenarioRename, onScenarioDuplicate, onScenarioDelete, onRevealScenarioDifference, onScenarioComparisonChange }: {
   readonly title: string;
   readonly dirty: boolean;
   readonly viewMode: "Cycle" | "Transaction" | "Split";
@@ -53,6 +53,7 @@ export function MinimalCycleViewTitleBar({ title, dirty, viewMode, scenarios, sc
   readonly onScenarioDuplicate?: (id: ScenarioId) => void;
   readonly onScenarioDelete?: (id: ScenarioId) => void;
   readonly onRevealScenarioDifference?: (signalId: SignalId, range: Readonly<{ start: number; end: number }>) => void;
+  readonly onScenarioComparisonChange?: (differences: readonly ScenarioSignalDifference[]) => void;
 }) {
   // Historical showcase documents may include a view mode in their saved
   // title. Mode is workspace presentation, so do not let that stale suffix
@@ -71,6 +72,7 @@ export function MinimalCycleViewTitleBar({ title, dirty, viewMode, scenarios, sc
   const differences = useMemo(() => scenarioModel && activeScenarioId && comparisonScenarioId
     ? compareScenarioSignalStreams(scenarioModel, activeScenarioId, comparisonScenarioId)
     : [], [scenarioModel, activeScenarioId, comparisonScenarioId]);
+  useEffect(() => onScenarioComparisonChange?.(compareOpen ? differences : []), [compareOpen, differences, onScenarioComparisonChange]);
   return <header className="app-titlebar"><span className="appmark">∿</span><h1 data-testid="titlebar-document-title" aria-label={`${displayTitle}${dirty ? " (unsaved changes)" : ""}`}>{displayTitle}{dirty && <span className="document-dirty-indicator" data-testid="titlebar-unsaved-indicator" aria-label="Unsaved changes">*</span>}</h1>
     {scenarios ? <div className="scenario-controls" data-testid="scenario-controls" aria-label="Scenario controls">
       <label>Scenario<select aria-label="Active Scenario" data-testid="active-scenario" value={activeScenarioId ?? ""} onChange={(event) => onScenarioChange?.(event.target.value as ScenarioId)}>{scenarios.map((scenario) => <option key={scenario.id} value={scenario.id}>{scenario.name}</option>)}</select></label>

@@ -1,9 +1,9 @@
 import { cursorSourceCycleAtClientX, cursorViewportXForSourceCycle } from "./runtime/cursor-screen-geometry.js";
-import { startTransition, useEffect, useMemo, useRef } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef } from "react";
 import type { RefObject } from "react";
 import type { CommandResult } from "@timing-chart-v2/commands";
 import { type Point } from "@timing-chart-v2/geometry";
-import { quickValueLiteral, quickValueOptions, scenarioModelFromV2, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type GroupId, type ScenarioId, type SignalId, type TransactionGroup, type TransactionId } from "@timing-chart-v2/schema";
+import { quickValueLiteral, quickValueOptions, scenarioModelFromV2, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type GroupId, type ScenarioId, type ScenarioSignalDifference, type SignalId, type TransactionGroup, type TransactionId } from "@timing-chart-v2/schema";
 import { ViewMetricsOwner } from "./runtime/view-metrics.js";
 import { ExportDialog } from "./export-dialog.js";
 import { downloadText } from "./download-text.js";
@@ -96,6 +96,11 @@ export function MinimalCycleView() {
   // -- those remain a further, separate follow-up.
   const lowerCanvasClickRef = useRef<(event: MouseEvent, targetHost: HTMLElement, targetViewport: HTMLElement) => void>(() => undefined);
   const timelineRuntimeRef = useRef<TimelineViewportRuntime | null>(null);
+  const scenarioDifferencesRef = useRef<readonly ScenarioSignalDifference[]>([]);
+  const publishScenarioDifferences = useCallback((differences: readonly ScenarioSignalDifference[]) => {
+    scenarioDifferencesRef.current = differences;
+    timelineRuntimeRef.current?.refreshOverlays("scenario-comparison");
+  }, []);
   const armArrowPick = useRef<(annotationType: "arrow" | "dependency" | "measurement") => void>(() => undefined);
   const selectAllRef = useRef<() => void>(() => undefined);
   const snapTransactionCycle = useRef<(clientX: number, surfaceLeft?: number, horizontalScroll?: number) => number | undefined>(() => undefined);
@@ -396,7 +401,7 @@ export function MinimalCycleView() {
     commandRegistry,
     executeBatch,
     dom: { host, viewport, ruler, gridLayer, viewportLower, rulerLower, hostLower, gridLayerLower, signalSplitRuntimeRef },
-    presentation: { getPinnedSignalIds, collapsedGroupIdsRef, applyCollapsedGroupsRef, forceUpperReprojectRef, reapplySelectionRef: presentation.reapplySelectionRef, lowerCanvasClickRef, timelineRuntimeRef, armArrowPick, snapTransactionCycle, transactionBoundaryX, transactionSourceWindow, refreshPlayhead, refreshRangeSelectionBand, publishStateRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, selectedAnnotationRef, gridEnabledRef, snapEnabledRef, treeFocusRowIdRef, suppressCanvasClickRef, menuOriginRef, transactionCyclesPerTcRef, groupStylePreviewRef },
+    presentation: { getPinnedSignalIds, collapsedGroupIdsRef, applyCollapsedGroupsRef, forceUpperReprojectRef, reapplySelectionRef: presentation.reapplySelectionRef, lowerCanvasClickRef, timelineRuntimeRef, armArrowPick, snapTransactionCycle, transactionBoundaryX, transactionSourceWindow, refreshPlayhead, refreshRangeSelectionBand, publishStateRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, selectedAnnotationRef, scenarioDifferencesRef, gridEnabledRef, snapEnabledRef, treeFocusRowIdRef, suppressCanvasClickRef, menuOriginRef, transactionCyclesPerTcRef, groupStylePreviewRef },
     state: { setRuntimeDiagnostics, setProblem, setTreePresentationRevision, setTransactionPresentationRevision, setRangePresentationRevision, setPlayheadPresentationRevision, setTimelineRange, setRangeSelectionActive, setSelectedCycle, setBottomPinned, setPinnedBottomSelection, setPinnedSignalIds, setTreeFilter, setTreeTypeFilter, setTreeAddMenuOpen, setTreeMoreMenuOpen, setContextMenu, setArrowPickStatus, setRenameDialogOpen, setCollapsedGroups, resetCollapsedGroups, resetForDocument, toggleCollapsedGroup, closeContextMenu },
     viewMetricsOwner,
     signalSplitEnabled,
@@ -850,6 +855,7 @@ export function MinimalCycleView() {
         try { application.deleteScenario(id); selection.clear(); }
         catch (error) { setProblem(error instanceof Error ? error.message : String(error)); }
       }}
+      onScenarioComparisonChange={publishScenarioDifferences}
       onRevealScenarioDifference={(signalId, sourceRange) => {
         if (!snapshot.document.signals.some((signal) => signal.id === signalId)) return;
         const start = Math.max(0, sourceRange.start);

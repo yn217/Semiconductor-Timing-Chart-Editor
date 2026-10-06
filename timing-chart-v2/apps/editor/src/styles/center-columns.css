@@ -17,6 +17,10 @@
 
 .surface-host [data-role="annotation-overlay-surface"] { grid-column: 3; grid-row: 1; z-index: 12; pointer-events: none; }
 
+.surface-host [data-role="scenario-difference-overlay-surface"] { grid-column: 3; grid-row: 1; z-index: 11; pointer-events: none; }
+
+.surface-host [data-role="scenario-difference-overlay"] { position: absolute; left: 0; top: 0; box-sizing: border-box; border: 1px solid #b45d00; background: color-mix(in srgb, #ffb02e 24%, transparent); pointer-events: none; }
+
 .surface-host [data-role="interactive-overlay-surface"] { grid-column: 3; grid-row: 1; z-index: 15; pointer-events: none; }
 
 .surface-host [data-role="snap-vertical-guide"] { position: absolute; top: 0; width: 1px; background: color-mix(in srgb, #2374e1 70%, transparent); }
