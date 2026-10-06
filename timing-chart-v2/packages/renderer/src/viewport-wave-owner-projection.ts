@@ -6,24 +6,35 @@ export function reconcileViewportWaveOwners(input: {
   readonly layer: HTMLElement;
   readonly projection: RenderProjection;
   readonly rows: ReadonlyMap<string, RowLayoutEntry>;
+  readonly firstTimingRowByGroup: ReadonlyMap<string, string>;
   readonly owners: Map<WaveSignalId, HTMLElement>;
+  readonly connectedSignalIds: Set<WaveSignalId>;
+  readonly recentSignalIds: WaveSignalId[];
   readonly dirtyWaves: ReadonlySet<WaveSignalId>;
   readonly sourceWindow: Readonly<{ start: number; end: number }> | undefined;
   readonly queueWave: (signalId: WaveSignalId, owner: HTMLElement) => void;
   readonly initializeOwner: (owner: HTMLElement, row: RowLayoutEntry) => void;
 }): Readonly<{ created: number; cacheHits: number }> {
-  const firstTimingRowByGroup = new Map<string, string>();
-  for (const rowId of input.projection.timingRowIds) {
-    const row = input.rows.get(rowId);
-    if (row?.kind === "timing" && !firstTimingRowByGroup.has(row.groupId)) firstTimingRowByGroup.set(row.groupId, row.rowId);
-  }
   const mounted = new Set(input.projection.mountedSignalIds);
-  for (const [signalId, owner] of input.owners) if (!mounted.has(signalId)) owner.remove();
+  const retainedLimit = Math.min(24, Math.max(8, mounted.size));
+  const historyLimit = mounted.size + retainedLimit;
+  if (input.recentSignalIds.length > historyLimit) input.recentSignalIds.splice(0, input.recentSignalIds.length - historyLimit);
+  const visibleRows = visibleRowIdSet(input.projection.visibleRowIds);
+  const retainedIds = input.recentSignalIds
+    .filter((signalId) => !mounted.has(signalId) && visibleRows.has(signalId) && input.owners.has(signalId))
+    .slice(-retainedLimit);
+  const retained = new Set(retainedIds);
+  const connected = new Set([...mounted, ...retained]);
+  for (const signalId of input.connectedSignalIds) {
+    if (connected.has(signalId)) continue;
+    input.owners.get(signalId)?.remove();
+    input.connectedSignalIds.delete(signalId);
+  }
   let created = 0;
   let cacheHits = 0;
-  for (const signalId of input.projection.mountedSignalIds) {
+  for (const signalId of [...retainedIds, ...input.projection.mountedSignalIds]) {
     const row = input.rows.get(signalId);
-    if (!row) throw new Error(`Missing RowLayout for mounted Signal '${signalId}'.`);
+    if (!row || row.kind !== "timing" || !row.visible) throw new Error(`Missing visible RowLayout for Wave Signal '${signalId}'.`);
     let owner = input.owners.get(signalId);
     const isNew = owner === undefined;
     if (!owner) {
@@ -38,9 +49,18 @@ export function reconcileViewportWaveOwners(input: {
       if (!isNew) cacheHits += 1;
       input.layer.append(owner);
     }
-    if (!isNew) { input.owners.delete(signalId); input.owners.set(signalId, owner); }
+    input.connectedSignalIds.add(signalId);
+    if (mounted.has(signalId)) {
+      delete owner.dataset.viewportRetained;
+      if (!isNew) { input.owners.delete(signalId); input.owners.set(signalId, owner); }
+      const recentIndex = input.recentSignalIds.indexOf(signalId);
+      if (recentIndex >= 0) input.recentSignalIds.splice(recentIndex, 1);
+      input.recentSignalIds.push(signalId);
+    } else {
+      if (owner.dataset.viewportRetained !== "true") owner.dataset.viewportRetained = "true";
+    }
     if (owner.dataset.groupId !== row.groupId) owner.dataset.groupId = row.groupId;
-    const groupStart = String(firstTimingRowByGroup.get(row.groupId) === row.rowId);
+    const groupStart = String(input.firstTimingRowByGroup.get(row.groupId) === row.rowId);
     if (owner.dataset.groupStart !== groupStart) owner.dataset.groupStart = groupStart;
     const pinnedRow = String(row.pinned === true);
     if (owner.dataset.pinnedRow !== pinnedRow) owner.dataset.pinnedRow = pinnedRow;
@@ -53,7 +73,19 @@ export function reconcileViewportWaveOwners(input: {
     const sourceWindowChanged = sourceWindow !== undefined
       && (owner.dataset.renderedSourceWindowStart !== String(sourceWindow.start)
         || owner.dataset.renderedSourceWindowEnd !== String(sourceWindow.end));
-    if (isNew || input.dirtyWaves.has(signalId) || sourceWindowChanged) input.queueWave(signalId, owner);
+    if (mounted.has(signalId) && (isNew || input.dirtyWaves.has(signalId) || sourceWindowChanged)) input.queueWave(signalId, owner);
   }
+  if (input.recentSignalIds.length > historyLimit) input.recentSignalIds.splice(0, input.recentSignalIds.length - historyLimit);
   return { created, cacheHits };
+}
+
+const visibleRowIdsBySource = new WeakMap<readonly string[], ReadonlySet<string>>();
+
+function visibleRowIdSet(source: readonly string[]): ReadonlySet<string> {
+  let ids = visibleRowIdsBySource.get(source);
+  if (!ids) {
+    ids = new Set(source);
+    visibleRowIdsBySource.set(source, ids);
+  }
+  return ids;
 }

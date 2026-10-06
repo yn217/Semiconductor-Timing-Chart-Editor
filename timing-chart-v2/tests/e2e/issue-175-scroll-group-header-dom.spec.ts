@@ -22,7 +22,7 @@ test("vertical viewport updates reuse unchanged Group header controls", async ({
   const viewport = page.getByTestId("cycle-viewport");
   const before = await host.getAttribute("data-canonical-revision");
   const beforeViewportStartY = await host.getAttribute("data-viewport-start-y");
-  const beforeMountedWaveIds = await host.locator("[data-role='stable-waveform-surface'] > [data-signal-id]").evaluateAll((owners) => owners.map((owner) => (owner as HTMLElement).dataset.signalId));
+  const beforeMountedWaveIds = await host.locator("[data-role='stable-waveform-surface'] > [data-role='wave-owner']").evaluateAll((owners) => owners.map((owner) => (owner as HTMLElement).dataset.signalId));
   const rendererSnapshot = () => host.locator("[data-role='timing-chart-surface']").evaluate((element) =>
     (element as HTMLElement & { requestPerformanceSnapshot: () => { projectionUpdates: number; waveBatchCount: number; waveRendersBySignalCount: number; localGeometryBuildsBySignalCount: number } }).requestPerformanceSnapshot());
   const beforeRenderer = await rendererSnapshot();
@@ -77,7 +77,10 @@ test("vertical viewport updates reuse unchanged Group header controls", async ({
   });
   expect(scrollEvidence.scrollTop).toBeGreaterThan(0);
   expect(await host.getAttribute("data-viewport-start-y")).not.toBe(beforeViewportStartY);
-  expect(await host.locator("[data-role='stable-waveform-surface'] > [data-signal-id]").evaluateAll((owners) => owners.map((owner) => (owner as HTMLElement).dataset.signalId))).toEqual(beforeMountedWaveIds);
+  const afterMountedWaveIds = await host.locator("[data-role='stable-waveform-surface'] > [data-role='wave-owner']").evaluateAll((owners) => owners.map((owner) => (owner as HTMLElement).dataset.signalId));
+  expect(afterMountedWaveIds).toEqual(expect.arrayContaining(beforeMountedWaveIds));
+  expect(afterMountedWaveIds.length).toBeLessThanOrEqual(beforeMountedWaveIds.length + 24);
+  expect(await host.locator("[data-role='wave-owner'][data-viewport-retained='true']").count()).toBeLessThanOrEqual(24);
   expect(scrollEvidence.childListChanges, `unchanged Group header controls must not be reconstructed during scroll: ${JSON.stringify(scrollEvidence)}`).toBe(0);
   expect(scrollEvidence.sameChildNodes).toBe(true);
   expect(scrollEvidence.timingNodesAddedOrRemoved, "scroll must only add/remove newly entering or exiting timing rows").toBeLessThan(10);
@@ -166,6 +169,8 @@ test("vertical scroll does not detach and reinsert rows that remain in the viewp
   await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const historyBefore = await page.getByTestId("history-status").textContent();
+  const dirtyBefore = await page.getByTestId("dirty-status").textContent();
 
   const evidence = await page.evaluate(async () => {
     const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']");
@@ -174,6 +179,7 @@ test("vertical scroll does not detach and reinsert rows that remain in the viewp
     const rowIds = () => [...timingLayer.querySelectorAll<HTMLElement>(":scope > [data-role='timing-row']")]
       .map((row) => row.dataset.rowId ?? "");
     const before = rowIds();
+    const initialRevision = document.querySelector<HTMLElement>("[data-testid='cycle-surface']")?.dataset.canonicalRevision;
     const removed = new Map<string, number>();
     const added = new Map<string, number>();
     const observer = new MutationObserver((records) => {
@@ -198,17 +204,29 @@ test("vertical scroll does not detach and reinsert rows that remain in the viewp
     observer.disconnect();
     const after = rowIds();
     const retained = new Set(before.filter((id) => after.includes(id)));
+    const retainedWaveOwners = [...document.querySelectorAll<HTMLElement>("[data-role='wave-owner'][data-viewport-retained='true']")]
+      .map((owner) => owner.dataset.signalId ?? "");
     return {
       beforeCount: before.length,
       afterCount: after.length,
       retainedCount: retained.size,
       detachedRetainedIds: [...retained].filter((id) => (removed.get(id) ?? 0) > 0 || (added.get(id) ?? 0) > 0),
+      retainedWaveOwnerCount: retainedWaveOwners.length,
+      retainedWaveOwnerIds: retainedWaveOwners,
       scrollTop: viewport.scrollTop,
+      initialRevision,
+      finalRevision: document.querySelector<HTMLElement>("[data-testid='cycle-surface']")?.dataset.canonicalRevision,
     };
   });
   expect(evidence.scrollTop).toBeGreaterThan(0);
   expect(evidence.beforeCount).toBeGreaterThan(evidence.retainedCount);
   expect(evidence.afterCount).toBeGreaterThan(evidence.retainedCount);
   expect(evidence.retainedCount).toBeGreaterThan(0);
+  expect(evidence.retainedWaveOwnerCount).toBeGreaterThan(0);
+  expect(evidence.retainedWaveOwnerCount).toBeLessThanOrEqual(24);
+  expect(new Set(evidence.retainedWaveOwnerIds).size).toBe(evidence.retainedWaveOwnerCount);
   expect(evidence.detachedRetainedIds, `retained viewport rows must stay connected: ${JSON.stringify(evidence)}`).toEqual([]);
+  expect(evidence.finalRevision).toBe(evidence.initialRevision);
+  expect(await page.getByTestId("history-status").textContent()).toBe(historyBefore);
+  expect(await page.getByTestId("dirty-status").textContent()).toBe(dirtyBefore);
 });

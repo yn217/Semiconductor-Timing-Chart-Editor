@@ -17,6 +17,11 @@ export function releaseWaveOwnerForCacheEviction(provider: WaveformSurfaceProvid
   else provider.disposeWave(signalId);
 }
 
+function removeRecentWaveSignal(signalIds: WaveSignalId[], signalId: WaveSignalId): void {
+  const index = signalIds.indexOf(signalId);
+  if (index >= 0) signalIds.splice(index, 1);
+}
+
 const diagnosticEncoder = new TextEncoder();
 
 function signalTypeLabel(type: string | undefined): string {
@@ -69,6 +74,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   readonly #frozenGroupHeaders = new Map<string, HTMLElement>();
   readonly #timingGroupHeaders = new Map<string, HTMLElement>();
   readonly #waveOwners = new Map<WaveSignalId, HTMLElement>();
+  readonly #connectedWaveOwnerIds = new Set<WaveSignalId>();
+  readonly #recentWaveSignalIds: WaveSignalId[] = [];
   readonly #overlayOwners = new Map<string, HTMLElement>();
   readonly #overlaySignatures = new Map<string, string>();
   readonly #edgeCounterOwners = new Map<string, HTMLElement>();
@@ -148,7 +155,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     // The renderer has one source-time viewport. Snapshot its bounded window
     // before row reconciliation mutates layout; reading the viewport width
     // later in this update can synchronously flush those DOM changes.
-    const existingConnectedOwner = [...this.#waveOwners.values()].find((owner) => owner.isConnected);
+    const existingConnectedOwner = [...this.#waveOwners.values()].find((owner) => owner.isConnected && owner.dataset.viewportRetained !== "true");
     let sharedSourceWindow = existingConnectedOwner ? this.#readSourceWindow(existingConnectedOwner) : undefined;
     let sharedSourceWindowResolved = existingConnectedOwner !== undefined;
     const prefetchScrollTop = layers.root.closest<HTMLElement>(".cycle-viewport")?.scrollTop ?? 0;
@@ -228,6 +235,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         if (this.#provider.retainWaveArtifact) this.#provider.retainWaveArtifact(signalId);
         else this.#provider.disposeWave(signalId);
         this.#waveOwners.delete(signalId);
+        this.#connectedWaveOwnerIds.delete(signalId);
         this.#diagnostics = { ...this.#diagnostics, domNodeDestroys: this.#diagnostics.domNodeDestroys + 1, waveArtifactDisposals: this.#diagnostics.waveArtifactDisposals + 1 };
       }
       // Replacements reset per-signal freshness state. Re-seed the mounted
@@ -251,6 +259,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       owner.remove();
       this.#provider.disposeWave(signalId);
       this.#waveOwners.delete(signalId);
+      this.#connectedWaveOwnerIds.delete(signalId);
+      removeRecentWaveSignal(this.#recentWaveSignalIds, signalId);
       this.#dirtyWaves.delete(signalId);
       this.#waveVersions.delete(signalId);
       this.#wavePending.delete(signalId);
@@ -264,6 +274,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       const row = rows.get(rowId);
       if (row?.kind === "timing" && !firstTimingRowByGroup.has(row.groupId)) firstTimingRowByGroup.set(row.groupId, row.rowId);
     }
+    this.#connectedWaveOwnerIds.clear();
+    this.#recentWaveSignalIds.length = 0;
     for (const [signalId, owner] of this.#waveOwners) if (!mounted.has(signalId)) owner.remove();
     for (const signalId of projection.mountedSignalIds) {
       let owner = this.#waveOwners.get(signalId);
@@ -278,6 +290,9 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         if (!isNew) this.#diagnostics = { ...this.#diagnostics, waveArtifactCacheHits: this.#diagnostics.waveArtifactCacheHits + 1 };
         layers.waves.append(owner);
       }
+      delete owner.dataset.viewportRetained;
+      this.#connectedWaveOwnerIds.add(signalId);
+      this.#recentWaveSignalIds.push(signalId);
       if (!isNew) { this.#waveOwners.delete(signalId); this.#waveOwners.set(signalId, owner); }
       const row = rows.get(signalId);
       if (row) {
@@ -314,7 +329,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     for (const [signalId, owner] of this.#waveOwners) {
       if (this.#waveOwners.size <= waveOwnerCacheLimit) break;
       if (mounted.has(signalId)) continue;
-      owner.remove(); releaseWaveOwnerForCacheEviction(this.#provider, signalId); this.#waveOwners.delete(signalId); this.#dirtyWaves.delete(signalId); this.#waveVersions.delete(signalId); this.#wavePending.delete(signalId);
+      owner.remove(); releaseWaveOwnerForCacheEviction(this.#provider, signalId); this.#waveOwners.delete(signalId); this.#connectedWaveOwnerIds.delete(signalId); removeRecentWaveSignal(this.#recentWaveSignalIds, signalId); this.#dirtyWaves.delete(signalId); this.#waveVersions.delete(signalId); this.#wavePending.delete(signalId);
       this.#diagnostics = { ...this.#diagnostics, domNodeDestroys: this.#diagnostics.domNodeDestroys + 1, waveArtifactDisposals: this.#diagnostics.waveArtifactDisposals + 1 };
     }
     this.#diagnostics = { ...this.#diagnostics, mountedWaveOwners: [...this.#waveOwners.values()].filter((owner) => owner.isConnected).length, cachedWaveOwners: this.#waveOwners.size, waveOwnerCacheLimit, dirtyWaveSize: this.#dirtyWaves.size, waveVersionSize: this.#waveVersions.size, fullReplaceEpochResets: this.#fullReplaceEpochResets, diagnosticMapPrunePasses: this.#diagnosticMapPrunePasses };
@@ -414,7 +429,10 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       layer: layers.waves,
       projection,
       rows,
+      firstTimingRowByGroup,
       owners: this.#waveOwners,
+      connectedSignalIds: this.#connectedWaveOwnerIds,
+      recentSignalIds: this.#recentWaveSignalIds,
       dirtyWaves: this.#dirtyWaves,
       sourceWindow: this.#sourceWindowSnapshot,
       queueWave: (signalId, owner) => this.#queueWave(signalId, owner),
@@ -455,7 +473,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     for (const [signalId, owner] of this.#waveOwners) {
       if (this.#waveOwners.size <= waveOwnerCacheLimit) break;
       if (mounted.has(signalId)) continue;
-      owner.remove(); releaseWaveOwnerForCacheEviction(this.#provider, signalId); this.#waveOwners.delete(signalId); this.#dirtyWaves.delete(signalId); this.#waveVersions.delete(signalId); this.#wavePending.delete(signalId);
+      owner.remove(); releaseWaveOwnerForCacheEviction(this.#provider, signalId); this.#waveOwners.delete(signalId); this.#connectedWaveOwnerIds.delete(signalId); removeRecentWaveSignal(this.#recentWaveSignalIds, signalId); this.#dirtyWaves.delete(signalId); this.#waveVersions.delete(signalId); this.#wavePending.delete(signalId);
       this.#diagnostics = { ...this.#diagnostics, domNodeDestroys: this.#diagnostics.domNodeDestroys + 1, waveArtifactDisposals: this.#diagnostics.waveArtifactDisposals + 1 };
     }
     this.#diagnostics = { ...this.#diagnostics, mountedWaveOwners: [...this.#waveOwners.values()].filter((owner) => owner.isConnected).length, cachedWaveOwners: this.#waveOwners.size, waveOwnerCacheLimit, dirtyWaveSize: this.#dirtyWaves.size, waveVersionSize: this.#waveVersions.size, fullReplaceEpochResets: this.#fullReplaceEpochResets, diagnosticMapPrunePasses: this.#diagnosticMapPrunePasses };
@@ -633,6 +651,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   dispose(): void {
     for (const signalId of this.#waveOwners.keys()) this.#provider.disposeWave(signalId);
     this.#waveOwners.clear();
+    this.#connectedWaveOwnerIds.clear();
+    this.#recentWaveSignalIds.length = 0;
     this.#dirtyWaves.clear();
     this.#waveVersions.clear();
     this.#wavePending.clear();
