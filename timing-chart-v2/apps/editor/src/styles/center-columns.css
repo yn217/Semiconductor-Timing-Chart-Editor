@@ -255,7 +255,7 @@
 .transaction-group-header-band { background: #eef2f7ad; border-bottom: 1px solid #c7d2de; pointer-events: none; /* decorative: must never intercept the Group header controls */ }
 .transaction-lane { position: absolute; left: 0; width: 100%; border-bottom: 1px solid #c9d6e3; }
 .transaction-lane:hover { background: rgb(214 229 245 / 45%); }
-.transaction-lane > button[data-transaction-has-phases="true"] { height: 32px; align-items: start; }
+.transaction-lane > button:has(.transaction-phases) { height: 32px; align-items: start; }
 .transaction-phases { position: absolute; inset: 15px -1px 0; pointer-events: none; }
 /* #429/#397 Transaction Mode Product Closure P0-4: derive both the bar's
    header strip and its phase segments from the one `--transaction-color`
@@ -265,12 +265,7 @@
    custom properties inherit, setting it once on the bar covers its
    descendant phase `<small>`s too. Absent the property (no Transaction or
    Group color authored), both fall back to the original static blue. */
-.transaction-phases small { position: absolute; top: 0; bottom: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border-inline-start: 1px solid color-mix(in srgb, var(--transaction-color, #2e70ad) 70%, black); background: color-mix(in srgb, var(--transaction-color, #2e70ad) 18%, white); font-size: 9px; line-height: 15px; pointer-events: none; }
-.transaction-phases small[data-phase-selected="true"] { background: color-mix(in srgb, var(--transaction-color, #2e70ad) 48%, white); box-shadow: inset 0 0 0 2px var(--ds-selection-border, #287ac0); color: #123b5f; font-weight: 700; }
-.transaction-phase-selectors { position: absolute; pointer-events: none; z-index: 5; }
-.transaction-phase-select { position: absolute; top: 0; bottom: 0; display: block; min-width: 0; padding: 0; border: 0; border-radius: 2px; background: transparent; cursor: pointer; pointer-events: auto; }
-.transaction-phase-select:hover { background: color-mix(in srgb, var(--ds-selection-border, #287ac0) 12%, transparent); }
-.transaction-phase-select:focus-visible { outline: 2px solid var(--ds-selection-border, #287ac0); outline-offset: -2px; z-index: 2; }
+.transaction-phases small { position: absolute; top: 0; bottom: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border-inline-start: 1px solid color-mix(in srgb, var(--transaction-color, #2e70ad) 70%, black); background: color-mix(in srgb, var(--transaction-color, #2e70ad) 18%, white); font-size: 9px; line-height: 15px; }
 .transaction-axis-break-gap { position: absolute; top: 0; bottom: 0; z-index: 2; background: var(--canvas-background, #f8fafc); border-inline: 1px solid #94a3b8; pointer-events: none; }
 .transaction-axis-segment { position: absolute; inset-block: 0; z-index: 1; border: 1px solid color-mix(in srgb, var(--transaction-color, #2e70ad) 85%, black); border-radius: 4px; background: color-mix(in srgb, var(--transaction-color, #2e70ad) 25%, white); pointer-events: none; }
 .transaction-hidden-in-fold { position: absolute; left: 8px; right: 8px; height: 30px; border: 1px dashed #94a3b8; background: #eef2f7; color: #475569; font-size: 11px; text-align: left; padding: 0 8px; z-index: 4; }
