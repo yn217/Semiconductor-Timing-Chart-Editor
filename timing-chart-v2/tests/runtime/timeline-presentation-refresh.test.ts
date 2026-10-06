@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { renderGeometryGrid } from "../../apps/editor/src/render-geometry-grid.js";
 import { DisplayTimeMappingCache } from "@timing-chart-v2/projection";
 import { canonicalFixture } from "../fixtures/canonical.js";
-import { applyPublishedTimeAxisMetrics, refreshGridPresentation, refreshRangeBandPresentation, refreshRulerAndGridIfNeeded } from "../../apps/editor/src/runtime/timeline-presentation-refresh.js";
+import { applyPublishedTimeAxisMetrics, publishZoomX, refreshGridPresentation, refreshRangeBandPresentation, refreshRulerAndGridIfNeeded, syncPresentationScale } from "../../apps/editor/src/runtime/timeline-presentation-refresh.js";
 
 vi.mock("../../apps/editor/src/render-geometry-grid.js", () => ({ renderGeometryGrid: vi.fn() }));
 
@@ -113,5 +113,40 @@ describe("Open ruler/grid readiness", () => {
     expect(band.style.width).toBe("80px");
     expect(rulerBand.style.left).toBe("20px");
     expect(rulerBand.style.width).toBe("40px");
+  });
+});
+
+describe("Zoom counter-scale variable scope (#175)", () => {
+  function fakeElement() {
+    const values = new Map<string, string>();
+    const style = { getPropertyValue: (name: string) => values.get(name) ?? "", setProperty: vi.fn((name: string, value: string) => { values.set(name, value); }) };
+    return { style, values };
+  }
+  function fakeScope(matches: Record<string, ReturnType<typeof fakeElement>[]>) {
+    const self = fakeElement();
+    return { ...self, querySelectorAll: (selector: string) => Object.entries(matches).filter(([key]) => selector.includes(key)).flatMap(([, list]) => list).map((item) => ({ style: item.style })) };
+  }
+
+  it("publishes --zoom-x on ruler/overlay layers only, never on the viewport itself", () => {
+    const ruler = fakeElement();
+    const overlay = fakeElement();
+    const viewport = fakeScope({ ".cycle-ruler": [ruler], "annotation-overlay-surface": [overlay] });
+    publishZoomX(viewport as unknown as ParentNode, 2);
+    expect(ruler.values.get("--zoom-x")).toBe("2");
+    expect(overlay.values.get("--zoom-x")).toBe("2");
+    expect(viewport.style.setProperty).not.toHaveBeenCalled();
+    publishZoomX(viewport as unknown as ParentNode, 2);
+    expect(ruler.style.setProperty).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps --presentation-x-scale on the host and gives wave text its own layer variable", () => {
+    const waves = fakeElement();
+    const overlay = fakeElement();
+    const host = fakeScope({ "stable-waveform-surface": [waves], "annotation-overlay-surface": [overlay] });
+    syncPresentationScale(host as unknown as HTMLElement, 1.5, 2);
+    expect(host.values.get("--presentation-x-scale")).toBe("3");
+    expect(host.values.has("--zoom-x")).toBe(false);
+    expect(waves.values.get("--wave-label-x-scale")).toBe("3");
+    expect(overlay.values.get("--zoom-x")).toBe("1.5");
   });
 });

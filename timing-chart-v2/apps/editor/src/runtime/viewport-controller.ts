@@ -1,6 +1,6 @@
 import type { CanonicalDocument } from "@timing-chart-v2/schema";
 import { clampTimelineZoom, type TimelineViewportRuntime } from "./timeline-viewport-runtime.js";
-import { syncRulerScroll } from "./timeline-presentation-refresh.js";
+import { publishZoomX, syncRulerScroll } from "./timeline-presentation-refresh.js";
 
 export type TimelineZoomSurfaceContext = {
   readonly rendererHost: HTMLElement;
@@ -39,7 +39,7 @@ export function applyTimelineZoom(next: number, context: TimelineZoomSurfaceCont
     }
     if (context.ruler.style.transformOrigin !== "0px 0px" && context.ruler.style.transformOrigin !== "0 0") context.ruler.style.transformOrigin = "0 0";
     syncRulerScroll(context.ruler, context.viewport, zoom);
-    context.viewport.style.setProperty("--zoom-x", String(zoom));
+    publishZoomX(context.viewport, zoom);
     context.onPresentationScale(zoom);
     context.rendererHost.style.width = `${width}px`;
     context.timingSurface.style.setProperty("width", `${width}px`);

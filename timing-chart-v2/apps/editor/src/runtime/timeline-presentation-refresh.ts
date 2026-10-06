@@ -157,12 +157,39 @@ export function refreshTimelinePresentation(context: {
   return { timeAxis, screenGeometryScale, rulerInitialized, waveWidthPxPerDisplayCycle, waveOriginPx };
 }
 
+// #175: zoom counter-scale variables are published on the smallest layers
+// that hold their consumers. An inherited custom property written on the
+// viewport or renderer host restyles every row, wave and grid line below it on
+// each Zoom step, although only ruler ticks, overlay labels and wave text read it.
+const ZOOM_X_SCOPES = ".cycle-ruler, [data-role='annotation-overlay-surface'], [data-role='interactive-overlay-surface']";
+const WAVE_LABEL_SCOPES = "[data-role='stable-waveform-surface']";
+
+function publishVariable(scope: ParentNode, selector: string, name: string, value: string): void {
+  // Unit-test doubles are not DOM elements; there is nothing to publish to without a DOM.
+  if (typeof scope.querySelectorAll !== "function") return;
+  for (const element of scope.querySelectorAll<HTMLElement>(selector)) {
+    if (element.style.getPropertyValue(name) !== value) element.style.setProperty(name, value);
+  }
+}
+
+/** `--zoom-x` for the ruler and overlay labels that counter-scale against the CSS Zoom (center-columns.css). */
+export function publishZoomX(scope: ParentNode, zoom: number): void {
+  publishVariable(scope, ZOOM_X_SCOPES, "--zoom-x", String(zoom));
+}
+
+/** `--wave-label-x-scale` for waveform SVG text (waveform.css). */
+export function publishWaveLabelScale(host: ParentNode, presentationScale: number): void {
+  publishVariable(host, WAVE_LABEL_SCOPES, "--wave-label-x-scale", String(presentationScale));
+}
+
 export function syncPresentationScale(host: HTMLElement, zoom: number, screenGeometryScale: number): void {
   const presentationScale = Math.max(0.0001, zoom * screenGeometryScale);
-  // This variable is consumed only by waveform SVG text (waveform.css).
-  // The outer viewport and ruler viewport have no consumers; publish only at
-  // the renderer host that owns those waveform labels.
+  // The published value stays on the renderer host (read by the Signal Split
+  // mirror and browser checks); it is registered non-inherited in
+  // waveform.css, so updating it never restyles the host's descendants.
   host.style.setProperty("--presentation-x-scale", String(presentationScale));
+  publishWaveLabelScale(host, presentationScale);
+  publishZoomX(host, zoom);
 }
 
 const scrollVariableConsumerCache = new WeakMap<HTMLElement, readonly HTMLElement[]>();
