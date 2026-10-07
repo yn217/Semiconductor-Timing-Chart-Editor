@@ -7,6 +7,30 @@ async function ready(page: Page) {
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
 }
 
+test("pinned Transaction duplicate ignores live multi-selection", async ({ page }) => {
+  await ready(page);
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  const bottom = page.getByTestId("bottom-editor");
+  await bottom.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true }).click();
+  const names: string[] = [];
+  for (let index = 0; index < 3; index += 1) {
+    await bottom.getByTestId("bottom-transaction-add").click();
+    names.push(await page.getByLabel("Bottom Transaction name").inputValue());
+  }
+  const tree = page.getByTestId("transaction-left-tree");
+  await tree.getByText(names[0]!, { exact: true }).click();
+  await openBottomSettings(page);
+  await bottom.getByTestId("bottom-pin").click();
+  await tree.getByText(names[1]!, { exact: true }).click();
+  await tree.getByText(names[2]!, { exact: true }).click({ modifiers: ["Control"] });
+  await expect(page.getByLabel("Bottom Transaction name")).toHaveValue(names[0]!);
+  await bottom.getByTestId("bottom-transaction-duplicate").click();
+  await expect(tree.getByText(`${names[0]} Copy`, { exact: true })).toHaveCount(1);
+  await expect(tree.getByText(`${names[1]} Copy`, { exact: true })).toHaveCount(0);
+  await expect(tree.getByText(`${names[2]} Copy`, { exact: true })).toHaveCount(0);
+  await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 0");
+});
+
 test("pinned Signal visibility and duplicate actions target the pinned stable ID", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");

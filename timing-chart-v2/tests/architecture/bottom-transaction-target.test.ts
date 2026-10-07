@@ -9,6 +9,9 @@ describe("Bottom Transaction target ownership (#1091)", () => {
       expect(props, component).toBeDefined();
       expect(props, component).toContain("transaction={bottom.transaction}");
       expect(props, component).not.toContain("transaction={selected.transaction}");
+      if (component === "TransactionEditor") {
+        expect(props).toContain("selectedTransactionIds={bottomTransactionActionIds(bottom.transaction, selected.transactionIds, workspace.bottomPinned || !workspace.followSelection)}");
+      }
     }
   });
 });

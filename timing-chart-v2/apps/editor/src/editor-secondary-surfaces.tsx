@@ -1,4 +1,5 @@
 import { useTransactionDisclosure } from "./workspace/use-transaction-disclosure.js";
+import { bottomTransactionActionIds } from "./runtime/transaction-selection-index.js";
 import type { AIBridgeStatus, AIBridgeViewOperation } from "./ai-bridge-client.js";
 import { useCallback, useEffect } from "react";
 import type {
@@ -226,7 +227,7 @@ export function useEditorSecondarySurfaces(
     <TransactionEditor
       key={`${input.documentEpoch}:${dialog.bottomResetToken}`}
       transaction={bottom.transaction}
-      selectedTransactionIds={selected.transactionIds}
+      selectedTransactionIds={bottomTransactionActionIds(bottom.transaction, selected.transactionIds, workspace.bottomPinned || !workspace.followSelection)}
       document={input.document}
       cyclesPerTc={workspace.cyclesPerTc}
       history={input.history}
