@@ -7,6 +7,7 @@ import { groupBackgroundColor } from "./group-background.js";
 import { syncGroupHeaderLayer } from "./group-header-dom.js";
 import { reconcileViewportWaveOwners } from "./viewport-wave-owner-projection.js";
 import { applySharedSymbolWaveformColor } from "./shared-symbol-waveform-style.js";
+import { signalPresentationLabel } from "./signal-presentation-label.js";
 
 export function isWaveMountRequestFresh(request: Pick<WaveMountRequest, "documentEpoch" | "isFresh">, currentDocumentEpoch: number): boolean {
   return (request.documentEpoch === undefined || request.documentEpoch === currentDocumentEpoch) && (request.isFresh?.() ?? true);
@@ -24,24 +25,6 @@ function removeRecentWaveSignal(signalIds: WaveSignalId[], signalId: WaveSignalI
 }
 
 const diagnosticEncoder = new TextEncoder();
-
-function signalTypeLabel(type: string | undefined): string {
-  if (type === "clock") return "Clock";
-  if (type === "commentRow") return "Comment";
-  if (type === "pulse") return "Pulse";
-  if (type === "binary") return "Signal";
-  if (type === "bus") return "Bus";
-  if (type === "state") return "State";
-  if (type === "logic") return "Level";
-  if (type === "event") return "Event";
-  return type ?? "Signal";
-}
-
-function signalPresentationLabel(kind: RowLayoutEntry["kind"], role: RowLayoutEntry["role"], signalType: string | undefined): string {
-  if (kind === "comment") return "";
-  if (signalType === undefined || signalType === "binary") return role === "input" ? "i" : role === "output" ? "o" : "wire";
-  return signalTypeLabel(signalType);
-}
 
 function nextBrowserFrame(): Promise<void> {
   return new Promise((resolve) => {

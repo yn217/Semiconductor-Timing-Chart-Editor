@@ -35,6 +35,7 @@ import { deriveSelectionCapabilities, useSelectionOwner } from "./application/us
 import { useClipboardActions } from "./application/clipboard-actions.js";
 import { useTimelineNavigationOwner } from "./runtime/use-timeline-navigation-owner.js";
 import { useWorkspaceUiState } from "./workspace/use-workspace-ui-state.js";
+import { useBottomPinLifecycle } from "./workspace/use-bottom-pin-lifecycle.js";
 import { useBottomPanelSizing } from "./workspace/use-bottom-panel-sizing.js";
 import { useTimelinePresentationState } from "./workspace/use-timeline-presentation-state.js";
 import { useDialogMenuState } from "./workspace/use-dialog-menu-state.js";
@@ -84,16 +85,7 @@ export function MinimalCycleView() {
   // `projection.setPane()` filter, without exposing Upper's internal
   // renderer/projection closures outside that effect.
   const forceUpperReprojectRef = useRef<() => void>(() => undefined);
-  // Signal Split View (#200) Lower-local row interaction PR1: clicking
-  // anywhere on Lower's own waveform canvas selects that cycle exactly
-  // like clicking Upper's does (shared horizontal geometry, shared
-  // selectedCycle/timelineRange state) -- set by the primary mount effect
-  // (which owns cycle-selection logic and the shared timeline geometry),
-  // called by the separate Lower mount effect below on its own click
-  // events, since the two are independent `useEffect`s with no shared
-  // closure. Deliberately narrower than Upper's full canvas interaction
-  // set: no drag-range-selection, no annotation drag, no context menu yet
-  // -- those remain a further, separate follow-up.
+  // The timeline runtime supplies the Lower pane's shared source-time click route.
   const lowerCanvasClickRef = useRef<(event: MouseEvent, targetHost: HTMLElement, targetViewport: HTMLElement) => void>(() => undefined);
   const timelineRuntimeRef = useRef<TimelineViewportRuntime | null>(null);
   const scenarioDifferencesRef = useRef<readonly ScenarioSignalDifference[]>([]);
@@ -367,25 +359,12 @@ export function MinimalCycleView() {
     }
     setFollowSelection(value);
   };
-  useEffect(() => {
-    if (!pinnedBottomSelection) return;
-    const targetExists = (pinnedBottomSelection.signalId === undefined || snapshot.document.signals.some((item) => item.id === pinnedBottomSelection.signalId))
-      && (pinnedBottomSelection.groupId === undefined || snapshot.document.signalGroups.some((item) => item.id === pinnedBottomSelection.groupId))
-      && (pinnedBottomSelection.annotationId === undefined || snapshot.document.annotations.some((item) => item.id === pinnedBottomSelection.annotationId))
-      && (pinnedBottomSelection.transactionId === undefined || snapshot.document.transactions.some((item) => item.id === pinnedBottomSelection.transactionId))
-      && (pinnedBottomSelection.bookmarkId === undefined || snapshot.document.bookmarks.some((item) => item.id === pinnedBottomSelection.bookmarkId));
-    if (!targetExists) {
-      if (bottomPinned) setBottomPinned(false);
-      if (!followSelection) setFollowSelection(true);
-      setPinnedBottomSelection(undefined);
-    }
-  }, [bottomPinned, followSelection, pinnedBottomSelection, snapshot.revision]);
-  useEffect(() => {
-    setPinnedBottomSelection(undefined);
-    if (bottomPinned) setBottomPinned(false);
-    if (!followSelection) setFollowSelection(true);
-    setContextMenu(undefined);
-  }, [documentEpoch]);
+  useBottomPinLifecycle({
+    document: snapshot.document, revision: snapshot.revision, documentEpoch,
+    pinnedBottomSelection, bottomPinned, followSelection,
+    setBottomPinned, setFollowSelection, setPinnedBottomSelection,
+    clearContextMenu: () => setContextMenu(undefined),
+  });
   useEditorDomBridgeEffects({ host, ruler, viewport, timelineRuntimeRef, viewMetricsOwner, treeFilter, treeTypeFilter, treePresentationRevision, collapsedGroupIds, treeFocusRowIdRef, selectedSignalId: selectedId, selectedGroupId, rangeSelectionActive, timelineRange, rangePresentationRevision, cyclesPerTc, leftPaneWidth, frozenPaneWidth, inspectorWidth });
   const diagnostics = useMemo(() => [...validationDiagnostics, ...runtimeDiagnostics], [runtimeDiagnostics, validationDiagnostics]);
   const waveDromHasError = runtimeDiagnostics.some((item) => item.code === "WAVE_RENDER_ERROR");
