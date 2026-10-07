@@ -26,8 +26,10 @@ function useExportDialogFocusLoop(dialogRef: RefObject<HTMLElement | null>, rest
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     };
     const onBackdropClick = (event: MouseEvent) => {
+      // Child clicks must reach React's delegated listener on the root.
+      if (event.target !== backdrop) return;
       event.stopPropagation();
-      if (dismissibleRef.current && event.target === backdrop) dismissRef.current();
+      if (dismissibleRef.current) dismissRef.current();
     };
     dialog.addEventListener("keydown", onKeyDown);
     backdrop.addEventListener("click", onBackdropClick);
