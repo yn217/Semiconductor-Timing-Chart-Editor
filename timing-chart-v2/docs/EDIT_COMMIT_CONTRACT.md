@@ -29,6 +29,7 @@ footer, never inside the Revert/Apply pair, on every entity that has one.
 | Inspector | Clock edge counter | Draft+Apply | `signal.updateEdgeCounter` | Apply form | editor remount/revert | discard on remount | command rejected; canonical unchanged |
 | Inspector | Group properties | Draft+Apply | `group.updateProperties` | Apply form | editor remount/revert | discard on remount | command rejected; canonical unchanged |
 | Inspector | Transaction fields/phases | Draft+Apply | `transaction.update` | Apply form | editor remount/revert | discard on remount | JSON/command rejection; canonical unchanged |
+| Inspector | Transaction linked-signal summary | View-only | none | n/a | n/a | resolves from the selected stable Transaction ID | no mutation |
 | Inspector | Annotation fields | Draft+Apply | `annotation.update` | Apply form | editor remount/revert | discard on remount | command rejection; canonical unchanged |
 | Inspector | Annotation anchor | Draft+Apply | `annotation.setAnchor` | Apply Anchor | editor remount/revert | discard on remount | command rejection; canonical unchanged |
 | Inspector | Document/header/footer | Draft+Apply | `document.updateProperties` | Apply form | Cancel closes without command | closes/discards | command rejection; canonical unchanged |
@@ -41,6 +42,7 @@ footer, never inside the Revert/Apply pair, on every entity that has one.
 | Bottom | Problems | View-only | none | n/a | n/a | selection only | no mutation |
 | Bottom | JSON | Draft+Apply when Advanced | `document.restore` / selected-object command | Apply JSON | read-only/default; remount discards | discard on remount | parse/validation error; canonical unchanged |
 | Bottom | Transaction | Draft+Apply | `transaction.update` | Apply | editor remount/revert | discard on remount | parse/command rejection; canonical unchanged |
+| Bottom | Transaction Linked Signals | Immediate per link/unlink action | `transaction.toggleSignal` | n/a | n/a | keyed to the selected Transaction ID; summary refreshes from Canonical | rejected command leaves Canonical unchanged |
 | Bottom | Follow Selection / Pin | Immediate view-only | none | n/a | n/a | deterministic view state | no mutation |
 
 ## Invariants
@@ -54,6 +56,9 @@ footer, never inside the Revert/Apply pair, on every entity that has one.
 - Undo restores the same prior Canonical snapshot regardless of entry point.
 - View-only Bottom operations never change Canonical, History, Dirty, or
   validation counters.
+- Transaction linked-signal editing has one mutation owner in the Bottom
+  Linked Signals tab. Inspector presents the same canonical links as a summary
+  and navigates to that tab for edits; it never owns a second editable draft.
 
 ## History retention policy
 

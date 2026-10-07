@@ -1,8 +1,10 @@
 import { cyclesToTc, tcToCycles } from "./transaction-tc.js";
 import { newPhaseUid, startOrder, stripPhaseUid, toDraftPhases, validatePhases, type DraftPhase } from "./transaction-phase-model.js";
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import type { CanonicalDocument, Transaction, TransactionPhase } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, SignalId, Transaction, TransactionId, TransactionPhase } from "@timing-chart-v2/schema";
 import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
+import { EditorIconButton } from "./editor-icon.js";
+import { TransactionLinkedSignals } from "./transaction-linked-signals.js";
 
 function phasesEqual(left: readonly TransactionPhase[], right: readonly TransactionPhase[]): boolean {
   return left.length === right.length && left.every((phase, index) => {
@@ -183,8 +185,6 @@ export function TransactionPhaseSummary({ transaction, transactions, commands, c
   return <TransactionPhaseEditor transaction={transaction} {...(transactions === undefined ? {} : { transactions })} commands={commands} {...(cyclesPerTc === undefined ? {} : { cyclesPerTc })} />;
 }
 
-export function TransactionLinkedSummary({ transaction, document }: { readonly transaction: Transaction | undefined; readonly document: CanonicalDocument }) {
-  const linked = new Set(transaction?.linkedSignals ?? []);
-  const signals = document.signals.filter((signal) => linked.has(signal.id));
-  return <section className="transaction-bottom-summary" data-testid="transaction-bottom-linked-signals"><header><strong>Linked Signals ({signals.length})</strong><span>{transaction?.name ?? "Select a Transaction"}</span></header>{signals.length === 0 ? <p className="inspector-note">No linked signals. Manage links in the Inspector.</p> : <div className="transaction-bottom-linked-list">{signals.map((signal) => <span key={signal.id}>{signal.display.name}</span>)}</div>}</section>;
+export function TransactionLinkedEditor({ transaction, document, onToggle }: { readonly transaction: Transaction | undefined; readonly document: CanonicalDocument; readonly onToggle: (transactionId: TransactionId, signalId: SignalId) => void }) {
+  return <section className="transaction-bottom-summary" data-testid="transaction-bottom-linked-signals">{transaction ? <TransactionLinkedSignals key={transaction.id} transaction={transaction} document={document} onToggle={(signalId) => onToggle(transaction.id, signalId)} renderUnlinkButton={(label, onClick) => <EditorIconButton label={label} icon="close" onClick={onClick} />} /> : <><header><strong>Linked Signals (0)</strong><span>Select a Transaction</span></header><p className="inspector-note">Select a Transaction to manage linked Signals.</p></>}</section>;
 }

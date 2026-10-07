@@ -12,7 +12,7 @@ import { expect, test, type Page } from "@playwright/test";
 // other document). The tests below that used to click it now build the
 // same "Read Request" shape (Start 2/End 12, Request/Processing/Response
 // phases, optionally linked to REQUEST/READY) through the real Create
-// Transaction + Inspector Phase table + Linked Signals UI.
+// Transaction + Inspector Phase table + Bottom Linked Signals editor.
 
 async function openTransactionMode(page: Page) {
   await page.goto("/");
@@ -44,16 +44,16 @@ async function createReadRequestTransaction(page: Page, { withLinks = false }: {
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
 
   if (withLinks) {
-    // Linking a signal dispatches transaction.linkSignal immediately and
-    // updates the canonical revision. The picker's open/closed flag is
-    // module-scoped (see
-    // transaction-linked-signals.tsx) so it survives that remount, same as
-    // Label Style's accordion state; no need to re-open between picks.
-    await inspector.getByTestId("open-linked-signal-picker").click();
+    // The Bottom Linked Signals editor remains mounted across each immediate
+    // canonical link command, so the picker stays open naturally.
+    await inspector.getByTestId("manage-transaction-links").click();
+    const linked = page.getByTestId("transaction-linked-signals");
+    await linked.getByTestId("open-linked-signal-picker").click();
     for (const name of ["REQUEST", "READY"]) {
-      await inspector.getByLabel("Search linked signals").fill(name);
-      await inspector.getByRole("option", { name: new RegExp(name) }).click();
+      await linked.getByLabel("Search linked signals").fill(name);
+      await linked.getByRole("option", { name: new RegExp(name) }).click();
     }
+    await page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true }).click();
   }
 }
 
@@ -129,8 +129,8 @@ test("A Transaction built with phases and Linked Signals survives Save/Open exac
 
   const inspector = page.getByTestId("inspector");
   await expect(inspector.getByLabel("Transaction name")).toHaveValue("Read Request");
-  const linked = inspector.getByTestId("transaction-linked-signals");
-  await expect(linked).toContainText("Linked Signals (2)");
+  const linked = inspector.getByTestId("inspector-linked-signal-summary");
+  await expect(inspector.getByText("Linked Signals", { exact: true })).toBeVisible();
   await expect(linked).toContainText("REQUEST");
   await expect(linked).toContainText("READY");
 

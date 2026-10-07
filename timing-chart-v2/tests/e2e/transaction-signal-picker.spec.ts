@@ -27,7 +27,7 @@ function largeTransactionDocument(signalCount: number) {
   };
 }
 
-test("Transaction Inspector uses a bounded searchable linked-signal picker", async ({ page }) => {
+test("Bottom Linked Signals tab owns the bounded picker and Inspector stays a live summary", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
@@ -39,8 +39,10 @@ test("Transaction Inspector uses a bounded searchable linked-signal picker", asy
   await editor.getByRole("button", { name: "Create Transaction" }).click();
 
   const inspector = page.getByTestId("inspector");
-  const linked = inspector.getByTestId("transaction-linked-signals");
-  await expect(linked.locator("input[type='checkbox']")).toHaveCount(0);
+  await expect(inspector.getByTestId("transaction-linked-signals")).toHaveCount(0);
+  await inspector.getByTestId("manage-transaction-links").click();
+  const linked = page.getByTestId("transaction-linked-signals");
+  await expect(page.getByTestId("transaction-linked-signals")).toHaveCount(1);
   await expect(linked.getByTestId("linked-signal-list")).toContainText("No linked signals");
   await linked.getByTestId("open-linked-signal-picker").click();
   const picker = linked.getByTestId("linked-signal-picker");
@@ -55,6 +57,8 @@ test("Transaction Inspector uses a bounded searchable linked-signal picker", asy
   await expect(results).toHaveAttribute("aria-activedescendant", /linked-signal-option-/);
   await results.press("Enter");
   await expect(linked.getByTestId("linked-signal-list")).toContainText("DATA");
+  await expect(inspector.getByTestId("inspector-linked-signal-summary")).toContainText("DATA");
+  await expect(linked.getByTestId("linked-signal-picker")).toBeVisible();
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
 
   const unlink = linked.getByRole("button", { name: "Unlink DATA" });
@@ -63,6 +67,13 @@ test("Transaction Inspector uses a bounded searchable linked-signal picker", asy
   await unlink.press("Enter");
   await expect(linked.getByTestId("linked-signal-list")).toContainText("No linked signals");
   await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
+
+  await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
+  const bottomTabs = page.getByTestId("bottom-tabs");
+  await expect(bottomTabs.getByRole("tab", { name: "Linked Signals" })).toHaveAttribute("aria-selected", "true");
+  await expect(inspector.getByTestId("inspector-linked-signal-summary")).toContainText("No linked Signals");
+  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
+  await expect(inspector.getByTestId("manage-transaction-links")).toBeVisible();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
   await expect(linked.getByTestId("linked-signal-list")).toContainText("DATA");
@@ -70,7 +81,7 @@ test("Transaction Inspector uses a bounded searchable linked-signal picker", asy
   await expect(linked.getByTestId("linked-signal-list")).toContainText("No linked signals");
 });
 
-test("10k Signal Transaction Inspector keeps picker DOM bounded and preserves hierarchy context", async ({ page }) => {
+test("10k Signal Bottom Linked Signals editor keeps picker DOM bounded and preserves hierarchy context", async ({ page }) => {
   test.setTimeout(120_000);
   await page.goto("/");
   const document = largeTransactionDocument(10_000);
@@ -81,7 +92,9 @@ test("10k Signal Transaction Inspector keeps picker DOM bounded and preserves hi
   await page.getByLabel("Workspace preset").selectOption("transaction");
   await page.getByTestId("transaction-editor").getByRole("button", { name: /Bulk transaction/ }).click();
 
-  const linked = page.getByTestId("inspector").getByTestId("transaction-linked-signals");
+  await page.getByTestId("inspector").getByTestId("manage-transaction-links").click();
+  const linked = page.getByTestId("transaction-linked-signals");
+  await expect(linked).toHaveCount(1);
   await expect(linked.getByTestId("linked-signal-list").locator(".transaction-linked-item")).toHaveCount(2);
   await linked.getByTestId("open-linked-signal-picker").click();
   const picker = linked.getByTestId("linked-signal-picker");

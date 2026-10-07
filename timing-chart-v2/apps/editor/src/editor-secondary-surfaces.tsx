@@ -46,7 +46,7 @@ import { TransactionEditor } from "./transaction-editor.js";
 import { TransactionLanes } from "./runtime/transaction-lanes.js";
 import { TransactionTree } from "./transaction-tree.js";
 import {
-  TransactionLinkedSummary,
+  TransactionLinkedEditor,
   TransactionPhaseSummary,
   clearAllPhaseDrafts,
 } from "./transaction-bottom-tabs.js";
@@ -237,7 +237,6 @@ export function useEditorSecondarySurfaces(
       onRedo={redo}
       onDelete={input.actions.deleteBottomTransaction}
       onCancel={() => dialog.setBottomResetToken((value) => value + 1)}
-      onToggleTransactionSignal={input.actions.toggleTransactionSignal}
     />
   );
   const bookmarkEditor = (
@@ -456,7 +455,7 @@ export function useEditorSecondarySurfaces(
   ) : workspace.bottomTab === "Phases" ? (
     <TransactionPhaseSummary transaction={selected.transaction} transactions={input.document.transactions ?? []} commands={surfaceCommands} cyclesPerTc={workspace.cyclesPerTc} />
   ) : workspace.bottomTab === "Linked Signals" ? (
-    <TransactionLinkedSummary transaction={selected.transaction} document={input.document} />
+    <TransactionLinkedEditor transaction={selected.transaction} document={input.document} onToggle={input.actions.toggleTransactionSignal} />
   ) : workspace.bottomTab === "Bookmarks" ? (
     bookmarkEditor
   ) : workspace.bottomTab === "Problems" ? (
@@ -551,7 +550,10 @@ export function useEditorSecondarySurfaces(
       }}
       onClose={() => dialog.setInspectorVisible(false)}
       onDeleteBookmark={input.actions.deleteBottomBookmark}
-      onToggleTransactionSignal={input.actions.toggleTransactionSignal}
+      onManageTransactionLinks={() => {
+        workspace.setBottomTab("Linked Signals");
+        input.setBottomVisible(true);
+      }}
       onGroupPreview={(groupId, style) => {
         refs.groupStylePreviewRef.current(groupId, style);
         refreshGroupStylePreview(refs.host.current!, groupId, style);

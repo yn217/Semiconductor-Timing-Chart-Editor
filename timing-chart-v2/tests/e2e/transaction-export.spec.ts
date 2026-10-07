@@ -32,10 +32,12 @@ async function createTransaction(page: Page, name = "DMA Read", start = 2, end =
   return editor;
 }
 
-async function linkSignal(inspector: import("@playwright/test").Locator, name: string) {
-  await inspector.getByTestId("open-linked-signal-picker").click();
-  await inspector.getByLabel("Search linked signals").fill(name);
-  await inspector.getByRole("option", { name: new RegExp(name) }).click();
+async function linkSignal(page: Page, name: string) {
+  await page.getByTestId("inspector").getByTestId("manage-transaction-links").click();
+  const linked = page.getByTestId("transaction-linked-signals");
+  await linked.getByTestId("open-linked-signal-picker").click();
+  await linked.getByLabel("Search linked signals").fill(name);
+  await linked.getByRole("option", { name: new RegExp(name) }).click();
 }
 
 test("creates, edits, links, saves and reopens one canonical Transaction", async ({ page }) => {
@@ -49,13 +51,13 @@ test("creates, edits, links, saves and reopens one canonical Transaction", async
   // and full-replace-on-command semantics as Color/Group.
   await inspector.getByLabel("Transaction description").fill("AXI burst read across the shared bus");
   await inspector.getByTestId("apply-inspector-transaction").click();
-  await linkSignal(inspector, "REQUEST");
+  await linkSignal(page, "REQUEST");
   await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 0");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo" }).click();
-  await expect(inspector.getByTestId("linked-signal-list").getByRole("button", { name: "Unlink REQUEST" })).toHaveCount(0);
+  await expect(page.getByTestId("transaction-linked-signals").getByTestId("linked-signal-list").getByRole("button", { name: "Unlink REQUEST" })).toHaveCount(0);
   await page.getByTestId("ribbon").getByRole("button", { name: "Redo" }).click();
-  await expect(inspector.getByTestId("linked-signal-list").getByRole("button", { name: "Unlink REQUEST" })).toHaveCount(1);
+  await expect(page.getByTestId("transaction-linked-signals").getByTestId("linked-signal-list").getByRole("button", { name: "Unlink REQUEST" })).toHaveCount(1);
   const save = page.waitForEvent("download");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
