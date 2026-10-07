@@ -17,7 +17,7 @@ function rippleFixture() {
     bookmarks: [{ id: "bookmark_data" as BookmarkId, name: "Data", start: 4 }],
     timeGroups: [{ id: "time_wait" as TimeGroupId, name: "Wait", start: 2, end: 5, presentation: { resumeLabelAnchorId: "label_wait" as LabelAnchorId } }],
     annotations: [{ id: "ann_data" as AnnotationId, type: "text" as const, label: "Data", visible: true, anchor: { signalId: "sig_data" as SignalId, cycle: 4, point: "value-start" as const } }],
-    transactions: [{ id: "txn_data" as TransactionId, name: "Transfer", start: 4, end: 7, phases: [{ name: "Data", start: 4, end: 6 }] }],
+    transactions: [{ id: "txn_data" as TransactionId, name: "Transfer", start: 4, end: 7, phases: [{ id: "phase_data" as import("@timing-chart-v2/schema").TransactionPhaseId, name: "Data", start: 4, end: 6 }] }],
   };
 }
 
@@ -189,7 +189,7 @@ describe("timeline ripple commands", () => {
     const initial = rippleFixture();
     initial.timeGroups[0] = { ...initial.timeGroups[0]!, start: 2, end: 4 };
     initial.timeline.labelAnchors[0] = { ...initial.timeline.labelAnchors[0]!, source: 4 };
-    initial.transactions[0] = { ...initial.transactions[0]!, start: 2, end: 4, phases: [{ name: "Deleted", start: 2, end: 4 }] };
+    initial.transactions[0] = { ...initial.transactions[0]!, start: 2, end: 4, phases: [{ id: "phase_deleted" as import("@timing-chart-v2/schema").TransactionPhaseId, name: "Deleted", start: 2, end: 4 }] };
     const session = new CommandHistorySession(initial);
     const result = session.execute({ id: commandId("cmd_delete_ranges"), type: "timeline.delete", start: 2, end: 4 });
     expect(result.ok).toBe(true);

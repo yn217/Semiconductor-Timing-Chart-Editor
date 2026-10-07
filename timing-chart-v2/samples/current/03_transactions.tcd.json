@@ -211,16 +211,19 @@
       "laneId": "lane:request",
       "phases": [
         {
+          "id": "phase_read_address",
           "name": "Address",
           "start": 8,
           "end": 12
         },
         {
+          "id": "phase_read_wait",
           "name": "Wait",
           "start": 12,
           "end": 24
         },
         {
+          "id": "phase_read_response",
           "name": "Response",
           "start": 24,
           "end": 30
@@ -253,16 +256,19 @@
       "laneId": "lane:response",
       "phases": [
         {
+          "id": "phase_write_command",
           "name": "Command",
           "start": 36,
           "end": 42
         },
         {
+          "id": "phase_write_data",
           "name": "Data",
           "start": 42,
           "end": 54
         },
         {
+          "id": "phase_write_complete",
           "name": "Complete",
           "start": 54,
           "end": 60

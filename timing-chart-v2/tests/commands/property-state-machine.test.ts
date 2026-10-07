@@ -41,7 +41,7 @@ function variedPropertyFixture(): CanonicalDocument {
   const annotation: Annotation = { id: annotationId, type: "marker", label: "MARK", visible: true, anchor: { signalId: "sig_data" as SignalId, cycle: 2, point: "cycle-center" } };
   const bookmark: Bookmark = { id: bookmarkId, name: "MARK", start: 2 };
   const timeGroup: TimeGroup = { id: timeGroupId, name: "WINDOW", start: 1, end: 3 };
-  const transaction: Transaction = { id: transactionId, name: "TRANSACTION", start: 1, end: 3, laneId: "lane_0", linkedSignals: ["sig_data" as SignalId], phases: [{ name: "phase", start: 1, end: 2 }] };
+  const transaction: Transaction = { id: transactionId, name: "TRANSACTION", start: 1, end: 3, laneId: "lane_0", linkedSignals: ["sig_data" as SignalId], phases: [{ id: "phase_property" as import("@timing-chart-v2/schema").TransactionPhaseId, name: "phase", start: 1, end: 2 }] };
   return {
     ...base,
     signalGroups: [...base.signalGroups, { id: auxiliaryGroupId, name: "Auxiliary", rows: [commentId, spacerId], spacers: [{ id: spacerId, height: 12 }] }],
