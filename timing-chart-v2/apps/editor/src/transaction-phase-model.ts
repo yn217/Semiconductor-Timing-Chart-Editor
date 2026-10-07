@@ -3,7 +3,7 @@ import { cyclesToTc, tcUnitLabel } from "./transaction-tc.js";
 
 /**
  * #751: the Phase draft model shared by the Bottom editor and the Inspector.
- *  - Identity: every draft row carries a stable `uid` (committed rows keep their source index as `c<index>`, new rows get `n<seq>`).
+ *  - Identity: committed rows carry canonical phase IDs as `uid`; new rows receive fresh opaque IDs.
  *    Edits and deletes resolve the uid, never the displayed (Start-sorted) position.
  *  - Order: the visible order is the Start-time projection (`startOrder`), independent of edit order.
  *  - Validation: ONE validator with structured codes over the canonical source cycles (TC input is converted to whole source cycles
