@@ -168,6 +168,7 @@
 .transaction-editor { min-height: 100%; padding: 0 12px; }.transaction-bottom-summary { min-height: 100%; padding: 10px 12px; color: #263d58; }
 .transaction-bottom-summary > header { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #d5dde7; padding-bottom: 7px; }
 .transaction-bottom-summary > header span { color: #718096; font-size: 10px; }
+.transaction-bottom-summary > .transaction-linked-signals { margin-top: 0; padding-top: 0; border-top: 0; }
 .transaction-bottom-phase-table { display: grid; gap: 2px; margin-top: 8px; max-width: 620px; }
 .transaction-bottom-phase-row { display: grid; grid-template-columns: minmax(160px, 1fr) 80px 80px 80px; gap: 8px; min-height: 28px; align-items: center; padding: 0 8px; border: 1px solid #d5dde7; font-size: 10px; }
 .transaction-bottom-phase-editor .transaction-bottom-phase-row { grid-template-columns: minmax(160px, 1fr) 70px 70px 70px 28px; }

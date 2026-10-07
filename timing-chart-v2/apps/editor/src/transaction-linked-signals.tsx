@@ -4,23 +4,8 @@ import type { Signal, SignalId, Transaction } from "@timing-chart-v2/schema";
 
 type UnlinkButton = (label: string, onClick: () => void) => ReactNode;
 
-// #454: toggling a link commits a canonical revision immediately, which
-// preserves the Inspector identity. Plain component state for "is the picker open" would
-// reset to closed on every single toggle, forcing a re-click of "Add
-// signal..." between each one when linking several signals in a row --
-// module-scoped persistence (the same pattern `useInspectorAccordion`
-// already uses for section open/closed state) keeps it open across that
-// reset only when the selected transaction changes.
-let linkedSignalPickerOpen = false;
-
 export function TransactionLinkedSignals({ transaction, document, onToggle, renderUnlinkButton }: { readonly transaction: Transaction; readonly document: Readonly<CanonicalDocument>; readonly onToggle: (signalId: SignalId) => void; readonly renderUnlinkButton: UnlinkButton }) {
-  const [pickerOpenState, setPickerOpenState] = useState(linkedSignalPickerOpen);
-  const setPickerOpen = (updater: boolean | ((current: boolean) => boolean)) => setPickerOpenState((current) => {
-    const next = typeof updater === "function" ? updater(current) : updater;
-    linkedSignalPickerOpen = next;
-    return next;
-  });
-  const pickerOpen = pickerOpenState;
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [linkedFilter, setLinkedFilter] = useState("");
   const linkedIds = new Set(transaction.linkedSignals ?? []);

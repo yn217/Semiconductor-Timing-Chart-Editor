@@ -7,6 +7,9 @@ test("builds six transactions through normal GUI selection transitions", async (
   await expect(page.getByTestId("transaction-left-tree").locator("[data-transaction-tree-id]")).toHaveCount(0);
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await page.getByRole("tab", { name: "Transaction", exact: true }).click();
+  // The authoring values below are source cycles; set the production TC scale
+  // to one cycle so the six-cycle Transaction and its Phases fit the sample.
+  await page.getByTestId("transaction-tc-scale").selectOption("1");
   const inspector = page.getByTestId("inspector");
   const ribbon = page.getByTestId("ribbon");
   const surface = page.getByTestId("cycle-surface");
@@ -23,7 +26,7 @@ test("builds six transactions through normal GUI selection transitions", async (
     await page.getByTestId("transaction-tree-more").click();
     await page.getByTestId("add-transaction-group-tree").click();
   }
-  await page.getByTestId("transaction-left-tree").locator("[data-transaction-tree-id]").first().click();
+  await page.getByTestId("transaction-left-tree").locator("[data-transaction-tree-id]").filter({ hasText: "Read_0" }).first().click();
   await inspector.getByLabel("Transaction group", { exact: true }).selectOption({ label: "Group 1" });
   await expect(inspector.getByLabel("Transaction group", { exact: true })).toHaveValue(/.+/);
   await inspector.getByLabel("Transaction end", { exact: true }).fill("6");
@@ -33,14 +36,17 @@ test("builds six transactions through normal GUI selection transitions", async (
     await expect(inspector.locator("[data-phase-index]")).toHaveCount(index + 1);
     await inspector.getByLabel(`Phase ${index + 1} name`).fill(["Address", "Read Data", "Response"][index]!);
   }
-  await inspector.getByTestId("open-linked-signal-picker").click();
-  await inspector.getByLabel("Search linked signals").fill("REQUEST");
-  await inspector.getByRole("option", { name: /REQUEST/ }).click();
+  await inspector.getByTestId("manage-transaction-links").click();
+  const linked = page.getByTestId("transaction-linked-signals");
+  await linked.getByTestId("open-linked-signal-picker").click();
+  await linked.getByLabel("Search linked signals").fill("REQUEST");
+  await linked.getByRole("option", { name: /REQUEST/ }).click();
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true }).click();
   await inspector.getByLabel("Transaction color").fill("#3366ff");
   await inspector.getByTestId("apply-inspector-transaction").click();
   await expect(page.getByTestId("history-status")).toContainText("History");
   await page.getByTestId("transaction-left-tree").locator("[data-transaction-tree-id]").nth(1).click();
-  await page.getByTestId("transaction-left-tree").locator("[data-transaction-tree-id]").first().click();
+  await page.getByTestId("transaction-left-tree").locator("[data-transaction-tree-id]").filter({ hasText: "Read_0" }).first().click();
   await expect(inspector.locator("[data-phase-index]")).toHaveCount(3);
   for (const [index, group] of [[1, "Group 1"], [2, "Group 2"], [3, "Group 2"], [4, "Group 3"]] as const) {
     await page.getByTestId("transaction-left-tree").locator("[data-transaction-tree-id]").nth(index).click();
@@ -67,11 +73,13 @@ test("builds six transactions through normal GUI selection transitions", async (
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(saved!);
   await expect(page.getByTestId("transaction-editor")).toContainText("Memory");
   await expect(page.getByTestId("transaction-editor")).toContainText("lane_3");
-  await page.getByTestId("transaction-left-tree").locator("[data-transaction-tree-id]").first().click();
+  await page.getByTestId("transaction-left-tree").locator("[data-transaction-tree-id]").filter({ hasText: "Read_0" }).first().click();
   await expect(inspector.getByLabel("Phase 1 name")).toHaveValue("Address");
   await expect(inspector.getByLabel("Phase 2 name")).toHaveValue("Read Data");
   await expect(inspector.getByLabel("Phase 3 name")).toHaveValue("Response");
-  await expect(inspector.getByTestId("linked-signal-list")).toContainText("REQUEST");
+  await expect(inspector.getByTestId("inspector-linked-signal-summary")).toContainText("REQUEST");
+  await inspector.getByTestId("manage-transaction-links").click();
+  await expect(page.getByTestId("transaction-linked-signals").getByTestId("linked-signal-list")).toContainText("REQUEST");
 });
 
 test("authored transaction keeps its stable ID through one edit Undo/Redo, mode roundtrip, and Save/Open", async ({ page }) => {

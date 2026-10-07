@@ -74,7 +74,7 @@ test("Sample A: create/rename/move/resize/delete, phase add/edit/delete, link/un
 
   // Select Read_0 and confirm the Inspector owns details while Bottom stays
   // table-first (no stale values from a previous/default state).
-  await lanes.locator("[data-transaction-id='txn_read0']").click();
+  await page.getByTestId("transaction-left-tree").locator("[data-transaction-tree-id='txn_read0']").click();
   await expect(inspector.getByLabel("Transaction name")).toHaveValue("Read_0");
   await expect(bottomEditor.locator("[data-transaction-row-id='txn_read0'] input[aria-label='Bottom Transaction name']")).toHaveValue("Read_0");
   // #703: the Bottom row is editable and carries its own Apply, disabled while the draft equals Canonical.
@@ -113,18 +113,20 @@ test("Sample A: create/rename/move/resize/delete, phase add/edit/delete, link/un
   await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
 
   // Unlink one Signal, then link a different one.
-  const linked = inspector.getByTestId("transaction-linked-signals");
+  await inspector.getByTestId("manage-transaction-links").click();
+  const linked = page.getByTestId("transaction-linked-signals");
   await expect(linked).toContainText("Linked Signals (3)");
   await linked.getByRole("button", { name: /Unlink DATA/ }).click();
   await expect(linked).toContainText("Linked Signals (2)");
-  await inspector.getByTestId("open-linked-signal-picker").click();
-  await inspector.getByLabel("Search linked signals").fill("RESP");
-  await inspector.getByRole("option", { name: /RESP/ }).click();
+  await linked.getByTestId("open-linked-signal-picker").click();
+  await linked.getByLabel("Search linked signals").fill("RESP");
+  await linked.getByRole("option", { name: /RESP/ }).click();
   await expect(linked).toContainText("Linked Signals (3)");
   await expect(linked).toContainText("RESP");
   await expect(page.getByTestId("history-status")).toHaveText("History 5 / Redo 0");
 
   // Duplicate, then delete the duplicate.
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true }).click();
   await bottomEditor.getByTestId("bottom-transaction-duplicate").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 6 / Redo 0");
   await expect(lanes.locator("[data-transaction-id]")).toHaveCount(5);
