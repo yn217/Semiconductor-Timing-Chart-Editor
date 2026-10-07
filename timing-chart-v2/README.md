@@ -32,6 +32,10 @@ verification must use an independent clean checkout; see
 [`docs/LOCAL_RELEASE.md`](../docs/LOCAL_RELEASE.md). GitHub Actions is not a
 quality gate and no hosted workflow is configured.
 
+Third-party notices are recorded in [`THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md).
+Project distribution terms are awaiting release-owner confirmation; public
+repository visibility must not be treated as a license grant.
+
 ## Package direction
 
 ```text
