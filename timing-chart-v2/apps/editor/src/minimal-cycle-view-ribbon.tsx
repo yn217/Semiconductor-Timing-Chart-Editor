@@ -337,6 +337,34 @@ function Ribbon({ tab, document, revision, range, history, zoom, cyclesPerTc, on
         <DsRibbonGroup ariaLabel="Assistant" className="ai-assistant-group" label="Assistant">
           <DsRibbonButton ariaLabel="Ask or edit with the AI Assistant" icon={<RibbonIcon name="i-ai" />} onClick={onOpenAIAssistant} title="Open the AI Assistant in the Bottom Panel to preview, validate and apply a proposal">Ask / Edit</DsRibbonButton>
         </DsRibbonGroup>
+        <div className="ai-workflow-groups" data-testid="ai-capability-groups" aria-label="AI workflow capabilities">
+          <section className="ai-workflow-category" data-ai-capability-category="Create" aria-labelledby="ai-create-heading">
+            <h4 id="ai-create-heading">Create</h4>
+            <span data-ai-capability="handshake-scenarios" data-support="built-in">Handshake missing cases · built-in suggestions</span>
+            <span data-ai-capability="signals-transactions" data-support="external">Signals / Transactions · connected-AI proposal</span>
+          </section>
+          <section className="ai-workflow-category" data-ai-capability-category="Edit" aria-labelledby="ai-edit-heading">
+            <h4 id="ai-edit-heading">Edit</h4>
+            <span data-ai-capability="signal-edits" data-support="offline">Rename / show / hide Signal · offline</span>
+            <span data-ai-capability="range-edits" data-support="external">Waveform range / group edits · connected-AI proposal</span>
+          </section>
+          <section className="ai-workflow-category" data-ai-capability-category="Analyze" aria-labelledby="ai-analyze-heading">
+            <h4 id="ai-analyze-heading">Analyze</h4>
+            <span data-ai-capability="protocol-checks" data-support="built-in">Protocol rules → Problems · built-in Check</span>
+            <span data-ai-capability="timing-explanation" data-support="external">Explain waveform / suspicious timing · connected AI</span>
+          </section>
+          <section className="ai-workflow-category" data-ai-capability-category="Review" aria-labelledby="ai-review-heading">
+            <h4 id="ai-review-heading">Review</h4>
+            <span data-ai-capability="spec-review" data-support="external">Timing-spec review · connected AI</span>
+            <span data-ai-capability="missing-cases" data-support="built-in">Handshake coverage · built-in suggestions</span>
+          </section>
+          <section className="ai-workflow-category" data-ai-capability-category="Convert" aria-labelledby="ai-convert-heading">
+            <h4 id="ai-convert-heading">Convert</h4>
+            <span data-ai-capability="sva-conversion" data-support="unsupported">Waveform → SVA · not supported</span>
+            <span data-ai-capability="documentation-conversion" data-support="unsupported">Waveform → documentation · not supported</span>
+            <span data-ai-capability="generic-scenario-conversion" data-support="unsupported">Generic waveform → scenario · not supported</span>
+          </section>
+        </div>
       </div>
       <div className="ribbon-major-group" data-major-group="Provider" aria-label="AI provider status">
         <DsRibbonGroup ariaLabel="Provider" className="ai-provider-group" label="Provider">

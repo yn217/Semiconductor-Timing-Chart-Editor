@@ -325,7 +325,17 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     const ribbon = page.getByTestId("ribbon");
     const trigger = ribbon.getByRole("button", { name: "Ask or edit with the AI Assistant" });
     const providerStatus = ribbon.getByTestId("ai-provider-status");
-    for (const element of [trigger, providerStatus]) {
+    const capabilities = ribbon.getByTestId("ai-capability-groups");
+    await expect(capabilities.locator("[data-ai-capability-category]")).toHaveCount(5);
+    for (const category of ["Create", "Edit", "Analyze", "Review", "Convert"]) {
+      await expect(capabilities.locator(`[data-ai-capability-category="${category}"]`)).toBeVisible();
+    }
+    await expect(capabilities.locator('[data-ai-capability="handshake-scenarios"]')).toContainText("built-in suggestions");
+    await expect(capabilities.locator('[data-ai-capability="signals-transactions"]')).toContainText("connected-AI proposal");
+    await expect(capabilities.locator('[data-ai-capability="sva-conversion"]')).toContainText("not supported");
+    await expect(capabilities.locator('[data-ai-capability="documentation-conversion"]')).toContainText("not supported");
+    await expect(capabilities.locator('[data-support="unsupported"] button')).toHaveCount(0);
+    for (const element of [trigger, providerStatus, capabilities]) {
       const box = (await element.boundingBox())!;
       expect(box.x, JSON.stringify(box)).toBeGreaterThanOrEqual(0);
       expect(box.x + box.width, JSON.stringify(box)).toBeLessThanOrEqual(viewport.width);
