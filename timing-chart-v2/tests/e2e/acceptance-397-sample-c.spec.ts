@@ -55,6 +55,18 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     // Cycle waveform occupies the lower pane.
     const transactionPaneBox = (await page.locator(".split-transaction-pane").boundingBox())!;
     const signalPaneBox = (await page.locator(".split-signal-content").boundingBox())!;
+    const transactionHeading = page.getByTestId("combined-transaction-heading");
+    const waveformHeading = page.getByTestId("combined-waveforms-heading");
+    await expect(transactionHeading).toBeVisible();
+    await expect(waveformHeading).toBeVisible();
+    await expect(transactionHeading).toHaveText("Transactions");
+    await expect(waveformHeading).toHaveText("Waveforms");
+    const transactionHeadingBox = (await transactionHeading.boundingBox())!;
+    const waveformHeadingBox = (await waveformHeading.boundingBox())!;
+    expect(transactionHeadingBox.y).toBeGreaterThanOrEqual(transactionPaneBox.y);
+    expect(transactionHeadingBox.y + transactionHeadingBox.height).toBeLessThanOrEqual(transactionPaneBox.y + transactionPaneBox.height);
+    expect(waveformHeadingBox.y).toBeGreaterThanOrEqual(transactionPaneBox.y + transactionPaneBox.height);
+    expect(waveformHeadingBox.y + waveformHeadingBox.height).toBeLessThanOrEqual(signalPaneBox.y + 1);
     const lanesBox = (await lanes.boundingBox())!;
     const surfaceBox = (await surface.boundingBox())!;
     expect(transactionPaneBox.y + transactionPaneBox.height).toBeLessThanOrEqual(signalPaneBox.y + 1);
@@ -76,6 +88,35 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     expect(bothInsideOneViewport).toBe(true);
 
     expect(errors.filter((message) => !message.includes("beforeunload"))).toEqual([]);
+  });
+}
+
+for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
+  test(`Combined pane ratio survives a Cycle mode round-trip without document edits at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await openSampleAInSplitMode(page);
+    const surface = page.getByTestId("cycle-surface");
+    const baseline = {
+      revision: await surface.getAttribute("data-canonical-revision"),
+      history: await page.getByTestId("history-status").innerText(),
+      dirty: await page.getByTestId("dirty-status").innerText(),
+    };
+    const divider = page.getByTestId("combined-split-divider");
+    const originalRatio = await divider.getAttribute("aria-valuenow");
+    const dividerBox = (await divider.boundingBox())!;
+    await page.mouse.move(dividerBox.x + dividerBox.width / 2, dividerBox.y + dividerBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(dividerBox.x + dividerBox.width / 2, dividerBox.y + dividerBox.height / 2 + 48);
+    await page.mouse.up();
+    await expect.poll(() => divider.getAttribute("aria-valuenow")).not.toBe(originalRatio);
+    const resizedRatio = await divider.getAttribute("aria-valuenow");
+
+    await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+    await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
+    await expect(page.getByTestId("combined-split-divider")).toHaveAttribute("aria-valuenow", resizedRatio!);
+    await expect(surface).toHaveAttribute("data-canonical-revision", baseline.revision!);
+    await expect(page.getByTestId("history-status")).toHaveText(baseline.history);
+    await expect(page.getByTestId("dirty-status")).toHaveText(baseline.dirty);
   });
 }
 
