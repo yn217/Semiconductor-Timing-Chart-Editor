@@ -28,6 +28,7 @@ test("Cycle Transition row selection keeps the editor mounted and view-only at s
     const rowOne = editor.getByLabel("Select transition 1", { exact: true });
     const rowTwo = editor.getByLabel("Select transition 2", { exact: true });
     const selectedCount = editor.getByTestId("event-selected-count");
+    const deleteSelected = editor.getByTestId("event-delete-selected");
     const baseline = await host.evaluate((element) => ({
       revision: element.getAttribute("data-canonical-revision"),
       history: document.querySelector("[data-testid='history-status']")?.textContent,
@@ -38,15 +39,17 @@ test("Cycle Transition row selection keeps the editor mounted and view-only at s
 
     await rowOne.check();
     await expect(selectedCount).toHaveText("1 row selected");
+    await expect(deleteSelected).toBeEnabled();
     await expect(rowTwo).not.toBeChecked();
     await expect(selectAll).not.toBeChecked();
     await rowTwo.check();
     await expect(selectedCount).toHaveText("2 rows selected");
+    await expect(deleteSelected).toBeEnabled();
     await rowOne.uncheck();
     await expect(selectedCount).toHaveText("1 row selected");
     await selectAll.check();
     await expect(selectedCount).toHaveText("3 rows selected");
-    await expect(editor.getByTestId("event-delete-selected")).toBeDisabled();
+    await expect(deleteSelected).toBeDisabled();
     await selectAll.uncheck();
     await expect(selectedCount).toHaveText("0 rows selected");
 
