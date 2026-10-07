@@ -3,15 +3,11 @@ import { startInCycleSample } from "./cycle-startup.js";
 
 startInCycleSample(test);
 
-// #419 -- Highlight "Cycle Snap / Free positioning" mode. Zero GUI existed
-// anywhere despite `annotation.setPositionMode` already being a fully-
-// validated semantic command (rejects switching to cycle-snap when the
-// current boundaries aren't integer cycles). This adds an immediate-commit
-// Mode select to the Bottom Panel's Annotation editor for Highlight,
-// dispatching that exact existing command -- one atomic mode flip, own
-// History entry, no new Canonical owner.
+// #419 -- Highlight "Cycle Snap / Free positioning" is an immediate, single-
+// History semantic choice. It is intentionally independent of other pending
+// Inspector drafts, which remain unapplied until Apply or Revert.
 
-test("Highlight Position Mode is editable in the Bottom Panel and commits through the existing annotation.setPositionMode command", async ({ page }) => {
+test("Inspector Highlight Position Mode commits through annotation.setPositionMode", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
@@ -27,8 +23,10 @@ test("Highlight Position Mode is editable in the Bottom Panel and commits throug
   await expect(modeSelect).toHaveValue("cycle-snap"); // default, matches schema's back-compat contract
 
   await modeSelect.selectOption("free");
-  // Immediate commit -- one atomic mode flip, its own History entry.
+  // Immediate commit -- one atomic mode flip, its own History entry. The
+  // Inspector explains this boundary beside the control.
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  await expect(page.getByLabel("Highlight position mode section")).toContainText("Applies immediately as one Undo step");
   await expect(modeSelect).toHaveValue("free");
 
   const startCycle = page.getByLabel("Inspector annotation anchor cycle");
@@ -44,6 +42,31 @@ test("Highlight Position Mode is editable in the Bottom Panel and commits throug
   // leaves Canonical/History unchanged.
   await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
   await expect(modeSelect).toHaveValue("free");
+});
+
+test("Highlight Position Mode immediate commit preserves and does not apply another Inspector draft", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByLabel("Annotation type").selectOption("highlight");
+  await page.getByRole("button", { name: "Add annotation" }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const inspector = page.getByTestId("annotation-editor");
+  const label = inspector.getByLabel("Annotation label").first();
+  const initialLabel = await label.inputValue();
+  await label.fill("unapplied label draft");
+  const modeSelect = inspector.getByRole("combobox", { name: "Highlight position mode" });
+  await modeSelect.selectOption("free");
+
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  await expect(label).toHaveValue("unapplied label draft");
+  await expect(modeSelect).toHaveValue("free");
+
+  await inspector.getByRole("button", { name: "Discard unapplied Inspector draft" }).click();
+  await expect(label).toHaveValue(initialLabel);
+  await expect(modeSelect).toHaveValue("free");
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
 });
 
 test("Fractional Highlight Free position survives production Save/Open", async ({ page }) => {

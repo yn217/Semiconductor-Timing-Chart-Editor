@@ -7,7 +7,7 @@ import type { EditorSurfaceCommandController } from "./application/editor-surfac
 function phasesEqual(left: readonly TransactionPhase[], right: readonly TransactionPhase[]): boolean {
   return left.length === right.length && left.every((phase, index) => {
     const other = right[index];
-    return other !== undefined && phase.name === other.name && phase.start === other.start && phase.end === other.end;
+    return other !== undefined && phase.id === other.id && phase.name === other.name && phase.start === other.start && phase.end === other.end;
   });
 }
 
@@ -53,7 +53,8 @@ export function addPhaseToDraft(transaction: Transaction): void {
   if (!canAddPhase(transaction)) return;
   const rows = draftRowsOrCommitted(transaction).map((phase) => ({ ...phase }));
   const nextStart = Math.max(transaction.start, ...rows.map((phase) => phase.end));
-  rows.push({ name: `Phase ${rows.length + 1}`, start: nextStart, end: nextStart + 1, uid: newPhaseUid() });
+  const id = newPhaseUid() as TransactionPhase["id"];
+  rows.push({ id, name: `Phase ${rows.length + 1}`, start: nextStart, end: nextStart + 1, uid: id });
   phaseDrafts.set(transaction.id, { base: transaction.phases ?? [], rows });
   bumpPhaseDrafts();
 }
@@ -122,7 +123,8 @@ export function TransactionPhaseEditor({ transaction, commands, compact = false,
   const addPhase = () => {
     const nextStart = Math.max(rangeStart, ...rows.map((phase) => phase.end));
     if (nextStart >= rangeEnd) return;
-    setRows((current) => [...current, { name: `Phase ${current.length + 1}`, start: nextStart, end: nextStart + 1, uid: newPhaseUid() }]);
+    const id = newPhaseUid() as TransactionPhase["id"];
+    setRows((current) => [...current, { id, name: `Phase ${current.length + 1}`, start: nextStart, end: nextStart + 1, uid: id }]);
   };
   const apply = () => {
     if (!changed) return;

@@ -586,8 +586,9 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["name", "start", "end"],
+            "required": ["id", "name", "start", "end"],
             "properties": {
+              "id": { "$ref": "#/$defs/stableId" },
               "name": { "type": "string" },
               "start": { "type": "number", "minimum": 0 },
               "end": { "type": "number", "exclusiveMinimum": 0 }

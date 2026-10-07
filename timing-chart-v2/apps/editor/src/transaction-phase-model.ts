@@ -12,9 +12,9 @@ import { cyclesToTc, tcUnitLabel } from "./transaction-tc.js";
 export interface DraftPhase extends TransactionPhase { readonly uid: string }
 
 let newPhaseSequence = 0;
-export const newPhaseUid = (): string => { newPhaseSequence += 1; return `n${newPhaseSequence}`; };
-export const toDraftPhases = (phases: readonly TransactionPhase[]): DraftPhase[] => phases.map((phase, index) => ({ name: phase.name, start: phase.start, end: phase.end, uid: `c${index}` }));
-export const stripPhaseUid = (phase: TransactionPhase & { readonly uid?: string }): TransactionPhase => ({ name: phase.name, start: phase.start, end: phase.end });
+export const newPhaseUid = (): string => { newPhaseSequence += 1; return `transactionPhase_draft_${globalThis.crypto.randomUUID()}_${newPhaseSequence}`; };
+export const toDraftPhases = (phases: readonly TransactionPhase[]): DraftPhase[] => phases.map((phase) => ({ ...phase, uid: phase.id }));
+export const stripPhaseUid = (phase: TransactionPhase & { readonly uid?: string }): TransactionPhase => ({ id: phase.id, name: phase.name, start: phase.start, end: phase.end });
 /** Start-time projection: Start, then End, then uid (stable). */
 export const startOrder = (a: DraftPhase, b: DraftPhase): number => a.start - b.start || a.end - b.end || a.uid.localeCompare(b.uid);
 

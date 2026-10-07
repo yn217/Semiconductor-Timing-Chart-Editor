@@ -116,6 +116,31 @@ test("Escape on the unsaved-changes dialog behaves exactly like Cancel", async (
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });
 
+test("outside click on the unsaved-changes dialog is consumed and behaves like Cancel", async ({ page }) => {
+  await page.goto("/");
+  await makeDirty(page);
+  const host = page.getByTestId("cycle-surface");
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+  const beforeName = await page.getByTestId("inspector").getByLabel("Inspector signal name", { exact: true }).inputValue();
+  const beforeHistory = await page.getByTestId("history-status").textContent();
+
+  await page.getByRole("button", { name: "File", exact: true }).click();
+  const newButton = page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true });
+  await newButton.click();
+  const dialog = page.getByTestId("unsaved-file-dialog");
+  await expect(dialog).toBeVisible();
+  const bounds = await dialog.boundingBox();
+  expect(bounds).not.toBeNull();
+  await page.mouse.click(bounds!.x + 4, bounds!.y + 4);
+
+  await expect(dialog).toBeHidden();
+  await expect(newButton).toBeFocused();
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+  await expect(page.getByTestId("inspector").getByLabel("Inspector signal name", { exact: true })).toHaveValue(beforeName);
+  await expect(page.getByTestId("dirty-status")).toHaveText("Modified");
+  await expect(page.getByTestId("history-status")).toHaveText(beforeHistory!);
+});
+
 test("dirty Open keeps keyboard focus inside the dialog and Enter activates the focused action", async ({ page }) => {
   await page.goto("/");
   await makeDirty(page);

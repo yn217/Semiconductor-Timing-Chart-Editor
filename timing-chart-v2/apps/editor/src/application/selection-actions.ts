@@ -1,5 +1,5 @@
 import type { MutableRefObject } from "react";
-import type { CanonicalDocument, SignalId, TransactionId, AnnotationId } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, SignalId, TransactionId, TransactionPhaseId, AnnotationId } from "@timing-chart-v2/schema";
 import type { SelectionOwner } from "./use-selection-owner.js";
 
 export interface SelectionActionsInput {
@@ -12,6 +12,7 @@ export interface SelectionActionsInput {
 export interface SelectionActions {
   readonly selectAnnotation: (id: AnnotationId) => void;
   readonly selectTransaction: (id: TransactionId, additive?: boolean) => void;
+  readonly selectTransactionPhase: (transactionId: TransactionId, phaseId: TransactionPhaseId) => void;
   readonly selectTransactions: (ids: ReadonlySet<TransactionId>, primary?: TransactionId) => void;
   readonly clearSelection: () => void;
   readonly selectAllSignals: () => void;
@@ -26,6 +27,7 @@ export interface SelectionActions {
 export function createSelectionActions(input: SelectionActionsInput): SelectionActions {
   const selectAnnotation = (id: AnnotationId) => input.selection.selectAnnotation(id);
   const selectTransaction = (id: TransactionId, additive = false) => input.selection.selectTransaction(id, additive);
+  const selectTransactionPhase = (transactionId: TransactionId, phaseId: TransactionPhaseId) => input.selection.selectTransactionPhase(transactionId, phaseId);
   const selectTransactions = (ids: ReadonlySet<TransactionId>, primary?: TransactionId) => input.selection.selectTransactions(ids, primary);
   const clearSelection = () => input.selection.clear();
   const selectAllSignals = () => {
@@ -49,5 +51,5 @@ export function createSelectionActions(input: SelectionActionsInput): SelectionA
     input.selection.selectSignal(id);
     requestAnimationFrame(() => input.hostRef.current?.querySelector<HTMLElement>(`[data-role='left-tree-rows'] [data-row-id='${CSS.escape(id)}']`)?.scrollIntoView({ block: "nearest" }));
   };
-  return { selectAnnotation, selectTransaction, selectTransactions, clearSelection, selectAllSignals, selectAllTransactions, selectAllAnnotations, selectHierarchySignal, revealSelectedInHierarchy };
+  return { selectAnnotation, selectTransaction, selectTransactionPhase, selectTransactions, clearSelection, selectAllSignals, selectAllTransactions, selectAllAnnotations, selectHierarchySignal, revealSelectedInHierarchy };
 }

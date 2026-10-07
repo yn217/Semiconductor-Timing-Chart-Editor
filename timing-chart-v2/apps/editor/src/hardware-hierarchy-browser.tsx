@@ -4,6 +4,7 @@ import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
 import { buildHardwareHierarchyRowIndex, deriveHardwareHierarchyEntries, filterHardwareHierarchyEntries, hardwareHierarchyScopes, hardwareHierarchyScopeBreadcrumbs, type HardwareHierarchyView } from "@timing-chart-v2/projection";
 import { useDialogFocusLoop } from "./dialog-focus-loop.js";
 import { EditorIcon } from "./editor-icon.js";
+import { ModalBackdrop } from "./modal-backdrop.js";
 
 type HardwareHierarchyDisplayMode = "signal" | "relative" | "full" | "split";
 const HIERARCHY_ROW_HEIGHT = 32;
@@ -81,7 +82,7 @@ export function HardwareHierarchyBrowser({ document, selectedSignalId, onSelect,
       setCopyStatus("Copy failed: clipboard access denied");
     }
   };
-  return <div className="modal-backdrop"><section ref={dialogRef} role="dialog" aria-modal="true" aria-label="Hardware Hierarchy" className="hierarchy-browser" data-testid="hierarchy-browser"
+  return <ModalBackdrop onDismiss={onClose}><section ref={dialogRef} role="dialog" aria-modal="true" aria-label="Hardware Hierarchy" className="hierarchy-browser" data-testid="hierarchy-browser"
     data-hierarchy-index-builds={rowIndexBuildCount.current}
     data-hierarchy-row-index-duration-ms={rowIndex.metrics.buildDurationMs}
     data-hierarchy-rows-visited={rowIndex.metrics.rowsVisited}
@@ -114,5 +115,5 @@ export function HardwareHierarchyBrowser({ document, selectedSignalId, onSelect,
         {lastVisibleIndex < visibleEntries.length && <tr aria-hidden="true" className="hierarchy-virtual-spacer"><td colSpan={columnCount} style={{ height: (visibleEntries.length - lastVisibleIndex) * HIERARCHY_ROW_HEIGHT }} /> </tr>}
       </tbody></table>
     </div>
-  </section></div>;
+  </section></ModalBackdrop>;
 }

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
-import type { Annotation, AnnotationId, AnnotationType, Bookmark, BookmarkId, CanonicalDocument, CommandId, DocumentProblem, GroupId, Signal, SignalId, SpacerId, Transaction, TransactionGroup, TransactionId } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationId, AnnotationType, Bookmark, BookmarkId, CanonicalDocument, CommandId, DocumentProblem, GroupId, Signal, SignalId, SpacerId, Transaction, TransactionGroup, TransactionId, TransactionPhaseId } from "@timing-chart-v2/schema";
 import { resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import type { TimelineNavigationOwner } from "../runtime/use-timeline-navigation-owner.js";
 import type { BottomTab } from "../workspace/use-workspace-ui-state.js";
@@ -101,6 +101,7 @@ export interface EditorActions extends ReturnType<typeof createSelectionGroupAct
   readonly deleteBottomAnnotation: () => void;
   readonly deleteBottomTransaction: () => void;
   readonly selectTransaction: (id: TransactionId, additive?: boolean) => void;
+  readonly selectTransactionPhase: (transactionId: TransactionId, phaseId: TransactionPhaseId) => void;
   readonly selectTransactions: (ids: ReadonlySet<TransactionId>, primary?: TransactionId) => void;
   readonly toggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => CommandResult;
   readonly createTransaction: (groupId?: TransactionGroup["id"]) => void;
@@ -228,7 +229,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     document,
   });
   const selectionActions = createSelectionActions({ document: input.document, selection: input.selection, hostRef: input.hostRef, selectedSignalId: input.selectedSignal?.id });
-  const { selectAnnotation, selectTransaction, selectTransactions, clearSelection, selectAllSignals, selectAllTransactions, selectHierarchySignal, revealSelectedInHierarchy } = selectionActions;
+  const { selectAnnotation, selectTransaction, selectTransactionPhase, selectTransactions, clearSelection, selectAllSignals, selectAllTransactions, selectHierarchySignal, revealSelectedInHierarchy } = selectionActions;
   const selectAIEntity = createSelectAIEntityAction({ selectSignal: selectHierarchySignal, selectGroup: input.selection.selectGroup, selectTransaction, selectAnnotation, selectBookmark });
   const revealAIEntity = createRevealAIEntityAction({ document: input.document, hostRef: input.hostRef, navigation: input.navigation, select: selectAIEntity });
   const selectAll = () => input.viewMode === "Transaction" ? selectAllTransactions() : input.selection.refs.state.current.annotationId !== undefined ? selectionActions.selectAllAnnotations() : selectAllSignals();
@@ -465,6 +466,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     deleteBottomAnnotation,
     deleteBottomTransaction,
     selectTransaction,
+    selectTransactionPhase,
     selectTransactions,
     toggleTransactionSignal,
     createTransaction,
