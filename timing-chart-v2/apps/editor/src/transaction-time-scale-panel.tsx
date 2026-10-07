@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import type { CanonicalDocument, TransactionTimeScale } from "@timing-chart-v2/schema";
 import { RibbonIcon } from "./ribbon-icon.js";
 import { useDialogFocusLoop } from "./dialog-focus-loop.js";
+import { consumeOutsidePointerDown } from "./modal-backdrop.js";
 
 const DEFAULT_SCALE: TransactionTimeScale = { clockCyclesPerTransactionCycle: 1, majorInterval: 5, minorInterval: 1 };
 
@@ -71,7 +72,7 @@ export function TransactionTimeScalePanel({ document, cyclesPerTc: activeCyclesP
       const target = event.target;
       if (!(target instanceof Node)) return;
       if (panelRef.current?.contains(target) || triggerRef.current?.contains(target)) return;
-      setOpen(false);
+      consumeOutsidePointerDown(event, () => { setOpen(false); requestAnimationFrame(() => triggerRef.current?.focus()); });
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
