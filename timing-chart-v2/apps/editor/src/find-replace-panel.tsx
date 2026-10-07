@@ -4,6 +4,7 @@ import type { CommandResult } from "@timing-chart-v2/commands";
 import type { CanonicalDocument, Signal, SignalId, Transaction, TransactionId } from "@timing-chart-v2/schema";
 import { RibbonIcon } from "./ribbon-icon.js";
 import { useDialogFocusLoop } from "./dialog-focus-loop.js";
+import { consumeOutsidePointerDown } from "./modal-backdrop.js";
 import { compileLiteralFindReplace } from "./find-replace-model.js";
 const itemName = (item: Signal | Transaction) => "display" in item ? item.display.name : item.name;
 
@@ -56,7 +57,7 @@ export function FindReplacePanel({ document, mode = "signals", onRenameSignals, 
       const target = event.target;
       if (!(target instanceof Node)) return;
       if (panelRef.current?.contains(target) || triggerRef.current?.contains(target)) return;
-      setOpen(false);
+      consumeOutsidePointerDown(event, () => { setOpen(false); requestAnimationFrame(() => triggerRef.current?.focus()); });
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
