@@ -55,6 +55,18 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     // Cycle waveform occupies the lower pane.
     const transactionPaneBox = (await page.locator(".split-transaction-pane").boundingBox())!;
     const signalPaneBox = (await page.locator(".split-signal-content").boundingBox())!;
+    const transactionHeading = page.getByTestId("combined-transaction-heading");
+    const waveformHeading = page.getByTestId("combined-waveforms-heading");
+    await expect(transactionHeading).toBeVisible();
+    await expect(waveformHeading).toBeVisible();
+    await expect(transactionHeading).toHaveText("Transactions");
+    await expect(waveformHeading).toHaveText("Waveforms");
+    const transactionHeadingBox = (await transactionHeading.boundingBox())!;
+    const waveformHeadingBox = (await waveformHeading.boundingBox())!;
+    expect(transactionHeadingBox.y).toBeGreaterThanOrEqual(transactionPaneBox.y);
+    expect(transactionHeadingBox.y + transactionHeadingBox.height).toBeLessThanOrEqual(transactionPaneBox.y + transactionPaneBox.height);
+    expect(waveformHeadingBox.y).toBeGreaterThanOrEqual(transactionPaneBox.y + transactionPaneBox.height);
+    expect(waveformHeadingBox.y + waveformHeadingBox.height).toBeLessThanOrEqual(signalPaneBox.y + 1);
     const lanesBox = (await lanes.boundingBox())!;
     const surfaceBox = (await surface.boundingBox())!;
     expect(transactionPaneBox.y + transactionPaneBox.height).toBeLessThanOrEqual(signalPaneBox.y + 1);

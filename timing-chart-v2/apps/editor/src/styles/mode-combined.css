@@ -25,6 +25,21 @@
   overflow-x: auto;
   overflow-y: hidden;
 }
+.cycle-panel.mode-split .combined-pane-heading {
+  display: flex;
+  flex: 0 0 24px;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--ds-border-subtle, #cbd4df);
+  background: var(--ds-surface-muted, #eef3f8);
+  color: #405875;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  line-height: 1;
+  text-transform: uppercase;
+}
 .cycle-panel.mode-split .split-transaction-pane {
   position: relative;
   width: max-content;
@@ -57,6 +72,18 @@
   overscroll-behavior-x: auto;
   overscroll-behavior-y: contain;
   z-index: 20;
+}
+.cycle-panel.mode-split .split-transaction-pane > .combined-pane-heading-transaction {
+  position: sticky;
+  z-index: 22;
+  top: 0;
+  left: 0;
+}
+.cycle-panel.mode-split > .cycle-viewport.split-signal-pane > .combined-pane-heading-waveforms {
+  position: sticky;
+  z-index: 19;
+  left: 0;
+  width: 100%;
 }
 .cycle-panel.mode-split .combined-split-divider {
   flex: 0 0 8px;
