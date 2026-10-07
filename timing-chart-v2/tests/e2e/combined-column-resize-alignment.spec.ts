@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { expectSharedSourceBoundaryX } from "./helpers/time-axis-alignment.js";
 
-test("Combined keeps Transaction and Cycle source boundaries aligned after column resize", async ({ page }) => {
-  await page.setViewportSize({ width: 1672, height: 941 });
+for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }]) test(`Combined keeps Transaction and Cycle source boundaries aligned after column resize at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+  await page.setViewportSize(viewport);
   await page.goto("/?transaction-demo");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");

@@ -36,7 +36,8 @@ test("Delete Undo restores selection to the recreated Signal; Redo clears it aga
   await expect(page.getByTestId("selection-status")).toHaveText("None");
 });
 
-test("Rename Undo keeps the same Signal selected (name reverts, selection does not move)", async ({ page }) => {
+for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }]) test(`Rename Undo keeps the same Signal selected (name reverts, selection does not move) at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+  await page.setViewportSize(viewport);
   await ready(page);
   const host = page.getByTestId("cycle-surface");
   const row = host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']");
@@ -54,6 +55,10 @@ test("Rename Undo keeps the same Signal selected (name reverts, selection does n
   await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
   await expect(page.getByTestId("selection-status")).toHaveText("REQUEST");
+  await expect(row).toBeVisible();
+  await ribbon.getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(page.getByTestId("selection-status")).toHaveText("RENAMED_REQUEST");
   await expect(row).toBeVisible();
 });
 
