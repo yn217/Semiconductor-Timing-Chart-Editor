@@ -91,6 +91,35 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
   });
 }
 
+for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
+  test(`Combined pane ratio survives a Cycle mode round-trip without document edits at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await openSampleAInSplitMode(page);
+    const surface = page.getByTestId("cycle-surface");
+    const baseline = {
+      revision: await surface.getAttribute("data-canonical-revision"),
+      history: await page.getByTestId("history-status").innerText(),
+      dirty: await page.getByTestId("dirty-status").innerText(),
+    };
+    const divider = page.getByTestId("combined-split-divider");
+    const originalRatio = await divider.getAttribute("aria-valuenow");
+    const dividerBox = (await divider.boundingBox())!;
+    await page.mouse.move(dividerBox.x + dividerBox.width / 2, dividerBox.y + dividerBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(dividerBox.x + dividerBox.width / 2, dividerBox.y + dividerBox.height / 2 + 48);
+    await page.mouse.up();
+    await expect.poll(() => divider.getAttribute("aria-valuenow")).not.toBe(originalRatio);
+    const resizedRatio = await divider.getAttribute("aria-valuenow");
+
+    await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+    await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
+    await expect(page.getByTestId("combined-split-divider")).toHaveAttribute("aria-valuenow", resizedRatio!);
+    await expect(surface).toHaveAttribute("data-canonical-revision", baseline.revision!);
+    await expect(page.getByTestId("history-status")).toHaveText(baseline.history);
+    await expect(page.getByTestId("dirty-status")).toHaveText(baseline.dirty);
+  });
+}
+
 test("Cycle/Transaction Split: linked Signal cross-highlight uses stable IDs and stays aligned after Zoom", async ({ page }) => {
   await openSampleAInSplitMode(page);
   const lanes = page.getByTestId("transaction-lanes");
