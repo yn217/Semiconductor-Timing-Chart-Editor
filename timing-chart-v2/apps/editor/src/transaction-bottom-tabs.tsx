@@ -113,6 +113,8 @@ export function TransactionPhaseEditor({ transaction, commands, compact = false,
     setError("");
   }, [transaction?.id, transaction?.start, transaction?.end, transaction?.phases]);
   const lastTransactionId = useRef<string | undefined>(transaction?.id);
+  const [editingUid, setEditingUid] = useState<string>();
+  const heldOrder = useRef<readonly string[]>([]);
   useEffect(() => {
     if (lastTransactionId.current === transaction?.id) return;
     lastTransactionId.current = transaction?.id;
@@ -147,8 +149,6 @@ export function TransactionPhaseEditor({ transaction, commands, compact = false,
   const updateRow = (uid: string, patch: Partial<TransactionPhase>) => setRows((current) => current.map((item) => item.uid === uid ? { ...item, ...patch } : item));
   // Start-time projection. While a row is being edited the visible order is held (a row must not jump under the caret on every
   // keystroke); it re-projects as soon as focus leaves the row, and on add / delete / revert / apply.
-  const [editingUid, setEditingUid] = useState<string>();
-  const heldOrder = useRef<readonly string[]>([]);
   const projected = [...rows].sort(startOrder);
   const displayRows = editingUid !== undefined && heldOrder.current.length === rows.length && heldOrder.current.every((uid) => rows.some((row) => row.uid === uid))
     ? heldOrder.current.map((uid) => rows.find((row) => row.uid === uid)!)
