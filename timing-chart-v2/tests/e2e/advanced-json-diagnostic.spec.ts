@@ -15,6 +15,10 @@ test("Advanced JSON reports deterministic line and column for malformed input", 
   await json.getByTestId("json-advanced-toggle").click();
   const editor = json.getByLabel("Advanced JSON");
   await editor.fill("{\r\n  \"formatVersion\": 2,\r\n  \"title\": \"壊れた\",\r\n}");
+  await json.getByTestId("apply-advanced-json").click();
+  await expect(json).toContainText("line 4, column 1");
+  await expect(editor).toHaveValue(/壊れた/);
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
   await json.getByRole("button", { name: "Format", exact: true }).click();
   await expect(json).toContainText("line 4, column 1");
   await expect(json).toContainText("Trailing commas are not valid in JSON");

@@ -90,7 +90,8 @@ export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, sel
   const apply = () => {
     if (!advanced) return;
     const value = parseDraft();
-    if (value === undefined || typeof value !== "object" || value === null || Array.isArray(value)) { setStatus("JSON object required"); return; }
+    if (value === undefined) return; // Preserve parse/resource diagnostics, including line and column.
+    if (typeof value !== "object" || value === null || Array.isArray(value)) { setStatus("JSON object required"); return; }
     let next = value as CanonicalDocument;
     if (scope === "selected") {
       if (!selected) { setStatus("No selected object"); return; }
