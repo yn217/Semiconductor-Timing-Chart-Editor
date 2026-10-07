@@ -6,6 +6,7 @@ const built = process.env.RELEASE_BUILT_ARTIFACT === "1";
 export default defineConfig({
   testDir: "tests/e2e",
   testMatch: [
+    "release-legacy-migration.spec.ts",
     "issue-1080-transition-row-selection.spec.ts",
     "issue-777-current-samples-open-save-roundtrip.spec.ts",
     "transaction-bottom-phase-linked-signals.spec.ts",
@@ -13,7 +14,7 @@ export default defineConfig({
     "undo-redo-selection-context.spec.ts",
     "transaction-export.spec.ts",
   ],
-  grep: /Combined keeps|Cycle Transition row selection|survives Open -> Save|Selecting a Transaction keeps|Rename Undo keeps|creates, edits, links, saves|exports deterministic SVG plus PNG/,
+  grep: /release legacy migration|Combined keeps|Cycle Transition row selection|survives Open -> Save|Selecting a Transaction keeps|Rename Undo keeps|creates, edits, links, saves|exports deterministic SVG plus PNG/,
   fullyParallel: false,
   retries: 0,
   reporter: [["list"]],
