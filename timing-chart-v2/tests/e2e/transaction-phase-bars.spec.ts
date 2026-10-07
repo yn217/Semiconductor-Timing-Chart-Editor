@@ -44,7 +44,9 @@ test("Phase-protected Transaction edge resize is rejected without a canonical ch
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await openTransactionSample(page);
   const bar = page.locator("[data-transaction-id='demo_txn_read']");
-  await bar.click();
+  // The semantic Phase hit targets intentionally sit over the lower phase
+  // strip. Select the Transaction through its unoccluded upper bar surface.
+  await bar.click({ position: { x: 12, y: 4 } });
   const inspector = page.getByTestId("inspector");
   const beforeStart = await inspector.getByLabel("Transaction start").inputValue();
   const beforeRevision = await host.getAttribute("data-canonical-revision");
@@ -71,4 +73,35 @@ test("Phase-protected Transaction edge resize is rejected without a canonical ch
   await page.mouse.up();
   await expect(inspector.getByLabel("Transaction end")).toHaveValue(beforeEnd);
   await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+});
+
+test("Transaction Phase selection restores by stable Phase ID after mode remount", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await openTransactionSample(page);
+  const phase = page.locator(".transaction-phase-hit-target").first();
+  await expect(phase).toBeVisible();
+  const phaseId = await phase.getAttribute("data-phase-id");
+  expect(phaseId).toBeTruthy();
+  const revision = await page.getByTestId("revision-status").textContent();
+  const history = await page.getByTestId("history-status").textContent();
+  const dirty = await page.getByTestId("dirty-status").textContent();
+  await phase.click();
+  const selectedPhase = page.locator(`.transaction-phase-hit-target[data-phase-id="${phaseId}"]`);
+  await expect(selectedPhase).toHaveAttribute("data-selected", "true");
+  await expect(selectedPhase).toHaveAttribute("aria-pressed", "true");
+  await expect(selectedPhase).toHaveCSS("outline-style", "solid");
+  await expect(selectedPhase).toHaveCSS("outline-width", "2px");
+  const transactionId = await phase.getAttribute("data-phase-transaction-id");
+  expect(transactionId).toBeTruthy();
+  await expect(page.locator(`[data-transaction-id="${transactionId}"]`)).toHaveAttribute("data-selected", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await expect(selectedPhase).toHaveAttribute("data-selected", "true");
+  await expect(selectedPhase).toHaveAttribute("aria-pressed", "true");
+  await expect(selectedPhase).toHaveCSS("outline-style", "solid");
+  await expect(selectedPhase).toHaveCSS("outline-width", "2px");
+  await expect(page.getByTestId("revision-status")).toHaveText(revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
 });

@@ -127,7 +127,7 @@ test("Cycle/Transaction Split: linked Signal cross-highlight uses stable IDs and
 
   // Selecting a Transaction cross-highlights its linked Signals by stable
   // Signal ID (not name/row-index) in the frozen label column.
-  await lanes.locator("[data-transaction-id='txn_read0']").click();
+  await lanes.locator("[data-transaction-id='txn_read0']").click({ position: { x: 12, y: 8 } });
   const request = host.locator("[data-role='frozen-row'][data-row-id='sig_request']");
   await expect(request).toHaveAttribute("data-transaction-linked", "true");
   const resetN = host.locator("[data-role='frozen-row'][data-row-id='sig_reset_n']");
@@ -149,7 +149,9 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await openSampleAInSplitMode(page);
     const surface = page.getByTestId("cycle-surface");
     const transactionId = "txn_read0";
-    await page.getByTestId("transaction-lanes").locator(`[data-transaction-id='${transactionId}']`).click();
+    // The lower 12px strip of a phased bar is the Phase hit target; select
+    // the Transaction from its distinct upper bar area.
+    await page.getByTestId("transaction-lanes").locator(`[data-transaction-id='${transactionId}']`).click({ position: { x: 12, y: 8 } });
     const linkedRow = surface.locator("[data-role='frozen-row'][data-row-id='sig_request']");
     const unrelatedRow = surface.locator("[data-role='frozen-row'][data-row-id='sig_reset_n']");
     const linkedWave = surface.locator("[data-role='wave-owner'][data-signal-id='sig_request']");
