@@ -1,4 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { openBottomSettings } from "./bottom-settings";
 
 async function ready(page: Page) {
@@ -6,6 +8,66 @@ async function ready(page: Page) {
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
 }
+
+async function savedDocument(page: Page) {
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  const pending = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  return JSON.parse(await readFile((await (await pending).path())!, "utf8"));
+}
+
+test("pinned Clock Apply mutates its stable ID, not the selected Signal", async ({ page }) => {
+  await ready(page);
+  const before = await savedDocument(page);
+  const clock = before.signals.find((signal: { id: string }) => signal.id === "sig_cycle_clock");
+  const bottom = page.getByTestId("bottom-editor");
+  const host = page.getByTestId("cycle-surface");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
+  await openBottomSettings(page);
+  await bottom.getByTestId("bottom-pin").click();
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const canonicalState = () => Promise.all(["revision-status", "history-status", "dirty-status"].map((id) => page.getByTestId(id).textContent()));
+  const beforeDraft = await canonicalState();
+  await bottom.getByLabel("Clock period", { exact: true }).fill(String(clock.generator.period + 4));
+  await bottom.getByTestId("cancel-bottom-draft").click();
+  await expect(bottom.getByLabel("Clock period", { exact: true })).toHaveValue(String(clock.generator.period));
+  expect(await canonicalState()).toEqual(beforeDraft);
+  await bottom.getByLabel("Clock period", { exact: true }).fill(String(clock.generator.period + 2));
+  await bottom.getByTestId("apply-clock-generator").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  const after = await savedDocument(page);
+  expect(after.signals.find((signal: { id: string }) => signal.id === clock.id).generator.period).toBe(clock.generator.period + 2);
+  expect(after.signals.filter((signal: { id: string }) => signal.id !== clock.id)).toEqual(before.signals.filter((signal: { id: string }) => signal.id !== clock.id));
+});
+
+test("Pin changes are view-only and Open/New clear the previous document target", async ({ page }) => {
+  await ready(page);
+  const bottom = page.getByTestId("bottom-editor");
+  await page.getByTestId("cycle-surface").locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const state = () => Promise.all(["revision-status", "history-status", "dirty-status"].map((id) => page.getByTestId(id).textContent()));
+  const before = await state();
+  await openBottomSettings(page);
+  await bottom.getByTestId("bottom-pin").click();
+  await bottom.getByTestId("bottom-pin").click();
+  await bottom.getByTestId("bottom-pin").click();
+  expect(await state()).toEqual(before);
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path.resolve("samples/current/01_cycle_signals.tcd.json"));
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await openBottomSettings(page);
+  await expect(bottom.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "false");
+  await expect(bottom.getByTestId("follow-selection")).toBeChecked();
+  await expect(bottom.getByTestId("bottom-target-mode")).toHaveCount(0);
+  await page.getByTestId("cycle-surface").locator("[data-role='frozen-row'][data-row-id='sig.req']").click();
+  await openBottomSettings(page);
+  await bottom.getByTestId("bottom-pin").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).click();
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await openBottomSettings(page);
+  await expect(bottom.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "false");
+  await expect(bottom.getByTestId("follow-selection")).toBeChecked();
+  await expect(bottom.getByTestId("bottom-target-mode")).toHaveCount(0);
+});
 
 test("pinned Transaction duplicate ignores live multi-selection", async ({ page }) => {
   await ready(page);
@@ -70,13 +132,19 @@ test("pinned Annotation stays on the collection surface and deletes the created 
   const created = before.find((id) => id.startsWith("annotation_phase9_"))!;
   await openBottomSettings(page);
   await bottom.getByTestId("bottom-pin").click();
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']").click();
+  await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
+  const selectedTransaction = page.getByTestId("transaction-left-tree").locator("[data-transaction-tree-id][data-selected='true']");
+  const transactionId = await selectedTransaction.getAttribute("data-transaction-tree-id");
+  expect(transactionId).toBeTruthy();
   await expect(bottom.getByTestId("annotation-collection")).toBeVisible();
   await bottom.getByTestId("annotation-collection").getByRole("button", { name: "Delete", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect.poll(async () => (await ids()).includes(created)).toBe(false);
   const after = await ids();
   for (const id of before.filter((item) => item !== created)) expect(after, `${id} must survive`).toContain(id);
+  await expect(page.getByTestId(`transaction-left-tree-row-${transactionId}`)).toHaveCount(1);
   await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']")).toHaveCount(1);
 });
 
@@ -112,12 +180,9 @@ test("pinned Transaction edits target the pinned stable ID", async ({ page }) =>
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await expect(bottom.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "true");
   await bottom.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true }).click();
-  // The pinned Transaction is the active (editable) Bottom row; select it in the Tree so the Inspector edits the same stable ID.
   await expect(page.getByLabel("Bottom Transaction name")).toHaveValue(created);
-  await page.getByTestId("transaction-left-tree").getByText(created, { exact: true }).click();
-  const inspector = page.getByTestId("inspector");
-  await inspector.getByLabel("Transaction name").fill(`${created} Updated`);
-  await inspector.getByTestId("apply-inspector-transaction").click();
+  await bottom.getByLabel("Bottom Transaction name", { exact: true }).fill(`${created} Updated`);
+  await bottom.getByTestId("apply-transaction-properties").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("transaction-left-tree").getByText(`${created} Updated`, { exact: true })).toHaveCount(1);
   await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toHaveCount(1);
