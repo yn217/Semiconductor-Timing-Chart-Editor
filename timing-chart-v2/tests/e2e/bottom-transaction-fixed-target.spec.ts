@@ -17,7 +17,8 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
     for (const fixed of ["Pin", "Follow OFF"] as const) {
       test(`fixed Transaction subtabs target stable ID: ${mode}, ${fixed}, ${viewport.width}x${viewport.height}`, async ({ page }) => {
         test.setTimeout(60_000); // Two production Save/Open cycles plus editing and History verification.
-        page.on("pageerror", (error) => console.error("FIXED_BOTTOM_PAGE_ERROR", error.message));
+        const pageErrors: string[] = [];
+        page.on("pageerror", (error) => pageErrors.push(error.message));
         await page.setViewportSize(viewport);
         await page.goto("/");
         await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
@@ -41,32 +42,54 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
         await bottom.getByLabel("Bottom Phase 1 name", { exact: true }).fill("Pinned Address");
         await bottom.getByTestId("apply-bottom-transaction-phases").click();
         await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+        await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+        await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+        await expect(bottom.getByLabel("Bottom Phase 1 name", { exact: true })).toHaveValue("Address");
+        await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
+        await expect(bottom.getByLabel("Bottom Phase 1 name", { exact: true })).toHaveValue("Pinned Address");
+        await bottom.getByRole("tab", { name: "Transaction", exact: true }).click();
+        await expect(bottom.getByLabel("Bottom Transaction name", { exact: true })).toHaveValue("Read request");
+        await bottom.getByLabel("Bottom Transaction description", { exact: true }).fill("Pinned description");
+        await bottom.getByTestId("apply-transaction-properties").click();
+        await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
         await page.getByTestId("inspector").getByTestId("manage-transaction-links").click();
         const links = bottom.getByTestId("transaction-linked-signals");
         await expect(links.locator('[data-signal-id="sig.addr"]')).toHaveCount(1);
         await links.locator('[data-signal-id="sig.addr"]').getByRole("button").click();
-        await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+        await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
         await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
         await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
         await expect(links.locator('[data-signal-id="sig.addr"]')).toHaveCount(1);
         await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
         await expect(links.locator('[data-signal-id="sig.addr"]')).toHaveCount(0);
+        await links.getByTestId("open-linked-signal-picker").click();
+        await links.getByLabel("Search linked signals").fill("ADDR");
+        await links.getByRole("option", { name: /request_address/ }).click();
+        await expect(links.locator('[data-signal-id="sig.addr"]')).toHaveCount(1);
+        await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 0");
         const saved = await save(page);
         const read = saved.document.transactions.find((tx: { id: string }) => tx.id === "txn.read");
         const write = saved.document.transactions.find((tx: { id: string }) => tx.id === "txn.write");
         expect(read.phases[0]).toMatchObject({ id: "phase_read_address", name: "Pinned Address" });
-        expect(read.linkedSignals).toEqual(["sig.req"]);
+        expect(read.linkedSignals).toEqual(["sig.req", "sig.addr"]);
+        expect(read.description).toBe("Pinned description");
         expect(write.phases[0]).toMatchObject({ id: "phase_write_command", name: "Command" });
         expect(write.linkedSignals).toEqual(["sig.req"]);
+        expect(write.description).toBe("An intentionally ungrouped write.");
         await openBottomSettings(page);
         if (fixed === "Pin") await bottom.getByTestId("bottom-pin").click();
         else await bottom.getByTestId("follow-selection").check();
         await bottom.getByRole("tab", { name: "Phases", exact: true }).click();
         await expect(bottom.getByLabel("Bottom Phase 1 name", { exact: true })).toHaveValue("Command");
+        await bottom.getByRole("tab", { name: "Transaction", exact: true }).click();
+        await expect(bottom.getByLabel("Bottom Transaction name", { exact: true })).toHaveValue("Un-grouped write");
+        await bottom.getByRole("tab", { name: "Linked Signals", exact: true }).click();
+        await expect(bottom.getByTestId("linked-signal-list").locator('[data-signal-id="sig.addr"]')).toHaveCount(0);
         await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(saved.filename);
         await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
         const reopened = await save(page);
         expect(reopened.document.transactions).toEqual(saved.document.transactions);
+        expect(pageErrors).toEqual([]);
       });
     }
   }
