@@ -453,9 +453,9 @@ export function useEditorSecondarySurfaces(
   ) : workspace.bottomTab === "Transaction" ? (
     transactionEditor
   ) : workspace.bottomTab === "Phases" ? (
-    <TransactionPhaseSummary transaction={selected.transaction} transactions={input.document.transactions ?? []} commands={surfaceCommands} cyclesPerTc={workspace.cyclesPerTc} />
+    <TransactionPhaseSummary transaction={bottom.transaction} transactions={input.document.transactions ?? []} commands={surfaceCommands} cyclesPerTc={workspace.cyclesPerTc} />
   ) : workspace.bottomTab === "Linked Signals" ? (
-    <TransactionLinkedEditor transaction={selected.transaction} document={input.document} onToggle={input.actions.toggleTransactionSignal} />
+    <TransactionLinkedEditor transaction={bottom.transaction} document={input.document} onToggle={input.actions.toggleTransactionSignal} />
   ) : workspace.bottomTab === "Bookmarks" ? (
     bookmarkEditor
   ) : workspace.bottomTab === "Problems" ? (
