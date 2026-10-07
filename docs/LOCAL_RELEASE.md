@@ -12,17 +12,19 @@ Use an independent clean checkout at the exact candidate commit, with Node
 
 ```text
 npm ci
-npm run check
-npm audit --audit-level=high
 npx playwright install chromium
+npm run release:verify
 ```
 
 Then execute the bounded release smoke defined by Issue #1087 at 1280x720 and
 1672x941. Do not substitute the historical full E2E suite. Record exact commands,
 candidate SHA, OS/Node/npm/Chromium versions, results, reviewed audit exceptions,
 and whether any dependency resolved outside the clean checkout. The dedicated
-smoke entry point remains to be implemented under #1087; this document alone
-does not establish release readiness.
+smoke entry point is `npm run release:smoke`. `release:verify` runs check (which
+includes build), audit, the curated smoke against development mode, and the
+same smoke against the built artifact, stopping on the first failure. Legacy
+migration and comprehensive viewport coverage remain to be completed under
+#1087; merely executing this wrapper does not establish those missing criteria.
 
 ## Artifact and rollback
 
