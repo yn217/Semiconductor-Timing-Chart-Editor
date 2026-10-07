@@ -8,9 +8,10 @@ control.
 | Operation | Commit boundary | Undo behavior | Cancel/revert behavior |
 | --- | --- | --- | --- |
 | Lightweight property choice (for example, Highlight Position Mode) | Immediately on the explicit control change | One semantic History entry per accepted change | Revert affects only other still-unapplied Inspector fields; it does not undo an accepted change |
-| Inspector property form | Apply | One semantic update for the form's changed fields | Revert discards only the current Inspector draft |
+| Signal, Transaction, or other Inspector property form | Apply | One semantic update for the form's changed fields | Revert discards only the current Inspector draft |
 | Scoped Annotation editor (Anchor, Measurement, Vertical Span) | Its explicitly named Apply action | One semantic History entry for that scoped update | Leaving/reverting the Inspector discards uncommitted fields; an accepted scoped update is undone with Undo |
-| Transaction Inspector or Bottom detail form | Apply | One semantic update for the edited detail fields | Cancel/Revert discards the local draft |
+| Bookmark Inspector or Bottom item draft | Apply in the editing surface | One semantic update for the edited Bookmark fields | Revert/cancel discards the local draft; same-field concurrent edits require an explicit conflict choice |
+| Transaction Inspector fields and shared Phase draft | Apply in the Inspector | One semantic update for the edited fields | Revert discards the current draft; Bottom remains a table/selection surface rather than a duplicate detail editor |
 | Bottom transition/event row edit | Each explicit Add/Edit operation | Each accepted operation is one Undo step | Invalid input is not committed |
 | Advanced JSON | Apply JSON after validation | One semantic document/object update | Cancel restores the source JSON text |
 | AI proposal | Preview, then Apply | Apply records one approved semantic batch | Reject is an exact no-op |
