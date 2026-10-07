@@ -44,7 +44,9 @@ test("Phase-protected Transaction edge resize is rejected without a canonical ch
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await openTransactionSample(page);
   const bar = page.locator("[data-transaction-id='demo_txn_read']");
-  await bar.click();
+  // The semantic Phase hit targets intentionally sit over the lower phase
+  // strip. Select the Transaction through its unoccluded upper bar surface.
+  await bar.click({ position: { x: 12, y: 4 } });
   const inspector = page.getByTestId("inspector");
   const beforeStart = await inspector.getByLabel("Transaction start").inputValue();
   const beforeRevision = await host.getAttribute("data-canonical-revision");
