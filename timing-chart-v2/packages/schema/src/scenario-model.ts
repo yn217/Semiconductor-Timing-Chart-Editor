@@ -16,6 +16,7 @@ import type {
   TimeGroupId,
   TransactionGroupId,
   TransactionId,
+  TransactionPhaseId,
   ValueSignal,
   DocumentProblem,
   SignalValueChange,
@@ -26,6 +27,13 @@ import { isStableId, opaqueDerivedId } from "./stable-id.js";
 import { validateCanonicalDocument } from "./validation.js";
 
 const DEFAULT_SCENARIO_ID = "scenario_default" as ScenarioId;
+
+// Exhaustive: a new stable-ID kind must explicitly declare its ownership.
+const ENTITY_OWNERSHIP = {
+  document: "shared", signal: "shared", signalGroup: "shared", spacer: "shared", enumDefinition: "shared",
+  annotation: "scenario", annotationGroup: "scenario", transaction: "scenario", transactionPhase: "scenario",
+  transactionGroup: "scenario", bookmark: "scenario", timeGroup: "scenario", labelAnchor: "scenario", constraint: "scenario",
+} satisfies Record<CanonicalEntityKind, "shared" | "scenario">;
 
 function rejectUnknownKeys(value: object, allowed: readonly string[], path: string, problems: DocumentProblem[]): void {
   const accepted = new Set(allowed);
@@ -240,6 +248,7 @@ export function duplicateScenario(document: ScenarioDocumentModel, scenarioId: S
   const annotationGroupIds = new Map(source.annotationGroups.map((item) => [item.id, allocate("annotationGroup", item.id) as AnnotationGroupId]));
   const transactionGroupIds = new Map((source.transactionGroups ?? []).map((item) => [item.id, allocate("transactionGroup", item.id) as TransactionGroupId]));
   const transactionIds = new Map(source.transactions.map((item) => [item.id, allocate("transaction", item.id) as TransactionId]));
+  const phaseIds = new Map(source.transactions.flatMap((item) => (item.phases ?? []).map((phase) => [phase.id, allocate("transactionPhase", phase.id) as TransactionPhaseId] as const)));
   const constraintIds = new Map(source.constraints.map((item) => [item.id, allocate("constraint", item.id) as ConstraintId]));
   const copied: TimingScenario = {
     ...source,
@@ -266,6 +275,7 @@ export function duplicateScenario(document: ScenarioDocumentModel, scenarioId: S
     transactions: source.transactions.map((item) => ({
       ...item,
       id: transactionIds.get(item.id)!,
+      ...(item.phases === undefined ? {} : { phases: item.phases.map((phase) => ({ ...phase, id: phaseIds.get(phase.id)! })) }),
       ...(item.groupId === undefined ? {} : { groupId: transactionGroupIds.get(item.groupId) ?? item.groupId }),
     })),
     constraints: source.constraints.map((item) => ({ ...item, id: constraintIds.get(item.id)! })),
@@ -522,8 +532,6 @@ export function validateScenarioDocumentModel(input: unknown): readonly Document
 
   // Document-wide entities are registered once; scenario-specific entities
   // must remain globally unique across all scenario projections.
-  const sharedKinds = new Set<CanonicalEntityKind>(["document", "signal", "signalGroup", "spacer", "enumDefinition"]);
-  const projectedScenarioKinds = new Set<CanonicalEntityKind>(["annotation", "annotationGroup", "transaction", "transactionGroup", "bookmark", "timeGroup", "labelAnchor", "constraint"]);
   let registeredSharedIds = false;
   const aggregate = { annotations: 0, annotationGroups: 0, transactions: 0, transactionGroups: 0, bookmarks: 0, timeGroups: 0, constraints: 0, labelAnchors: 0, valueChanges: 0 };
   const aggregateLimits: ReadonlyArray<readonly [keyof typeof aggregate, number, string]> = [
@@ -601,11 +609,11 @@ export function validateScenarioDocumentModel(input: unknown): readonly Document
     problems.push(...perScenarioBudget);
     if (projectionProblems.length === 0) {
       for (const entry of canonicalEntityInventory(projection)) {
-        if (sharedKinds.has(entry.kind)) {
+        if (ENTITY_OWNERSHIP[entry.kind] === "shared") {
           if (!registeredSharedIds) registerOwnedId(entry.id, entry.path);
           continue;
         }
-        if (projectedScenarioKinds.has(entry.kind)) registerOwnedId(entry.id, `$.scenarios[${scenarioIndex}]${entry.path.slice(1)}`);
+        registerOwnedId(entry.id, `$.scenarios[${scenarioIndex}]${entry.path.slice(1)}`);
       }
     }
     registeredSharedIds = true;

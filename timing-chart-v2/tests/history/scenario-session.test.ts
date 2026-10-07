@@ -52,7 +52,7 @@ describe("ScenarioCommandHistorySession", () => {
   });
 
   it("records Scenario rename, duplicate, and delete as global Undo/Redo operations", () => {
-    const model = scenarioModelFromV2(canonicalFixture());
+    const model = scenarioModelFromV2({ ...canonicalFixture(), transactions: [{ id: "tx_phase_history" as never, name: "Transfer", start: 0, end: 8, phases: [{ id: "phase_history" as never, name: "Data", start: 0, end: 8 }] }] });
     const original = model.scenarios[0]!;
     const session = new ScenarioCommandHistorySession(model);
 
@@ -65,6 +65,9 @@ describe("ScenarioCommandHistorySession", () => {
     expect(session.scenarioModel().scenarios[0]?.name).toBe("Baseline");
 
     const duplicateId = session.duplicateScenario(original.id);
+    const duplicatedModel = session.scenarioModel();
+    const copiedPhaseId = duplicatedModel.scenarios[1]!.transactions[0]!.phases![0]!.id;
+    expect(copiedPhaseId).not.toBe("phase_history");
     expect(session.activeScenarioId()).toBe(duplicateId);
     expect(session.scenarioModel().scenarios).toHaveLength(2);
     expect(session.undo().ok).toBe(true);
@@ -72,6 +75,14 @@ describe("ScenarioCommandHistorySession", () => {
     expect(session.activeScenarioId()).toBe(original.id);
     expect(session.redo().ok).toBe(true);
     expect(session.activeScenarioId()).toBe(duplicateId);
+    expect(session.scenarioModel()).toEqual(duplicatedModel);
+    expect(session.getSnapshot().document.transactions[0]!.phases![0]!.id).toBe(copiedPhaseId);
+    const historyBeforeSwitch = session.historyState();
+    session.switchScenario(original.id);
+    expect(session.getSnapshot().document.transactions[0]!.phases![0]!.id).toBe("phase_history");
+    session.switchScenario(duplicateId);
+    expect(session.getSnapshot().document.transactions[0]!.phases![0]!.id).toBe(copiedPhaseId);
+    expect(session.historyState()).toEqual(historyBeforeSwitch);
 
     session.deleteScenario(duplicateId);
     expect(session.scenarioModel().scenarios).toHaveLength(1);
