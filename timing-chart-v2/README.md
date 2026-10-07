@@ -12,14 +12,25 @@ temporary WaveJSON and default-skin SVG without entering persisted state. Local
 Geometry Maps are extracted from the rendered cycle grid, brick uses, and skin
 paths. Derived RowLayout drives identical Left/Frozen/Timing row shells while a
 stable signal-owned surface retains heavy WaveDrom SVG identity across reorder
-and virtualization. The workspace does not contain the Phase 6 production GUI.
+and virtualization. The production GUI includes Cycle, Transaction, and Combined
+workspaces, document Open/Save, Undo/Redo, annotations, and export.
 
 ## Commands
 
 ```bash
 npm ci
-npm run check
+npm run dev
 ```
+
+Use Node >= 22.12. Run these commands from `timing-chart-v2/` in the
+authoritative checkout. `npm run dev` is a developer server, not a release
+artifact. For production use, build with `npm run build` and serve
+`apps/editor/dist/` with a static HTTP server.
+
+Normal development uses focused checks for the affected behavior. Release
+verification must use an independent clean checkout; see
+[`docs/LOCAL_RELEASE.md`](../docs/LOCAL_RELEASE.md). GitHub Actions is not a
+quality gate and no hosted workflow is configured.
 
 ## Package direction
 
