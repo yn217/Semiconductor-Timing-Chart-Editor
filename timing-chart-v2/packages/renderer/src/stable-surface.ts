@@ -7,7 +7,7 @@ import { groupBackgroundColor } from "./group-background.js";
 import { syncGroupHeaderLayer } from "./group-header-dom.js";
 import { reconcileViewportWaveOwners } from "./viewport-wave-owner-projection.js";
 import { applySharedSymbolWaveformColor } from "./shared-symbol-waveform-style.js";
-import { signalPresentationLabel } from "./signal-presentation-label.js";
+import { signalPresentationLabel, signalTypeLabel } from "./signal-presentation-label.js";
 
 export function isWaveMountRequestFresh(request: Pick<WaveMountRequest, "documentEpoch" | "isFresh">, currentDocumentEpoch: number): boolean {
   return (request.documentEpoch === undefined || request.documentEpoch === currentDocumentEpoch) && (request.isFresh?.() ?? true);

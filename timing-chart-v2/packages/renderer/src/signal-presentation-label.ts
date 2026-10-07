@@ -1,6 +1,6 @@
 import type { RowLayoutEntry } from "@timing-chart-v2/projection";
 
-function signalTypeLabel(type: string | undefined): string {
+export function signalTypeLabel(type: string | undefined): string {
   if (type === "clock") return "Clock";
   if (type === "commentRow") return "Comment";
   if (type === "pulse") return "Pulse";
