@@ -4,6 +4,85 @@ import { cycleDocument } from "../../apps/editor/src/fixtures-cycle-reference-do
 
 startInCycleSample(test);
 
+for (const action of ["open", "new"] as const) {
+  test(`document ${action} clears range, selection, filters and fixed Bottom context`, async ({ page }) => {
+    await ready(page);
+    const host = page.getByTestId("cycle-surface");
+    await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+    const bottom = page.getByTestId("bottom-editor");
+    await bottom.getByTestId("bottom-settings").click();
+    await bottom.getByTestId("bottom-pin").click();
+    await bottom.getByTestId("follow-selection").uncheck();
+    await expect(bottom.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "true");
+    await page.getByTestId("signal-tree-search-top").fill("REQUEST");
+    await page.getByTestId("signal-tree-type-filter").selectOption("input");
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+    await page.getByLabel("Timeline range end").fill("4");
+    await page.getByLabel("Timeline range start").fill("2");
+    if (action === "open") {
+      const replacement = structuredClone(cycleDocument);
+      replacement.document.title = "Replacement context document";
+      await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({
+        name: "history-replacement.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(replacement)),
+      });
+    } else {
+      await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+      await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).click();
+    }
+    await expect(host).toHaveAttribute("data-editor-idle", "true");
+    await expect(page.getByTestId("selection-status")).toHaveText("None");
+    await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+    await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+    await expect(page.getByTestId("cycle-status")).toHaveText("Cycle 0");
+    await expect(page.getByTestId("signal-tree-search-top")).toHaveValue("");
+    await expect(page.getByTestId("signal-tree-type-filter")).toHaveValue("all");
+    await expect(bottom.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "false");
+    await expect(bottom.getByTestId("follow-selection")).toBeChecked();
+    await expect(bottom.getByTestId("bottom-target-mode")).toHaveCount(0);
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+    await expect(page.getByLabel("Timeline range start")).toHaveValue("0");
+    await expect(page.getByLabel("Timeline range end")).toHaveValue("1");
+  });
+}
+
+
+test("row Reorder Undo/Redo retains stable selection and transient filter", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const rows = host.locator("[data-role='frozen-row'][data-row-id]");
+  const request = host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']");
+  await request.click();
+  await page.getByTestId("signal-tree-search-top").fill("R");
+  const order = () => rows.evaluateAll((elements) => elements.map((element) => element.getAttribute("data-row-id")));
+  const original = await order();
+  expect(original).toHaveLength(cycleDocument.signals.length);
+  const expected = [...original];
+  const index = expected.indexOf("sig_cycle_request");
+  expect(index).toBeGreaterThan(0);
+  [expected[index - 1], expected[index]] = [expected[index], expected[index - 1]];
+  await request.click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Move Up", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect.poll(order).toEqual(expected);
+  const assertContext = async () => {
+    await expect(request).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByTestId("selection-status")).toHaveText("REQUEST");
+    await expect(page.getByTestId("signal-tree-search-top")).toHaveValue("R");
+  };
+  await assertContext();
+  const ribbon = page.getByTestId("ribbon");
+  await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+  await expect.poll(order).toEqual(original);
+  await assertContext();
+  await ribbon.getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect.poll(order).toEqual(expected);
+  await assertContext();
+});
+
+
 test("Group move Undo/Redo preserves real scroll offsets and transient tree filters", async ({ page }) => {
   await page.setViewportSize({ width: 1672, height: 941 });
   await ready(page);
