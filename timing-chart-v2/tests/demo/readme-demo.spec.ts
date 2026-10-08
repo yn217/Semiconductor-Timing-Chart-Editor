@@ -195,6 +195,61 @@ test("measurement", async ({ page }) => {
   }, null, 2));
 });
 
+test("annotation", async ({ page }) => {
+  const recordingStart = Date.now();
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+  await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.waitForTimeout(500);
+  const trimStartSeconds = (Date.now() - recordingStart) / 1000;
+  const created: Array<{ id: string; type: string; label: string }> = [];
+  for (const [type, signalId, start, end, label] of [
+    ["arrow", "sig_cycle_request", 3, 6, "Request accepted"],
+    ["range", "sig_cycle_valid", 6, 9, "Valid window"],
+    ["callout", "sig_cycle_data", 7, 8, "Payload 0xA5"],
+  ] as const) {
+    await host.locator(`[data-role='frozen-row'][data-row-id='${signalId}']`).click();
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+    // Grow the end first so setting the start never creates an invalid draft range.
+    await page.getByLabel("Timeline range end", { exact: true }).fill(String(end));
+    await page.getByLabel("Timeline range start", { exact: true }).fill(String(start));
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+    await page.getByLabel("Annotation type").selectOption(type);
+    const before = await snapshotAnnotationIds(host);
+    await page.getByTestId("annotation-toolbar").getByRole("button", { name: "Add annotation", exact: true }).click();
+    await expect(host).toHaveAttribute("data-editor-idle", "true");
+    const id = await waitForCreatedAnnotationId(host, before, type);
+    const owner = annotationOwnerById(host, id);
+    await expect(owner).toBeVisible();
+    const inspector = page.getByTestId("inspector");
+    await expect(inspector.getByTestId("annotation-editor")).toHaveAttribute("data-annotation-id", id);
+    await inspector.getByLabel("Annotation label", { exact: true }).fill(label);
+    await inspector.getByRole("button", { name: "Apply", exact: true }).click();
+    await expect(owner).toHaveAttribute("aria-label", new RegExp(label));
+    created.push({ id, type, label });
+    await page.waitForTimeout(1200);
+  }
+  for (const { id } of created) await expect(annotationOwnerById(host, id)).toBeVisible();
+  await page.waitForTimeout(2000);
+  expect(errors).toEqual([]);
+  const video = page.video();
+  expect(video).not.toBeNull();
+  await page.close();
+  await video!.saveAs(resolve("artifacts/readme-demo-capture/annotation.webm"));
+  await writeFile(resolve("artifacts/readme-demo-capture/annotation.json"), JSON.stringify({
+    trimStartSeconds, viewport: { width: 1440, height: 900 }, dpr: 1,
+    build: "production-preview", sourceHead: process.env.DEMO_SOURCE_HEAD,
+    scenes: created.map(({ type, label }) => `${type}: ${label}`), errors,
+  }, null, 2));
+});
+
 test("export", async ({ page }) => {
   const recordingStart = Date.now();
   const errors: string[] = [];
