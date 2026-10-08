@@ -4,7 +4,7 @@ import { isStableId } from "./stable-id.js";
 import { CANONICAL_PROBLEM_CODES, SCHEMA_RULE_KEYWORDS, type Annotation, type CanonicalDocument, type CanonicalDocumentProblem, type CanonicalProblemCode, type CanonicalRuleDescriptor, type DocumentProblem, type SchemaProblemCode, type SchemaRuleDescriptor, type SchemaRuleKeyword, type SemanticAnchor, type Signal, type SignalValueChange, type TimeGroup } from "./types.js";
 import { valueSignalValueProblem } from "./value-signal-compatibility.js";
 import { validateEnumDefinition } from "./enum-semantics.js";
-import { parseBusValue } from "./value-format.js";
+import { parseBusValue, type BusValueFormat } from "./value-format.js";
 import { canonicalReferences } from "./reference-registry.js";
 import { validateTimeGroupHierarchy } from "./time-group-hierarchy.js";
 import { ANNOTATION_LABEL_LINE_HEIGHT, ANNOTATION_LABEL_MAX_WIDTH } from "./annotation-label-layout.js";
@@ -143,13 +143,13 @@ const DERIVED_OR_TRANSIENT_KEYS = new Set([
   "problems", "minimap", "generatedEdges", "edgeList", "dragPreview",
 ]);
 
-function requiredBits(value: string | number): number | undefined {
+function requiredBits(value: string | number, format?: BusValueFormat): number | undefined {
   if (typeof value === "number") {
     if (!Number.isSafeInteger(value) || value < 0) return undefined;
     return value === 0 ? 1 : value.toString(2).length;
   }
   try {
-    const parsed = parseBusValue(value);
+    const parsed = parseBusValue(value, undefined, format);
     if (parsed.kind === "symbolic") return /^[A-Za-z_][A-Za-z0-9_]*$/.test(value.trim()) ? undefined : Number.NaN;
     if (parsed.kind === "unknown") return parsed.width ?? 1;
     const numeric = parsed.value!;
@@ -169,7 +169,7 @@ function validateChanges(signal: Signal, changes: readonly SignalValueChange[], 
     if (change.start <= previous) problems.push(problem("CHANGE_POINTS_NOT_STRICTLY_SORTED", `${changePath}.start`, "Change points must be strictly increasing with no duplicate start.", signal.id));
     previous = change.start;
     if (signal.type === "bus" && signal.width !== undefined) {
-      const bits = requiredBits(change.value);
+      const bits = requiredBits(change.value, change.displayFormat ?? (signal.type === "bus" ? signal.displayFormat : undefined));
       if (Number.isNaN(bits)) problems.push(problem("INVALID_BUS_LITERAL", `${changePath}.value`, "Bus value is neither a supported literal nor a symbolic identifier.", signal.id));
       else if (bits !== undefined && bits > signal.width) problems.push(problem("BUS_WIDTH_OVERFLOW", `${changePath}.value`, `Value requires ${bits} bits but signal width is ${signal.width}.`, signal.id));
     }

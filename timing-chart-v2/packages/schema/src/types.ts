@@ -105,6 +105,8 @@ export interface SignalValueChange {
   readonly value: string | number;
   /** Optional presentation label; semantic value remains authoritative. */
   readonly displayLabel?: string;
+  /** Bus only: how this one value is written/displayed. Absent follows the Signal's own displayFormat. */
+  readonly displayFormat?: "hex" | "binary" | "decimal" | "signed" | "unsigned" | "symbolic";
   readonly comment?: string;
 }
 

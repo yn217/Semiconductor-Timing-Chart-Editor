@@ -77,7 +77,8 @@ test("Combined routes a real Transaction bar drag to the Transaction pane only",
   const box = await bar.locator(":scope > span").boundingBox();
   expect(box).not.toBeNull();
   // The bar is wider than the viewport (its centre sits under the Inspector), so grab a visible point of it.
-  await page.mouse.move(box!.x + 200, box!.y + box!.height / 2);
+  // The left column (Transaction tree rail) overlays the first 265px, so grab well past it (and away from the drop tick).
+  await page.mouse.move(Math.max(box!.x + 200, 600), box!.y + box!.height / 2);
   await page.mouse.down();
   // A body drag places the Transaction start on the Snap cycle under the pointer; drop on the cycle-20 tick (visible in Combined).
   const cycle20 = (await page.getByTestId("cycle-ruler").locator("[data-cycle='20']").boundingBox())!;

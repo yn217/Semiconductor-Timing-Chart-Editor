@@ -313,7 +313,7 @@
    table), so this column width must stay an identical fixed value on
    every row -- an `auto`-sized column here would size itself per-row and
    break the very column alignment Section 2 asks for. */
-.event-row { display: grid; grid-template-columns: 20px 18px 24px 82px 56px 64px minmax(0, 1fr) minmax(160px, 1.4fr) 132px; align-items: center; min-height: var(--table-row-height); border-bottom: 1px solid #e1e6ed; }
+.event-row { display: grid; grid-template-columns: 38px 18px 24px 82px 56px 64px minmax(0, 1fr) minmax(160px, 1.4fr) 132px; align-items: center; min-height: var(--table-row-height); border-bottom: 1px solid #e1e6ed; }
 
 .event-row.selected:not(.event-columns) { background: #eaf3fb; box-shadow: inset 3px 0 #2c78bb; }
 /* Rows are always editable; `.editing` marks a row with an unapplied
@@ -335,6 +335,7 @@
 .event-row-value-cell { display: flex; align-items: center; gap: 6px; }
 .event-row-value-cell > :is(input, select) { flex: 1 1 auto; min-width: 0; }
 .event-row-value-cell > output { flex: 0 0 auto; }
+.event-row-value-cell > .bus-format-select { flex: 0 0 auto; width: 76px; padding: 0 4px; }
 
 .event-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
 /* A row's own Draft dot -- distinct from the Generator/Inspector Draft
@@ -550,6 +551,7 @@
 .clock-generator input, .clock-generator select { width: 82px; }
 .quick-values { display: flex; gap: 4px; }
 .quick-values button { min-width: 30px; padding-inline: 6px; }
+.quick-values select { height: var(--ds-control-height); min-width: 84px; padding: 0 6px; border: 1px solid #aebccd; border-radius: 3px; background: white; color: #19243a; }
 
 /* #426 Phase 1: one shared visual contract for a Bottom tab's Draft/Apply
    "unapplied changes" indicator, so every tab that has a Draft state

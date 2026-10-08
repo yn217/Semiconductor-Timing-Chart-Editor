@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { nextEventRowDraft, reconcileEventRowDrafts, type EventRowDraft, type EventRowFields } from "../../apps/editor/src/runtime/event-row-drafts.js";
 
-const committed: EventRowFields = { start: 3, value: "1", comment: "" };
+const committed: EventRowFields = { start: 3, value: "1", comment: "", format: "" };
 const one = (draft: EventRowDraft | undefined): ReadonlyMap<string, EventRowDraft> => new Map(draft ? [["t3", draft]] : []);
 
 describe("always-editable Transition row drafts", () => {

@@ -123,7 +123,7 @@ button, input, select { font: inherit; font-size: var(--ds-font-size); }
 .column-headings { grid-template-columns: var(--gui-left-width) var(--gui-frozen-width, 210px) minmax(640px, 1fr); }
 .cycle-viewport { height: calc(100% - 34px); }
 .frozen-pane-resize-handle { position: absolute; z-index: 24; top: 0; bottom: 0; left: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px) - 4px); width: 8px; cursor: ew-resize; touch-action: none; }
-.frozen-pane-resize-handle::after { content: ""; position: absolute; top: 50%; left: 3px; width: 2px; height: 42px; transform: translateY(-50%); border-radius: 2px; background: #9aaabd; opacity: .75; }
+.frozen-pane-resize-handle::after { content: ""; position: absolute; top: 50%; left: 3px; width: 2px; height: 42px; transform: translateY(-50%); border-radius: 2px; background: #9aaabd; opacity: 0; }
 .frozen-pane-resize-handle:hover::after, .frozen-pane-resize-handle:focus-visible::after { background: #2678bc; opacity: 1; }
 .empty-editor { padding: 24px; color: #68768a; }
 
@@ -157,10 +157,6 @@ button, input, select { font: inherit; font-size: var(--ds-font-size); }
 .editor-shell .column-headings[data-testid="transaction-tree-header"] > .role-column-heading,
 .editor-shell .column-headings[data-testid="transaction-tree-header"] > .signal-column-heading,
 .editor-shell .column-headings[data-testid="transaction-tree-header"] > .frozen-pane-heading-gutter { display: none; }
-.editor-shell .column-headings[data-testid="transaction-tree-header"] { min-height: 58px; height: 58px; align-items: stretch; }
-.editor-shell .column-headings[data-testid="transaction-tree-header"] > .left-column-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 28px 28px; align-items: center; gap: 0 4px; overflow: hidden; padding: 0 8px; }.editor-shell .column-headings[data-testid="transaction-tree-header"] .tree-filter-controls { min-width: 0; padding: 0; border: 0; }
-.editor-shell .column-headings[data-testid="transaction-tree-header"] > .left-column-heading > .tree-filter-controls { position: static; inset: auto; z-index: auto; height: auto; background: transparent; }
-/* #748: same 27px control height as Cycle's filter select and the search input (the 28px header rows hold both). */
-.editor-shell .column-headings[data-testid="transaction-tree-header"] > .left-column-heading > select { min-width: 0; width: 96px; height: 27px; }
+.editor-shell .column-headings[data-testid="transaction-tree-header"] { min-height: 37px; height: 37px; align-items: stretch; }
 .editor-shell .column-headings[data-testid="transaction-tree-header"] { z-index: 30; }
 .editor-shell .cycle-viewport { height: 100%; }/* Cycle-mode workspace composition lives in mode-cycle.css (owner: data-view-mode="Cycle"). */

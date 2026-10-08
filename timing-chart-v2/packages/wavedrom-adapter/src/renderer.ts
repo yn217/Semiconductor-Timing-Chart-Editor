@@ -259,7 +259,15 @@ function valueLabelTemplates(entry: MarkupCacheEntry, source: SVGElement, ownerD
   const templates = Object.freeze(Array.from(nodes, (node, index) => {
     const slot = slots[index]!;
     const endSlot = slots[index + 1] ?? wave.length;
-    return { template: node.cloneNode(true) as SVGElement, segmentStart: grid[slot]!, segmentEnd: grid[endSlot]! };
+    const template = node.cloneNode(true) as SVGElement;
+    // The label is re-parented directly under the image <svg>, so the lane group's translate must travel with it.
+    const transforms: string[] = [];
+    for (let ancestor = node.parentElement; ancestor && ancestor !== (source as Element); ancestor = ancestor.parentElement) {
+      const transform = ancestor.getAttribute("transform");
+      if (transform) transforms.unshift(transform);
+    }
+    if (transforms.length > 0) template.setAttribute("transform", transforms.join(" "));
+    return { template, segmentStart: grid[slot]!, segmentEnd: grid[endSlot]! };
   }));
   if (templates.some(({ template }) => !template.querySelector("tspan"))) return;
   templatesByDocument.set(ownerDocument, templates);

@@ -1,13 +1,14 @@
 import { formatBusValue, type SignalValueChange, type ValueSignal } from "@timing-chart-v2/schema";
 
 type FormattableSignal = Pick<ValueSignal, "type" | "displayFormat" | "width">;
-type FormattableChange = Pick<SignalValueChange, "value" | "displayLabel">;
+type FormattableChange = Pick<SignalValueChange, "value" | "displayLabel" | "displayFormat">;
 
 /** Shared read-only value formatting used by the Bottom event table and Inspector. */
 export function formatSignalValueChange(signal: FormattableSignal, change: FormattableChange): string {
   if (change.displayLabel !== undefined) return change.displayLabel;
-  if (signal.type === "bus" && signal.displayFormat !== undefined) {
-    return formatBusValue(change.value, signal.displayFormat, signal.width);
+  const format = change.displayFormat ?? signal.displayFormat;
+  if (signal.type === "bus" && format !== undefined) {
+    return formatBusValue(change.value, format, signal.width);
   }
   return String(change.value);
 }

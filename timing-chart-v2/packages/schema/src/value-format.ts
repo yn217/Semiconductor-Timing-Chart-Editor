@@ -1,19 +1,20 @@
 export type BusValueFormat = "hex" | "binary" | "decimal" | "signed" | "unsigned" | "symbolic";
-export interface ParsedBusValue { readonly kind: "numeric" | "unknown" | "symbolic"; readonly value?: bigint; readonly width?: number }
+export interface ParsedBusValue { readonly kind: "numeric" | "unknown" | "symbolic"; readonly value?: bigint; readonly width?: number; /** Digit count of an explicit 0x/0b (or sized) literal, used to keep the typed digit count when the output radix matches. */ readonly typedDigits?: number; readonly typedBase?: 2 | 10 | 16 }
 const UNKNOWN = /^[xz?]+$/i;
 // Literal radix is semantic input, independent of displayFormat: bare
 // digit-only strings are decimal; A-F-bearing strings are hex; binary/hex
 // strings can be explicit with 0b/0x or sized HDL syntax. Sized numeric values
 // are truncated to N bits before downstream formatting/validation. displayFormat
 // only controls output formatting. Keep validation and rendering on this policy.
-export function parseBusValue(input: string | number, width?: number): ParsedBusValue {
+// `format` is only a radix hint for a bare [01]+ literal: under a Binary format it is binary (so "10100101" is 0xA5, not decimal ten million).
+export function parseBusValue(input: string | number, width?: number, format?: BusValueFormat): ParsedBusValue {
   if (typeof input === "number") { if (!Number.isSafeInteger(input) || input < 0) throw new Error("Bus numeric values must be non-negative safe integers."); return { kind: "numeric", value: BigInt(input), width: width ?? Math.max(1, input.toString(2).length) }; }
   const source = input.trim().replaceAll("_", "");
   if (!source) throw new Error("Bus value cannot be empty.");
   if (UNKNOWN.test(source)) return { kind: "unknown", width: width ?? source.length };
   const sized = /^(\d+)'([hdb])([0-9a-fxz?]+)$/i.exec(source);
   const prefixed = /^(0x|0b|0d)([0-9a-fxz?]+)$/i.exec(source);
-  const base = sized ? ({ h: 16, d: 10, b: 2 }[sized[2]!.toLowerCase() as "h" | "d" | "b"]!) : prefixed ? ({ "0x": 16, "0d": 10, "0b": 2 }[prefixed[1]!.toLowerCase()]!) : /^[0-9]+$/.test(source) ? 10 : /^[01]+$/.test(source) ? 2 : /^[0-9a-f]+$/i.test(source) ? 16 : undefined;
+  const base = sized ? ({ h: 16, d: 10, b: 2 }[sized[2]!.toLowerCase() as "h" | "d" | "b"]!) : prefixed ? ({ "0x": 16, "0d": 10, "0b": 2 }[prefixed[1]!.toLowerCase()]!) : /^[01]+$/.test(source) && format === "binary" ? 2 : /^[0-9]+$/.test(source) ? 10 : /^[01]+$/.test(source) ? 2 : /^[0-9a-f]+$/i.test(source) ? 16 : undefined;
   const digits = sized?.[3] ?? prefixed?.[2] ?? source;
   if (base === undefined) {
     if (/^\d+'/.test(source)) throw new Error("Invalid sized bus literal.");
@@ -29,17 +30,20 @@ export function parseBusValue(input: string | number, width?: number): ParsedBus
     value &= (1n << BigInt(sizedWidth)) - 1n;
   }
   const resolvedWidth = width ?? sizedWidth;
-  return resolvedWidth === undefined ? { kind: "numeric", value } : { kind: "numeric", value, width: resolvedWidth };
+  const typed = sized ? {} : { typedDigits: digits.length, typedBase: base as 2 | 10 | 16 };
+  return resolvedWidth === undefined ? { kind: "numeric", value, ...typed } : { kind: "numeric", value, width: resolvedWidth, ...typed };
 }
 export function formatBusValue(input: string | number, format: BusValueFormat = "hex", width?: number): string {
-  const parsed = parseBusValue(input, width); if (parsed.kind !== "numeric") return String(input);
+  const parsed = parseBusValue(input, width, format); if (parsed.kind !== "numeric") return String(input);
   const bits = width ?? parsed.width; let value = parsed.value!;
   // Two's complement needs a declared width (argument or sized literal); a
   // value's own bit length is not a width, so without one it stays non-negative.
   const signedWidth = width ?? (typeof input === "number" ? undefined : parsed.width);
   if (format === "signed" && signedWidth !== undefined && (value & (1n << BigInt(signedWidth - 1))) !== 0n) value -= 1n << BigInt(signedWidth);
-  if (format === "binary") return `0b${value.toString(2).padStart(bits ?? 1, "0")}`;
+  // The digit count follows what was typed when it is a literal in the output radix (0b0101 stays 4 digits); anything else falls back to the Bus width.
+  const typedHere = typeof input === "string" && parsed.typedBase === (format === "binary" ? 2 : format === "hex" ? 16 : 0) ? parsed.typedDigits : undefined;
+  if (format === "binary") return `0b${value.toString(2).padStart(typedHere ?? bits ?? 1, "0")}`;
   if (format === "decimal" || format === "signed" || format === "unsigned") return value.toString(10);
   if (format === "symbolic") return String(input);
-  return `0x${value.toString(16).toUpperCase().padStart(Math.ceil((bits ?? 1) / 4), "0")}`;
+  return `0x${value.toString(16).toUpperCase().padStart(typedHere ?? Math.ceil((bits ?? 1) / 4), "0")}`;
 }

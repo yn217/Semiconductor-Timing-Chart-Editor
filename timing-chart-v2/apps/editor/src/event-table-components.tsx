@@ -73,12 +73,13 @@ export function EventRow({ signal, enumDefinition, change, end, index, selected,
   // manufacture an empty History entry. `end` is derived and read-only, so it
   // is excluded from the Draft.
   const committed = eventRowFields(change);
-  const { start, value, comment } = draft?.fields ?? committed;
+  const { start, value, comment, format } = draft?.fields ?? committed;
   const externalConflict = draft?.conflict ?? false;
   const hasChanges = draft !== undefined && !sameEventRowFields(draft.fields, committed);
-  const formatted = formatEventRowValue(signal, change);
+  const formatted = formatEventRowValue(signal, { value: change.value, ...(change.displayLabel === undefined ? {} : { displayLabel: change.displayLabel }), ...(format === "" ? {} : { displayFormat: format as NonNullable<ValueSignal["displayFormat"]> }) });
+  const signalFormat = signal.displayFormat ?? "hex";
   const edit = (fields: Partial<EventRowFields>) => {
-    const next = { start, value, comment, ...fields };
+    const next = { start, value, comment, format, ...fields };
     onDraftChange(nextEventRowDraft(draft, committed, next));
   };
   const reloadLatest = () => onDraftChange(undefined);
@@ -86,7 +87,7 @@ export function EventRow({ signal, enumDefinition, change, end, index, selected,
   return <form className={`event-row${selected ? " selected" : ""}${hasChanges ? " editing" : ""}`} role="row" data-event-id={change.id ?? `start-${change.start}`} data-event-start={change.start} draggable={false} onDragEnter={onDragOver} onDragOver={onDragOver} onDropCapture={onDrop} onDrop={onDrop} onDragEnd={onDragEnd} onClick={() => onSelect(change.start)} onSubmit={(event) => {
     event.preventDefault();
     if (!hasChanges || externalConflict) return;
-    const result = commands.replaceValue(signal.id, change.start, start, canonicalValueFromEditor(signal, enumDefinition, value), comment);
+    const result = commands.replaceValue(signal.id, change.start, start, canonicalValueFromEditor(signal, enumDefinition, value), comment, (format || undefined) as ValueSignal["displayFormat"]);
     // A rejected Draft (e.g. a duplicate change point) stays in the row so
     // the Problems banner's guidance can be acted on directly.
     if (result.ok) onDraftChange(undefined);
@@ -104,7 +105,7 @@ export function EventRow({ signal, enumDefinition, change, end, index, selected,
     {/* The input edits the canonical literal; when the Signal's display
         format (bus radix, display label) renders it differently, the
         formatted value stays visible beside it. */}
-    <span className="event-row-value-cell"><ValueEditorControl signal={signal} enumDefinition={enumDefinition} value={value} onChange={(next) => edit({ value: next })} ariaLabel={`Value ${change.start}`} listId={`event-row-value-options-${change.start}`} />{formatted !== String(change.value) && <output data-testid={`event-row-value-${change.start}`} title="Displayed value">{formatted}</output>}</span>
+    <span className="event-row-value-cell">{signal.type === "bus" && <BusFormatSelect value={format || signalFormat} signalFormat={signalFormat} ariaLabel={`Format ${change.start}`} onChange={(next) => edit({ format: next === signalFormat ? "" : next })} />}<ValueEditorControl signal={format ? { ...signal, displayFormat: format as NonNullable<ValueSignal["displayFormat"]> } : signal} enumDefinition={enumDefinition} value={value} onChange={(next) => edit({ value: next })} ariaLabel={`Value ${change.start}`} listId={`event-row-value-options-${change.start}`} />{formatted !== String(change.value) && <output data-testid={`event-row-value-${change.start}`} title="Displayed value">{formatted}</output>}</span>
     <input aria-label={`Comment ${change.start}`} data-testid={`event-row-comment-${change.start}`} value={comment} onChange={(event) => edit({ comment: event.target.value })} />
     {/* A clean row shows compact Duplicate/Delete icons; a row with an
         unapplied Draft swaps them for Cancel/Apply (the wider state) plus a
@@ -128,7 +129,7 @@ export function EventRow({ signal, enumDefinition, change, end, index, selected,
 
 /** Match the value shown by the waveform projection while preserving an
  * explicit presentation label when one is supplied. */
-export function formatEventRowValue(signal: Pick<ValueSignal, "type" | "displayFormat" | "width">, change: Pick<SignalValueChange, "value" | "displayLabel">): string {
+export function formatEventRowValue(signal: Pick<ValueSignal, "type" | "displayFormat" | "width">, change: Pick<SignalValueChange, "value" | "displayLabel" | "displayFormat">): string {
   return formatSignalValueChange(signal, change);
 }
 
@@ -137,7 +138,31 @@ export function InspectorBusCurrentValue({ signal, cycle }: { readonly signal: V
   return <div className="property-row"><span>Value at cycle {cycle}</span><output aria-label={`Bus value at cycle ${cycle}`} data-testid="inspector-bus-current-value">{value ?? "—"}</output></div>;
 }
 
-export function QuickValues({ signal, setValue }: { readonly signal: ValueSignal; readonly setValue: (value: string) => void }) {
+const BUS_FORMAT_CHOICES: readonly { readonly format: NonNullable<ValueSignal["displayFormat"]>; readonly label: string }[] = [
+  { format: "hex", label: "Hex" },
+  { format: "binary", label: "Binary" },
+  { format: "symbolic", label: "Symbol" },
+];
+
+/** Per-Transition Bus format pull-down. A Signal-level format outside the three choices (decimal, signed, unsigned) stays visible as a disabled entry. */
+export function BusFormatSelect({ value, signalFormat, ariaLabel, onChange }: { readonly value: string; readonly signalFormat: string; readonly ariaLabel: string; readonly onChange: (format: string) => void }) {
+  const extra = [value, signalFormat].filter((format, index, all) => !BUS_FORMAT_CHOICES.some((choice) => choice.format === format) && all.indexOf(format) === index);
+  return <select className="bus-format-select" aria-label={ariaLabel} value={value} onChange={(event) => onChange(event.target.value)} onClick={(event) => event.stopPropagation()}>
+    {BUS_FORMAT_CHOICES.map((choice) => <option key={choice.format} value={choice.format}>{choice.label}</option>)}
+    {extra.map((format) => <option key={format} value={format} disabled={format !== value}>{format}</option>)}
+  </select>;
+}
+
+/** Bus: a format pull-down for the Transition being added (it does not change the Signal's Bus format) plus one-click X / Z. */
+export function QuickValues({ signal, setValue, format, onFormatChange }: { readonly signal: ValueSignal; readonly setValue: (value: string) => void; readonly format?: string; readonly onFormatChange?: (format: string) => void }) {
+  if (signal.type === "bus" && onFormatChange) {
+    const signalFormat = signal.displayFormat ?? "hex";
+    return <div className="quick-values" role="group" aria-label="Quick values">
+      <BusFormatSelect value={format || signalFormat} signalFormat={signalFormat} ariaLabel="Value format" onChange={(next) => onFormatChange(next === signalFormat ? "" : next)} />
+      <button type="button" onClick={() => setValue("X")}>X</button>
+      <button type="button" onClick={() => setValue("Z")}>Z</button>
+    </div>;
+  }
   const values = quickValueOptions(signal.type);
   return <div className="quick-values" role="group" aria-label="Quick values">{values.map((item) => <button type="button" key={item} onClick={() => setValue(quickValueLiteral(signal.type, item))}>{item}</button>)}</div>;
 }

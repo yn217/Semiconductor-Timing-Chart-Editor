@@ -127,6 +127,11 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     expect(toWaveJson({ signal: bus, cycleCount: 10 })).toEqual({ wave: "=..=...=..", data: ["IDLE", "0x1000", "IDLE"] });
   });
 
+  it("draws Bus X and Z with WaveDrom's unknown / high-impedance bricks and no data label", () => {
+    const bus = { ...canonicalFixture().signals[1]!, values: [{ start: 0, value: "X" }, { start: 2, value: "A5" }, { start: 4, value: "z" }, { start: 6, value: "0x10" }] } as ValueSignal;
+    expect(toWaveJson({ signal: bus, cycleCount: 8 })).toMatchObject({ wave: "x.=.z.=.", data: ["0xA5", "0x10"] });
+  });
+
   it("projects sized HDL bus literals using their declared width", () => {
     const bus = {
       ...canonicalFixture().signals[1]!,
