@@ -64,15 +64,17 @@ export function MinimalCycleViewTitleBar({ title, dirty, viewMode, scenarios, sc
   const [scenarioName, setScenarioName] = useState(activeScenario?.name ?? "");
   const [compareOpen, setCompareOpen] = useState(false);
   const [comparisonScenarioId, setComparisonScenarioId] = useState<ScenarioId | undefined>(() => scenarios?.find((scenario) => scenario.id !== activeScenarioId)?.id);
+  // Resolve against the incoming model synchronously; effects repair state only after render.
+  const comparisonTargetId = scenarios?.find((scenario) => scenario.id === comparisonScenarioId && scenario.id !== activeScenarioId)?.id ?? scenarios?.find((scenario) => scenario.id !== activeScenarioId)?.id;
   useEffect(() => setScenarioName(activeScenario?.name ?? ""), [activeScenario?.id, activeScenario?.name]);
   useEffect(() => {
     if (comparisonScenarioId === activeScenarioId || !scenarios?.some((scenario) => scenario.id === comparisonScenarioId)) {
       setComparisonScenarioId(scenarios?.find((scenario) => scenario.id !== activeScenarioId)?.id);
     }
   }, [activeScenarioId, comparisonScenarioId, scenarios]);
-  const differences = useMemo(() => scenarioModel && activeScenarioId && comparisonScenarioId
-    ? compareScenarioSignalStreams(scenarioModel, activeScenarioId, comparisonScenarioId)
-    : [], [scenarioModel, activeScenarioId, comparisonScenarioId]);
+  const differences = useMemo(() => scenarioModel && activeScenario && comparisonTargetId
+    ? compareScenarioSignalStreams(scenarioModel, activeScenario.id, comparisonTargetId)
+    : [], [scenarioModel, activeScenario, comparisonTargetId]);
   useEffect(() => onScenarioComparisonChange?.(compareOpen ? differences : []), [compareOpen, differences, onScenarioComparisonChange]);
   return <header className="app-titlebar"><span className="appmark">∿</span><h1 data-testid="titlebar-document-title" aria-label={`${displayTitle}${dirty ? " (unsaved changes)" : ""}`}>{displayTitle}{dirty && <span className="document-dirty-indicator" data-testid="titlebar-unsaved-indicator" aria-label="Unsaved changes">*</span>}</h1>
     {scenarios ? <div className="scenario-controls" data-testid="scenario-controls" aria-label="Scenario controls">
@@ -83,7 +85,7 @@ export function MinimalCycleViewTitleBar({ title, dirty, viewMode, scenarios, sc
       <button type="button" data-testid="scenario-delete" disabled={scenarios.length <= 1} onClick={() => activeScenarioId && onScenarioDelete?.(activeScenarioId)}>Delete</button>
       <button type="button" data-testid="scenario-compare-toggle" disabled={scenarios.length <= 1 || scenarioModel === undefined} aria-expanded={compareOpen} onClick={() => setCompareOpen((open) => !open)}>Compare</button>
       {compareOpen && scenarioModel && <section className="scenario-comparison-popover" data-testid="scenario-comparison" aria-label="Scenario comparison">
-        <label>Compare {activeScenario?.name ?? "Scenario"} with<select aria-label="Compare with Scenario" data-testid="scenario-compare-target" value={comparisonScenarioId ?? ""} onChange={(event) => setComparisonScenarioId(event.target.value as ScenarioId)}>{scenarios.filter((scenario) => scenario.id !== activeScenarioId).map((scenario) => <option key={scenario.id} value={scenario.id}>{scenario.name}</option>)}</select></label>
+        <label>Compare {activeScenario?.name ?? "Scenario"} with<select aria-label="Compare with Scenario" data-testid="scenario-compare-target" value={comparisonTargetId ?? ""} onChange={(event) => setComparisonScenarioId(event.target.value as ScenarioId)}>{scenarios.filter((scenario) => scenario.id !== activeScenarioId).map((scenario) => <option key={scenario.id} value={scenario.id}>{scenario.name}</option>)}</select></label>
         <p>Different source-cycle ranges</p>
         {differences.length === 0 ? <span data-testid="scenario-no-differences">No waveform differences</span> : <ul>{differences.map((difference) => {
           const definition = scenarioModel.signalDefinitions.find((signal) => signal.id === difference.signalId);
