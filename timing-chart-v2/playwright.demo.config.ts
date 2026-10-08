@@ -8,7 +8,8 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   timeout: 60_000,
-  outputDir: "artifacts/readme-demo-capture",
+  // Playwright clears its outputDir before each run. Keep saved demo masters elsewhere so a focused recapture preserves other demos.
+  outputDir: "test-results/readme-demo",
   reporter: "list",
   use: {
     browserName: "chromium", headless: true,
