@@ -4,6 +4,62 @@ import { cycleDocument } from "../../apps/editor/src/fixtures-cycle-reference-do
 
 startInCycleSample(test);
 
+test("compatible Bottom row selection and dirty draft survive metadata Undo/Redo", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const ribbon = page.getByTestId("ribbon");
+  await ribbon.getByRole("button", { name: "More", exact: true }).click();
+  await page.getByRole("menu", { name: "More Home Commands" }).getByRole("menuitem", { name: "Rename", exact: true }).click();
+  const dialog = page.getByTestId("rename-dialog");
+  await dialog.getByRole("textbox").fill("RENAMED_REQUEST");
+  await dialog.getByRole("button", { name: "Apply", exact: true }).click();
+  const editor = page.getByTestId("signal-editor");
+  const row = editor.locator("form.event-row[data-event-start='0']");
+  await row.getByLabel("Select transition 1").check();
+  await row.getByLabel("Comment 0").fill("Unapplied compatible draft");
+  await expect(editor.getByTestId("event-selected-count")).toHaveText("1 row selected");
+  await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+  await expect(page.getByTestId("selection-status")).toHaveText("REQUEST");
+  await expect(row.getByLabel("Comment 0")).toHaveValue("Unapplied compatible draft");
+  await expect(row.getByLabel("Select transition 1")).toBeChecked();
+  await expect(editor.getByTestId("event-selected-count")).toHaveText("1 row selected");
+  await ribbon.getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(page.getByTestId("selection-status")).toHaveText("RENAMED_REQUEST");
+  await expect(row.getByLabel("Comment 0")).toHaveValue("Unapplied compatible draft");
+  await expect(row.getByLabel("Select transition 1")).toBeChecked();
+  await row.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+});
+
+test("Hierarchy modal Scope remains stable and owns keyboard history shortcuts", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.getByTestId("signal-visibility").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await page.getByRole("button", { name: "More tree actions", exact: true }).click();
+  await page.getByTestId("hierarchy-open").click();
+  const hierarchy = page.getByTestId("hierarchy-browser");
+  await hierarchy.getByLabel("Hierarchy scope", { exact: true }).selectOption("dut");
+  await hierarchy.getByTestId("hierarchy-path-search").fill("request");
+  await hierarchy.getByTestId("hierarchy-path-view").click();
+  await page.keyboard.press("Control+z");
+  await page.keyboard.press("Control+Shift+z");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(hierarchy.getByLabel("Hierarchy scope", { exact: true })).toHaveValue("dut");
+  await expect(hierarchy.getByTestId("hierarchy-path-search")).toHaveValue("request");
+  await expect(hierarchy.getByTestId("hierarchy-path-view")).toHaveAttribute("aria-pressed", "true");
+  await hierarchy.getByRole("button", { name: "Close hierarchy", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+  await expect(page.getByTestId("selection-status")).toHaveText("REQUEST");
+});
+
+
 for (const action of ["open", "new"] as const) {
   test(`document ${action} clears range, selection, filters and fixed Bottom context`, async ({ page }) => {
     await ready(page);
