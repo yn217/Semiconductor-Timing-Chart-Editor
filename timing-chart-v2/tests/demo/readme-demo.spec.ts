@@ -51,15 +51,26 @@ test("hero-timing-chart", async ({ page }) => {
   await expect(annotationOwnerById(host, id)).toHaveAttribute("aria-label", /Δ 2 cycles/);
   await page.waitForTimeout(2500);
   await mode.getByRole("button", { name: "Transaction", exact: true }).click();
-  await tabs.getByRole("button", { name: "Home", exact: true }).click();
-  await ribbon.locator("[data-major-group='Transaction']").getByRole("button", { name: "Create Transaction", exact: true }).click();
+  const transactionEditor = page.getByTestId("transaction-editor");
+  const end = transactionEditor.getByLabel("New Transaction end", { exact: true });
+  const start = transactionEditor.getByLabel("New Transaction start", { exact: true });
+  // The production input step expresses one source cycle in the active TC unit.
+  const cycleInTc = Number(await end.getAttribute("step"));
+  expect(cycleInTc).toBeGreaterThan(0);
+  await transactionEditor.getByLabel("New Transaction name", { exact: true }).fill("Handshake");
+  await end.fill(String(9 * cycleInTc));
+  await start.fill(String(3 * cycleInTc));
+  await transactionEditor.getByRole("button", { name: "Create Transaction", exact: true }).click();
   const bars = page.getByTestId("transaction-lanes").locator("[data-transaction-id]");
   await expect(bars).toHaveCount(1);
   expect((await bars.boundingBox())!.width).toBeGreaterThan(0);
+  expect(Number(await page.getByTestId("inspector").getByLabel("Transaction start", { exact: true }).inputValue()) / cycleInTc).toBeCloseTo(3, 10);
+  expect(Number(await page.getByTestId("inspector").getByLabel("Transaction end", { exact: true }).inputValue()) / cycleInTc).toBeCloseTo(9, 10);
   await page.waitForTimeout(2000);
   await mode.getByRole("button", { name: "Combined", exact: true }).click();
   await expect(page.locator(".split-transaction-pane")).toBeVisible();
   await expect(page.locator(".split-signal-content")).toBeVisible();
+  await expect.poll(async () => (await bars.boundingBox())?.width ?? 0).toBeGreaterThan(100);
   await page.waitForTimeout(3000);
   await tabs.getByRole("button", { name: "File", exact: true }).click();
   await ribbon.getByRole("button", { name: "Export", exact: true }).click();
