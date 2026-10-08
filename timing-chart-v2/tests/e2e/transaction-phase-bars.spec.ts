@@ -75,6 +75,46 @@ test("Phase-protected Transaction edge resize is rejected without a canonical ch
   await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
 });
 
+test("Scenario switching never aliases a copied Transaction Phase selection", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  await openTransactionSample(page);
+  await page.getByTestId("scenario-enable").click();
+  const active = page.getByTestId("active-scenario");
+  const sourceScenarioId = await active.inputValue();
+  const sourcePhase = page.getByRole("button", { name: "Read_0, phase Address, cycles 10 to 20", exact: true });
+  await expect(sourcePhase).toBeVisible();
+  const sourcePhaseId = await sourcePhase.getAttribute("data-phase-id");
+  expect(sourcePhaseId).toBeTruthy();
+  await sourcePhase.click();
+  await expect(sourcePhase).toHaveAttribute("aria-pressed", "true");
+  await page.getByTestId("scenario-duplicate").click();
+  const copyScenarioId = await active.inputValue();
+  expect(copyScenarioId).not.toBe(sourceScenarioId);
+  await expect(page.locator(`.transaction-phase-hit-target[data-phase-id="${sourcePhaseId}"]`)).toHaveCount(0);
+  // Identify the copied Address Phase by its semantic accessible name, not
+  // creation order or viewport position. Its stable ID is then the locator.
+  const copiedAddress = page.getByRole("button", { name: "Read_0, phase Address, cycles 10 to 20", exact: true });
+  await expect(copiedAddress).toHaveCount(1);
+  const copyPhaseId = await copiedAddress.getAttribute("data-phase-id");
+  expect(copyPhaseId).toBeTruthy();
+  expect(copyPhaseId).not.toBe(sourcePhaseId);
+  await expect(copiedAddress).toHaveAttribute("aria-pressed", "false");
+  await copiedAddress.click();
+  await expect(copiedAddress).toHaveAttribute("aria-pressed", "true");
+  const revision = await page.getByTestId("revision-status").textContent();
+  const history = await page.getByTestId("history-status").textContent();
+  const dirty = await page.getByTestId("dirty-status").textContent();
+  await active.selectOption(sourceScenarioId);
+  await expect(page.locator(`.transaction-phase-hit-target[data-phase-id="${copyPhaseId}"]`)).toHaveCount(0);
+  await expect(sourcePhase).toHaveAttribute("aria-pressed", "false");
+  await active.selectOption(copyScenarioId);
+  await expect(page.locator(`.transaction-phase-hit-target[data-phase-id="${sourcePhaseId}"]`)).toHaveCount(0);
+  await expect(page.getByTestId("revision-status")).toHaveText(revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
+});
+
 test("Transaction Phase selection restores by stable Phase ID after mode remount", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");
