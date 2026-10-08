@@ -224,7 +224,7 @@ export function MinimalCycleView() {
   selection.configure({
     decorateSelection: applySelectionDecorations,
     synchronizeContext: (kind) => {
-      if (!followSelectionRef.current || bottomPinnedRef.current) return;
+      if (!followSelectionRef.current || bottomPinnedRef.current || bottomTab === "JSON") return;
       const preferredTab = kind === "annotation" ? "Annotation"
         : kind === "transaction" ? "Transaction"
           : kind === "signal" || kind === "spacer" ? "Signal" : undefined;
