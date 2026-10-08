@@ -142,7 +142,10 @@ export function refreshTimelinePresentation(context: {
     const minimumWaveWidth = Math.max(160, inTransaction ? metrics.viewportWidth : metrics.viewportWidth - metrics.leftPaneWidth - metrics.frozenPaneWidth);
     const currentTimeAxis = resolveTimeAxisGeometry(context.document, context.geometryMaps);
     const rebuilt = rebuildRulerPresentation(context.ruler, context.document, context.geometryMaps, context.mappingCache, rulerInitialized ? screenGeometryScale : undefined, currentTimeAxis.ownerSignalId ? context.geometrySvgs.get(currentTimeAxis.ownerSignalId) : undefined, metrics.zoom, minimumWaveWidth, context.viewport, context.cyclesPerTc);
-    timeAxis = rebuilt.timeAxis; screenGeometryScale = rebuilt.scale; waveWidthPxPerDisplayCycle = rebuilt.waveWidthPxPerDisplayCycle; waveOriginPx = rebuilt.waveOriginPx; rulerInitialized = true;
+    timeAxis = rebuilt.timeAxis; screenGeometryScale = rebuilt.scale; waveWidthPxPerDisplayCycle = rebuilt.waveWidthPxPerDisplayCycle; waveOriginPx = rebuilt.waveOriginPx;
+    // An empty document has no geometry yet. Keep the readiness gate open so
+    // the first newly authored timing owner can rebuild the ruler on arrival.
+    rulerInitialized = timeAxis.geometry !== undefined && timeAxis.ownerSignalId !== undefined;
     sharedMetrics = context.publishTimeAxisMetrics?.(timeAxis, screenGeometryScale, waveWidthPxPerDisplayCycle, waveOriginPx, context.currentZoom) ?? sharedMetrics;
     if (sharedMetrics) applyPublishedTimeAxisMetrics(context.ruler, context.viewport, sharedMetrics);
     context.markOpenPhase("ruler-painted"); syncPresentationScale(context.host, context.currentZoom, screenGeometryScale);

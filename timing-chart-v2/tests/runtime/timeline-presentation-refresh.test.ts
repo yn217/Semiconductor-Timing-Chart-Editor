@@ -2,11 +2,33 @@ import { describe, expect, it, vi } from "vitest";
 import { renderGeometryGrid } from "../../apps/editor/src/render-geometry-grid.js";
 import { DisplayTimeMappingCache } from "@timing-chart-v2/projection";
 import { canonicalFixture } from "../fixtures/canonical.js";
-import { applyPublishedTimeAxisMetrics, publishZoomX, refreshGridPresentation, refreshRangeBandPresentation, refreshRulerAndGridIfNeeded, syncPresentationScale } from "../../apps/editor/src/runtime/timeline-presentation-refresh.js";
+import { applyPublishedTimeAxisMetrics, publishZoomX, refreshGridPresentation, refreshRangeBandPresentation, refreshRulerAndGridIfNeeded, refreshTimelinePresentation, syncPresentationScale } from "../../apps/editor/src/runtime/timeline-presentation-refresh.js";
+import { ViewMetricsOwner } from "../../apps/editor/src/runtime/view-metrics.js";
 
 vi.mock("../../apps/editor/src/render-geometry-grid.js", () => ({ renderGeometryGrid: vi.fn() }));
 
 describe("Open ruler/grid readiness", () => {
+  it("keeps an empty-axis rebuild uninitialized so new timing geometry can recover it (#1102)", () => {
+    const document = { ...canonicalFixture(), signals: [], signalGroups: [] };
+    const element = () => ({ dataset: {}, style: { setProperty: vi.fn() }, closest: () => null, replaceChildren: vi.fn() }) as unknown as HTMLElement;
+    const ruler = element();
+    const viewport = Object.assign(element(), { clientWidth: 800, scrollLeft: 0 });
+    const result = refreshTimelinePresentation({
+      reason: "ruler", document, ruler, grid: element(), viewport,
+      host: element(), rulerViewport: element(), geometryMaps: new Map(), geometrySvgs: new Map(),
+      mappingCache: new DisplayTimeMappingCache(),
+      metricsOwner: new ViewMetricsOwner({ leftPaneWidth: 200, frozenPaneWidth: 200, inspectorWidth: 300, viewportWidth: 800, zoom: 1 }),
+      currentZoom: 1, previousScale: 1, rulerInitialized: true, timeAxis: { mode: "clockless" },
+      totalHeight: 0, gridEnabled: false, cyclesPerTc: 10,
+      markOpenPhase: vi.fn(), onPlayhead: vi.fn(), onRange: vi.fn(), onResize: vi.fn(),
+    });
+    expect(result.timeAxis.geometry).toBeUndefined();
+    expect(result.rulerInitialized).toBe(false);
+    const recover = vi.fn();
+    refreshRulerAndGridIfNeeded(() => result.rulerInitialized, recover, vi.fn());
+    expect(recover).toHaveBeenCalledTimes(1);
+  });
+
   it("does not rebuild ruler and grid a second time after reference geometry initialized them", () => {
     const refreshRuler = vi.fn();
     const refreshGrid = vi.fn();
