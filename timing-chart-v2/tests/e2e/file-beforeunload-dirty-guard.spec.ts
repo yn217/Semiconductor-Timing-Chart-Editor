@@ -3,6 +3,25 @@ import { startInCycleSample } from "./cycle-startup.js";
 
 startInCycleSample(test);
 
+test("dirty tab close requests confirmation and declining retains the page", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByTestId("cycle-surface").locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const name = page.getByTestId("inspector").getByLabel("Inspector signal name", { exact: true });
+  await name.fill("KEEP_OPEN_REQUEST");
+  await name.press("Enter");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Modified");
+  const pending = page.waitForEvent("dialog");
+  await page.close({ runBeforeUnload: true });
+  const dialog = await pending;
+  expect(dialog.type()).toBe("beforeunload");
+  await dialog.dismiss();
+  expect(page.isClosed()).toBe(false);
+  await expect(name).toHaveValue("KEEP_OPEN_REQUEST");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Modified");
+});
+
 const unloadState = (page: import("@playwright/test").Page) => page.evaluate(() => {
   const event = new Event("beforeunload", { cancelable: true }) as BeforeUnloadEvent;
   const dispatchResult = window.dispatchEvent(event);

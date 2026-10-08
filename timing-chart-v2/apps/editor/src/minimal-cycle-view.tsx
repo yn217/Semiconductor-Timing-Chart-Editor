@@ -871,6 +871,6 @@ export function MinimalCycleView() {
      {saveAsVisible && <SaveAsDialog defaultName={snapshot.document.document.title || "timing-chart"} restoreFocusRef={dialogOriginRef} onSave={(name) => { const saved = documentLifecycle.saveAs(name); if (saved) closeDialog(() => setSaveAsVisible(false)); return saved; }} onClose={() => closeDialog(() => setSaveAsVisible(false))} />}
     </EditorDialogLayer>}
     status={shellStatus}
-    feedback={<OperationFeedback error={problem} message={application.operationMessage} onShowProblems={() => { setBottomTab("Problems"); setBottomVisible(true); }} />}
+    feedback={<OperationFeedback error={problem} message={application.operationMessage} operationLabel={runtimeDiagnostics.find((item) => problem.includes(item.message))?.operationLabel} onShowProblems={() => { setBottomTab("Problems"); setBottomVisible(true); }} />}
   />;
 }
