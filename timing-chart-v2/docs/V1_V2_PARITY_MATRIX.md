@@ -496,7 +496,12 @@ evidence.
 | `05_bottom_json_LOCKED.png` | 983 × 440 | V2 JSON Bottom context tests | V1 JSON crop has no one-to-one V2 capture contract yet |
 
 The V2 v8 layout metrics and browser artifacts remain the authoritative
-executable evidence for the current V2 contract. The five panel rows stay
-open until each has a mapped V2 fixture/state and an unchanged-reference
-comparison, or an explicit product decision records why the v8 override is
-the accepted replacement.
+executable evidence for the current V2 contract. On 2026-10-09 the product
+owner explicitly approved V2 v8 as the formal replacement for all five
+historical panel rows (#1095). Their V1 mapping/pixel-comparison obligation
+is therefore closed by product decision, not by an unperformed comparison.
+The mapping-status observations in the historical table above explain why
+the old images are not direct V2 baselines; they no longer impose an open
+current-release visual-matching requirement. Current V2 functional,
+interaction, persistence, Export, and visual-regression acceptance remains
+required. Historical assets, Golden files, thresholds, and masks are unchanged.

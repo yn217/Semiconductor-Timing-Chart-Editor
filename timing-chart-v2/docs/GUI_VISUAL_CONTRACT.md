@@ -1,6 +1,19 @@
 # GUI Visual Acceptance Contract
 
-This document is normative. The original GUI mockup images are Golden Visual References, not loose inspiration.
+This document is normative. The approved V2 v8 executable reference is the current-release visual authority. Original V1 GUI mockups are retained as historical inputs, not current-release pixel-match obligations.
+
+### Historical panel replacement decision (#1095)
+
+On 2026-10-09 the product owner explicitly approved V2 v8 as the formal
+replacement for the five historical V1 panel references: Left, Bottom Signal,
+Bottom Annotation, Bottom Problems, and Bottom JSON. Their one-to-one V1
+visual mapping/pixel-match obligation is closed by this product decision.
+The V1 files remain unchanged for historical traceability.
+
+This is not acceptance of unverified functionality. Current V2 layout,
+interaction, stable identity, Save/Open, and Export requirements remain in
+force, as do V2 visual regression checks and WaveDrom fidelity checks.
+No Golden file, tolerance, threshold, or mask is changed by this decision.
 
 ## 1. Reference viewport
 Golden images were designed at approximately `1672 x 941` px.
