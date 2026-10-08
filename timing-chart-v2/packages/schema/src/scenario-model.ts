@@ -30,7 +30,7 @@ const DEFAULT_SCENARIO_ID = "scenario_default" as ScenarioId;
 
 // Exhaustive: a new stable-ID kind must explicitly declare its ownership.
 const ENTITY_OWNERSHIP = {
-  document: "shared", signal: "shared", signalGroup: "shared", spacer: "shared", enumDefinition: "shared",
+  document: "shared", signal: "shared", signalValueChange: "scenario", signalGroup: "shared", spacer: "shared", enumDefinition: "shared",
   annotation: "scenario", annotationGroup: "scenario", transaction: "scenario", transactionPhase: "scenario",
   transactionGroup: "scenario", bookmark: "scenario", timeGroup: "scenario", labelAnchor: "scenario", constraint: "scenario",
 } satisfies Record<CanonicalEntityKind, "shared" | "scenario">;

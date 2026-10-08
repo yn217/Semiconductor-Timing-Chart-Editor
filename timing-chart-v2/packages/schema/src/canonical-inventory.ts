@@ -1,12 +1,19 @@
 import type { CanonicalDocument } from "./types.js";
 
-export type CanonicalEntityKind = "document" | "signal" | "signalGroup" | "spacer" | "annotation" | "annotationGroup" | "transaction" | "transactionPhase" | "transactionGroup" | "enumDefinition" | "bookmark" | "timeGroup" | "labelAnchor" | "constraint";
+export type CanonicalEntityKind = "document" | "signal" | "signalValueChange" | "signalGroup" | "spacer" | "annotation" | "annotationGroup" | "transaction" | "transactionPhase" | "transactionGroup" | "enumDefinition" | "bookmark" | "timeGroup" | "labelAnchor" | "constraint";
 export interface CanonicalEntityEntry { readonly id: string; readonly kind: CanonicalEntityKind; readonly path: string; }
 
 /** Single source of truth for every stable-ID canonical entity. */
 export function canonicalEntityInventory(document: CanonicalDocument): readonly CanonicalEntityEntry[] {
   const entries: CanonicalEntityEntry[] = [{ id: document.document.id, kind: "document", path: "$.document.id" }];
-  document.signals.forEach((item, index) => entries.push({ id: item.id, kind: "signal", path: `$.signals[${index}].id` }));
+  document.signals.forEach((item, index) => {
+    entries.push({ id: item.id, kind: "signal", path: `$.signals[${index}].id` });
+    const changes = item.type === "clock" ? item.enable ?? [] : "values" in item ? item.values : [];
+    const collection = item.type === "clock" ? "enable" : "values";
+    changes.forEach((change, changeIndex) => {
+      if (change.id !== undefined) entries.push({ id: change.id, kind: "signalValueChange", path: `$.signals[${index}].${collection}[${changeIndex}].id` });
+    });
+  });
   document.signalGroups.forEach((group, index) => {
     entries.push({ id: group.id, kind: "signalGroup", path: `$.signalGroups[${index}].id` });
     group.spacers?.forEach((item, itemIndex) => entries.push({ id: item.id, kind: "spacer", path: `$.signalGroups[${index}].spacers[${itemIndex}].id` }));

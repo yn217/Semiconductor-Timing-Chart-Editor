@@ -2,13 +2,18 @@ import { describe, expect, it, vi } from "vitest";
 import { commandPlannerMetrics, commandPolicyCodes, commandPolicyDescriptors, planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
 import { deriveTimingDiagnostics, TIMING_DIAGNOSTIC_CATEGORIES } from "@timing-chart-v2/core";
-import { DEFAULT_MEASUREMENT_LAYOUT, MAX_MEASUREMENT_LANE, canonicalReferenceMetrics, parseDocument, serializeValidatedCanonicalDocument, type Annotation, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type ConstraintId, type GroupId, type Signal, type SignalId, type SpacerId, type TransactionGroupId, type TransactionId, type TransactionPhaseId, type ValueSignal } from "@timing-chart-v2/schema";
+import { DEFAULT_MEASUREMENT_LAYOUT, MAX_MEASUREMENT_LANE, canonicalReferenceMetrics, parseDocument, serializeValidatedCanonicalDocument, type Annotation, type AnnotationId, type BookmarkId, type CanonicalDocument, type ClockSignal, type CommandId, type CommentRow, type ConstraintId, type GroupId, type Signal, type SignalId, type SpacerId, type TransactionGroupId, type TransactionId, type TransactionPhaseId, type ValueSignal } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import { valueChangeIdAllocator } from "../../packages/commands/src/value-change-id-allocator.js";
 import { generatePerformanceDocument } from "../../packages/testing/src/index.js";
 
 const commandId = (id: string) => id as CommandId;
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+const normalizeFixture = (document: CanonicalDocument): CanonicalDocument => {
+  const result = parseDocument(document);
+  if (!result.ok) throw new Error("Expected canonical fixture normalization to succeed.");
+  return result.document;
+};
 
 function extraSignal(id = "sig_extra"): Signal {
   const base = clone(canonicalFixture().signals[1]!);
@@ -611,8 +616,9 @@ describe("pure Semantic Command planning", () => {
 
   it("keeps generated value-change IDs unique across repeated edits to one Signal", () => {
     const source = canonicalFixture();
-    const session = new CommandHistorySession({ ...source, timeline: { ...source.timeline, cycleCount: 128, end: 128 } });
-    const initialSignal = source.signals.find((item) => item.id === "sig_data");
+    const initialDocument = normalizeFixture({ ...source, timeline: { ...source.timeline, cycleCount: 128, end: 128 } });
+    const session = new CommandHistorySession(initialDocument);
+    const initialSignal = initialDocument.signals.find((item) => item.id === "sig_data");
     const initialValueCount = initialSignal && "values" in initialSignal ? initialSignal.values.length : 0;
     const allocationSpy = vi.spyOn(valueChangeIdAllocator, "allocate");
     const ids: string[] = [];
@@ -636,7 +642,13 @@ describe("pure Semantic Command planning", () => {
     for (let index = 0; index < ids.length; index += 1) expect(session.redo().ok).toBe(true);
     const reopened = parseDocument(saved);
     expect(reopened.ok).toBe(true);
-    if (reopened.ok) expect(reopened.document.signals.find((item) => item.id === "sig_data")).toEqual(session.getSnapshot().document.signals.find((item) => item.id === "sig_data"));
+    if (reopened.ok) {
+      const reopenedData = reopened.document.signals.find((item) => item.id === "sig_data");
+      const currentData = session.getSnapshot().document.signals.find((item) => item.id === "sig_data");
+      if (!reopenedData || reopenedData.type === "clock" || reopenedData.type === "commentRow" || !currentData || currentData.type === "clock" || currentData.type === "commentRow") throw new Error("Expected the edited Value Signal after Save/Open.");
+      expect(reopenedData.values.map(({ start, value }) => ({ start, value }))).toEqual(currentData.values.map(({ start, value }) => ({ start, value })));
+      expect(reopenedData.values.filter((change) => ids.includes(change.id ?? "")).map((change) => change.id)).toEqual(ids);
+    }
   });
 
   it("keeps reorder and visibility out of WaveDrom and Local Geometry domains", () => {
@@ -1714,7 +1726,7 @@ describe("command execution and atomic history", () => {
       align: "right",
       locked: false,
     };
-    const session = new CommandHistorySession({ ...canonicalFixture(), annotations: [marker, bracket] });
+    const session = new CommandHistorySession(normalizeFixture({ ...canonicalFixture(), annotations: [marker, bracket] }));
 
     expect(session.execute({ id: commandId("marker_presentation"), type: "annotation.updateProperties", annotationId: marker.id, label: "Marker updated", visible: false, color: "#bb3300", labelOffset: { x: 11, y: -6 }, style: { strokeWidth: 4, strokeStyle: "solid", fillColor: "#ddccaa", fillOpacity: 0.6 } }).ok).toBe(true);
     expect(session.execute({ id: commandId("marker_rotation"), type: "annotation.setRotation", annotationId: marker.id, rotation: 18 }).ok).toBe(true);
@@ -1758,7 +1770,7 @@ describe("command execution and atomic history", () => {
     const c: Annotation = { id: "ann_import_c" as AnnotationId, type: "text", label: "C", visible: true, anchor: { signalId: "sig_data" as SignalId, cycle: 3, point: "cycle-start" } };
     const groupA = { id: "ann_import_group_a" as never, name: "Primary", annotationIds: [a.id, b.id] };
     const groupC = { id: "ann_import_group_c" as never, name: "Secondary", annotationIds: [c.id] };
-    const initial = { ...canonicalFixture(), annotations: [a, b, c], annotationGroups: [groupA, groupC] };
+    const initial = normalizeFixture({ ...canonicalFixture(), annotations: [a, b, c], annotationGroups: [groupA, groupC] });
     const session = new CommandHistorySession(initial);
     const unchangedImport = session.execute({ id: commandId("annotation_collection_same"), type: "annotation.replaceCollection", annotations: [a, b, c] });
     expect(unchangedImport).toMatchObject({ ok: false, reason: "no-op" });
