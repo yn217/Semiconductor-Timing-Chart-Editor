@@ -4,6 +4,73 @@ import { readFile, writeFile } from "node:fs/promises";
 import { projectScenarioAsV2, type ScenarioId } from "@timing-chart-v2/schema";
 import { canonicalDocumentOf, parseEditorDocument } from "../../apps/editor/src/file-document-controller.js";
 import { annotationOwnerById, snapshotAnnotationIds, waitForCreatedAnnotationId } from "../e2e/annotation-identity.js";
+import { documentState, expectViewOnly } from "../e2e/view-only.js";
+
+test("scenario-compare", async ({ page }) => {
+  const recordingStart = Date.now();
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+  await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  const host = page.getByTestId("cycle-surface");
+  const ribbon = page.getByTestId("ribbon");
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await ribbon.getByRole("button", { name: "New", exact: true }).click();
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+  await page.getByTestId("scenario-enable").click();
+  const active = page.getByTestId("active-scenario");
+  const a = await active.inputValue();
+  await page.getByTestId("scenario-name").fill("Scenario A");
+  await page.getByTestId("scenario-rename").click();
+  await page.getByTestId("scenario-duplicate").click();
+  const b = await active.inputValue();
+  expect(b).not.toBe(a);
+  await page.getByTestId("scenario-name").fill("Scenario B");
+  await page.getByTestId("scenario-rename").click();
+  const ready = host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']");
+  await ready.click();
+  const editor = page.getByTestId("signal-editor");
+  await editor.getByLabel("New event start").fill("7");
+  await editor.getByLabel("New event value").selectOption("0");
+  await editor.getByTestId("add-signal-event").click();
+  await expect(editor.locator("[data-event-start='7']")).toBeVisible();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const before = await documentState(page);
+  const trimStartSeconds = (Date.now() - recordingStart) / 1000;
+  await page.waitForTimeout(1500);
+  await active.selectOption(a);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expectViewOnly(page, before);
+  await page.waitForTimeout(2000);
+  await active.selectOption(b);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.waitForTimeout(1500);
+  await page.getByTestId("scenario-compare-toggle").click();
+  await expect(page.getByTestId("scenario-compare-target")).toHaveValue(a);
+  const overlay = page.locator("[data-role='scenario-difference-overlay'][data-signal-id='sig_cycle_ready'][data-source-start='7']");
+  await expect(overlay).toBeVisible();
+  await expect(overlay).toHaveAttribute("data-source-end", "8");
+  expect((await overlay.boundingBox())!.width).toBeGreaterThan(0);
+  await page.waitForTimeout(2000);
+  await page.getByTestId("scenario-difference-reveal-sig_cycle_ready-7").click();
+  await expect(ready).toHaveAttribute("data-selected", "true");
+  await expect(page.getByTestId("range-selection-band")).toHaveAttribute("data-range-start", "7");
+  await expect(page.getByTestId("range-selection-band")).toHaveAttribute("data-range-end", "8");
+  await expectViewOnly(page, before);
+  await page.waitForTimeout(2500);
+  expect(errors).toEqual([]);
+  const video = page.video();
+  expect(video).not.toBeNull();
+  await page.close();
+  await video!.saveAs(resolve("artifacts/readme-demo-capture/scenario-compare.webm"));
+  await writeFile(resolve("artifacts/readme-demo-capture/scenario-compare.json"), JSON.stringify({
+    trimStartSeconds, viewport: { width: 1440, height: 900 }, dpr: 1,
+    build: "production-preview", sourceHead: process.env.DEMO_SOURCE_HEAD,
+    scenarioIds: [a, b], scenes: ["Scenario B", "Scenario A", "Compare READY Cycle 7", "Show in timeline"], errors,
+  }, null, 2));
+});
 
 test("transaction-view", async ({ page }) => {
   const recordingStart = Date.now();
