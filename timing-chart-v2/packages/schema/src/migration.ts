@@ -98,6 +98,7 @@ function normalizeChanges(value: unknown, fallback: string | number, warnings: M
       value: typeof source.value === "string" || typeof source.value === "number" ? source.value : fallback,
     };
     if (typeof source.displayLabel === "string") result.displayLabel = source.displayLabel;
+    if (["hex", "binary", "decimal", "signed", "unsigned", "symbolic"].includes(text(source.displayFormat))) result.displayFormat = source.displayFormat;
     if (typeof source.comment === "string") result.comment = source.comment;
     return result as unknown as SignalValueChange;
   });

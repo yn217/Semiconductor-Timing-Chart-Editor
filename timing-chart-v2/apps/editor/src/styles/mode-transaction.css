@@ -1,6 +1,6 @@
 /* Transaction Mode workspace owner: every rule scoped by .cycle-panel.mode-transaction, moved here
    from app-shell/center-columns/bottom-editor so the mode has one stylesheet (#593). */
-.desktop-workspace[data-workspace-owner="TransactionWorkspace"] { --gui-workspace-header-height: 58px; }
+.desktop-workspace[data-workspace-owner="TransactionWorkspace"] { --gui-workspace-header-height: 37px; }
 /* Transaction mode's tree header is 58px tall (line 140), not the plain
    37px `.column-headings` height every other mode uses -- `.cycle-viewport`
    kept the flat 37px offset, so its bottom 21px (exactly enough to swallow
@@ -11,13 +11,16 @@
 .editor-shell .cycle-panel.mode-transaction .cycle-viewport { height: 100%; }
 .cycle-panel.mode-transaction { --time-domain-left: 0px; }
 .cycle-panel.mode-transaction .surface-host { visibility: hidden; }
+/* The filter strip (absolute, 35px) occupies the first band of the rail beside the ruler, like Cycle. */
+.desktop-workspace[data-workspace-owner="TransactionWorkspace"] .left-workspace-rail > .transaction-left-tree { margin-top: 35px; }
 .cycle-panel.mode-transaction .transaction-left-tree {
   position: absolute;
   z-index: 18;
   /* Standalone Transaction tree is a sibling of `.cycle-viewport`, not a
      child of its horizontally scrolling surface. Keep it fixed below the
      58px Transaction header while the shared time surface scrolls behind it. */
-  top: 58px;
+  /* 37px header + the 35px filter strip that sits beside the ruler (same band as Cycle). */
+  top: 72px;
   /* Leave the native horizontal scrollbar unobscured; the tree is a fixed
      overlay sibling and must not cover the scrollbar's starting thumb. */
   bottom: 16px;

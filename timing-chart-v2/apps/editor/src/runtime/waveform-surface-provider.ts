@@ -5,7 +5,7 @@ import type { EditorSessionController } from "./editor-session-controller.js";
 import type { CanonicalDocument, Signal, SignalId, SignalValueChange } from "@timing-chart-v2/schema";
 import { valueSignalWaveDomain } from "@timing-chart-v2/schema";
 import type { WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
-import { analyticLocalGeometry, semanticValuesForWindow, toWaveJsonMappedClock, toWaveJsonWindow, type RenderedWave, type WaveDromAdapter, type WaveJsonSignal } from "@timing-chart-v2/wavedrom-adapter";
+import { analyticLocalGeometry, busLogicToken, semanticValuesForWindow, toWaveJsonMappedClock, toWaveJsonWindow, type RenderedWave, type WaveDromAdapter, type WaveJsonSignal } from "@timing-chart-v2/wavedrom-adapter";
 import type { DisplayTimeMapping, DisplayTimeMappingCache } from "@timing-chart-v2/projection";
 import type { GeometryRegistry } from "./geometry-registry.js";
 import { displayWindowForSource } from "./display-boundary.js";
@@ -142,8 +142,8 @@ function projectWaveSignal(input: {
   // WaveDrom artifact (one SVG image parse per mounted bus row on scroll).
   const windowedValues = !foldedClock && sourceWindow !== undefined && rendererStart !== undefined && rendererEnd !== undefined && rendererEnd > rendererStart;
   const semanticValues = !semanticDomain || remappedValues === undefined ? undefined
-    : windowedValues ? semanticValuesForWindow(remappedValues, rendererStart, rendererEnd)
-    : remappedValues.map((change: { readonly value: string | number }) => String(change.value));
+    : windowedValues ? semanticValuesForWindow(remappedValues, rendererStart, rendererEnd, signal.type)
+    : remappedValues.filter((change: { readonly value: string | number }) => busLogicToken(signal.type, change.value) === undefined).map((change: { readonly value: string | number }) => String(change.value));
   const mappedWaveJson = foldedClock
     ? waveJson
     : sourceWindow === undefined || rendererStart === undefined || rendererEnd === undefined || rendererEnd <= rendererStart

@@ -9,8 +9,8 @@ export interface SignalEditorCommandActions {
   readonly updateEdgeCounter: (signalId: SignalId, edgeCounter: EdgeCounterSettings) => CommandResult;
   readonly updateResetSemantics: (signalId: SignalId, resetSemantics: ResetSemantics | undefined) => CommandResult;
   readonly replaceValues: (signalId: SignalId, values: ValueSignal["values"]) => CommandResult;
-  readonly updateValue: (signalId: SignalId, start: number, value: string | number, comment?: string) => CommandResult;
-  readonly replaceValue: (signalId: SignalId, fromStart: number, start: number, value: string | number, comment?: string) => CommandResult;
+  readonly updateValue: (signalId: SignalId, start: number, value: string | number, comment?: string, displayFormat?: ValueSignal["values"][number]["displayFormat"]) => CommandResult;
+  readonly replaceValue: (signalId: SignalId, fromStart: number, start: number, value: string | number, comment?: string, displayFormat?: ValueSignal["values"][number]["displayFormat"]) => CommandResult;
   readonly removeValue: (signalId: SignalId, start: number) => CommandResult;
   readonly updateCommentRow: (signalId: SignalId, payload: Omit<CommandOf<"commentRow.update">, "id" | "type" | "signalId">) => CommandResult;
 }
@@ -161,8 +161,8 @@ export function createEditorSurfaceCommandController(input: {
     updateEdgeCounter: (signalId, edgeCounter) => dispatch<"signal.updateEdgeCounter">("edge_counter", { type: "signal.updateEdgeCounter", signalId, edgeCounter }),
     updateResetSemantics: (signalId, resetSemantics) => dispatch<"signal.updateResetSemantics">("reset_semantics", { type: "signal.updateResetSemantics", signalId, ...(resetSemantics === undefined ? {} : { resetSemantics }) }),
     replaceValues: (signalId, values) => dispatch<"signal.replaceValues">("replace_values", { type: "signal.replaceValues", signalId, values }),
-    updateValue: (signalId, start, value, comment) => dispatch<"signal.updateValue">("add_value", { type: "signal.updateValue", signalId, start, value, ...(comment === undefined || comment === "" ? {} : { comment }) }),
-    replaceValue: (signalId, fromStart, start, value, comment) => dispatch<"signal.replaceValue">("replace_value", { type: "signal.replaceValue", signalId, fromStart, start, value, ...(comment === undefined || comment === "" ? {} : { comment }) }),
+    updateValue: (signalId, start, value, comment, displayFormat) => dispatch<"signal.updateValue">("add_value", { type: "signal.updateValue", signalId, start, value, ...(displayFormat === undefined ? {} : { displayFormat }), ...(comment === undefined || comment === "" ? {} : { comment }) }),
+    replaceValue: (signalId, fromStart, start, value, comment, displayFormat) => dispatch<"signal.replaceValue">("replace_value", { type: "signal.replaceValue", signalId, fromStart, start, value, ...(displayFormat === undefined ? {} : { displayFormat }), ...(comment === undefined || comment === "" ? {} : { comment }) }),
     removeValue: (signalId, start) => dispatch<"signal.removeValue">("remove_value", { type: "signal.removeValue", signalId, start }),
     updateCommentRow: (signalId, payload) => dispatch<"commentRow.update">("comment_row_update", { type: "commentRow.update", signalId, ...payload }),
     move: (transactionId, start) => dispatch<"transaction.move">("transaction_snap_move", { type: "transaction.move", transactionId, start }),

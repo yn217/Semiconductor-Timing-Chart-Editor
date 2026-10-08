@@ -50,6 +50,14 @@ function applyGaps(wave: string[], gaps: readonly number[] | undefined): void {
   }
 }
 
+/** A Bus value of exactly X/Z is drawn with WaveDrom's own unknown / high-impedance
+ * brick (token `x` / `z`) instead of a data segment, so it carries no `data` label. */
+export function busLogicToken(type: ValueSignal["type"], value: string | number): "x" | "z" | undefined {
+  if (type !== "bus") return undefined;
+  const normalized = String(value).trim().toLowerCase();
+  return normalized === "x" || normalized === "z" ? normalized : undefined;
+}
+
 function valueSignalToWaveJson(signal: ValueSignal, cycleCount: number, gaps: readonly number[] | undefined, enumDefinitions: readonly EnumDefinition[] = []): WaveJsonSignal {
   assertChangePoints(signal.values, cycleCount);
   const wave = Array<string>(cycleCount).fill(".");
@@ -61,13 +69,15 @@ function valueSignalToWaveJson(signal: ValueSignal, cycleCount: number, gaps: re
       eventToken(change.value);
       wave[change.start] = WAVEDROM_DATA_TOKEN;
       data.push(String(change.value));
+    } else if (isData && busLogicToken(signal.type, change.value) !== undefined) {
+      wave[change.start] = busLogicToken(signal.type, change.value)!;
     } else if (isData) {
       wave[change.start] = WAVEDROM_DATA_TOKEN;
       const enumDefinition = signal.type === "state" && signal.enumId !== undefined ? enumDefinitions.find((definition) => definition.id === signal.enumId) : undefined;
       data.push(change.displayLabel ?? (enumDefinition !== undefined
         ? resolveEnumValue(enumDefinition, change.value)
-        : signal.type === "bus" && signal.displayFormat !== undefined
-        ? formatBusValue(change.value, signal.displayFormat, signal.width)
+        : signal.type === "bus" && (change.displayFormat ?? signal.displayFormat) !== undefined
+        ? formatBusValue(change.value, change.displayFormat ?? signal.displayFormat, signal.width)
         : String(change.value)));
     } else {
       wave[change.start] = logicToken(signal.type, change.value);
@@ -397,8 +407,10 @@ function valueChangesInWindow(changes: readonly SignalValueChange[], start: numb
  * binding is positional, so a bounded render must not receive the complete
  * document history (whose index 0 is the first change of the whole Signal).
  */
-export function semanticValuesForWindow(changes: readonly SignalValueChange[], start: number, end: number): readonly string[] {
-  return valueChangesInWindow(changes, start, end).map((change) => String(change.value));
+export function semanticValuesForWindow(changes: readonly SignalValueChange[], start: number, end: number, signalType?: ValueSignal["type"]): readonly string[] {
+  return valueChangesInWindow(changes, start, end)
+    .filter((change) => signalType === undefined || busLogicToken(signalType, change.value) === undefined)
+    .map((change) => String(change.value));
 }
 
 export function toWaveJsonWindow(source: CanonicalSignalSource, start: number, end: number, semanticWindow: Readonly<{ start: number; end: number }> = { start, end }, geometryWindow: Readonly<{ start: number; end: number }> = semanticWindow): WaveJsonSignal {
@@ -410,7 +422,7 @@ export function toWaveJsonWindow(source: CanonicalSignalSource, start: number, e
   const geometryMetadata = geometryWindow.start === semanticWindow.start && geometryWindow.end === semanticWindow.end ? {} : { geometryWindow };
   if (source.signal.type === "clock") return { ...clockToWaveJsonWindow(source, start, end), sourceWindow: semanticWindow, ...geometryMetadata, displayWindow: { start, end } };
   const localChanges = valueChangesInWindow(source.signal.values, start, end)
-    .map((change, index) => ({ start: index === 0 ? 0 : change.start - start, value: change.value, ...(change.displayLabel === undefined ? {} : { displayLabel: change.displayLabel }) }));
+    .map((change, index) => ({ start: index === 0 ? 0 : change.start - start, value: change.value, ...(change.displayLabel === undefined ? {} : { displayLabel: change.displayLabel }), ...(change.displayFormat === undefined ? {} : { displayFormat: change.displayFormat }) }));
   const localSignal = { ...source.signal, values: localChanges };
   const localGaps = (source.gapCycles ?? []).filter((cycle) => cycle > start && cycle < end).map((cycle) => cycle - start);
   return { ...valueSignalToWaveJson(localSignal, end - start, localGaps, source.enumDefinitions), sourceWindow: semanticWindow, ...geometryMetadata, displayWindow: { start, end } };

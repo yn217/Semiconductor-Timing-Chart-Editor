@@ -240,6 +240,7 @@
         "start": { "type": "number", "minimum": 0 },
         "value": { "type": ["string", "number"] },
         "displayLabel": { "type": "string" },
+        "displayFormat": { "enum": ["hex", "binary", "decimal", "signed", "unsigned", "symbolic"] },
         "comment": { "type": "string" }
       }
     },

@@ -92,7 +92,7 @@ export function resolveValueEditorPolicy(signal: ValueSignal, enumDefinition?: E
   // format-picker labels "Hex"/"Binary"/"Symbol", meaningful only via
   // `quickValueLiteral`'s translation, not literal candidate values a
   // datalist should offer as-is).
-  return { kind: "combo", options: [{ value: "X", label: "X (High-Z unknown)" }, { value: "Z", label: "Z (High-Z)" }], placeholder: signal.displayFormat === "binary" ? "e.g. 00000000" : signal.displayFormat === "symbolic" ? "e.g. VALUE" : "e.g. 00" };
+  return { kind: "combo", options: [{ value: "X", label: "X (High-Z unknown)" }, { value: "Z", label: "Z (High-Z)" }], placeholder: signal.displayFormat === "binary" ? "e.g. 10100101 or 0b10100101" : signal.displayFormat === "symbolic" ? "free text, e.g. IDLE" : "e.g. A5 or 0xA5" };
 }
 
 /** Restore the canonical numeric/string type when an editor draft matches a defined Enum value. */

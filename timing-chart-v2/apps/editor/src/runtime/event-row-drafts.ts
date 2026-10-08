@@ -2,18 +2,19 @@ import type { SignalValueChange } from "@timing-chart-v2/schema";
 import { reconcileExternalDraft } from "./external-draft-reconciliation.js";
 
 /** One Transition row's editable fields, as the always-editable row shows them. */
-export interface EventRowFields { readonly start: number; readonly value: string; readonly comment: string }
+/** `format` is this Transition's own Bus display format; "" follows the Signal's Bus format. */
+export interface EventRowFields { readonly start: number; readonly value: string; readonly comment: string; readonly format: string }
 
 /** An unapplied row Draft. `base` is the committed row it was started from;
  * `conflict` is set when Canonical changed underneath a dirty Draft. */
 export interface EventRowDraft { readonly base: EventRowFields; readonly fields: EventRowFields; readonly conflict: boolean }
 
-export function eventRowFields(change: Pick<SignalValueChange, "start" | "value" | "comment">): EventRowFields {
-  return { start: change.start, value: String(change.value), comment: change.comment ?? "" };
+export function eventRowFields(change: Pick<SignalValueChange, "start" | "value" | "comment" | "displayFormat">): EventRowFields {
+  return { start: change.start, value: String(change.value), comment: change.comment ?? "", format: change.displayFormat ?? "" };
 }
 
 export function sameEventRowFields(left: EventRowFields, right: EventRowFields): boolean {
-  return left.start === right.start && left.value === right.value && left.comment === right.comment;
+  return left.start === right.start && left.value === right.value && left.comment === right.comment && left.format === right.format;
 }
 
 /** Record an edit. Editing a row back to its committed values clears its Draft. */

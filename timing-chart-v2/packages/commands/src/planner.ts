@@ -482,7 +482,7 @@ function cloneStableId<T extends string>(sourceId: T, commandId: string, used: S
 }
 
 function sameValue(left: SignalValueChange | undefined, right: SignalValueChange | undefined): boolean {
-  return left?.value === right?.value && left?.comment === right?.comment;
+  return left?.value === right?.value && left?.comment === right?.comment && left?.displayFormat === right?.displayFormat;
 }
 
 /** Sparse equivalent of the old dense per-cycle rebuild (#855): the output is described as source intervals placed at output offsets;
@@ -492,7 +492,7 @@ function sparseChangesFromSegments(changes: readonly SignalValueChange[], segmen
   const result: SignalValueChange[] = [];
   let previous: SignalValueChange | undefined;
   const visit = (start: number, state: SignalValueChange | undefined) => {
-    if (state && !sameValue(state, previous)) result.push({ start, value: state.value, ...(state.comment === undefined ? {} : { comment: state.comment }) });
+    if (state && !sameValue(state, previous)) result.push({ start, value: state.value, ...(state.displayFormat === undefined ? {} : { displayFormat: state.displayFormat }), ...(state.comment === undefined ? {} : { comment: state.comment }) });
     previous = state;
   };
   for (const segment of [...segments].filter((item) => item.to > item.from).sort((left, right) => left.outputStart - right.outputStart)) {
@@ -894,10 +894,11 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       if (!Number.isFinite(command.start) || command.start < 0 || command.start >= document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.start", "Change point is outside the timeline.");
       const valueProblem = valueSignalValueProblem(signal.type, command.value);
       if (valueProblem) return fail("invalid", "UNSUPPORTED_SIGNAL_VALUE", "$.value", valueProblem);
+      if (command.displayFormat !== undefined && signal.type !== "bus") return fail("invalid", "DISPLAY_FORMAT_NOT_SUPPORTED", "$.displayFormat", "A per-value display format applies only to bus signals.");
       const existing = signal.values.find((change) => change.start === command.start);
-      if (existing?.value === command.value && existing.comment === command.comment) return fail("no-op", "NO_OP", "$", "Signal value is unchanged.");
+      if (existing?.value === command.value && existing.comment === command.comment && existing.displayFormat === command.displayFormat) return fail("no-op", "NO_OP", "$", "Signal value is unchanged.");
       const allocation = existing?.id === undefined ? valueChangeIdAllocator.allocate(signal.id, signal.values) : undefined;
-      const change = { id: existing?.id ?? allocation!.id, start: command.start, value: command.value, ...(command.comment === undefined ? {} : { comment: command.comment }) };
+      const change = { id: existing?.id ?? allocation!.id, start: command.start, value: command.value, ...(command.displayFormat === undefined ? {} : { displayFormat: command.displayFormat }), ...(command.comment === undefined ? {} : { comment: command.comment }) };
       const values = [...signal.values.filter((item) => item.start !== command.start), change].sort((left, right) => left.start - right.start);
       const previousIdIndex = valueChangeIdAllocator.getIndex(signal.id, signal.values);
       if (allocation) valueChangeIdAllocator.remember(signal.id, values, allocation.nextIndex);
@@ -931,9 +932,10 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       if (command.start !== command.fromStart && signal.values.some((change) => change.start === command.start)) return fail("invalid", "DUPLICATE_CHANGE_POINT", "$.start", `A change already starts at cycle ${command.start}.`);
       const valueProblem = valueSignalValueProblem(signal.type, command.value);
       if (valueProblem) return fail("invalid", "UNSUPPORTED_SIGNAL_VALUE", "$.value", valueProblem);
-      if (source.start === command.start && source.value === command.value && source.comment === command.comment) return fail("no-op", "NO_OP", "$", "Value change is unchanged.");
+      if (command.displayFormat !== undefined && signal.type !== "bus") return fail("invalid", "DISPLAY_FORMAT_NOT_SUPPORTED", "$.displayFormat", "A per-value display format applies only to bus signals.");
+      if (source.start === command.start && source.value === command.value && source.comment === command.comment && source.displayFormat === command.displayFormat) return fail("no-op", "NO_OP", "$", "Value change is unchanged.");
       const allocation = source.id === undefined ? valueChangeIdAllocator.allocate(signal.id, signal.values) : undefined;
-      const replacement = { id: source.id ?? allocation!.id, start: command.start, value: command.value, ...(command.comment === undefined ? {} : { comment: command.comment }) };
+      const replacement = { id: source.id ?? allocation!.id, start: command.start, value: command.value, ...(command.displayFormat === undefined ? {} : { displayFormat: command.displayFormat }), ...(command.comment === undefined ? {} : { comment: command.comment }) };
       const values = signal.values.map((change) => change === source ? replacement : change).sort((left, right) => left.start - right.start);
       const previousIdIndex = valueChangeIdAllocator.getIndex(signal.id, signal.values);
       if (allocation) valueChangeIdAllocator.remember(signal.id, values, allocation.nextIndex);

@@ -376,6 +376,8 @@ export function InspectorValueSignalEditor({ signal, selectedCycle, document, ch
   // as one array so hasChanges (the gate) and changeCount (the label)
   // can never silently drift out of sync with each other.
   const changedFields = [
+    // An edited-but-uncommitted Display Name also arms Apply (Enter/blur still commit it on their own; Apply carries `name` too).
+    name !== signal.display.name,
     role !== signal.role,
     signalType !== signal.type,
     signalType === "bus" && width !== (signal.width ?? 1),

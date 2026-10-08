@@ -41,6 +41,9 @@ function valueHelperCopy(signal: ValueSignal): { readonly label: string; readonl
 export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic, cycleCount, enumDefinitions, commands, generatorSlot }: { readonly signal: ValueSignal; readonly documentEpoch: number; readonly revision: number; readonly onImportDiagnostic: (message: string) => void; readonly cycleCount: number; readonly enumDefinitions?: CanonicalDocument["enumDefinitions"]; readonly commands: Pick<SignalEditorCommandActions, "replaceValues" | "updateValue" | "replaceValue" | "removeValue">; readonly generatorSlot?: ReactNode }) {
   const [start, setStart] = useState(0);
   const [value, setValue] = useState(defaultEventValue(signal));
+  // The new Transition's own Bus format ("" follows the Signal's Bus format).
+  const [format, setFormat] = useState("");
+  const newFormat = (format || undefined) as ValueSignal["displayFormat"];
   const [comment, setComment] = useState("");
   const [selectedKey, setSelectedKey] = useState<string | undefined>(() => signal.values[0] === undefined ? undefined : transitionIdentity(signal.values[0]));
   // Bottom Panel Visual Reference pass: bulk row selection (checkbox column)
@@ -104,7 +107,7 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
   };
   const nextStart = indexed.firstFree() ?? Math.max(0, cycleCount - 1);
   const emitValue = (nextValues: readonly ValueSignal["values"][number][]): CommandResult => commands.replaceValues(signal.id, nextValues);
-  const addRow = () => commands.updateValue(signal.id, nextStart, canonicalValueFromEditor(signal, enumDefinition, value));
+  const addRow = () => commands.updateValue(signal.id, nextStart, canonicalValueFromEditor(signal, enumDefinition, value), undefined, newFormat);
   // Row Actions compaction follow-up: the toolbar's Duplicate (targets
   // `selected`) and each row's own Duplicate icon (targets that row
   // directly) are the same operation parametrized over which change point
@@ -113,7 +116,7 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
   const duplicateChange = (source: ValueSignal["values"][number]) => {
     const duplicateStart = indexed.firstFree();
     if (duplicateStart === undefined) return;
-    commands.updateValue(signal.id, duplicateStart, source.value, source.comment);
+    commands.updateValue(signal.id, duplicateStart, source.value, source.comment, source.displayFormat);
   };
   const duplicateRow = () => { if (selected) duplicateChange(selected); };
   const canDuplicate = nextStart < cycleCount;
@@ -174,7 +177,7 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
   // `signal.updateValue` command path.
   const previewEnd = indexed.nextEnd(start);
   const addAndContinue = () => {
-    commands.updateValue(signal.id, start, canonicalValueFromEditor(signal, enumDefinition, value), comment);
+    commands.updateValue(signal.id, start, canonicalValueFromEditor(signal, enumDefinition, value), comment, newFormat);
     // Auto-advance Start to the next free cycle (excluding the one just
     // committed) so continuous entry doesn't need manual arithmetic each
     // time -- Value is kept (commonly the next transition reuses it),
@@ -270,7 +273,7 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
     <div className="event-panels">
       <form className="transition-form-panel" onSubmit={(event) => {
         event.preventDefault();
-        commands.updateValue(signal.id, start, canonicalValueFromEditor(signal, enumDefinition, value), comment);
+        commands.updateValue(signal.id, start, canonicalValueFromEditor(signal, enumDefinition, value), comment, newFormat);
       }}>
         <h2 data-testid="transition-form-mode" data-mode={signal.values.some((change) => change.start === start) ? "edit" : "add"}>{signal.values.some((change) => change.start === start) ? `Editing transition at cycle ${start}` : "Add new transition"}</h2>
         {/* Density fix (#402/#426 follow-up): Start/Value/Comment used to
@@ -290,7 +293,7 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
               with a Transition row's own inline editor) resolves the
               right control from the Signal's type (a closed logic domain
               gets a real <select>; an open one gets a combo). */}
-          <label className="field-inline transition-field-value"><span>Value</span><ValueEditorControl signal={signal} enumDefinition={enumDefinition} value={value} onChange={setValue} ariaLabel="New event value" listId="add-edit-transition-value-options" /></label>
+          <label className="field-inline transition-field-value"><span>Value</span><ValueEditorControl signal={format ? { ...signal, displayFormat: format as NonNullable<ValueSignal["displayFormat"]> } : signal} enumDefinition={enumDefinition} value={value} onChange={setValue} ariaLabel="New event value" listId="add-edit-transition-value-options" /></label>
           <label className="field-inline transition-field-comment"><span>Comment</span><input aria-label="New event comment" value={comment} onChange={(event) => setComment(event.target.value)} /></label>
         </div>
         <span className="event-add-preview" data-derived="true" title="Derived from the transitions after this Start; not editable">End: {previewEnd} / Duration: {previewEnd - start} cycles</span>
@@ -309,7 +312,7 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
       </form>
       <div className="value-helper-panel">
         <h2>Value Helper <span>({valueHelperCopy(signal).label})</span></h2>
-        <QuickValues signal={signal} setValue={setValue} />
+        <QuickValues signal={signal} setValue={setValue} format={format} onFormatChange={(next) => { setFormat(next); setValue(""); }} />
         <span className="value-helper-hint">{valueHelperCopy(signal).hint}</span>
       </div>
       {generatorSlot}

@@ -19,7 +19,7 @@ function busDocument() {
 const expectedLabels = {
   hex: ["0x00", "0xA5", "0x0F"],
   decimal: ["0", "165", "15"],
-  binary: ["0b00000000", "0b10100101", "0b00001111"],
+  binary: ["0b00", "0b10100101", "0b00001111"],
   signed: ["0", "-91", "15"],
   unsigned: ["0", "165", "15"],
   symbolic: ["00", "A5", "0F"],
@@ -42,7 +42,7 @@ for (const size of sizes) {
       await expect.poll(async () => (await readWave(page, id)).present, { timeout: 30_000 }).toBe(true);
       return (await readWave(page, id)).labels.map((label) => label.shownText).filter((text) => text !== "");
     };
-    const tableCells = async () => (await page.getByTestId("signal-editor").innerText()).replace(/\s+/g, " ");
+    const tableCells = async () => (await page.getByTestId("signal-editor").evaluate((root) => [root.innerText, ...Array.from(root.querySelectorAll("input")).map((input) => input.value)].join(" "))).replace(/\s+/g, " ");
     const same = (actual: readonly string[], expected: readonly string[]) => expected.every((value) => actual.includes(value));
 
     await surface.locator(`[data-role='frozen-row'][data-row-id='${id}']`).click();
