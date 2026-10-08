@@ -4,11 +4,12 @@ import type { BottomPinnedSelection } from "./use-workspace-ui-state.js";
 
 type PinnedSelection = BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId, BookmarkId>;
 
-/** Bottom pin lifetime follows canonical identity and document epoch, not DOM mounts. */
+/** Bottom pin lifetime follows canonical identity and active context, not DOM mounts. */
 export function useBottomPinLifecycle(options: {
   document: CanonicalDocument;
   revision: number;
   documentEpoch: number;
+  projectionGeneration: number;
   pinnedBottomSelection: PinnedSelection | undefined;
   bottomPinned: boolean;
   followSelection: boolean;
@@ -17,7 +18,7 @@ export function useBottomPinLifecycle(options: {
   setPinnedBottomSelection: (value: PinnedSelection | undefined) => void;
   clearContextMenu: () => void;
 }) {
-  const { document, revision, documentEpoch, pinnedBottomSelection, bottomPinned, followSelection,
+  const { document, revision, documentEpoch, projectionGeneration, pinnedBottomSelection, bottomPinned, followSelection,
     setBottomPinned, setFollowSelection, setPinnedBottomSelection, clearContextMenu } = options;
   useEffect(() => {
     if (!pinnedBottomSelection) return;
@@ -37,5 +38,5 @@ export function useBottomPinLifecycle(options: {
     if (bottomPinned) setBottomPinned(false);
     if (!followSelection) setFollowSelection(true);
     clearContextMenu();
-  }, [documentEpoch]);
+  }, [documentEpoch, projectionGeneration]);
 }

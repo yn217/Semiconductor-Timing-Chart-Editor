@@ -361,7 +361,7 @@ export function MinimalCycleView() {
     setFollowSelection(value);
   };
   useBottomPinLifecycle({
-    document: snapshot.document, revision: snapshot.revision, documentEpoch,
+    document: snapshot.document, revision: snapshot.revision, documentEpoch, projectionGeneration: application.runtime.session.projectionGeneration(),
     pinnedBottomSelection, bottomPinned, followSelection,
     setBottomPinned, setFollowSelection, setPinnedBottomSelection,
     clearContextMenu: () => setContextMenu(undefined),
