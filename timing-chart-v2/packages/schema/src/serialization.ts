@@ -46,11 +46,11 @@ function migrateDocumentOwned(input: unknown, ownsInput: boolean): { document: C
   const document = (ownsInput ? migrated.value : cloneUnknown(migrated.value)) as CanonicalDocument;
   dropLegacySplitPane(document);
   defaultAdditiveCollections(document);
-  const phaseIdentityWarnings = addLegacyTransactionPhaseIds(document);
+  const phaseIdentityWarnings = addLegacyNestedIds(document);
   return { document, warnings: [...migrated.warnings, ...phaseIdentityWarnings] };
 }
 
-function addLegacyTransactionPhaseIds(document: CanonicalDocument): readonly MigrationWarning[] {
+function addLegacyNestedIds(document: CanonicalDocument): readonly MigrationWarning[] {
   const usedIds = new Set<string>();
   const collect = (value: unknown): void => {
     if (Array.isArray(value)) { for (const item of value) collect(item); return; }
@@ -70,7 +70,20 @@ function addLegacyTransactionPhaseIds(document: CanonicalDocument): readonly Mig
       assigned += 1;
     }
   }
-  return assigned === 0 ? [] : [{ code: "MIGRATED_TRANSACTION_PHASE_IDS", path: "$.transactions", message: `Stable Phase IDs were assigned to ${assigned} legacy Phase${assigned === 1 ? "" : "s"} while opening this document.` }];
+  const warnings: MigrationWarning[] = assigned === 0 ? [] : [{ code: "MIGRATED_TRANSACTION_PHASE_IDS", path: "$.transactions", message: `Stable Phase IDs were assigned to ${assigned} legacy Phase${assigned === 1 ? "" : "s"} while opening this document.` }];
+  let changesAssigned = 0;
+  for (const signal of document.signals) {
+    const changes = signal.type === "clock" ? signal.enable ?? [] : "values" in signal ? signal.values : [];
+    for (const [index, change] of changes.entries()) {
+      if (typeof change.id === "string" && change.id.length > 0) continue;
+      const id = opaqueDerivedId(`signal-change:${signal.id}:${index}`, usedIds);
+      usedIds.add(id);
+      (change as unknown as { id: string }).id = id;
+      changesAssigned += 1;
+    }
+  }
+  if (changesAssigned > 0) warnings.push({ code: "MIGRATED_VALUE_CHANGE_IDS", path: "$.signals", message: `Stable IDs were assigned to ${changesAssigned} legacy Signal changes while opening this document.` });
+  return warnings;
 }
 
 export function migrateDocument(input: unknown): { document: CanonicalDocument; warnings: readonly MigrationWarning[] } | undefined {
