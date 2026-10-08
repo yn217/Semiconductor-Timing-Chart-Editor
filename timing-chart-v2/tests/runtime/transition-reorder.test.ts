@@ -9,6 +9,10 @@ const values: readonly TransitionChange[] = [
 ];
 
 describe("reorderTransitionBlock", () => {
+  it("requires normalized stable IDs instead of using mutable Start as identity", () => {
+    expect(() => transitionIdentity({ start: 3, value: 1 })).toThrow("must have a stable ID");
+  });
+
   it("rejects non-contiguous selections instead of silently changing their relative placement", () => {
     const selected = new Set([transitionIdentity(values[0]!), transitionIdentity(values[2]!)]);
     expect(reorderTransitionBlock(values, selected, 3, 12)).toBeUndefined();

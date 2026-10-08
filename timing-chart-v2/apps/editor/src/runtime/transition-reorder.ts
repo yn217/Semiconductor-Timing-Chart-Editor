@@ -2,7 +2,10 @@ import type { ValueSignal } from "@timing-chart-v2/schema";
 
 export type TransitionChange = ValueSignal["values"][number];
 
-export const transitionIdentity = (change: TransitionChange): string => change.id ?? String(change.start);
+export const transitionIdentity = (change: TransitionChange): string => {
+  if (!change.id) throw new Error("Signal value changes must have a stable ID before entering editor runtime.");
+  return change.id;
+};
 
 /** Reorder one contiguous selected block and rebuild starts from its original durations. */
 export function reorderTransitionBlock(ordered: readonly TransitionChange[], selectedKeys: ReadonlySet<string>, targetIndex: number, cycleCount: number): { readonly values: readonly TransitionChange[]; readonly firstIndex: number; readonly blockSize: number } | undefined {

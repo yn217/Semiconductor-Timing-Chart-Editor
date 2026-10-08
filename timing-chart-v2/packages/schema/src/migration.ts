@@ -91,7 +91,7 @@ function normalizeChanges(value: unknown, fallback: string | number, warnings: M
     const explicitId = typeof source.id === "string" && source.id.length > 0 ? source.id : undefined;
     const id = explicitId !== undefined && !claimedIds.has(explicitId)
       ? (claimedIds.add(explicitId), explicitId)
-      : allocateMigrationId(`${basePath.replace(/[^a-zA-Z0-9]+/g, "_")}_value`, index, usedIds);
+      : allocateMigrationId(`legacy_${basePath.replace(/[^a-zA-Z0-9]+/g, "_").replace(/^_+/, "")}_value`, index, usedIds);
     if (explicitId !== undefined && id !== explicitId) warnings.push({ code: "MIGRATION_DUPLICATE_CHANGE_ID_REPAIRED", path: `${basePath}[${index}].id`, message: `Duplicate change-point ID '${explicitId}' was replaced with '${id}'.` });
     const result: MutableRecord = {
       id,

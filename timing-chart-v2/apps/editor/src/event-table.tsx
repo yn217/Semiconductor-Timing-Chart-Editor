@@ -14,10 +14,8 @@ import { registerActiveGestureCancel } from "./runtime/active-gesture-cancellati
 import { pruneExternalSelection } from "./runtime/external-draft-reconciliation.js";
 import { eventRowFields, reconcileEventRowDrafts, type EventRowDraft } from "./runtime/event-row-drafts.js";
 
-// Signal transitions have no separately persisted row ID; within the
-// canonical value list, the start boundary is the unique row identity.
-// Content-based keys can collide for identical adjacent transitions and
-// make React reuse the wrong virtualized row/editor state.
+// Transition identity and React row reconciliation both use the canonical
+// value-change ID; mutable Start is only timing data.
 const EVENT_ROW_HEIGHT = 30;
 const EVENT_OVERSCAN = 8;
 const EMPTY_DRAFTS: ReadonlyMap<string, EventRowDraft> = new Map();
@@ -339,7 +337,7 @@ export function EventTable({ signal, documentEpoch, projectionGeneration, revisi
             not a decorative header cell. */}
         <div className="event-row event-columns" role="row"><input ref={selectAllRef} type="checkbox" aria-label="Select all transitions" checked={allChecked} onChange={toggleAll} /><span>#</span><span>Start</span><span className="event-derived-column" data-derived="true" title="Derived: End is the next transition's Start (or the last cycle). Edit Start to change it.">End</span><span className="event-derived-column" data-derived="true" title="Derived: End minus Start. Not directly editable.">Duration</span><span>Value</span><span>Comment</span><span>Actions</span></div>
         <div aria-hidden="true" style={{ height: eventFirst * EVENT_ROW_HEIGHT }} />
-        {renderedEvents.map((change, offset) => { const index = eventFirst + offset; const key = transitionIdentity(change); return <EventRow key={`slot:${offset}`} index={index + 1} signal={signal} enumDefinition={enumDefinition} change={change} end={indexed.ordered[index + 1]?.start ?? cycleCount} selected={key === selectedKey} checked={checkedKeys.has(key)} draft={rowDrafts.get(key)} canDuplicate={canDuplicate} onToggleChecked={() => toggleChecked(change)} onSelect={selectTransition} onDraftChange={(draft) => setRowDraft(key, draft)} onDuplicate={() => duplicateChange(change)} commands={commands} draggable onDragStart={() => setActiveDragStarts(new Set(checkedKeys.has(key) && checkedCount > 1 ? checkedKeys : [key]))} onDragOver={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); }} onDrop={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); reorderDrop(change.start); }} onDragEnd={() => setActiveDragStarts(undefined)} />; })}
+        {renderedEvents.map((change, offset) => { const index = eventFirst + offset; const key = transitionIdentity(change); return <EventRow key={key} index={index + 1} signal={signal} enumDefinition={enumDefinition} change={change} end={indexed.ordered[index + 1]?.start ?? cycleCount} selected={key === selectedKey} checked={checkedKeys.has(key)} draft={rowDrafts.get(key)} canDuplicate={canDuplicate} onToggleChecked={() => toggleChecked(change)} onSelect={selectTransition} onDraftChange={(draft) => setRowDraft(key, draft)} onDuplicate={() => duplicateChange(change)} commands={commands} draggable onDragStart={() => setActiveDragStarts(new Set(checkedKeys.has(key) && checkedCount > 1 ? checkedKeys : [key]))} onDragOver={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); }} onDrop={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); reorderDrop(change.start); }} onDragEnd={() => setActiveDragStarts(undefined)} />; })}
         <div aria-hidden="true" style={{ height: Math.max(0, indexed.ordered.length - eventLast) * EVENT_ROW_HEIGHT }} />
       </div>
     </div>
