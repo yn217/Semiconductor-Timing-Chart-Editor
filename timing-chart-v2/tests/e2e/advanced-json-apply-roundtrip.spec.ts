@@ -62,9 +62,12 @@ for (const scope of ["document", "selected"] as const) {
     if (scope === "document") {
       source.document.title = "JSON document edit";
       expected.document.title = source.document.title;
+      // Same legacy v2 normalization as production Open, not direct validation.
+      delete source.annotationGroups;
     } else {
       source.display.name = "JSON signal edit";
       expected.signals.find((signal: { id: string }) => signal.id === source.id).display.name = source.display.name;
+      source.display.splitPane = "Upper";
     }
     await editor.fill(JSON.stringify(source));
     await json.getByRole("button", { name: "Format", exact: true }).click();
