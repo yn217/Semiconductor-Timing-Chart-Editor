@@ -25,6 +25,7 @@ import { useEditorPresentationState } from "./application/use-editor-presentatio
 import { useEditorResizeActions } from "./application/use-editor-resize-actions.js";
 import { useEditorWorkspaceActions } from "./application/use-editor-workspace-actions.js";
 import { EditorShellView } from "./editor-shell-view.js";
+import { OperationFeedback } from "./operation-feedback.js";
 import { composeMode } from "./workspace/mode-composition.js";
 import { useViewModeTransition } from "./runtime/use-view-mode-transition.js";
 import { useActivePaneTracking } from "./runtime/use-active-pane-tracking.js";
@@ -870,5 +871,6 @@ export function MinimalCycleView() {
      {saveAsVisible && <SaveAsDialog defaultName={snapshot.document.document.title || "timing-chart"} restoreFocusRef={dialogOriginRef} onSave={(name) => { const saved = documentLifecycle.saveAs(name); if (saved) closeDialog(() => setSaveAsVisible(false)); return saved; }} onClose={() => closeDialog(() => setSaveAsVisible(false))} />}
     </EditorDialogLayer>}
     status={shellStatus}
+    feedback={<OperationFeedback error={problem} message={application.operationMessage} onShowProblems={() => { setBottomTab("Problems"); setBottomVisible(true); }} />}
   />;
 }

@@ -1,5 +1,10 @@
 /* Status Bar ownership boundary. */
 
+.operation-feedback { position: absolute; z-index: 40; bottom: 32px; right: 12px; max-width: min(520px, 70vw); padding: 12px; border: 1px solid #cbd4df; border-radius: 4px; background: #fff; color: #213a59; box-shadow: 0 3px 12px #20365226; }
+.operation-feedback[data-kind="error"] { border-color: #b42318; }
+.operation-feedback p { margin: 0 0 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.operation-feedback button + button { margin-left: 8px; }
+
 
 /* Migrated from legacy.css; 11 complete rule blocks retain their declarations. */
 
