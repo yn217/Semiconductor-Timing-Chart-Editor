@@ -60,10 +60,10 @@ type ApprovalPolicy = "always" | "auto-view-only";
 // real, truthful record of the one provider that exists today.
 type ActivityEntry = { readonly id: number; readonly timestamp: string; readonly provider: string; readonly actor: "user" | "external-agent"; readonly kind: "read-only" | "proposal"; readonly summary: string; readonly result: string };
 
-/** Revision numbers can repeat after Open/New, so AI freshness uses the
- * runtime-owned document epoch as a second synchronous boundary. */
-export function isAIPreviewFresh(input: { readonly proposalEpoch: number | undefined; readonly currentEpoch: number; readonly proposalRevision: number; readonly currentRevision: number }): boolean {
-  return input.proposalEpoch !== undefined && input.proposalEpoch === input.currentEpoch && input.proposalRevision === input.currentRevision;
+/** Revision numbers can repeat across Open/New and Scenario switches.
+ * Both runtime-owned lifetime and projection generation are required. */
+export function isAIPreviewFresh(input: { readonly proposalEpoch: number | undefined; readonly currentEpoch: number; readonly proposalRevision: number; readonly currentRevision: number; readonly proposalGeneration: number | undefined; readonly currentGeneration: number }): boolean {
+  return input.proposalEpoch !== undefined && input.proposalEpoch === input.currentEpoch && input.proposalRevision === input.currentRevision && input.proposalGeneration !== undefined && input.proposalGeneration === input.currentGeneration;
 }
 
 /** Render a reviewable, ordered summary of the actual semantic commands in
@@ -170,12 +170,14 @@ function scopeViolationMessage(scope: AIScope, document: CanonicalDocument, comm
   return undefined;
 }
 
-export function AIOperationPanel({ document, validationDiagnostics, documentEpoch, revision, mode, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, range, scenarioModel, activeScenarioId, onGenerateHandshakeScenarios, onCommand, onCommandBatch, onViewIntent, onViewOperation, onSetSelection, onRevealEntity, onDiagnostic, icon, provider = deterministicMockAIProposalProvider, bridgeHost, bridgePort, bridgeEnabled, onBridgeEnabledChange, bridgeToken, onBridgeTokenChange, onBridgeStatusChange, getZoom }: { readonly document: CanonicalDocument; readonly validationDiagnostics: readonly DocumentProblem[]; readonly documentEpoch: number; readonly revision: number; readonly mode: "Cycle" | "Transaction" | "Combined"; readonly selectedSignalId: SignalId | undefined; readonly selectedGroupId: GroupId | undefined; readonly selectedAnnotationId: string | undefined; readonly selectedTransactionId: string | undefined; readonly range: Readonly<{ start: number; end: number }> | undefined; readonly scenarioModel?: ScenarioDocumentModel; readonly activeScenarioId?: ScenarioId; readonly onGenerateHandshakeScenarios?: (scenarioId: ScenarioId, selectedKeys: readonly string[]) => readonly ScenarioId[]; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onCommandBatch?: (commands: readonly SemanticCommand[]) => CommandResult; readonly onViewIntent?: (intent: AIViewIntent) => void; readonly onViewOperation?: (operation: AIBridgeViewOperation, args: Readonly<Record<string, unknown>>) => void; readonly onSetSelection?: (target: Readonly<{ entityType: AISelectionEntityType; entityId: string }>) => void; readonly onRevealEntity?: (target: Readonly<{ entityType: AISelectionEntityType; entityId: string }>) => void; readonly onDiagnostic?: (diagnostic: DocumentProblem | readonly DocumentProblem[] | undefined) => void; readonly icon: ReactNode; readonly provider?: AIProposalProvider; readonly bridgeHost: string; readonly bridgePort: number; readonly bridgeEnabled: boolean; readonly onBridgeEnabledChange: (enabled: boolean) => void; readonly bridgeToken: string; readonly onBridgeTokenChange: (token: string) => void; readonly onBridgeStatusChange?: (status: AIBridgeStatus) => void; readonly getZoom?: () => number }) {
+export function AIOperationPanel({ document, validationDiagnostics, documentEpoch, projectionGeneration, revision, mode, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, range, scenarioModel, activeScenarioId, onGenerateHandshakeScenarios, onCommand, onCommandBatch, onViewIntent, onViewOperation, onSetSelection, onRevealEntity, onDiagnostic, icon, provider = deterministicMockAIProposalProvider, bridgeHost, bridgePort, bridgeEnabled, onBridgeEnabledChange, bridgeToken, onBridgeTokenChange, onBridgeStatusChange, getZoom }: { readonly document: CanonicalDocument; readonly validationDiagnostics: readonly DocumentProblem[]; readonly documentEpoch: number; readonly projectionGeneration: number; readonly revision: number; readonly mode: "Cycle" | "Transaction" | "Combined"; readonly selectedSignalId: SignalId | undefined; readonly selectedGroupId: GroupId | undefined; readonly selectedAnnotationId: string | undefined; readonly selectedTransactionId: string | undefined; readonly range: Readonly<{ start: number; end: number }> | undefined; readonly scenarioModel?: ScenarioDocumentModel; readonly activeScenarioId?: ScenarioId; readonly onGenerateHandshakeScenarios?: (scenarioId: ScenarioId, selectedKeys: readonly string[]) => readonly ScenarioId[]; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onCommandBatch?: (commands: readonly SemanticCommand[]) => CommandResult; readonly onViewIntent?: (intent: AIViewIntent) => void; readonly onViewOperation?: (operation: AIBridgeViewOperation, args: Readonly<Record<string, unknown>>) => void; readonly onSetSelection?: (target: Readonly<{ entityType: AISelectionEntityType; entityId: string }>) => void; readonly onRevealEntity?: (target: Readonly<{ entityType: AISelectionEntityType; entityId: string }>) => void; readonly onDiagnostic?: (diagnostic: DocumentProblem | readonly DocumentProblem[] | undefined) => void; readonly icon: ReactNode; readonly provider?: AIProposalProvider; readonly bridgeHost: string; readonly bridgePort: number; readonly bridgeEnabled: boolean; readonly onBridgeEnabledChange: (enabled: boolean) => void; readonly bridgeToken: string; readonly onBridgeTokenChange: (token: string) => void; readonly onBridgeStatusChange?: (status: AIBridgeStatus) => void; readonly getZoom?: () => number }) {
   const [query, setQuery] = useState("");
   const [preview, setPreview] = useState<AIProposal>();
   const [validatedRevision, setValidatedRevision] = useState<number>();
   const [previewDocumentEpoch, setPreviewDocumentEpoch] = useState<number>();
   const [validatedDocumentEpoch, setValidatedDocumentEpoch] = useState<number>();
+  const [previewProjectionGeneration, setPreviewProjectionGeneration] = useState<number>();
+  const [validatedProjectionGeneration, setValidatedProjectionGeneration] = useState<number>();
   const [status, setStatus] = useState("Ready");
   const [approvalPolicy, setApprovalPolicy] = useState<ApprovalPolicy>("always");
   const [scope, setScope] = useState<AIScope>("document");
@@ -189,7 +191,7 @@ export function AIOperationPanel({ document, validationDiagnostics, documentEpoc
   const missingCaseSuggestions = useMemo(() => scenarioModel && activeScenarioId ? listHandshakeMissingCaseSuggestions(scenarioModel, activeScenarioId) : [], [scenarioModel, activeScenarioId]);
   const liveSelection = resolveAIContextSelection(document, { selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId });
   const contextSummary = buildAIContextSummary({ document, mode, scope, ...liveSelection, range });
-  const previousDocumentEpochRef = useRef(documentEpoch);
+  const previousDocumentEpochRef = useRef({ documentEpoch, projectionGeneration });
   // Activity entries outlive the retention window: the retained array is a
   // view, not an identity allocator.  Keeping the sequence outside the
   // trimmed state prevents the first 50-entry boundary from reusing a live
@@ -221,17 +223,17 @@ export function AIOperationPanel({ document, validationDiagnostics, documentEpoc
     }
   };
   useEffect(() => {
-    if (previousDocumentEpochRef.current === documentEpoch) return;
-    previousDocumentEpochRef.current = documentEpoch;
-    // Open/New replacement is a document boundary even when the incoming
-    // session starts at the same revision. Keep user policy and audit history,
+    if (previousDocumentEpochRef.current.documentEpoch === documentEpoch && previousDocumentEpochRef.current.projectionGeneration === projectionGeneration) return;
+    previousDocumentEpochRef.current = { documentEpoch, projectionGeneration };
+    // Open/New and Scenario changes invalidate context even at the same
+    // revision. Keep user policy and audit history,
     // but never carry a proposal or its validation across that boundary.
     setPreview(undefined);
     setValidatedRevision(undefined);
-    setPreviewDocumentEpoch(undefined);
-    setValidatedDocumentEpoch(undefined);
-    setStatus("Ready · document replaced");
-  }, [documentEpoch]);
+    setPreviewDocumentEpoch(undefined); setPreviewProjectionGeneration(undefined);
+    setValidatedDocumentEpoch(undefined); setValidatedProjectionGeneration(undefined);
+    setStatus("Ready · document or Scenario context changed");
+  }, [documentEpoch, projectionGeneration]);
   const logActivity = (kind: ActivityEntry["kind"], summary: string, result: string, actor: ActivityEntry["actor"] = "user") => {
     const id = nextActivityId.current++;
     setActivityLog((log) => [{ id, timestamp: new Date().toISOString(), provider: providerName, actor, kind, summary, result }, ...log].slice(0, 50));
@@ -249,7 +251,8 @@ export function AIOperationPanel({ document, validationDiagnostics, documentEpoc
     setPreview(result.proposal);
     setValidatedRevision(undefined);
     setPreviewDocumentEpoch(documentEpoch);
-    setValidatedDocumentEpoch(undefined);
+    setPreviewProjectionGeneration(projectionGeneration);
+    setValidatedDocumentEpoch(undefined); setValidatedProjectionGeneration(undefined);
     // #395 PR4: a proposal submitted by an external agent still always
     // lands here -- in Preview, requiring the same manual Validate/Apply
     // the local UI's own Preview button requires. There is no bridge-side
@@ -262,21 +265,22 @@ export function AIOperationPanel({ document, validationDiagnostics, documentEpoc
     if (actor === "user" && approvalPolicy === "auto-view-only" && result.proposal.kind === "view-only") runAutoApply(result.proposal);
     return result;
   };
-  const validatePreview = (current = preview, proposalEpoch = previewDocumentEpoch) => {
+  const validatePreview = (current = preview, proposalEpoch = previewDocumentEpoch, proposalGeneration = previewProjectionGeneration) => {
     if (!current) { setStatus("Create a preview first."); return false; }
-    if (!isAIPreviewFresh({ proposalEpoch, currentEpoch: documentEpoch, proposalRevision: current.baseRevision, currentRevision: revision })) { onDiagnostic?.({ code: "AI_PREVIEW_STALE", path: "$.ai.preview.baseRevision", message: "Preview is out of date. Regenerate it.", severity: "error", operation: "ai.proposal.validate", operationLabel: "Validate AI proposal", source: "ai", stage: "validate", recommendation: "Regenerate the preview from the current document before applying it.", detail: "ai-proposal:stale" }); setPreview(undefined); setValidatedRevision(undefined); setPreviewDocumentEpoch(undefined); setValidatedDocumentEpoch(undefined); setStatus("Preview is out of date. Regenerate it."); logActivity(current.kind === "view-only" ? "read-only" : "proposal", current.summary, "Preview is out of date. Regenerate it."); return false; }
+    if (!isAIPreviewFresh({ proposalEpoch, currentEpoch: documentEpoch, proposalRevision: current.baseRevision, currentRevision: revision, proposalGeneration, currentGeneration: projectionGeneration })) { onDiagnostic?.({ code: "AI_PREVIEW_STALE", path: "$.ai.preview.baseRevision", message: "Preview is out of date. Regenerate it.", severity: "error", operation: "ai.proposal.validate", operationLabel: "Validate AI proposal", source: "ai", stage: "validate", recommendation: "Regenerate the preview from the current document before applying it.", detail: "ai-proposal:stale" }); setPreview(undefined); setValidatedRevision(undefined); setPreviewDocumentEpoch(undefined); setPreviewProjectionGeneration(undefined); setValidatedDocumentEpoch(undefined); setValidatedProjectionGeneration(undefined); setStatus("Preview is out of date. Regenerate it."); logActivity(current.kind === "view-only" ? "read-only" : "proposal", current.summary, "Preview is out of date. Regenerate it."); return false; }
     const problems = proposalValidationProblems(document, current);
     if (problems.length > 0) { onDiagnostic?.(aiDiagnostics(problems, "ai.proposal.validate", "Validate AI proposal", "validate", "invalid", current.commands[0]?.id)); setValidatedRevision(undefined); setStatus(`Validation failed · ${formatProblems(problems)}`); logActivity(current.kind === "view-only" ? "read-only" : "proposal", current.summary, `Validation failed · ${formatProblems(problems)}`); return false; }
     setValidatedRevision(revision);
     setValidatedDocumentEpoch(documentEpoch);
+    setValidatedProjectionGeneration(projectionGeneration);
     setStatus("Validated · deterministic local checks passed");
     logActivity(current.kind === "view-only" ? "read-only" : "proposal", current.summary, "Validated · deterministic local checks passed");
     return true;
   };
-  const applyPreview = (current = preview, validated = validatedRevision, proposalEpoch = previewDocumentEpoch, validatedEpoch = validatedDocumentEpoch) => {
+  const applyPreview = (current = preview, validated = validatedRevision, proposalEpoch = previewDocumentEpoch, validatedEpoch = validatedDocumentEpoch, proposalGeneration = previewProjectionGeneration, validatedGeneration = validatedProjectionGeneration) => {
     if (!current) { setStatus("Create a preview first."); return; }
-    if (!isAIPreviewFresh({ proposalEpoch, currentEpoch: documentEpoch, proposalRevision: current.baseRevision, currentRevision: revision })) { onDiagnostic?.({ code: "AI_PREVIEW_STALE", path: "$.ai.preview.baseRevision", message: "Preview is out of date. Regenerate it.", severity: "error", operation: "ai.proposal.apply", operationLabel: "Apply AI proposal", source: "ai", stage: "commit", recommendation: "Regenerate the preview from the current document before applying it.", detail: "ai-proposal:stale" }); setPreview(undefined); setValidatedRevision(undefined); setPreviewDocumentEpoch(undefined); setValidatedDocumentEpoch(undefined); setStatus("Preview is out of date. Regenerate it."); logActivity(current.kind === "view-only" ? "read-only" : "proposal", current.summary, "Preview is out of date. Regenerate it."); return; }
-    if (validated !== revision || validatedEpoch !== documentEpoch) { setStatus("Validate the proposal before applying it."); return; }
+    if (!isAIPreviewFresh({ proposalEpoch, currentEpoch: documentEpoch, proposalRevision: current.baseRevision, currentRevision: revision, proposalGeneration, currentGeneration: projectionGeneration })) { onDiagnostic?.({ code: "AI_PREVIEW_STALE", path: "$.ai.preview.baseRevision", message: "Preview is out of date. Regenerate it.", severity: "error", operation: "ai.proposal.apply", operationLabel: "Apply AI proposal", source: "ai", stage: "commit", recommendation: "Regenerate the preview from the current document before applying it.", detail: "ai-proposal:stale" }); setPreview(undefined); setValidatedRevision(undefined); setPreviewDocumentEpoch(undefined); setPreviewProjectionGeneration(undefined); setValidatedDocumentEpoch(undefined); setValidatedProjectionGeneration(undefined); setStatus("Preview is out of date. Regenerate it."); logActivity(current.kind === "view-only" ? "read-only" : "proposal", current.summary, "Preview is out of date. Regenerate it."); return; }
+    if (validated !== revision || validatedEpoch !== documentEpoch || validatedGeneration !== projectionGeneration) { setStatus("Validate the proposal before applying it."); return; }
     const problems = proposalValidationProblems(document, current);
     if (problems.length > 0) { onDiagnostic?.(aiDiagnostics(problems, "ai.proposal.apply", "Apply AI proposal", "validate", "invalid", current.commands[0]?.id)); setValidatedRevision(undefined); setStatus(`Validation failed · ${formatProblems(problems)}`); logActivity(current.kind === "view-only" ? "read-only" : "proposal", current.summary, `Validation failed · ${formatProblems(problems)}`); return; }
     if (current.kind === "view-only") {
@@ -295,8 +299,8 @@ export function AIOperationPanel({ document, validationDiagnostics, documentEpoc
     onDiagnostic?.(undefined);
     setPreview(undefined);
     setValidatedRevision(undefined);
-    setPreviewDocumentEpoch(undefined);
-    setValidatedDocumentEpoch(undefined);
+    setPreviewDocumentEpoch(undefined); setPreviewProjectionGeneration(undefined);
+    setValidatedDocumentEpoch(undefined); setValidatedProjectionGeneration(undefined);
     setStatus("Applied · one atomic SemanticCommand transaction");
     logActivity("proposal", current.summary, "Applied · one atomic SemanticCommand transaction");
   };
@@ -307,8 +311,8 @@ export function AIOperationPanel({ document, validationDiagnostics, documentEpoc
   // state) avoids relying on a state update that may not have committed
   // yet within this same event handler.
   const runAutoApply = (justBuilt: AIProposal) => {
-    if (!validatePreview(justBuilt, documentEpoch)) return;
-    applyPreview(justBuilt, revision, documentEpoch, documentEpoch);
+    if (!validatePreview(justBuilt, documentEpoch, projectionGeneration)) return;
+    applyPreview(justBuilt, revision, documentEpoch, documentEpoch, projectionGeneration, projectionGeneration);
   };
   const cancelPreview = () => { onDiagnostic?.(undefined); if (preview) logActivity(preview.kind === "view-only" ? "read-only" : "proposal", preview.summary, "Cancelled · no document mutation"); setPreview(undefined); setValidatedRevision(undefined); setStatus("Preview cancelled · no document mutation"); };
 
@@ -336,7 +340,8 @@ export function AIOperationPanel({ document, validationDiagnostics, documentEpoc
     setPreview(result.proposal);
     setValidatedRevision(undefined);
     setPreviewDocumentEpoch(documentEpoch);
-    setValidatedDocumentEpoch(undefined);
+    setPreviewProjectionGeneration(projectionGeneration);
+    setValidatedDocumentEpoch(undefined); setValidatedProjectionGeneration(undefined);
     setStatus("Proposal ready for review (submitted by external agent) · no document mutation yet");
     logActivity("proposal", result.proposal.summary, `Preview ready · base revision ${result.proposal.baseRevision}`, "external-agent");
     return { summary: result.proposal.summary, baseRevision: result.proposal.baseRevision, kind: result.proposal.kind, requiresApproval: true, message: "Proposal ready for review -- open the AI Assistant panel to Validate and Apply it." };
@@ -351,7 +356,8 @@ export function AIOperationPanel({ document, validationDiagnostics, documentEpoc
     setPreview(result.proposal);
     setValidatedRevision(undefined);
     setPreviewDocumentEpoch(documentEpoch);
-    setValidatedDocumentEpoch(undefined);
+    setPreviewProjectionGeneration(projectionGeneration);
+    setValidatedDocumentEpoch(undefined); setValidatedProjectionGeneration(undefined);
     setStatus("Multi-operation proposal ready for review · no document mutation yet");
     logActivity("proposal", result.proposal.summary, `Preview ready · base revision ${result.proposal.baseRevision}`, "external-agent");
     return { summary: result.proposal.summary, baseRevision: result.proposal.baseRevision, kind: result.proposal.kind, requiresApproval: true, message: "Atomic multi-operation proposal ready for review -- open the AI Assistant panel to Validate and Apply it." };

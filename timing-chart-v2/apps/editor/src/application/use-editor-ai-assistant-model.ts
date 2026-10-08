@@ -7,7 +7,7 @@ import type { DocumentProblem, ScenarioDocumentModel, ScenarioId } from "@timing
 
 type PanelProps = ComponentProps<typeof AIOperationPanel>;
 
-export function useEditorAiAssistantModel(input: Pick<PanelProps, "document" | "validationDiagnostics" | "documentEpoch" | "revision" | "mode" | "selectedSignalId" | "selectedGroupId" | "selectedAnnotationId" | "selectedTransactionId" | "range" | "onCommand"> & {
+export function useEditorAiAssistantModel(input: Pick<PanelProps, "document" | "validationDiagnostics" | "documentEpoch" | "projectionGeneration" | "revision" | "mode" | "selectedSignalId" | "selectedGroupId" | "selectedAnnotationId" | "selectedTransactionId" | "range" | "onCommand"> & {
   readonly scenarioModel: ScenarioDocumentModel | undefined;
   readonly activeScenarioId: ScenarioId | undefined;
   readonly onGenerateHandshakeScenarios: NonNullable<PanelProps["onGenerateHandshakeScenarios"]>;
@@ -36,6 +36,7 @@ export function useEditorAiAssistantModel(input: Pick<PanelProps, "document" | "
     document: input.document,
     validationDiagnostics: input.validationDiagnostics,
     documentEpoch: input.documentEpoch,
+    projectionGeneration: input.projectionGeneration,
     revision: input.revision,
     mode: input.mode,
     selectedSignalId: input.selectedSignalId,
