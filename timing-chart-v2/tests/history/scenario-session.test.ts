@@ -100,12 +100,22 @@ describe("ScenarioCommandHistorySession", () => {
     const request = { ...binaryTemplate, id: "sig_req" as typeof template.id, name: "REQ", type: "binary" as const, values: [{ start: 0, value: 0 }] };
     const acknowledge = { ...binaryTemplate, id: "sig_ack" as typeof template.id, name: "ACK", type: "binary" as const, values: [{ start: 0, value: 0 }] };
     const v2 = { ...source, timeline: { ...source.timeline, end: 12, cycleCount: 12 }, signals: [source.signals[0]!, request, acknowledge], signalGroups: [{ ...source.signalGroups[0]!, rows: [source.signals[0]!.id, request.id, acknowledge.id] }], constraints: [{ id: "constraint_handshake" as never, type: "handshake", data: { requestSignalId: request.id, acknowledgeSignalId: acknowledge.id } }] };
-    const model = scenarioModelFromV2(v2);
+    const model = scenarioModelFromV2({ ...v2, transactions: [{
+      id: "tx_generated_history" as never, name: "Transfer", start: 0, end: 8,
+      phases: [{ id: "phase_generated_history" as never, name: "Data", start: 0, end: 8 }],
+    }] });
     const active = model.scenarios[0]!;
     const generated = createScenariosFromHandshakeSuggestions(model, active.id, ["handshake:constraint_handshake:same-cycle", "handshake:constraint_handshake:backpressure"]);
     const session = new ScenarioCommandHistorySession(model);
     session.addGeneratedScenarios(generated.document, generated.createdScenarioIds);
     expect(session.scenarioModel().scenarios).toHaveLength(3);
+    const phaseIds = session.scenarioModel().scenarios.map((scenario) => scenario.transactions[0]!.phases![0]!.id);
+    expect(phaseIds[0]).toBe("phase_generated_history");
+    expect(new Set(phaseIds).size).toBe(3);
+    for (const scenario of session.scenarioModel().scenarios) {
+      expect(Object.keys(scenario.signalStates)).toEqual(Object.keys(active.signalStates));
+      expect(scenario.transactions[0]!.phases![0]).toMatchObject({ name: "Data", start: 0, end: 8 });
+    }
     expect(session.activeScenarioId()).toBe(generated.createdScenarioIds[1]);
     expect(session.historyState()).toMatchObject({ undoDepth: 1, redoDepth: 0, dirty: true });
 
@@ -116,5 +126,6 @@ describe("ScenarioCommandHistorySession", () => {
     expect(session.redo().ok).toBe(true);
     expect(session.scenarioModel()).toEqual(generated.document);
     expect(session.activeScenarioId()).toBe(generated.createdScenarioIds[1]);
+    expect(session.scenarioModel().scenarios.map((scenario) => scenario.transactions[0]!.phases![0]!.id)).toEqual(phaseIds);
   });
 });
