@@ -38,8 +38,21 @@ GIFの全区間を再生し、文字の欠け、空白画面、残留dialog、�
 
 Feature GIFは4 MB以下を目安にし、7 MBを超える場合はsequenceを見直します。
 READMEへの埋め込みは生成と目視確認が完了してから行います。
-現在はTransaction View、Quick Start、Measurement、Exportの4本を生成しています。
-Hero、Timeline Edit、Annotation、Scenario Compareの4本は未実装であり、この手順だけで#1098の完了を意味しません。
+現在はHero、Quick Start、Transaction View、Measurement、Timeline Edit、Annotation、Scenario Compare、Exportの8本を生成しています。
+READMEとマニュアルの整合性確認、全GIFの最終レビューは別の完了条件であり、生成だけで#1098の完了を意味しません。
+
+## 全デモの再生成
+
+```powershell
+node scripts/capture-readme-demos.mjs --grep 'hero-timing-chart$|quick-start$|transaction-view$|measurement$|timeline-edit$|annotation$|scenario-compare$|export$'
+node scripts/encode-readme-demos.mjs hero-timing-chart quick-start transaction-view measurement timeline-edit annotation scenario-compare export
+```
+
+captureは各ケースを独立したブラウザ状態で開始します。
+録画とJSONは`artifacts/readme-demo-capture`、Playwrightの失敗証跡は`test-results/readme-demo`へ保存します。
+再エンコード前に既存GIFを退避してください。
+Heroは18.5秒、8,634,120 bytesで、8 MBの目安を超えていますが12 MBのreview threshold内です。
+HeroのTransactionは作成フォームからsource cycles 3から9を指定し、Combinedで表示幅を確認します。
 
 ## Measurementの録画
 
