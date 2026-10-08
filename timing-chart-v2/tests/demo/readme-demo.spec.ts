@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { readFile, writeFile } from "node:fs/promises";
 import { projectScenarioAsV2, type ScenarioId } from "@timing-chart-v2/schema";
 import { canonicalDocumentOf, parseEditorDocument } from "../../apps/editor/src/file-document-controller.js";
+import { annotationOwnerById, snapshotAnnotationIds, waitForCreatedAnnotationId } from "../e2e/annotation-identity.js";
 
 test("transaction-view", async ({ page }) => {
   const recordingStart = Date.now();
@@ -129,6 +130,68 @@ test("quick-start", async ({ page }) => {
     trimStartSeconds, viewport: { width: 1440, height: 900 }, dpr: 1,
     build: "production-preview", sourceHead: process.env.DEMO_SOURCE_HEAD,
     scenes: ["New", "Clear default signals", "Group", "Clock", "VALID transitions", "READY transitions", "Save"], errors,
+  }, null, 2));
+});
+
+test("measurement", async ({ page }) => {
+  const recordingStart = Date.now();
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+  await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.waitForTimeout(500);
+  const trimStartSeconds = (Date.now() - recordingStart) / 1000;
+  await page.getByRole("button", { name: "Properties", exact: true }).click();
+  const properties = page.getByRole("dialog", { name: "Document Properties" });
+  await properties.getByLabel("Timebase frequency (Hz)").fill("100000000");
+  await properties.getByLabel("Timebase display unit").selectOption("ns");
+  await page.waitForTimeout(1500);
+  await properties.getByTestId("apply-document-properties").click();
+  await properties.getByRole("button", { name: "Close properties" }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const previousIds = await snapshotAnnotationIds(host);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByLabel("Annotation type").selectOption("measurement");
+  await page.getByRole("button", { name: "Pick measurement endpoints", exact: true }).click();
+  const ruler = page.getByTestId("cycle-ruler");
+  const pick = async (signalId: string, cycle: number) => {
+    const row = await host.locator(`[data-role='timing-row'][data-row-id='${signalId}']`).boundingBox();
+    const rulerBox = await ruler.boundingBox();
+    const x = await ruler.locator(`[data-source-cycle='${cycle}'][data-cycle]`).evaluate((element) => Number.parseFloat((element as HTMLElement).style.left));
+    expect(row && rulerBox).toBeTruthy();
+    await page.mouse.move(rulerBox!.x + x, row!.y + row!.height / 2, { steps: 8 });
+    await page.waitForTimeout(800);
+    await page.mouse.down();
+    await page.mouse.up();
+  };
+  await expect(page.getByTestId("arrow-pick-status")).toHaveText("Click from transition");
+  await pick("sig_cycle_request", 3);
+  await expect(page.getByTestId("arrow-pick-status")).toHaveText("Click to transition");
+  await pick("sig_cycle_ready", 5);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const annotationId = await waitForCreatedAnnotationId(host, previousIds, "measurement");
+  const measurement = annotationOwnerById(host, annotationId);
+  await expect(measurement).toBeVisible();
+  await expect(measurement).toHaveAttribute("aria-label", /Δ 2 cycles \(20 ns\)/);
+  await page.waitForTimeout(3000);
+  await measurement.locator("[data-role='annotation-body']").click();
+  await expect(page.getByTestId("inspector").getByTestId("annotation-editor")).toHaveAttribute("data-annotation-id", annotationId);
+  await page.waitForTimeout(2000);
+  expect(errors).toEqual([]);
+  const video = page.video();
+  expect(video).not.toBeNull();
+  await page.close();
+  await video!.saveAs(resolve("artifacts/readme-demo-capture/measurement.webm"));
+  await writeFile(resolve("artifacts/readme-demo-capture/measurement.json"), JSON.stringify({
+    trimStartSeconds, viewport: { width: 1440, height: 900 }, dpr: 1,
+    build: "production-preview", sourceHead: process.env.DEMO_SOURCE_HEAD,
+    scenes: ["Physical timebase 100 MHz", "REQUEST Cycle 3", "READY Cycle 5", "Delta 2 cycles / 20 ns", "Stable ID Inspector"], errors,
   }, null, 2));
 });
 

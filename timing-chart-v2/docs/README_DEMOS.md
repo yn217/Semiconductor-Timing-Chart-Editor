@@ -9,7 +9,6 @@ Canonicalへの直接書き込みやデモ用のProduction分岐は使いませ�
 依存を導入済みの作業環境で、`timing-chart-v2`から実行します。
 
 ```powershell
-npm run build
 node scripts/capture-readme-demos.mjs --grep transaction-view
 ```
 
@@ -39,7 +38,25 @@ GIFの全区間を再生し、文字の欠け、空白画面、残留dialog、�
 
 Feature GIFは4 MB以下を目安にし、7 MBを超える場合はsequenceを見直します。
 READMEへの埋め込みは生成と目視確認が完了してから行います。
-残る7本のjourneyは未実装であり、この手順だけで#1098の完了を意味しません。
+現在はTransaction View、Quick Start、Measurement、Exportの4本を生成しています。
+Hero、Timeline Edit、Annotation、Scenario Compareの4本は未実装であり、この手順だけで#1098の完了を意味しません。
+
+## Measurementの録画
+
+```powershell
+node scripts/capture-readme-demos.mjs --grep 'measurement$'
+node scripts/encode-readme-demos.mjs measurement
+```
+
+captureスクリプトは毎回Production buildを更新してから録画します。
+Newで標準Signalを持つ文書を作り、Document Propertiesで基準周波数100 MHzと表示単位nsを設定します。
+Annotationの「Pick measurement endpoints」でREQUESTのCycle 3とREADYのCycle 5を選びます。
+ラベルの「Δ 2 cycles (20 ns)」と、overlay選択後のInspectorが同じAnnotation IDを持つことを検証します。
+IDの解決には作成前後のstable ID集合の差を使い、DOMの末尾や表示順は使いません。
+
+生成したGIFは1440×900、12 fps、約11秒、6,341,470 bytesです。
+4 MBの目標値は超えていますが、7 MBのreview threshold内です。
+全区間のcontact sheetと等倍のラベル表示を確認しました。
 
 ## 最初の生成記録
 
