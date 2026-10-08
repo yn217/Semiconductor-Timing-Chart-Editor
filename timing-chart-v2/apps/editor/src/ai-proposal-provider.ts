@@ -1,6 +1,7 @@
 import { planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
 import { measurementProfilePair, valueSignalValueProblem, type AnnotationId, type AnnotationType, type CanonicalDocument, type GroupId, type JsonObject, type MeasurementProfile, type SemanticAnchor, type SignalId, type SignalRole, type TimeGroup, type TimeGroupId, type TransactionGroupId, type TransactionId, type TransactionPhase, type TransitionAnchorKind, type ValueSignal } from "@timing-chart-v2/schema";
 import { nextCommandId } from "./command-id.js";
+import { canonicalEntityIds, isStableId } from "@timing-chart-v2/schema";
 import { nextEntityId } from "./entity-id.js";
 import { createAnnotation } from "./create-annotation.js";
 
@@ -343,17 +344,18 @@ export function buildTypedTransactionProposal(document: CanonicalDocument, revis
     const start = args.startCycle;
     const end = args.endCycle;
     if (typeof name !== "string" || !name.trim() || !Number.isSafeInteger(start) || !Number.isSafeInteger(end) || (start as number) < transaction.start || (end as number) > transaction.end || (end as number) <= (start as number)) return { ok: false, message: `${tool} requires a name and integer source-cycle boundaries inside the Transaction.` };
-    const phase = { id: tool === "propose_update_phase" && Number.isSafeInteger(args.phaseIndex) ? transaction.phases?.[args.phaseIndex as number]?.id : nextEntityId("transactionPhase", document) as TransactionPhase["id"], name: name.trim(), start: start as number, end: end as number };
+    const phaseIndex = transaction.phases?.findIndex((phase) => phase.id === args.phaseId) ?? -1;
+    if (tool === "propose_update_phase" && (typeof args.phaseId !== "string" || phaseIndex < 0 || args.phaseIndex !== undefined)) return { ok: false, message: "propose_update_phase requires a stable phaseId that exists in the Transaction, not phaseIndex." };
+    if (tool === "propose_add_phase" && args.phaseId !== undefined && (typeof args.phaseId !== "string" || !isStableId(args.phaseId) || canonicalEntityIds(document).has(args.phaseId))) return { ok: false, message: "propose_add_phase requires an unused stable phaseId when supplied." };
+    const phase = { id: tool === "propose_update_phase" ? transaction.phases![phaseIndex]!.id : (args.phaseId ?? nextEntityId("transactionPhase", document)) as TransactionPhase["id"], name: name.trim(), start: start as number, end: end as number };
     if (tool === "propose_add_phase") return { ok: true, proposal: proposal(revision, `Add Phase ${phase.name} to ${transaction.name}`, [command({ type: "transaction.phaseAdd", transactionId: transaction.id, phase }, "typed_add_phase")]) };
-    const phaseIndex = args.phaseIndex;
-    if (!Number.isSafeInteger(phaseIndex) || (phaseIndex as number) < 0 || (phaseIndex as number) >= (transaction.phases?.length ?? 0)) return { ok: false, message: "propose_update_phase requires a phaseIndex that exists in the Transaction." };
-    return { ok: true, proposal: proposal(revision, `Update Phase ${phase.name} in ${transaction.name}`, [command({ type: "transaction.phaseUpdate", transactionId: transaction.id, phaseIndex: phaseIndex as number, phase }, "typed_update_phase")]) };
+    return { ok: true, proposal: proposal(revision, `Update Phase ${phase.name} in ${transaction.name}`, [command({ type: "transaction.phaseUpdate", transactionId: transaction.id, phaseIndex, phaseId: phase.id, phase }, "typed_update_phase")]) };
   }
   if (tool === "propose_delete_phase") {
-    const phaseIndex = args.phaseIndex;
-    if (!Number.isSafeInteger(phaseIndex) || (phaseIndex as number) < 0 || (phaseIndex as number) >= (transaction.phases?.length ?? 0)) return { ok: false, message: "propose_delete_phase requires a phaseIndex that exists in the Transaction." };
-    const phase = transaction.phases![phaseIndex as number]!;
-    return { ok: true, proposal: proposal(revision, `Delete Phase ${phase.name} from ${transaction.name}`, [command({ type: "transaction.phaseDelete", transactionId: transaction.id, phaseIndex: phaseIndex as number }, "typed_delete_phase")]) };
+    const phaseIndex = transaction.phases?.findIndex((phase) => phase.id === args.phaseId) ?? -1;
+    if (typeof args.phaseId !== "string" || phaseIndex < 0 || args.phaseIndex !== undefined) return { ok: false, message: "propose_delete_phase requires a stable phaseId that exists in the Transaction, not phaseIndex." };
+    const phase = transaction.phases![phaseIndex]!;
+    return { ok: true, proposal: proposal(revision, `Delete Phase ${phase.name} from ${transaction.name}`, [command({ type: "transaction.phaseDelete", transactionId: transaction.id, phaseIndex, phaseId: phase.id }, "typed_delete_phase")]) };
   }
   if (tool === "propose_link_signal" || tool === "propose_unlink_signal") {
     const signalId = args.signalId;

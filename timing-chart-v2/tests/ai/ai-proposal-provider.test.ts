@@ -207,10 +207,10 @@ describe("deterministic AI proposal provider", () => {
     const added = buildTypedTransactionProposal(document, 32, "propose_add_phase", { transactionId: "transaction_1", name: "Response", startCycle: 6, endCycle: 7 });
     expect(added.ok).toBe(true);
     if (added.ok) expect(added.proposal.commands).toEqual([expect.objectContaining({ type: "transaction.phaseAdd", transactionId: "transaction_1", phase: expect.objectContaining({ name: "Response", start: 6, end: 7, id: expect.stringMatching(/^transactionPhase_/) }) })]);
-    const updated = buildTypedTransactionProposal(document, 32, "propose_update_phase", { transactionId: "transaction_1", phaseIndex: 1, name: "Payload", startCycle: 3, endCycle: 5 });
+    const updated = buildTypedTransactionProposal(document, 32, "propose_update_phase", { transactionId: "transaction_1", phaseId: "phase_data", name: "Payload", startCycle: 3, endCycle: 5 });
     expect(updated.ok).toBe(true);
     if (updated.ok) expect(updated.proposal.commands).toEqual([expect.objectContaining({ type: "transaction.phaseUpdate", transactionId: "transaction_1", phaseIndex: 1, phase: { id: "phase_data", name: "Payload", start: 3, end: 5 } })]);
-    const deleted = buildTypedTransactionProposal(document, 32, "propose_delete_phase", { transactionId: "transaction_1", phaseIndex: 0 });
+    const deleted = buildTypedTransactionProposal(document, 32, "propose_delete_phase", { transactionId: "transaction_1", phaseId: "phase_address" });
     expect(deleted.ok).toBe(true);
     if (deleted.ok) expect(deleted.proposal.commands).toEqual([expect.objectContaining({ type: "transaction.phaseDelete", transactionId: "transaction_1", phaseIndex: 0 })]);
     const linked = buildTypedTransactionProposal(document, 32, "propose_link_signal", { transactionId: "transaction_1", signalId: "sig_data" });
@@ -220,7 +220,7 @@ describe("deterministic AI proposal provider", () => {
     expect(unlinked.ok).toBe(true);
     if (unlinked.ok) expect(unlinked.proposal.commands).toEqual([expect.objectContaining({ type: "transaction.unlinkSignal", transactionId: "transaction_1", signalId: "sig_clk" })]);
     expect(buildTypedTransactionProposal(document, 32, "propose_link_signal", { transactionId: "transaction_1", signalId: "missing" })).toMatchObject({ ok: false, message: "Signal 'missing' does not exist in the current document." });
-    expect(buildTypedTransactionProposal(document, 32, "propose_update_phase", { transactionId: "transaction_1", phaseIndex: 9, name: "Bad", startCycle: 2, endCycle: 4 })).toMatchObject({ ok: false, message: "propose_update_phase requires a phaseIndex that exists in the Transaction." });
+    expect(buildTypedTransactionProposal(document, 32, "propose_update_phase", { transactionId: "transaction_1", phaseId: "missing", name: "Bad", startCycle: 2, endCycle: 4 })).toMatchObject({ ok: false, message: expect.stringContaining("requires a stable phaseId") });
   });
 
   it("builds one revisioned Transaction+Phases+Signals proposal and commits it atomically as one History entry", () => {

@@ -71,6 +71,7 @@ export function isAIPreviewFresh(input: { readonly proposalEpoch: number | undef
  * never ambiguous to a reviewer. */
 export function describeAIProposalCommands(document: CanonicalDocument, commands: readonly SemanticCommand[]): readonly Readonly<{ title: string; detail: string }>[] {
   const proposedTransactionNames = new Map<string, string>();
+  const proposedPhases = new Map(document.transactions.flatMap((transaction) => (transaction.phases ?? []).map((phase) => [phase.id, phase] as const)));
   const transactionName = (id: string) => proposedTransactionNames.get(id) ?? document.transactions.find((item) => item.id === id)?.name ?? id;
   const signalName = (id: string) => document.signals.find((item) => item.id === id)?.display.name ?? id;
   return commands.map((command) => {
@@ -80,12 +81,13 @@ export function describeAIProposalCommands(document: CanonicalDocument, commands
         return { title: `Create Transaction ${command.transaction.name}`, detail: `${command.transaction.start}–${command.transaction.end} source cycles · ID ${command.transaction.id}` };
       }
       case "transaction.phaseAdd":
-        return { title: `Add Phase ${command.phase.name} to ${transactionName(command.transactionId)}`, detail: `${command.phase.start}–${command.phase.end} source cycles · Transaction ID ${command.transactionId}` };
       case "transaction.phaseUpdate":
-        return { title: `Update Phase ${command.phase.name} in ${transactionName(command.transactionId)}`, detail: `${command.phase.start}–${command.phase.end} source cycles · Transaction ID ${command.transactionId}` };
+        proposedPhases.set(command.phase.id, command.phase);
+        return { title: `${command.type === "transaction.phaseAdd" ? "Add" : "Update"} Phase ${command.phase.name} ${command.type === "transaction.phaseAdd" ? "to" : "in"} ${transactionName(command.transactionId)}`, detail: `${command.phase.start}–${command.phase.end} source cycles · Phase ID ${command.phase.id} · Transaction ID ${command.transactionId}` };
       case "transaction.phaseDelete": {
-        const phase = document.transactions.find((item) => item.id === command.transactionId)?.phases?.[command.phaseIndex];
-        return { title: `Delete Phase ${phase?.name ?? `#${command.phaseIndex + 1}`} from ${transactionName(command.transactionId)}`, detail: `Transaction ID ${command.transactionId}` };
+        const phase = command.phaseId === undefined ? document.transactions.find((item) => item.id === command.transactionId)?.phases?.[command.phaseIndex] : proposedPhases.get(command.phaseId);
+        if (phase) proposedPhases.delete(phase.id);
+        return { title: `Delete Phase ${phase?.name ?? command.phaseId ?? `#${command.phaseIndex + 1}`} from ${transactionName(command.transactionId)}`, detail: `Phase ID ${command.phaseId ?? phase?.id ?? "unknown"} · Transaction ID ${command.transactionId}` };
       }
       case "transaction.linkSignal":
       case "transaction.unlinkSignal":

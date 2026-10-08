@@ -1484,9 +1484,12 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       const phases = [...(transaction.phases ?? [])];
       const usedIds = new Set(canonicalEntityIds(document));
       if (command.type === "transaction.phaseAdd") phases.push({ ...command.phase, id: typeof command.phase.id !== "string" || usedIds.has(command.phase.id) ? allocateTransactionPhaseId(usedIds) : command.phase.id });
-      else if (command.phaseIndex < 0 || command.phaseIndex >= phases.length) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.phaseIndex", "Phase index is out of range.");
-      else if (command.type === "transaction.phaseUpdate") phases[command.phaseIndex] = { ...command.phase, id: phases[command.phaseIndex]!.id };
-      else phases.splice(command.phaseIndex, 1);
+      else {
+        const phaseIndex = command.phaseId === undefined ? command.phaseIndex : phases.findIndex((phase) => phase.id === command.phaseId);
+        if (!Number.isInteger(phaseIndex) || phaseIndex < 0 || phaseIndex >= phases.length) return fail("invalid", "INVALID_TRANSACTION_PHASE", command.phaseId === undefined ? "$.phaseIndex" : "$.phaseId", "Phase target does not exist.");
+        if (command.type === "transaction.phaseUpdate") phases[phaseIndex] = { ...command.phase, id: phases[phaseIndex]!.id };
+        else phases.splice(phaseIndex, 1);
+      }
       const sorted = phases.slice().sort((a, b) => a.start - b.start || a.end - b.end || a.name.localeCompare(b.name));
       const phaseProblem = transactionPhasesProblem(sorted, transaction.start, transaction.end);
       if (phaseProblem) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.phase", phaseProblem);
