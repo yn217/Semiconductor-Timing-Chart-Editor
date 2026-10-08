@@ -77,7 +77,7 @@ npm run dev
 
 詳しい手順は[5分のQuick Start](timing-chart-v2/docs/QUICK_START.md)を参照してください。
 操作映像の再生成方法は[READMEデモの手順](timing-chart-v2/docs/README_DEMOS.md)にあります。
-詳細な操作ガイドは統合レビュー中です。
+機能別の説明は[User Manual](timing-chart-v2/docs/USER_MANUAL.md)を参照してください。
 
 ## 開発と設計資料
 
