@@ -75,6 +75,7 @@ npm run dev
 5. 下パネルでNew event startとNew event valueを指定してAddします。VALIDはCycle 2で1、Cycle 5で0、READYはCycle 3で1、Cycle 5で0を入力します。
 6. 波形を確認し、File → Saveで文書を保存します。File → ExportでSVGを出力できます。
 
+詳しい手順は[5分のQuick Start](timing-chart-v2/docs/QUICK_START.md)を参照してください。
 操作映像の再生成方法は[READMEデモの手順](timing-chart-v2/docs/README_DEMOS.md)にあります。
 詳細な操作ガイドは統合レビュー中です。
 
