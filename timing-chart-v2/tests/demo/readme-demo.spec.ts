@@ -6,6 +6,83 @@ import { canonicalDocumentOf, parseEditorDocument } from "../../apps/editor/src/
 import { annotationOwnerById, snapshotAnnotationIds, waitForCreatedAnnotationId } from "../e2e/annotation-identity.js";
 import { documentState, expectViewOnly } from "../e2e/view-only.js";
 
+test("hero-timing-chart", async ({ page }) => {
+  const recordingStart = Date.now();
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+  await page.goto("/");
+  const mode = page.locator(".view-mode");
+  const tabs = page.locator(".ribbon-tabs");
+  const ribbon = page.getByTestId("ribbon");
+  const host = page.getByTestId("cycle-surface");
+  await mode.getByRole("button", { name: "Cycle", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const trimStartSeconds = (Date.now() - recordingStart) / 1000;
+  await tabs.getByRole("button", { name: "File", exact: true }).click();
+  await ribbon.getByRole("button", { name: "New", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  // New's production template supplies CLOCK/VALID/READY; do not inject a completed chart.
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_valid']").click();
+  const editor = page.getByTestId("signal-editor");
+  await editor.getByLabel("New event start").fill("10");
+  await editor.getByLabel("New event value").selectOption("1");
+  await page.waitForTimeout(700);
+  await editor.getByTestId("add-signal-event").click();
+  await expect(editor.locator("[data-event-start='10']")).toBeVisible();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.waitForTimeout(2200);
+  const previousIds = await snapshotAnnotationIds(host);
+  await tabs.getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByLabel("Annotation type").selectOption("measurement");
+  await page.getByRole("button", { name: "Pick measurement endpoints", exact: true }).click();
+  const ruler = page.getByTestId("cycle-ruler");
+  for (const [id, cycle] of [["sig_cycle_request", 3], ["sig_cycle_ready", 5]] as const) {
+    const row = await host.locator(`[data-role='timing-row'][data-row-id='${id}']`).boundingBox();
+    const origin = await ruler.boundingBox();
+    const x = await ruler.locator(`[data-source-cycle='${cycle}'][data-cycle]`).evaluate((element) => Number.parseFloat((element as HTMLElement).style.left));
+    expect(row && origin).toBeTruthy();
+    await page.mouse.move(origin!.x + x, row!.y + row!.height / 2, { steps: 8 });
+    await page.waitForTimeout(500);
+    await page.mouse.down();
+    await page.mouse.up();
+  }
+  const id = await waitForCreatedAnnotationId(host, previousIds, "measurement");
+  await expect(annotationOwnerById(host, id)).toHaveAttribute("aria-label", /Δ 2 cycles/);
+  await page.waitForTimeout(2500);
+  await mode.getByRole("button", { name: "Transaction", exact: true }).click();
+  await tabs.getByRole("button", { name: "Home", exact: true }).click();
+  await ribbon.locator("[data-major-group='Transaction']").getByRole("button", { name: "Create Transaction", exact: true }).click();
+  const bars = page.getByTestId("transaction-lanes").locator("[data-transaction-id]");
+  await expect(bars).toHaveCount(1);
+  expect((await bars.boundingBox())!.width).toBeGreaterThan(0);
+  await page.waitForTimeout(2000);
+  await mode.getByRole("button", { name: "Combined", exact: true }).click();
+  await expect(page.locator(".split-transaction-pane")).toBeVisible();
+  await expect(page.locator(".split-signal-content")).toBeVisible();
+  await page.waitForTimeout(3000);
+  await tabs.getByRole("button", { name: "File", exact: true }).click();
+  await ribbon.getByRole("button", { name: "Export", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Export Timing Chart" });
+  await expect(dialog).toBeVisible();
+  await page.waitForTimeout(1200);
+  const download = page.waitForEvent("download");
+  await dialog.getByRole("button", { name: "Export SVG", exact: true }).click();
+  expect(await readFile((await (await download).path())!, "utf8")).toContain("<svg");
+  await expect(dialog.getByRole("status")).toHaveText("SVG ready");
+  await page.waitForTimeout(2000);
+  expect(errors).toEqual([]);
+  const video = page.video();
+  expect(video).not.toBeNull();
+  await page.close();
+  await video!.saveAs(resolve("artifacts/readme-demo-capture/hero-timing-chart.webm"));
+  await writeFile(resolve("artifacts/readme-demo-capture/hero-timing-chart.json"), JSON.stringify({
+    trimStartSeconds, viewport: { width: 1440, height: 900 }, dpr: 1,
+    build: "production-preview", sourceHead: process.env.DEMO_SOURCE_HEAD,
+    scenes: ["New production template", "VALID transition", "Measurement", "Create Transaction", "Combined", "Export SVG"], errors,
+  }, null, 2));
+});
+
 test("scenario-compare", async ({ page }) => {
   const recordingStart = Date.now();
   const errors: string[] = [];
