@@ -358,12 +358,14 @@ test("Legend editor exposes stable-ID label, visibility and ordering controls", 
   await input.getByLabel("Legend label legend_input").fill("Inputs");
   await input.getByLabel("Legend visibility legend_input").uncheck();
   await editor.locator("[data-legend-entry-id='legend_output']").getByRole("button", { name: "Move legend_output up" }).click();
+  await expect.poll(() => editor.locator("[data-legend-entry-id]").evaluateAll((rows) => rows.map((row) => row.getAttribute("data-legend-entry-id")))).toEqual(["legend_output", "legend_input", "legend_internal"]);
   await properties.getByTestId("apply-document-properties").click();
   await expect(properties.getByTestId("legend-status")).toHaveText("Properties applied");
   await page.screenshot({ path: ".tmp_gui_reference/gui-batch-legend-editor-1280x720.png", fullPage: true });
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(page.getByTestId("editor-legend").locator("[data-legend-id='legend_input']")).toHaveCount(0);
   await expect(page.getByTestId("editor-legend").locator("[data-legend-id='legend_output']")).toHaveText(/output/);
+  await expect.poll(() => page.getByTestId("editor-legend").locator("[data-legend-id]").evaluateAll((entries) => entries.map((entry) => entry.getAttribute("data-legend-id")))).toEqual(["legend_output", "legend_internal"]);
 });
 
 test("edits Legend entry labels, visibility and order, then preserves them through Save/Open and export", async ({ page }) => {
