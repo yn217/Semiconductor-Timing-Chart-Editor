@@ -2,6 +2,33 @@ import { describe, expect, it, vi } from "vitest";
 import { createBottomEditorActions } from "../../apps/editor/src/application/bottom-editor-actions.js";
 
 describe("bottom editor action controller", () => {
+  for (const kind of ["Signal", "Annotation", "Transaction"] as const) {
+    for (const scenario of ["selected-target", "unrelated-selection", "bulk-selection", "rejected"] as const) {
+      it(`pinned ${kind} delete repairs only deleted IDs: ${scenario}`, () => {
+        const ids = scenario === "unrelated-selection" ? ["B"] : scenario === "bulk-selection" ? ["A", "B"] : ["A"];
+        const primary = scenario === "bulk-selection" || scenario === "unrelated-selection" ? "B" : "A";
+        const repair = vi.fn();
+        const deleteTarget = vi.fn(() => ({ ok: scenario !== "rejected" }));
+        const selection = {
+          refs: { signalIds: { current: new Set(ids) }, annotationIds: { current: new Set(ids) }, transactionIds: { current: new Set(ids) } },
+          selectSignals: repair, selectAnnotations: repair, selectTransactions: repair,
+        };
+        const actions = createBottomEditorActions({
+          application: {}, document: {}, nextCommandId: vi.fn(),
+          editActions: { deleteSignal: deleteTarget, deleteAnnotation: deleteTarget, deleteTransaction: deleteTarget },
+          selection, bottomSignal: "A", bottomAnnotation: { id: "A" }, bottomTransaction: { id: "A" },
+          bottomPinnedRef: { current: true }, bottomPinned: true,
+          selectedSignalRef: { current: primary }, selectedAnnotationRef: { current: primary }, selectedTransactionRef: { current: primary },
+          setBottomPinned: vi.fn(), setPinnedBottomSelection: vi.fn(), followSelection: true,
+        } as never);
+        actions[`deleteBottom${kind}`]();
+        expect(deleteTarget).toHaveBeenCalledExactlyOnceWith("A");
+        if (scenario === "unrelated-selection" || scenario === "rejected") expect(repair).not.toHaveBeenCalled();
+        else expect(repair).toHaveBeenCalledExactlyOnceWith(new Set(scenario === "bulk-selection" ? ["B"] : []), primary);
+      });
+    }
+  }
+
   it("routes linked-signal toggles through the application owner", () => {
     const execute = vi.fn(() => ({ ok: true }));
     const actions = createBottomEditorActions({

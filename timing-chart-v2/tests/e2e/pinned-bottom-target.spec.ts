@@ -16,6 +16,59 @@ async function savedDocument(page: Page) {
   return JSON.parse(await readFile((await (await pending).path())!, "utf8"));
 }
 
+for (const kind of ["Signal", "Annotation", "Transaction"] as const) {
+  test(`delete pinned selected ${kind} repairs selection and remains one History unit`, async ({ page }) => {
+    await ready(page);
+    const host = page.getByTestId("cycle-surface");
+    const bottom = page.getByTestId("bottom-editor");
+    let id: string;
+    let entity: import("@playwright/test").Locator;
+    if (kind === "Signal") {
+      id = "sig_cycle_reset_n";
+      entity = host.locator(`[data-role='frozen-row'][data-row-id='${id}']`);
+      await entity.click();
+    } else if (kind === "Annotation") {
+      await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+      await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+      await page.getByTestId("annotation-toolbar").getByRole("button", { name: "Add annotation", exact: true }).click();
+      const selected = page.getByTestId("annotation-list").locator("[data-annotation-list-id][data-selected='true']");
+      await expect(selected).toHaveCount(1);
+      id = (await selected.getAttribute("data-annotation-list-id"))!;
+      entity = page.getByTestId("annotation-list").locator(`[data-annotation-list-id='${id}']`);
+    } else {
+      await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+      await bottom.getByTestId("bottom-transaction-add").click();
+      const selected = page.getByTestId("transaction-left-tree").locator("[data-transaction-tree-id][data-selected='true']");
+      await expect(selected).toHaveCount(1);
+      id = (await selected.getAttribute("data-transaction-tree-id"))!;
+      entity = page.getByTestId(`transaction-left-tree-row-${id}`);
+    }
+    const baseDepth = kind === "Signal" ? 0 : 1;
+    await expect(page.getByTestId("history-status")).toHaveText(`History ${baseDepth} / Redo 0`);
+    await openBottomSettings(page);
+    await bottom.getByTestId("bottom-pin").click();
+    await expect(bottom.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "true");
+    // Close the settings popover before clicking a covered editor action.
+    await bottom.getByTestId("bottom-settings").click();
+    if (kind === "Signal") await bottom.getByTestId("signal-delete").click();
+    else if (kind === "Annotation") await bottom.getByTestId("annotation-collection").getByRole("button", { name: "Delete", exact: true }).click();
+    else await bottom.getByTestId("bottom-transaction-delete").click();
+    await expect(entity).toHaveCount(0);
+    await expect(page.getByTestId("selection-status")).toHaveText("None");
+    await expect(bottom.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "false");
+    await expect(page.getByTestId("history-status")).toHaveText(`History ${baseDepth + 1} / Redo 0`);
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+    const ribbon = page.getByTestId("ribbon");
+    await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
+    await expect(entity).toHaveCount(1);
+    await expect(page.getByTestId("history-status")).toHaveText(`History ${baseDepth} / Redo 1`);
+    await ribbon.getByRole("button", { name: "Redo", exact: true }).click();
+    await expect(entity).toHaveCount(0);
+    await expect(page.getByTestId("selection-status")).toHaveText("None");
+    await expect(page.getByTestId("history-status")).toHaveText(`History ${baseDepth + 1} / Redo 0`);
+  });
+}
+
 test("pinned Clock Apply mutates its stable ID, not the selected Signal", async ({ page }) => {
   await ready(page);
   const before = await savedDocument(page);
