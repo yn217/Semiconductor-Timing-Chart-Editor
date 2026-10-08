@@ -250,6 +250,81 @@ test("annotation", async ({ page }) => {
   }, null, 2));
 });
 
+test("timeline-edit", async ({ page }) => {
+  const recordingStart = Date.now();
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+  await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  const host = page.getByTestId("cycle-surface");
+  const ribbon = page.getByTestId("ribbon");
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await ribbon.getByRole("button", { name: "New", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByLabel("Timeline range end", { exact: true }).fill("6");
+  await page.getByLabel("Timeline range start", { exact: true }).fill("5");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByLabel("Annotation type").selectOption("callout");
+  const previousIds = await snapshotAnnotationIds(host);
+  await page.getByTestId("annotation-toolbar").getByRole("button", { name: "Add annotation", exact: true }).click();
+  const id = await waitForCreatedAnnotationId(host, previousIds, "callout");
+  const owner = annotationOwnerById(host, id);
+  await expect(owner).toBeVisible();
+  await page.getByTestId("inspector").getByLabel("Annotation label", { exact: true }).fill("Response edge");
+  await page.getByTestId("inspector").getByRole("button", { name: "Apply", exact: true }).click();
+  const save = async () => {
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+    const download = page.waitForEvent("download");
+    await ribbon.getByRole("button", { name: "Save", exact: true }).click();
+    const parsed = parseEditorDocument(await readFile((await (await download).path())!, "utf8"));
+    if (!parsed.ok || parsed.kind !== "canonical") throw new Error("Expected saved canonical timeline demo.");
+    return canonicalDocumentOf(parsed.document);
+  };
+  const before = await save();
+  const body = owner.locator("[data-role='annotation-body']");
+  const initialX = (await body.boundingBox())!.x;
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByLabel("Timeline range start", { exact: true }).fill("3");
+  await page.getByLabel("Timeline range end", { exact: true }).fill("4");
+  await page.getByLabel("Timeline insert count", { exact: true }).fill("2");
+  await page.waitForTimeout(500);
+  const trimStartSeconds = (Date.now() - recordingStart) / 1000;
+  await page.waitForTimeout(2000);
+  const historyBefore = Number((await page.getByTestId("history-status").textContent())!.match(/History (\d+)/)![1]);
+  await ribbon.getByRole("button", { name: "Insert before", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-cycle-count", String(before.timeline.cycleCount + 2));
+  await expect(page.getByTestId("history-status")).toHaveText(`History ${historyBefore + 1} / Redo 0`);
+  expect((await body.boundingBox())!.x).toBeGreaterThan(initialX);
+  await page.waitForTimeout(3000);
+  await owner.locator("[data-role='annotation-body']").click();
+  const anchor = page.getByTestId("inspector").getByLabel("Inspector annotation anchor cycle", { exact: true });
+  await expect(anchor).toHaveValue("7");
+  await page.waitForTimeout(1500);
+  const after = await save();
+  expect(after.annotations.find((annotation) => annotation.id === id)?.anchor?.cycle).toBe(7);
+  for (const signalId of ["sig_cycle_request", "sig_cycle_ready"]) {
+    const oldSignal = before.signals.find((signal) => signal.id === signalId)!;
+    const newSignal = after.signals.find((signal) => signal.id === signalId)!;
+    if (oldSignal.type !== "binary" || newSignal.type !== "binary") throw new Error("Expected binary transition fixture.");
+    expect(newSignal.values).toEqual(oldSignal.values.map((value) => ({ ...value, start: value.start >= 3 ? value.start + 2 : value.start })));
+  }
+  expect(errors).toEqual([]);
+  const video = page.video();
+  expect(video).not.toBeNull();
+  await page.close();
+  await video!.saveAs(resolve("artifacts/readme-demo-capture/timeline-edit.webm"));
+  await writeFile(resolve("artifacts/readme-demo-capture/timeline-edit.json"), JSON.stringify({
+    trimStartSeconds, viewport: { width: 1440, height: 900 }, dpr: 1,
+    build: "production-preview", sourceHead: process.env.DEMO_SOURCE_HEAD,
+    scenes: ["Insert two cycles before Cycle 3", "Transitions ripple", "Stable Annotation follows Cycle 5 → 7", "Save semantic verification"], errors,
+  }, null, 2));
+});
+
 test("export", async ({ page }) => {
   const recordingStart = Date.now();
   const errors: string[] = [];
