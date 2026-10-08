@@ -15,6 +15,13 @@ stable signal-owned surface retains heavy WaveDrom SVG identity across reorder
 and virtualization. The production GUI includes Cycle, Transaction, and Combined
 workspaces, document Open/Save, Undo/Redo, annotations, and export.
 
+## User documentation
+
+- [Quick Start](docs/QUICK_START.md): create CLOCK, VALID, and READY through the production UI.
+- [User Manual](docs/USER_MANUAL.md): feature reference and current non-goals.
+- [Product overview and demonstrations](../README.md)
+- [Regenerate the UI demonstrations](docs/README_DEMOS.md)
+
 ## Commands
 
 ```bash
