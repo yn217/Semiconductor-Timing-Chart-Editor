@@ -551,6 +551,7 @@ export function MinimalCycleView() {
     validationDiagnostics,
     validationPending,
     documentEpoch,
+    projectionGeneration: application.runtime.session.projectionGeneration(),
     revision: snapshot.revision,
     transactionPresentationRevision,
     history,

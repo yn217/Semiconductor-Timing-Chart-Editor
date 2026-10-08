@@ -4,6 +4,7 @@ import type { DragEvent } from "react";
 import type { CommandResult } from "@timing-chart-v2/commands";
 import type { CanonicalDocument, EnumDefinition, ValueSignal } from "@timing-chart-v2/schema";
 import { DOCUMENT_RESOURCE_BUDGET, parseJsonInput } from "@timing-chart-v2/schema";
+import { isActiveProjectionContextFresh } from "./runtime/active-projection-context.js";
 import type { SignalEditorCommandActions } from "./application/editor-surface-command-controller.js";
 import { defaultEventValue, EventRow, QuickValues, ValueEditorControl } from "./event-table-components.js";
 import { canonicalValueFromEditor } from "./runtime/value-editor-policy.js";
@@ -38,7 +39,7 @@ function valueHelperCopy(signal: ValueSignal): { readonly label: string; readonl
   }
 }
 
-export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic, cycleCount, enumDefinitions, commands, generatorSlot }: { readonly signal: ValueSignal; readonly documentEpoch: number; readonly revision: number; readonly onImportDiagnostic: (message: string) => void; readonly cycleCount: number; readonly enumDefinitions?: CanonicalDocument["enumDefinitions"]; readonly commands: Pick<SignalEditorCommandActions, "replaceValues" | "updateValue" | "replaceValue" | "removeValue">; readonly generatorSlot?: ReactNode }) {
+export function EventTable({ signal, documentEpoch, projectionGeneration, revision, onImportDiagnostic, cycleCount, enumDefinitions, commands, generatorSlot }: { readonly signal: ValueSignal; readonly documentEpoch: number; readonly projectionGeneration: number; readonly revision: number; readonly onImportDiagnostic: (message: string) => void; readonly cycleCount: number; readonly enumDefinitions?: CanonicalDocument["enumDefinitions"]; readonly commands: Pick<SignalEditorCommandActions, "replaceValues" | "updateValue" | "replaceValue" | "removeValue">; readonly generatorSlot?: ReactNode }) {
   const [start, setStart] = useState(0);
   const [value, setValue] = useState(defaultEventValue(signal));
   const [comment, setComment] = useState("");
@@ -60,8 +61,8 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
   const fileInput = useRef<HTMLInputElement>(null);
   const importRequestId = useRef(0);
   const importMounted = useRef(false);
-  const latestImportContext = useRef({ documentEpoch, revision, signalId: signal.id, onImportDiagnostic });
-  latestImportContext.current = { documentEpoch, revision, signalId: signal.id, onImportDiagnostic };
+  const latestImportContext = useRef({ documentEpoch, projectionGeneration, revision, signalId: signal.id, onImportDiagnostic });
+  latestImportContext.current = { documentEpoch, projectionGeneration, revision, signalId: signal.id, onImportDiagnostic };
   useEffect(() => {
     importMounted.current = true;
     return () => { importMounted.current = false; importRequestId.current += 1; };
@@ -127,7 +128,7 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
     URL.revokeObjectURL(url);
   };
   const importValues = (file: File) => {
-    const token = { documentEpoch, revision, targetSignalId: signal.id, requestId: ++importRequestId.current };
+    const token = { documentEpoch, projectionGeneration, revision, targetSignalId: signal.id, requestId: ++importRequestId.current };
     if (file.size > DOCUMENT_RESOURCE_BUDGET.inputBytes) {
       setImportStatus(`Import rejected: file exceeds ${DOCUMENT_RESOURCE_BUDGET.inputBytes.toLocaleString()} bytes.`);
       return;
@@ -135,8 +136,8 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
     const reader = new FileReader();
     reader.onload = () => {
       const current = latestImportContext.current;
-      if (!importMounted.current || importRequestId.current !== token.requestId || current.documentEpoch !== token.documentEpoch || current.revision !== token.revision || current.signalId !== token.targetSignalId) {
-        const message = "Event import cancelled because the document, revision, Signal target, or editor changed while the file was being read. Retry the import on the current Signal.";
+      if (!importMounted.current || importRequestId.current !== token.requestId || !isActiveProjectionContextFresh(token, current) || current.signalId !== token.targetSignalId) {
+        const message = "Event import cancelled because the document, Scenario context, revision, Signal target, or editor changed while the file was being read. Retry the import on the current Signal.";
         current.onImportDiagnostic(message);
         if (importMounted.current) setImportStatus(message);
         return;
@@ -161,7 +162,7 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
       }
     };
     reader.onerror = () => {
-      if (importMounted.current && importRequestId.current === token.requestId) setImportStatus("Import rejected: file could not be read.");
+      if (importMounted.current && importRequestId.current === token.requestId && isActiveProjectionContextFresh(token, latestImportContext.current)) setImportStatus("Import rejected: file could not be read.");
     };
     reader.readAsText(file);
   };

@@ -22,6 +22,7 @@ export interface EditorSecondarySurfacesInput {
   readonly validationDiagnostics: readonly DocumentProblem[];
   readonly validationPending: boolean;
   readonly documentEpoch: number;
+  readonly projectionGeneration: number;
   readonly revision: number;
   readonly transactionPresentationRevision: number;
   readonly history: HistoryState;

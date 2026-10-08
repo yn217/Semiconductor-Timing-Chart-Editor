@@ -168,6 +168,7 @@ export function TimelineToolbar({ document, range, history, onUndo, onRedo, onRa
 export interface SignalEditorProps {
   readonly signal: Signal | undefined;
   readonly documentEpoch: number;
+  readonly projectionGeneration: number;
   readonly revision: number;
   readonly cycleCount: number;
   readonly bookmarks: CanonicalDocument["bookmarks"];
