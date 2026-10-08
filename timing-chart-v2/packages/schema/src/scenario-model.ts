@@ -22,7 +22,7 @@ import type {
   SignalValueChange,
 } from "./types.js";
 import { canonicalEntityInventory, type CanonicalEntityKind } from "./canonical-inventory.js";
-import { DOCUMENT_RESOURCE_BUDGET, validateDocumentResourceBudget, validateDocumentInputComplexity } from "./resource-budget.js";
+import { countSignalChangePoints, DOCUMENT_RESOURCE_BUDGET, validateDocumentResourceBudget, validateDocumentInputComplexity } from "./resource-budget.js";
 import { isStableId, opaqueDerivedId } from "./stable-id.js";
 import { validateCanonicalDocument } from "./validation.js";
 
@@ -605,7 +605,7 @@ export function validateScenarioDocumentModel(input: unknown): readonly Document
     }
     const projectionProblems = validateCanonicalDocument(projection);
     problems.push(...projectionProblems);
-    const perScenarioBudget = validateDocumentResourceBudget(projection).filter((item) => !["$.annotations", "$.annotationGroups", "$.transactions", "$.transactionGroups", "$.bookmarks", "$.timeGroups", "$.constraints", "$.timeline.labelAnchors", "$.signals[*].values"].includes(item.path));
+    const perScenarioBudget = validateDocumentResourceBudget(projection).filter((item) => !["$.annotations", "$.annotationGroups", "$.transactions", "$.transactionGroups", "$.bookmarks", "$.timeGroups", "$.constraints", "$.timeline.labelAnchors", "$.signals[*].values|$.signals[*].enable"].includes(item.path));
     problems.push(...perScenarioBudget);
     if (projectionProblems.length === 0) {
       for (const entry of canonicalEntityInventory(projection)) {
@@ -626,9 +626,7 @@ export function validateScenarioDocumentModel(input: unknown): readonly Document
     aggregate.timeGroups += scenario.timeGroups.length;
     aggregate.constraints += scenario.constraints.length;
     aggregate.labelAnchors += scenario.timeline.labelAnchors.length;
-    for (const state of Object.values(scenario.signalStates)) {
-      if (state?.kind === "values") aggregate.valueChanges += state.values.length;
-    }
+    aggregate.valueChanges += countSignalChangePoints(Object.values(scenario.signalStates));
   });
 
   for (const [metric, limit, pathName] of aggregateLimits) {

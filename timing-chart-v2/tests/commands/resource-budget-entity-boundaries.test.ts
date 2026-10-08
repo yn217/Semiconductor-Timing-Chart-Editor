@@ -68,12 +68,51 @@ describe("resource budget entity boundaries", () => {
     const atLimit = session.getSnapshot();
     const beforeHistory = session.historyState();
     const rejected = session.execute({ id: commandId("budget_value_overflow"), type: "signal.replaceValues", signalId: "budget_target" as SignalId, values: [{ start: 0, value: 0 }, { start: 1, value: 1 }, { start: 2, value: 0 }] });
-    expect(rejected).toMatchObject({ ok: false, reason: "invalid", problems: [expect.objectContaining({ code: "RESOURCE_LIMIT_EXCEEDED", path: "$.signals[*].values" })] });
+    expect(rejected).toMatchObject({ ok: false, reason: "invalid", problems: [expect.objectContaining({ code: "RESOURCE_LIMIT_EXCEEDED", path: "$.signals[*].values|$.signals[*].enable" })] });
     expect(session.getSnapshot()).toBe(atLimit);
     expect(session.historyState()).toEqual({ ...beforeHistory, dirty: true });
     expect(session.undo().ok).toBe(true);
     expect(session.redo().ok).toBe(true);
     expect(session.getSnapshot().document.signals.find((signal) => signal.id === "budget_target")?.values).toHaveLength(2);
+  }, 30_000);
+
+  it("includes Clock enable changes in the shared million-change limit and rejects overflow atomically", () => {
+    const base = canonicalFixture();
+    const clock = base.signals.find((signal) => signal.type === "clock");
+    if (!clock || clock.type !== "clock") throw new Error("Expected fixture Clock.");
+    const streams: Signal[] = Array.from({ length: 10 }, (_, index) => {
+      const id = `budget_mixed_${index}` as SignalId;
+      const name = `MIXED_${index}`;
+      if (index < 5) return {
+        ...clock,
+        id,
+        name,
+        source: { ...clock.source, signalName: name },
+        display: { ...clock.display, name },
+        generator: { ...clock.generator, period: 1, duty: 0.5 },
+        enable: Array.from({ length: index === 4 ? 99_999 : 100_000 }, (_, start) => ({ start, value: start % 2 })),
+      };
+      return binarySignal(id, Array.from({ length: 100_000 }, (_, start) => ({ start, value: start % 2 })));
+    });
+    const target = binarySignal("budget_mixed_overflow", [{ start: 0, value: 0 }]);
+    const signals = [...streams, target];
+    const document = {
+      ...base,
+      timeline: { ...base.timeline, end: 100_000, cycleCount: 100_000, referenceClock: signals[0]!.id },
+      signals,
+      signalGroups: [{ ...base.signalGroups[0]!, rows: signals.map((signal) => signal.id) }],
+    };
+    const session = new CommandHistorySession(document);
+    const before = session.getSnapshot();
+    const history = session.historyState();
+    const rejected = session.execute({ id: commandId("budget_mixed_clock_enable_overflow"), type: "signal.updateValue", signalId: target.id, start: 1, value: 1 });
+    expect(rejected).toMatchObject({
+      ok: false,
+      reason: "invalid",
+      problems: [expect.objectContaining({ code: "RESOURCE_LIMIT_EXCEEDED", path: "$.signals[*].values|$.signals[*].enable", value: 1_000_001, detail: "resource-budget;metric=valueChanges;current=1000001;limit=1000000" })],
+    });
+    expect(session.getSnapshot()).toBe(before);
+    expect(session.historyState()).toEqual(history);
   }, 30_000);
 
   it("keeps an AI create proposal behind the same canonical budget boundary", () => {
