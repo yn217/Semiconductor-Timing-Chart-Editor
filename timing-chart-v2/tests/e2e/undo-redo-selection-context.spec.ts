@@ -1,7 +1,70 @@
 import { expect, test } from "@playwright/test";
 import { startInCycleSample } from "./cycle-startup.js";
+import { cycleDocument } from "../../apps/editor/src/fixtures-cycle-reference-documents.js";
 
 startInCycleSample(test);
+
+test("Group move Undo/Redo preserves real scroll offsets and transient tree filters", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await ready(page);
+  const fixture = JSON.parse(JSON.stringify(cycleDocument));
+  const template = fixture.signals.find((signal: { id: string }) => signal.id === "sig_cycle_request");
+  for (let index = 0; index < 40; index++) {
+    const signal = structuredClone(template);
+    signal.id = `sig_history_row_${index}`;
+    signal.name = `REQUEST_COPY_${index}`;
+    signal.display.name = signal.name;
+    signal.source.signalName = `history_${index}`;
+    fixture.signals.push(signal);
+    fixture.signalGroups[0].rows.push(signal.id);
+  }
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({
+    name: "history-scroll.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(fixture)),
+  });
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByLabel("Zoom preset").selectOption("200");
+  await page.getByTestId("signal-tree-search-top").fill("REQUEST");
+  const viewport = page.getByTestId("cycle-viewport");
+  const owner = page.locator(".editor-shell[data-view-mode='Cycle'] [data-role='timeline-viewport']");
+  await expect.poll(() => owner.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeGreaterThan(100);
+  await expect.poll(() => viewport.evaluate((element) => element.scrollHeight - element.clientHeight)).toBeGreaterThan(100);
+  const box = (await owner.boundingBox())!;
+  await page.mouse.move(box.x + 120, box.y + 100);
+  await page.mouse.wheel(160, 0);
+  await expect.poll(() => owner.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  // Vertical scrolling belongs to the outer Cycle viewport, not its horizontal child.
+  await viewport.hover({ position: { x: 10, y: 100 } });
+  await page.mouse.wheel(0, 180);
+  await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  const readContext = () => page.evaluate(() => ({
+    x: document.querySelector(".editor-shell[data-view-mode='Cycle'] [data-role='timeline-viewport']")!.scrollLeft,
+    y: document.querySelector("[data-testid='cycle-viewport']")!.scrollTop,
+    filter: (document.querySelector("[data-testid='signal-tree-search-top']") as HTMLInputElement).value,
+    zoom: document.querySelector("[data-testid='zoom-status-bar']")!.textContent,
+    selected: document.querySelector("[data-testid='selection-status']")!.textContent,
+  }));
+  const before = await readContext();
+  const group = page.getByTestId("signal-editor").getByLabel("Signal group");
+  await group.selectOption("grp_cycle_payload");
+  await page.getByTestId("move-signal-to-group").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(group).toHaveValue("grp_cycle_payload");
+  await expect.poll(readContext).toEqual(before);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  const ribbon = page.getByTestId("ribbon");
+  await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+  await expect(group).toHaveValue("grp_cycle_control");
+  await expect.poll(readContext).toEqual(before);
+  await ribbon.getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(group).toHaveValue("grp_cycle_payload");
+  await expect.poll(readContext).toEqual(before);
+});
+
 
 test("timeline Undo/Redo preserves compatible range, pinned target, zoom and panel geometry", async ({ page }) => {
   await page.setViewportSize({ width: 1672, height: 941 });
