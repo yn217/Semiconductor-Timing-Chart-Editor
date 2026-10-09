@@ -23,7 +23,7 @@ import type {
   ValueSignal,
   EnumDefinition,
 } from "@timing-chart-v2/schema";
-import { ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_LABEL_PLACEMENTS, MAX_MEASUREMENT_LANE, annotationsForReferences, canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesToAny, referencesToSignal, validateEnumDefinition, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
+import { ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_LABEL_PLACEMENTS, MAX_MEASUREMENT_LANE, annotationsForReferences, canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesFromOwner, referencesToAny, referencesToSignal, referencesToTimeGroup, validateEnumDefinition, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
 import type { ChangeSet, SemanticCommand } from "./types.js";
 import type { CommandPolicyCode } from "./policy.js";
 import { mergeChangeSets } from "./changeset.js";
@@ -158,6 +158,11 @@ function deleteSignals(document: CanonicalDocument, signalIds: readonly SignalId
   if (annotationDependents.length > 0) {
     const dependentIds = annotationDependents.map((annotation) => annotation.id).join(", ");
     return fail("invalid", "SIGNAL_HAS_DEPENDENTS", signalIds.length === 1 ? "$.signalId" : "$.signalIds", `${signalIds.length === 1 ? "Signal has" : "Signals have"} annotation dependents: ${dependentIds}.`);
+  }
+  const constraintDependents = references.filter((reference) => reference.kind.startsWith("constraint."));
+  if (constraintDependents.length > 0) {
+    const dependentIds = [...new Set(constraintDependents.map((reference) => reference.ownerId))].join(", ");
+    return fail("invalid", "SIGNAL_HAS_DEPENDENTS", signalIds.length === 1 ? "$.signalId" : "$.signalIds", `${signalIds.length === 1 ? "Signal has" : "Signals have"} constraint dependents: ${dependentIds}.`);
   }
 
   const linkedTransactionIds = new Set(references
@@ -1656,8 +1661,9 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
     }
     case "transactionGroup.delete": {
       const groups = document.transactionGroups ?? []; if (!groups.some((item) => item.id === command.groupId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.groupId", "Transaction Group does not exist.");
-      const transactions = document.transactions.map((item) => item.groupId === command.groupId ? (({ groupId: _removed, ...rest }) => rest)(item) : item);
-      const affectedTransactions = document.transactions.filter((item) => item.groupId === command.groupId).map((item) => item.id);
+      const dependentIds = new Set(referencesToAny(document, "transaction-group", [command.groupId]).filter((reference) => reference.kind === "transaction.group").map((reference) => reference.ownerId));
+      const transactions = document.transactions.map((item) => dependentIds.has(item.id) ? (({ groupId: _removed, ...rest }) => rest)(item) : item);
+      const affectedTransactions = [...dependentIds] as Transaction["id"][];
       return { ok: true, document: { ...document, transactionGroups: groups.filter((item) => item.id !== command.groupId), transactions }, changeSet: { transactionGroupSemantics: [command.groupId], transactionSemantics: affectedTransactions }, inverseChangeSet: { transactionGroupSemantics: [command.groupId], transactionSemantics: affectedTransactions } };
     }
     case "transaction.moveToGroup": {
@@ -2204,8 +2210,10 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
     case "timeGroup.delete": {
       const group = document.timeGroups.find((item) => item.id === command.timeGroupId);
       if (!group) return fail("invalid", "TIME_GROUP_NOT_FOUND", "$.timeGroupId", `Time Group '${command.timeGroupId}' does not exist.`);
-      const ownedAnchorId = group.presentation?.resumeLabelAnchorId;
-      const labelAnchors = document.timeline.labelAnchors.filter((anchor) => anchor.id !== ownedAnchorId && anchor.ownerTimeGroupId !== group.id);
+      const incomingReferences = referencesToTimeGroup(document, group.id);
+      const ownedAnchorIds = new Set(incomingReferences.filter((reference) => reference.kind === "labelAnchor.ownerTimeGroup").map((reference) => reference.ownerId));
+      for (const reference of referencesFromOwner(document, group.id)) if (reference.kind === "timeGroup.resumeLabelAnchor") ownedAnchorIds.add(reference.targetId);
+      const labelAnchors = document.timeline.labelAnchors.filter((anchor) => !ownedAnchorIds.has(anchor.id));
       const nextDocument = { ...document, timeline: { ...document.timeline, labelAnchors }, timeGroups: promoteTimeGroupChildren(document.timeGroups, group) };
       const changeSet: ChangeSet = { timeGroupSemantics: [group.id, ...document.timeGroups.filter(item => item.parentId === group.id).map(item => item.id)], geometryScreenX: true, minimapOverview: true, ...(group.presentation?.collapsed ? { waveSemantics: timingSignalIds(nextDocument), geometryLocal: timingSignalIds(nextDocument) } : {}) };
       return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };

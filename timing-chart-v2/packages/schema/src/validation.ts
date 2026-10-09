@@ -236,7 +236,6 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
   if (document.timeline.physicalTimebase !== undefined && (!Number.isFinite(document.timeline.physicalTimebase.referenceFrequencyHz) || document.timeline.physicalTimebase.referenceFrequencyHz <= 0)) problems.push(problem("INVALID_PHYSICAL_TIMEBASE", "$.timeline.physicalTimebase", "Physical timebase frequency must be a positive finite number."));
 
   const signals = new Map<string, Signal>(document.signals.map((signal) => [signal.id, signal]));
-  const transactionGroups = new Map((document.transactionGroups ?? []).map((group) => [group.id, group]));
   const transactionScale = document.transactionTimeScale;
   document.signals.forEach((signal, index) => {
     if (signal.type === "clock" || signal.type === "commentRow") return;
@@ -323,7 +322,6 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
     if (annotation.verticalSpan !== undefined) {
       if (annotation.type !== "marker") problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].verticalSpan`, "Vertical span is only valid for Marker annotations.", annotation.id));
       if (annotation.verticalSpan.mode === "rows" && (!annotation.verticalSpan.startRowId || !annotation.verticalSpan.endRowId)) problems.push(problem("MISSING_CROSS_REFERENCE", `$.annotations[${index}].verticalSpan`, "Rows mode requires stable boundary row IDs.", annotation.id));
-      for (const [key, id] of [["startRowId", annotation.verticalSpan.startRowId], ["endRowId", annotation.verticalSpan.endRowId]] as const) if (id && !signals.has(id)) problems.push(problem("MISSING_CROSS_REFERENCE", `$.annotations[${index}].verticalSpan.${key}`, "Vertical span boundary must reference an existing Signal.", annotation.id));
       for (const [key, offset] of [["startOffset", annotation.verticalSpan.startOffset], ["endOffset", annotation.verticalSpan.endOffset]] as const) if (offset !== undefined && !Number.isFinite(offset)) problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].verticalSpan.${key}`, "Vertical span offsets must be finite.", annotation.id));
     }
     if (annotation.positionMode !== undefined) {
@@ -345,7 +343,6 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
   (document.annotationGroups ?? []).forEach((group, groupIndex) => {
     group.annotationIds.forEach((annotationId, memberIndex) => {
       const path = `$.annotationGroups[${groupIndex}].annotationIds[${memberIndex}]`;
-      if (!annotationIds.has(annotationId)) problems.push(problem("ANNOTATION_GROUP_MEMBER_NOT_FOUND", path, `Annotation '${annotationId}' does not exist.`, group.id));
       const owner = annotationGroupMembership.get(annotationId);
       if (owner) problems.push(problem("ANNOTATION_GROUP_DUPLICATE_MEMBER", path, `Annotation '${annotationId}' already belongs to group '${owner}'.`, group.id));
       else annotationGroupMembership.set(annotationId, group.id);
@@ -355,18 +352,25 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
   const timeGroups = new Map<string, TimeGroup>(document.timeGroups.map((group) => [group.id, group]));
   const enumIds = new Set<string>((document.enumDefinitions ?? []).map((definition) => definition.id));
   const bookmarks = new Set<string>(document.bookmarks.map((bookmark) => bookmark.id));
-  const labelAnchors = new Map(document.timeline.labelAnchors.map((anchor) => [anchor.id, anchor]));
+  const labelAnchors = new Map<string, (typeof document.timeline.labelAnchors)[number]>(document.timeline.labelAnchors.map((anchor) => [anchor.id, anchor]));
   const groups = new Set<string>(document.signalGroups.map((group) => group.id));
+  const transactionGroupIds = new Set<string>((document.transactionGroups ?? []).map((group) => group.id));
   for (const reference of canonicalReferences(document)) {
     const targetExists = reference.targetType === "signal" ? signals.has(reference.targetId)
       : reference.targetType === "time-group" ? timeGroups.has(reference.targetId)
       : reference.targetType === "group" ? groups.has(reference.targetId)
+      : reference.targetType === "transaction-group" ? transactionGroupIds.has(reference.targetId)
+      : reference.targetType === "annotation" ? annotationIds.has(reference.targetId)
+      : reference.targetType === "label-anchor" ? labelAnchors.has(reference.targetId)
       : reference.targetType === "spacer" ? spacers.has(reference.targetId) : reference.targetType === "enum" ? enumIds.has(reference.targetId) : bookmarks.has(reference.targetId);
     if (!targetExists) {
       const targetLabel = reference.targetType === "signal" ? "Signal"
         : reference.targetType === "time-group" ? "Time Group"
-        : reference.targetType === "group" ? "Signal Group" : reference.targetType === "spacer" ? "Spacer" : reference.targetType === "enum" ? "Enum" : "Bookmark";
-      problems.push(problem("MISSING_CROSS_REFERENCE", reference.path, targetLabel + " '" + reference.targetId + "' does not exist.", reference.ownerId));
+        : reference.targetType === "group" ? "Signal Group" : reference.targetType === "transaction-group" ? "Transaction Group"
+        : reference.targetType === "annotation" ? "Annotation" : reference.targetType === "label-anchor" ? "Label Anchor"
+        : reference.targetType === "spacer" ? "Spacer" : reference.targetType === "enum" ? "Enum" : "Bookmark";
+      const code = reference.kind === "annotationGroup.member" ? "ANNOTATION_GROUP_MEMBER_NOT_FOUND" : "MISSING_CROSS_REFERENCE";
+      problems.push(problem(code, reference.path, targetLabel + " '" + reference.targetId + "' does not exist.", reference.ownerId));
     }
   }
   document.enumDefinitions?.forEach((definition, index) => {
@@ -379,7 +383,6 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
   document.timeGroups.forEach((group, index) => {
     if (!Number.isInteger(group.start) || !Number.isInteger(group.end) || group.start < 0 || group.start >= group.end || group.end > document.timeline.cycleCount) problems.push(problem("INVALID_TIME_GROUP_RANGE", `$.timeGroups[${index}]`, "Time Group must use an integer-cycle half-open range within the source timeline.", group.id));
     const resume = group.presentation?.resumeLabelAnchorId;
-    if (resume && !labelAnchors.has(resume)) problems.push(problem("MISSING_CROSS_REFERENCE", `$.timeGroups[${index}].presentation.resumeLabelAnchorId`, `Label anchor '${resume}' does not exist.`, group.id));
     if (resume) {
       const anchor = labelAnchors.get(resume);
       if (anchor && anchor.ownerTimeGroupId !== group.id) problems.push(problem("TIME_GROUP_RESUME_OWNER_MISMATCH", `$.timeGroups[${index}].presentation.resumeLabelAnchorId`, "Resume label anchor must reciprocally name this Time Group as owner.", group.id));
@@ -406,10 +409,6 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
     transaction.phases?.forEach((phase, phaseIndex) => {
       if (!phase.name.trim() || !Number.isInteger(phase.start) || !Number.isInteger(phase.end) || phase.start < transaction.start || phase.start >= phase.end || phase.end > transaction.end) problems.push(problem("INVALID_TRANSACTION_PHASE", `$.transactions[${index}].phases[${phaseIndex}]`, "Phase must be named and use an integer-cycle half-open subrange of its transaction.", transaction.id));
     });
-    transaction.linkedSignals?.forEach((signalId, signalIndex) => {
-      if (!signals.has(signalId)) problems.push(problem("MISSING_CROSS_REFERENCE", `$.transactions[${index}].linkedSignals[${signalIndex}]`, `Signal '${signalId}' does not exist.`, transaction.id));
-    });
-    if (transaction.groupId !== undefined && !transactionGroups.has(transaction.groupId)) problems.push(problem("MISSING_CROSS_REFERENCE", `$.transactions[${index}].groupId`, `Transaction Group '${transaction.groupId}' does not exist.`, transaction.id));
   });
 
   const legendEntryIds = new Set<string>();

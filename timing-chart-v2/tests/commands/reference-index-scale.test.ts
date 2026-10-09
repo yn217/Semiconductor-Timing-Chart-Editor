@@ -1,9 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { commandPlannerMetrics, planCommand } from "@timing-chart-v2/commands";
-import { canonicalReferenceMetrics, type SignalId } from "@timing-chart-v2/schema";
+import { canonicalReferenceMetrics, type ConstraintId, type SignalId } from "@timing-chart-v2/schema";
 import { generatePerformanceDocument } from "../../packages/testing/src/index.js";
+import { canonicalFixture } from "../fixtures/canonical.js";
 
 describe("planner reference-index scaling", () => {
+  it("blocks deletion of a Signal referenced by a typed Constraint through the registry", () => {
+    const base = canonicalFixture();
+    const signalId = base.signals[1]!.id;
+    const document = { ...base, constraints: [{ id: "constraint_requires_signal" as ConstraintId, type: "latency", data: { triggerSignalId: signalId, responseSignalId: base.signals[0]!.id } }] };
+    const result = planCommand(document, { id: "cmd_delete_constraint_signal" as never, type: "signal.delete", signalId });
+    expect(result).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "SIGNAL_HAS_DEPENDENTS", message: expect.stringContaining("constraint_requires_signal") }] });
+  });
+
   it("keeps multi-row invalidation and bulk deletion on indexed target queries at product-scale fixture size", () => {
     const base = generatePerformanceDocument({ signalCount: 10_000, cycleCount: 500 });
     const document = {

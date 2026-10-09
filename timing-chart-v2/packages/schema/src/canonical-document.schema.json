@@ -289,7 +289,7 @@
         "labelEvery": { "type": "integer", "minimum": 1 },
         "position": { "enum": ["above", "below"] },
         "offset": { "$ref": "#/$defs/offset" },
-        "anchorId": { "type": "string" }
+        "anchorId": { "$ref": "#/$defs/stableId" }
       }
     },
     "signal": {
@@ -323,7 +323,7 @@
         "edgeCounter": { "$ref": "#/$defs/edgeCounter" },
         "width": { "type": "integer", "minimum": 1 },
         "displayFormat": { "enum": ["hex", "binary", "decimal", "signed", "unsigned", "symbolic"] },
-        "enumId": { "type": "string", "minLength": 1 },
+        "enumId": { "$ref": "#/$defs/stableId" },
         "resetSemantics": { "$ref": "#/$defs/resetSemantics" },
         "title": { "type": "string" },
         "body": { "type": "string" },
