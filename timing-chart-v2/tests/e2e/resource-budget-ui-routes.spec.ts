@@ -107,6 +107,28 @@ test("bulk registration crosses the exact signal budget once and rejects overflo
   await expect(page.getByTestId("problems-panel")).toContainText("RESOURCE_LIMIT_EXCEEDED");
 });
 
+test("AI Preview/Validate/Apply cannot commit a Signal beyond the resource budget", async ({ page }) => {
+  const host = await openDocument(page, documentWithSignalCount(10_000));
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_clk']").click();
+  const revisionBefore = await host.getAttribute("data-canonical-revision");
+  const dirtyBefore = await page.getByTestId("dirty-status").textContent();
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
+  await page.getByRole("button", { name: "Ask or edit with the AI Assistant" }).click();
+  const ai = page.getByTestId("ai-operation-panel");
+  await ai.getByLabel("AI semantic query").fill("create signal named AI_OVERFLOW");
+  await ai.getByRole("button", { name: "Preview", exact: true }).click();
+  await expect(ai.getByTestId("ai-preview")).toContainText("Create binary signal AI_OVERFLOW");
+  await ai.getByTestId("ai-validate").click();
+  await expect(ai.getByTestId("ai-status")).toHaveText("Validated · deterministic local checks passed");
+  await ai.getByTestId("ai-apply").click();
+  await expect(ai.getByTestId("ai-status")).toContainText("Apply failed · invalid");
+  await expect(ai.getByTestId("ai-status")).toContainText("RESOURCE_LIMIT_EXCEEDED");
+  await expect(host).toHaveAttribute("data-canonical-revision", revisionBefore!);
+  await expect(page.getByTestId("signal-count-status")).toHaveText("Signals: 10000");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(page.getByTestId("dirty-status")).toHaveText(dirtyBefore!);
+});
+
 test("annotation import is rejected at the resource boundary without replacing the session", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
