@@ -4,6 +4,33 @@ import { cycleDocument } from "../../apps/editor/src/fixtures-cycle-reference-do
 
 startInCycleSample(test);
 
+test("Undoing Transaction creation clears the non-Signal stable-ID selection", async ({ page }) => {
+  await ready(page);
+  const ribbon = page.getByTestId("ribbon");
+  await ribbon.getByRole("button", { name: "Transaction", exact: true }).click();
+  await expect(page.getByTestId("selection-status")).toHaveText("None");
+
+  await ribbon.getByRole("button", { name: "Create Transaction", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  const selectedRow = page.locator("[data-testid^='transaction-left-tree-row-'][data-selected='true']");
+  await expect(selectedRow).toHaveCount(1);
+  const transactionId = await selectedRow.getAttribute("data-transaction-tree-id");
+  expect(transactionId).toBeTruthy();
+  await expect(page.getByTestId("selection-status")).not.toHaveText("None");
+
+  await page.keyboard.press("Control+z");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+  await expect(page.locator(`[data-transaction-tree-id='${transactionId}']`)).toHaveCount(0);
+  await expect(page.getByTestId("selection-status")).toHaveText("None");
+
+  await page.keyboard.press("Control+Shift+z");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  const restoredRow = page.locator(`[data-transaction-tree-id='${transactionId}']`);
+  await expect(restoredRow).toHaveCount(1);
+  await expect(restoredRow).toHaveAttribute("data-selected", "false");
+  await expect(page.getByTestId("selection-status")).toHaveText("None");
+});
+
 test("compatible Bottom row selection and dirty draft survive metadata Undo/Redo", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
