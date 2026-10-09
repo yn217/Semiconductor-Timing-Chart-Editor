@@ -170,6 +170,31 @@ describe("timeline ripple commands", () => {
     }
   });
 
+  it("preserves standalone LabelAnchor identity and display through exact insert/delete ripple and history", () => {
+    const initial = rippleFixture();
+    const anchorId = "label_wait" as LabelAnchorId;
+    initial.timeGroups = [];
+    initial.timeline.labelAnchors = [{ id: anchorId, source: 5, display: 20 }];
+    const session = new CommandHistorySession(initial);
+
+    const inserted = session.execute({ id: commandId("cmd_standalone_anchor_insert"), type: "timeline.insert", at: 3, count: 2 });
+    expect(inserted.ok).toBe(true);
+    expect(session.getSnapshot().document.timeline.labelAnchors).toEqual([{ id: anchorId, source: 7, display: 20 }]);
+
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.timeline.labelAnchors).toEqual([{ id: anchorId, source: 5, display: 20 }]);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.timeline.labelAnchors).toEqual([{ id: anchorId, source: 7, display: 20 }]);
+
+    const deleted = session.execute({ id: commandId("cmd_standalone_anchor_delete"), type: "timeline.delete", start: 2, end: 4 });
+    expect(deleted.ok).toBe(true);
+    expect(session.getSnapshot().document.timeline.labelAnchors).toEqual([{ id: anchorId, source: 5, display: 20 }]);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.timeline.labelAnchors).toEqual([{ id: anchorId, source: 7, display: 20 }]);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.timeline.labelAnchors).toEqual([{ id: anchorId, source: 5, display: 20 }]);
+  });
+
   it("rejects a delete that would collapse distinct LabelAnchor sources", () => {
     const initial = rippleFixture();
     initial.timeline.labelAnchors = [

@@ -1260,6 +1260,49 @@ describe("deterministic document export", () => {
     expect(svg).toContain('data-axis-break-id="tg_export"');
   });
 
+  it("carries standalone LabelAnchor ruler labels into PNG raster input and PDF output", async () => {
+    const base = canonicalFixture();
+    const document = { ...base, timeline: { ...base.timeline, cycleCount: 20, end: 20, labelAnchors: [{ id: "la_multiformat" as never, source: 5, display: 1000 }] } };
+    const snapshot = { revision: 0, document };
+    const service = new DeterministicExportService();
+    const svg = new TextDecoder().decode(await service.export({ format: "svg", snapshot }));
+    expect(svg).toContain(">1000<");
+    expect(svg).not.toContain('data-axis-break-id=');
+
+    // The Node PDF path embeds the same deterministic SVG bytes in its
+    // canonical comment; this guards shared ruler mapping without parsing a
+    // lossy image representation.
+    const pdf = new TextDecoder().decode(await service.export({ format: "pdf", snapshot }));
+    expect(pdf.startsWith("%PDF-1.4")).toBe(true);
+    expect(pdf).toContain(">1000<");
+
+    const NativeBlob = globalThis.Blob;
+    const capturedSvgParts: BlobPart[][] = [];
+    class CapturedBlob extends NativeBlob {
+      constructor(parts: BlobPart[], options?: BlobPropertyBag) {
+        if (options?.type === "image/svg+xml") capturedSvgParts.push([...parts]);
+        super(parts, options);
+      }
+    }
+    const context = { scale: vi.fn(), fillRect: vi.fn(), drawImage: vi.fn(), fillStyle: "" };
+    const canvas = { width: 0, height: 0, getContext: vi.fn(() => context), toBlob: (callback: BlobCallback) => callback(new NativeBlob(["PNG-bytes"], { type: "image/png" })) };
+    class FakeImage { src = ""; async decode() { return undefined; } }
+    vi.stubGlobal("Blob", CapturedBlob);
+    vi.stubGlobal("Image", FakeImage);
+    vi.stubGlobal("document", { createElement: vi.fn(() => canvas) });
+    try {
+      const png = await service.export({ format: "png", snapshot });
+      const rasterSource = await new NativeBlob(capturedSvgParts[0]!, { type: "image/svg+xml" }).text();
+      expect(capturedSvgParts).toHaveLength(1);
+      expect(rasterSource).toContain(">1000<");
+      expect(rasterSource).not.toContain('data-axis-break-id=');
+      expect(new TextDecoder().decode(png)).toBe("PNG-bytes");
+      expect(context.drawImage).toHaveBeenCalledOnce();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("shares the same folded time mapping across waveforms, transactions, and annotations", () => {
     const scene = buildExportScene(foldedFixture(), { format: "svg", scope: "document", foldPolicy: "respect" });
     // The DMA transaction (source 2..12) ends inside the collapsed [5,15) range and must clamp to
