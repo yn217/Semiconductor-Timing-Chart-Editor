@@ -7,12 +7,24 @@ import { EditorIcon } from "./editor-icon.js";
 import { ModalBackdrop } from "./modal-backdrop.js";
 
 type HardwareHierarchyDisplayMode = "signal" | "relative" | "full" | "split";
+type HierarchyColumnAlignment = "left" | "center" | "right";
 const HIERARCHY_ROW_HEIGHT = 32;
 const HIERARCHY_OVERSCAN_ROWS = 10;
+const MAX_VISIBLE_HIERARCHY_PATH_CHARACTERS = 52;
+
+export function compactHierarchyPath(path: string, maxCharacters = MAX_VISIBLE_HIERARCHY_PATH_CHARACTERS): string {
+  const characters = Array.from(path);
+  if (characters.length <= maxCharacters || maxCharacters < 5) return path;
+  const remaining = maxCharacters - 1;
+  const headLength = Math.max(2, Math.floor(remaining * 0.35));
+  const tailLength = remaining - headLength;
+  return `${characters.slice(0, headLength).join("")}…${characters.slice(-tailLength).join("")}`;
+}
 
 export function HardwareHierarchyBrowser({ document, selectedSignalId, onSelect, restoreFocusRef, onClose }: { readonly document: CanonicalDocument; readonly selectedSignalId: SignalId | undefined; readonly onSelect: (id: SignalId) => void; readonly restoreFocusRef?: RefObject<HTMLElement | null>; readonly onClose: () => void }) {
   const [view, setView] = useState<HardwareHierarchyView>("group");
   const [displayMode, setDisplayMode] = useState<HardwareHierarchyDisplayMode>("split");
+  const [instancePathAlignment, setInstancePathAlignment] = useState<HierarchyColumnAlignment>("left");
   const [scope, setScope] = useState<string>("all");
   const [query, setQuery] = useState("");
   const [copySelection, setCopySelection] = useState<ReadonlySet<SignalId>>(new Set());
@@ -97,6 +109,7 @@ export function HardwareHierarchyBrowser({ document, selectedSignalId, onSelect,
     <div className="hierarchy-toolbar" role="toolbar" aria-label="Hierarchy view controls">
       <span>View</span><button type="button" data-testid="hierarchy-group-view" aria-pressed={view === "group"} onClick={() => { resetTableScroll(); setView("group"); }}>Group View</button><button type="button" data-testid="hierarchy-path-view" aria-pressed={view === "hierarchy"} onClick={() => { resetTableScroll(); setView("hierarchy"); }}>Hierarchy View</button>
       <label>Display mode<select aria-label="Hierarchy display mode" value={displayMode} onChange={(event) => setDisplayMode(event.target.value as HardwareHierarchyDisplayMode)}><option value="signal">Signal only</option><option value="relative">Relative Path</option><option value="full">Full Path</option><option value="split">Split columns</option></select></label>
+      {displayMode === "split" && <label>Instance Path alignment<select aria-label="Instance Path alignment" value={instancePathAlignment} onChange={(event) => setInstancePathAlignment(event.target.value as HierarchyColumnAlignment)}><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label>}
       <label>Scope<select aria-label="Hierarchy scope" value={scope} onChange={(event) => { resetTableScroll(); setScope(event.target.value); }}><option value="all">All scopes</option>{scopes.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
       <label>Search paths<input type="search" aria-label="Search hierarchy paths" data-testid="hierarchy-path-search" value={query} onChange={(event) => { resetTableScroll(); setQuery(event.target.value); }} placeholder="Path, signal, display name, group…" /></label>
       <button type="button" data-testid="copy-selected-hierarchy-paths" disabled={copySelection.size === 0} onClick={() => { const selected = visibleEntries.filter((entry) => copySelection.has(entry.signalId)); void copyPaths(selected.map((entry) => entry.fullPath)); }}>Copy Selected Paths ({copySelection.size})</button>
@@ -109,9 +122,9 @@ export function HardwareHierarchyBrowser({ document, selectedSignalId, onSelect,
       </span>)}
     </nav>
     <div ref={tableViewportRef} className="hierarchy-table-viewport" role="region" aria-label="Hierarchy entries" tabIndex={0} onScroll={(event) => setTableScrollTop(event.currentTarget.scrollTop)} data-hierarchy-total-rows={visibleEntries.length} data-hierarchy-mounted-rows={mountedEntries.length}>
-      <table data-hierarchy-display-mode={displayMode}><thead><tr><th>Copy</th>{displayMode === "signal" && <th>Signal</th>}{displayMode === "relative" && <><th>Relative Path</th><th>Signal</th></>}{displayMode === "full" && <th>Full Path</th>}{displayMode === "split" && <><th>Instance Path</th><th>Signal</th></>}<th>Role</th><th>Type</th><th>Width</th><th>Group</th>{displayMode !== "full" && <th>Full Path</th>}</tr></thead><tbody>
+      <table data-hierarchy-display-mode={displayMode} data-instance-path-alignment={instancePathAlignment}><thead><tr><th>Copy</th>{displayMode === "signal" && <th>Signal</th>}{displayMode === "relative" && <><th>Relative Path</th><th>Signal</th></>}{displayMode === "full" && <th>Full Path</th>}{displayMode === "split" && <><th>Instance Path</th><th>Signal</th></>}<th>Role</th><th>Type</th><th>Width</th><th>Group</th>{displayMode !== "full" && <th>Full Path</th>}</tr></thead><tbody>
         {firstVisibleIndex > 0 && <tr aria-hidden="true" className="hierarchy-virtual-spacer"><td colSpan={columnCount} style={{ height: firstVisibleIndex * HIERARCHY_ROW_HEIGHT }} /> </tr>}
-        {mountedEntries.map((entry) => <tr key={entry.signalId} data-hierarchy-row-id={entry.signalId} data-selected={String(entry.signalId === selectedSignalId)}><td><div className="hierarchy-copy-actions"><input type="checkbox" aria-label={`Select path ${entry.fullPath} for copying`} checked={copySelection.has(entry.signalId)} onChange={() => toggleCopySelection(entry.signalId)} /><button type="button" aria-label={`Copy full path ${entry.fullPath}`} onClick={() => { void copyPaths([entry.fullPath]); }}>Copy</button></div></td>{displayMode === "signal" && <td><button type="button" onClick={() => onSelect(entry.signalId)}>{entry.signalName}</button></td>}{displayMode === "relative" && <><td>{entry.relativePath}</td><td><button type="button" onClick={() => onSelect(entry.signalId)}>{entry.signalName}</button></td></>}{displayMode === "full" && <td title={entry.fullPath}><button type="button" onClick={() => onSelect(entry.signalId)}>{entry.fullPath}</button></td>}{displayMode === "split" && <><td>{entry.instancePath}</td><td><button type="button" onClick={() => onSelect(entry.signalId)}>{entry.signalName}</button></td></>}<td>{entry.role}</td><td>{entry.type}</td><td>{entry.width}</td><td>{entry.groupName}</td>{displayMode !== "full" && <td title={entry.fullPath}>{entry.fullPath}</td>}</tr>)}
+        {mountedEntries.map((entry) => <tr key={entry.signalId} data-hierarchy-row-id={entry.signalId} data-selected={String(entry.signalId === selectedSignalId)}><td><div className="hierarchy-copy-actions"><input type="checkbox" aria-label={`Select path ${entry.fullPath} for copying`} checked={copySelection.has(entry.signalId)} onChange={() => toggleCopySelection(entry.signalId)} /><button type="button" aria-label={`Copy full path ${entry.fullPath}`} onClick={() => { void copyPaths([entry.fullPath]); }}>Copy</button></div></td>{displayMode === "signal" && <td><button type="button" onClick={() => onSelect(entry.signalId)}>{entry.signalName}</button></td>}{displayMode === "relative" && <><td title={entry.relativePath}><span className="hierarchy-path-text">{compactHierarchyPath(entry.relativePath)}</span></td><td><button type="button" onClick={() => onSelect(entry.signalId)}>{entry.signalName}</button></td></>}{displayMode === "full" && <td title={entry.fullPath}><button type="button" className="hierarchy-path-text" onClick={() => onSelect(entry.signalId)}>{compactHierarchyPath(entry.fullPath)}</button></td>}{displayMode === "split" && <><td className="hierarchy-instance-path" title={entry.instancePath}><span className="hierarchy-path-text">{compactHierarchyPath(entry.instancePath)}</span></td><td><button type="button" onClick={() => onSelect(entry.signalId)}>{entry.signalName}</button></td></>}<td>{entry.role}</td><td>{entry.type}</td><td>{entry.width}</td><td>{entry.groupName}</td>{displayMode !== "full" && <td title={entry.fullPath}><span className="hierarchy-path-text">{compactHierarchyPath(entry.fullPath)}</span></td>}</tr>)}
         {lastVisibleIndex < visibleEntries.length && <tr aria-hidden="true" className="hierarchy-virtual-spacer"><td colSpan={columnCount} style={{ height: (visibleEntries.length - lastVisibleIndex) * HIERARCHY_ROW_HEIGHT }} /> </tr>}
       </tbody></table>
     </div>

@@ -464,6 +464,15 @@ test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registra
   await displayMode.selectOption("full");
   await expect(hierarchy.locator("[data-hierarchy-row-id='sig_cycle_data']")).toContainText("dut.data[7:0]");
   await displayMode.selectOption("split");
+  const instancePathAlignment = hierarchy.getByLabel("Instance Path alignment");
+  for (const alignment of ["left", "center", "right"] as const) {
+    await instancePathAlignment.selectOption(alignment);
+    const alignedCell = hierarchy.locator("td.hierarchy-instance-path").first();
+    await expect(alignedCell).toHaveCSS("text-align", alignment);
+  }
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+  await expect(page.getByTestId("history-status")).toHaveText(beforeHistory!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(beforeDirty!);
   await hierarchy.getByTestId("hierarchy-path-view").click();
   await expect(hierarchy.getByTestId("hierarchy-path-view")).toHaveAttribute("aria-pressed", "true");
   await hierarchy.getByLabel("Hierarchy scope", { exact: true }).selectOption("dut");
@@ -482,7 +491,8 @@ test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registra
   await hierarchy.getByRole("button", { name: "Close hierarchy" }).click();
   await page.getByRole("button", { name: "Add signal or group" }).click();
   await page.getByTestId("bulk-register-open").click();
-  await page.getByLabel("Bulk signal definitions").fill("dut.core.status binary\ndut.core.payload[7:0] bus");
+  const longHierarchyPath = "dut.core.u_dma.u_axi.request_controller.request_ready";
+  await page.getByLabel("Bulk signal definitions").fill(`dut.core.status binary\ndut.core.payload[7:0] bus\n${longHierarchyPath} binary`);
   await page.getByTestId("bulk-register-preview-button").click();
   await expect(page.getByTestId("bulk-register-preview")).toContainText("width 8");
   await page.getByTestId("bulk-register-apply").click();
@@ -490,6 +500,15 @@ test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registra
   await page.getByRole("button", { name: "More tree actions" }).click();
   await page.getByTestId("hierarchy-open").click();
   const nestedHierarchy = page.getByTestId("hierarchy-browser");
+  await nestedHierarchy.getByLabel("Hierarchy display mode").selectOption("full");
+  await nestedHierarchy.getByLabel("Search hierarchy paths").fill(longHierarchyPath);
+  const longPathRow = nestedHierarchy.locator("tr[data-hierarchy-row-id]").first();
+  const displayedLongPath = longPathRow.locator("td[title]").first();
+  await expect(displayedLongPath).toHaveAttribute("title", longHierarchyPath);
+  await expect(displayedLongPath).toContainText("…");
+  await expect(displayedLongPath).toContainText("request_ready");
+  await expect(nestedHierarchy.getByRole("button", { name: `Copy full path ${longHierarchyPath}` })).toBeVisible();
+  await nestedHierarchy.getByLabel("Search hierarchy paths").fill("");
   await nestedHierarchy.getByLabel("Hierarchy display mode").selectOption("relative");
   await nestedHierarchy.getByLabel("Hierarchy scope", { exact: true }).selectOption("dut.core");
   const nestedStatus = nestedHierarchy.locator("tr[data-hierarchy-row-id]").filter({ hasText: "status" });

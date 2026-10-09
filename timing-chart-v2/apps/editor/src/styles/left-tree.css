@@ -256,6 +256,10 @@
 .hierarchy-browser .hierarchy-virtual-spacer td { padding: 0; border: 0; }
 .hierarchy-browser tr[data-selected="true"] { background: #e4f1ff; }
 .hierarchy-browser td button { border: 0; padding: 0; background: transparent; color: #145e9f; text-decoration: underline; cursor: pointer; }
+.hierarchy-browser .hierarchy-path-text { display: inline-block; max-width: 52ch; overflow: hidden; text-overflow: clip; vertical-align: bottom; }
+.hierarchy-browser table[data-instance-path-alignment="left"] .hierarchy-instance-path { text-align: left; }
+.hierarchy-browser table[data-instance-path-alignment="center"] .hierarchy-instance-path { text-align: center; }
+.hierarchy-browser table[data-instance-path-alignment="right"] .hierarchy-instance-path { text-align: right; }
 
 .surface-host [data-role="tree-signal-role"],
 .surface-host [data-role="signal-role"] {
