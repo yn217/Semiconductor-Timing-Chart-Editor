@@ -18,16 +18,9 @@ import {
   type TimeGroupId,
   type TransactionId,
 } from "@timing-chart-v2/schema";
-import { canonicalFixture } from "../fixtures/canonical.js";
+import { canonicalFixture, canonicalFixtureWithStableValueIds } from "../fixtures/canonical.js";
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
-const canonicalFixtureWithStableValueIds = (): CanonicalDocument => {
-  const document = clone(canonicalFixture());
-  for (const signal of document.signals) {
-    if (signal.type !== "clock" && "values" in signal) signal.values = signal.values.map((value, index) => ({ ...value, id: `value_${signal.id}_${index}` }));
-  }
-  return document;
-};
 
 describe("canonical v2 schema and roundtrip", () => {
   it("assigns deterministic stable IDs to legacy v2 Transaction Phases and preserves them on Save/Open", () => {

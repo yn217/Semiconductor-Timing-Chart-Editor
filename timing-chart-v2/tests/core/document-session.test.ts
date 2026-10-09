@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import { DocumentSession } from "@timing-chart-v2/core";
 import { isTrustedParsedCanonicalDocument, parseDocument } from "@timing-chart-v2/schema";
 import { DOCUMENT_RESOURCE_BUDGET } from "@timing-chart-v2/schema";
-import { canonicalFixture } from "../fixtures/canonical.js";
+import { canonicalFixture, canonicalFixtureWithStableValueIds } from "../fixtures/canonical.js";
 
 describe("DocumentSession atomic Open/Save", () => {
   it("preserves structurally shared frozen branches on a local commit", () => {
-    const session = new DocumentSession(canonicalFixture());
+    const session = new DocumentSession(canonicalFixtureWithStableValueIds());
     const before = session.getSnapshot();
     const next = { ...before.document, document: { ...before.document.document, title: "Local edit" } };
     const after = session.commit(next, before.revision);
@@ -120,7 +120,7 @@ describe("DocumentSession atomic Open/Save", () => {
   });
 
   it("saves deterministically and reopens without semantic change", () => {
-    const session = new DocumentSession(canonicalFixture());
+    const session = new DocumentSession(canonicalFixtureWithStableValueIds());
     const beforeMetrics = session.metrics();
     const first = session.save();
     expect(first.ok).toBe(true);

@@ -3,7 +3,7 @@ import { CommandHistorySession } from "@timing-chart-v2/history";
 import { DocumentSession } from "@timing-chart-v2/core";
 import { DOCUMENT_RESOURCE_BUDGET, validateCanonicalDocument, type Annotation, type Bookmark, type CanonicalDocument, type CommandId, type GroupId, type Signal, type SignalId, type SpacerId, type TimeGroup, type Transaction } from "@timing-chart-v2/schema";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
-import { canonicalFixture } from "../fixtures/canonical.js";
+import { canonicalFixture, canonicalFixtureWithStableValueIds } from "../fixtures/canonical.js";
 
 const commandId = (value: string) => value as CommandId;
 const ACTIONS_PER_SEED = 320;
@@ -28,16 +28,8 @@ function generatedSignal(id: SignalId, index: number): Signal {
   };
 }
 
-function fixtureWithStableValueIds(): CanonicalDocument {
-  const document = canonicalFixture();
-  for (const signal of document.signals) {
-    if (signal.type !== "clock" && "values" in signal) signal.values = signal.values.map((value, index) => ({ ...value, id: `value_${signal.id}_${index}` }));
-  }
-  return document;
-}
-
 function variedPropertyFixture(): CanonicalDocument {
-  const base = fixtureWithStableValueIds();
+  const base = canonicalFixtureWithStableValueIds();
   const commentId = "sig_comment_property" as SignalId;
   const spacerId = "spacer_property" as SpacerId;
   const auxiliaryGroupId = "grp_aux_property" as GroupId;
@@ -171,7 +163,7 @@ describe("SemanticCommand state machine foundation", () => {
       { name: "group-rename", command: { id: commandId("metamorphic_group_rename"), type: "group.rename", groupId: "grp_main" as GroupId, name: "Main Renamed" } },
     ];
     for (const testCase of cases) {
-      const session = new CommandHistorySession(fixtureWithStableValueIds());
+      const session = new CommandHistorySession(canonicalFixtureWithStableValueIds());
       const before = waveformSemantics(session.getSnapshot().document);
       const result = session.execute(testCase.command);
       expect(result, testCase.name).toMatchObject({ ok: true });

@@ -1,9 +1,9 @@
 import { expect, it } from "vitest";
 import { buildTimeGroupHierarchy, cachedTimeGroupHierarchy, parseDocument, serializeCanonicalDocument, validateCanonicalDocument, type TimeGroup, type TimeGroupId } from "@timing-chart-v2/schema";
-import { canonicalFixture } from "../fixtures/canonical.js";
+import { canonicalFixtureWithStableValueIds } from "../fixtures/canonical.js";
 
 const group = (id: string, start: number, end: number, parentId?: string): TimeGroup => ({ id: id as TimeGroupId, name: id, start, end, ...(parentId === undefined ? {} : { parentId: parentId as TimeGroupId }) });
-const document = (timeGroups: readonly TimeGroup[]) => ({ ...canonicalFixture(), timeGroups });
+const document = (timeGroups: readonly TimeGroup[]) => ({ ...canonicalFixtureWithStableValueIds(), timeGroups });
 
 it("keeps old flat documents as roots and preserves nested Save/Open exactly", () => {
   const flat = document([group("a", 0, 8), group("b", 1, 3)]);
