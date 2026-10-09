@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 import { startInCycleSample } from "./cycle-startup.js";
 
 startInCycleSample(test);
@@ -12,6 +13,23 @@ function revisionNumber(value: string | null) {
   const match = value?.match(/Canonical revision (\d+)/);
   expect(match).not.toBeNull();
   return Number(match?.[1]);
+}
+
+async function saveDocument(page: Page) {
+  const ribbon = page.getByTestId("ribbon");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  const downloadPromise = page.waitForEvent("download");
+  await ribbon.getByRole("button", { name: "Save", exact: true }).click();
+  const path = await (await downloadPromise).path();
+  if (!path) throw new Error("Save did not produce a document file.");
+  const document = JSON.parse(await readFile(path, "utf8"));
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  return document as { signals: Array<Record<string, any>> };
+}
+
+function valueChangeIds(signal: Record<string, any>): string[] {
+  return (signal.type === "clock" ? signal.enable ?? [] : signal.type === "commentRow" ? [] : signal.values ?? [])
+    .flatMap((change: Record<string, unknown>) => typeof change.id === "string" ? [change.id] : []);
 }
 
 const clipboardCollisionSignal = {
@@ -96,6 +114,9 @@ test("Copy is view-only and Duplicate/Paste use one canonical command with fresh
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   const ribbon = page.getByTestId("ribbon");
+  const beforeDocument = await saveDocument(page);
+  const sourceSignal = beforeDocument.signals.find((signal) => signal.id === "sig_cycle_request")!;
+  const sourceChangeIds = valueChangeIds(sourceSignal);
   const beforeRevision = await page.getByTestId("revision-status").textContent();
   const beforeHistory = await page.getByTestId("history-status").textContent();
   const initialRevision = revisionNumber(beforeRevision);
@@ -106,6 +127,12 @@ test("Copy is view-only and Duplicate/Paste use one canonical command with fresh
   await ribbon.locator(".home-edit-group").getByRole("button", { name: "Duplicate", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("selection-status")).toHaveText("REQUEST_duplicate");
+  const afterDuplicate = await saveDocument(page);
+  const duplicate = afterDuplicate.signals.find((signal) => signal.name === "REQUEST_duplicate")!;
+  const duplicateChangeIds = valueChangeIds(duplicate);
+  expect(duplicateChangeIds).toHaveLength(sourceChangeIds.length);
+  expect(duplicateChangeIds.some((id) => sourceChangeIds.includes(id))).toBe(false);
+  expect(new Set([...sourceChangeIds, ...duplicateChangeIds]).size).toBe(sourceChangeIds.length + duplicateChangeIds.length);
   expect(revisionNumber(await page.getByTestId("revision-status").textContent())).toBe(initialRevision + 1);
   await expect(page.getByTestId("history-status")).toHaveText(/History 1 \/ Redo 0/);
   const ids = await host.locator("[data-role='frozen-row']").evaluateAll((rows) => rows.map((row) => row.getAttribute("data-row-id")));
@@ -116,6 +143,12 @@ test("Copy is view-only and Duplicate/Paste use one canonical command with fresh
   await ribbon.getByRole("button", { name: "Paste", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("selection-status")).toHaveText("REQUEST_copy");
+  const afterPaste = await saveDocument(page);
+  const pasted = afterPaste.signals.find((signal) => signal.name === "REQUEST_copy")!;
+  const pastedChangeIds = valueChangeIds(pasted);
+  expect(pastedChangeIds).toHaveLength(sourceChangeIds.length);
+  expect(pastedChangeIds.some((id) => [...sourceChangeIds, ...duplicateChangeIds].includes(id))).toBe(false);
+  expect(new Set([...sourceChangeIds, ...duplicateChangeIds, ...pastedChangeIds]).size).toBe(sourceChangeIds.length + duplicateChangeIds.length + pastedChangeIds.length);
   expect(revisionNumber(await page.getByTestId("revision-status").textContent())).toBe(initialRevision + 3);
   await expect(page.getByTestId("history-status")).toHaveText(/History 1 \/ Redo 0/);
 });

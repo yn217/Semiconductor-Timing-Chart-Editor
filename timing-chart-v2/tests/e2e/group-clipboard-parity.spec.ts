@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import type { SignalId, TransactionId } from "@timing-chart-v2/schema";
@@ -6,6 +6,21 @@ import { startInCycleSample } from "./cycle-startup.js";
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 
 startInCycleSample(test);
+
+async function saveCanonicalDocument(page: Page) {
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const path = await (await downloadPromise).path();
+  if (!path) throw new Error("Save did not produce a document file.");
+  const value = JSON.parse(await readFile(path, "utf8"));
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  return value as { signalGroups: Array<{ id: string; name: string; rows: string[] }>; signals: Array<Record<string, any>> };
+}
+
+function signalChanges(signal: Record<string, any>) {
+  return signal.type === "clock" ? signal.enable ?? [] : signal.type === "commentRow" ? [] : signal.values ?? [];
+}
 
 test("duplicates a 2000-row Group with fresh identities and exact one-step Undo/Redo", async ({ page }) => {
   test.setTimeout(120_000);
@@ -104,18 +119,31 @@ test("copies, pastes, and duplicates a group as one semantic batch", async ({ pa
   expect(copiedGroup.rows).toHaveLength(originalGroup.rows.length);
   expect(new Set(copiedGroup.rows)).not.toEqual(new Set(originalGroup.rows));
   const originalSignals = new Map(savedDocument.signals.filter((signal: { id: string }) => originalGroup.rows.includes(signal.id)).map((signal: { id: string; source: unknown }) => [signal.id, signal]));
-  for (const rowId of copiedGroup.rows) {
-    const copiedSignal = savedDocument.signals.find((signal: { id: string }) => signal.id === rowId);
-    const originalSignal = [...originalSignals.values()].find((signal: { source: unknown }) => JSON.stringify(signal.source) === JSON.stringify(copiedSignal.source));
-    expect(copiedSignal).toBeTruthy();
-    expect(originalSignal).toBeTruthy();
-    expect(copiedSignal.id).not.toBe(originalSignal.id);
+  const originalNestedIds = new Set([...originalSignals.values()].flatMap((signal: Record<string, any>) => signalChanges(signal).flatMap((change: Record<string, unknown>) => typeof change.id === "string" ? [change.id] : [])));
+  const copiedNestedIds: string[] = [];
+  for (const copiedGroup of copiedGroups.filter((group: { id: string }) => group.id !== originalGroup.id)) {
+    for (let index = 0; index < copiedGroup.rows.length; index += 1) {
+      const copiedSignal = savedDocument.signals.find((signal: { id: string }) => signal.id === copiedGroup.rows[index]);
+      const originalSignal = savedDocument.signals.find((signal: { id: string }) => signal.id === originalGroup.rows[index]);
+      expect(copiedSignal).toBeTruthy();
+      expect(originalSignal).toBeTruthy();
+      expect(copiedSignal!.id).not.toBe(originalSignal!.id);
+      expect(signalChanges(copiedSignal!).map(({ id: _id, ...change }: Record<string, unknown>) => change)).toEqual(signalChanges(originalSignal!).map(({ id: _id, ...change }: Record<string, unknown>) => change));
+      const sourceIds = signalChanges(originalSignal!).flatMap((change: Record<string, unknown>) => typeof change.id === "string" ? [change.id] : []);
+      const copiedIds = signalChanges(copiedSignal!).flatMap((change: Record<string, unknown>) => typeof change.id === "string" ? [change.id] : []);
+      expect(copiedIds).toHaveLength(sourceIds.length);
+      expect(copiedIds.some((id: string) => sourceIds.includes(id))).toBe(false);
+      copiedNestedIds.push(...copiedIds);
+    }
   }
+  expect(new Set([...originalNestedIds, ...copiedNestedIds]).size).toBe(originalNestedIds.size + copiedNestedIds.length);
 
   const savedPath = await (await download).path();
+  expect(savedPath).toBeTruthy();
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  expect(await saveCanonicalDocument(page)).toEqual(savedDocument);
 });
 
 test("cuts and pastes a group with its rows as one semantic batch", async ({ page }) => {
@@ -124,6 +152,9 @@ test("cuts and pastes a group with its rows as one semantic batch", async ({ pag
   const surface = host.locator("[data-role='timing-chart-surface']");
   const ribbon = page.getByTestId("ribbon");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const before = await saveCanonicalDocument(page);
+  const originalGroup = before.signalGroups.find((group) => group.id === "grp_cycle_payload")!;
+  const originalSignals = new Map(before.signals.filter((signal) => originalGroup.rows.includes(signal.id)).map((signal) => [signal.id, signal]));
   await host.locator("[data-role='left-group-header'][data-group-id='grp_cycle_payload'] [data-role='tree-branch']").click();
   await ribbon.getByRole("button", { name: "Cut", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
@@ -140,6 +171,13 @@ test("cuts and pastes a group with its rows as one semantic batch", async ({ pag
   expect(groups).toHaveLength(1);
   expect(groups[0].id).not.toBe("grp_cycle_payload");
   expect(groups[0].rows).toHaveLength(3);
+  expect(groups[0].rows).toEqual(originalGroup.rows);
+  for (const rowId of groups[0].rows as string[]) {
+    const beforeSignal = originalSignals.get(rowId)!;
+    const afterSignal = savedDocument.signals.find((signal: { id: string }) => signal.id === rowId)!;
+    expect(signalChanges(afterSignal).map(({ id: _id, ...change }: Record<string, unknown>) => change)).toEqual(signalChanges(beforeSignal).map(({ id: _id, ...change }: Record<string, unknown>) => change));
+    expect(signalChanges(afterSignal).map((change: Record<string, unknown>) => change.id)).toEqual(signalChanges(beforeSignal).map((change: Record<string, unknown>) => change.id));
+  }
 });
 
 test("Group Cut → Paste preserves external Transaction links through the production clipboard route", async ({ page }) => {
@@ -163,6 +201,8 @@ test("Group Cut → Paste preserves external Transaction links through the produ
   });
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const before = await saveCanonicalDocument(page);
+  const originalSignal = before.signals.find((signal) => signal.id === linkedSignal.id)!;
   const ribbon = page.getByTestId("ribbon");
   const groupHeader = host.locator("[data-role='left-group-header'][data-group-id='grp_linked_payload']");
   await groupHeader.locator("[data-role='tree-branch']").click();
@@ -181,7 +221,10 @@ test("Group Cut → Paste preserves external Transaction links through the produ
   expect(pastedGroup).toBeTruthy();
   expect(pastedGroup!.id).not.toBe("grp_linked_payload");
   expect(pastedGroup!.rows).toHaveLength(1);
-  expect(pastedGroup!.rows[0]).not.toBe(linkedSignal.id);
+  expect(pastedGroup!.rows[0]).toBe(linkedSignal.id);
+  const restoredSignal = saved.signals.find((signal) => signal.id === linkedSignal.id)!;
+  expect(signalChanges(restoredSignal).map(({ id: _id, ...change }: Record<string, unknown>) => change)).toEqual(signalChanges(originalSignal).map(({ id: _id, ...change }: Record<string, unknown>) => change));
+  expect(signalChanges(restoredSignal).map((change: Record<string, unknown>) => change.id)).toEqual(signalChanges(originalSignal).map((change: Record<string, unknown>) => change.id));
   expect(saved.transactions.find((transaction) => transaction.id === "txn_linked_payload")?.linkedSignals)
     .toEqual([clockId, pastedGroup!.rows[0] as SignalId]);
 });

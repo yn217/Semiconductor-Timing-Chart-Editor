@@ -8,11 +8,12 @@ import { groupId, signalId } from "../minimal-cycle-view-fixture-helpers.js";
 import { annotationClipboardStatus, captureAnnotationClipboard, createAnnotationsFromClipboard, cutAnnotations, selectedAnnotations, type AnnotationClipboard } from "./annotation-clipboard.js";
 import { captureGroupTransactionLinks, remapGroupTransactionLinks, type GroupTransactionSignalLink } from "./group-clipboard-links.js";
 import { createClipboardIndexes, resolveClipboardSignalGroupTarget, resolveGroupSignalsInRowOrder } from "./group-clipboard-selection.js";
+import { copySignalWithFreshValueChangeIds } from "./signal-clipboard-identity.js";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
 import type { SelectionOwner } from "./use-selection-owner.js";
 
 type SignalClipboardItem = Readonly<{ signal: Signal; groupId: GroupId; index: number }>;
-type GroupClipboardItem = Readonly<{ group: SignalGroup; rows: readonly Signal[]; sourceIndex: number; cutLinks?: readonly GroupTransactionSignalLink[] }>;
+type GroupClipboardItem = Readonly<{ group: SignalGroup; rows: readonly Signal[]; sourceIndex: number; cutLinks?: readonly GroupTransactionSignalLink[]; move?: boolean }>;
 type SpacerClipboardItem = Readonly<{ spacer: SpacerRow; groupId: GroupId; index: number }>;
 const spacerId = (value: string) => value as SpacerId;
 export const NO_SIGNAL_GROUP_STATUS = "No Signal Group to insert into";
@@ -135,7 +136,7 @@ export function useClipboardActions({ application, selection }: { application: E
       commands.push({ id: nextCommandId("cut_group_delete"), type: "group.delete", groupId: value.group.id });
       const result = application.executeBatch(nextCommandId("cut_group"), commands);
       if (result.ok) {
-        setClipboard({ group: { group: value.group, rows, sourceIndex: value.document.signalGroups.indexOf(value.group), cutLinks } });
+        setClipboard({ group: { group: value.group, rows, sourceIndex: value.document.signalGroups.indexOf(value.group), cutLinks, move: true } });
         selection.clear();
         setStatus(`Cut ${value.group.name} group`);
       } else setStatus("Cannot cut Group: one or more rows have dependent Annotations or protected references.");
@@ -209,7 +210,8 @@ export function useClipboardActions({ application, selection }: { application: E
       const id = signalId(allocateId(source.signal.type === "commentRow" ? "commentRow" : "signal"));
       const copyOrdinal = created.length + 1;
       const name = `${source.signal.display.name}_${operation === "duplicate" ? "duplicate" : "copy"}${input.length > 1 ? `_${copyOrdinal}` : ""}`;
-      const signal: Signal = { ...source.signal, id, name, display: { ...source.signal.display, name } };
+      const copied = copySignalWithFreshValueChangeIds(source.signal, id, () => allocateId("signalValueChange"));
+      const signal: Signal = { ...copied, name, display: { ...source.signal.display, name } };
       created.push(signal);
       const bucket = createdByGroup.get(target.id) ?? { target, signals: [] };
       bucket.signals.push(signal);
@@ -238,6 +240,7 @@ export function useClipboardActions({ application, selection }: { application: E
     const current = document();
     const allocateId = createEntityIdAllocator(current);
     const newGroupId = groupId(allocateId("group"));
+    const moving = operation === "paste" && input.move === true;
     const sourceSignalsById = new Map(input.rows.map((signal) => [signal.id, signal]));
     const sourceSpacers = new Map<string, SpacerRow>((input.group.spacers ?? []).map((item) => [item.id, item]));
     const newIdByOldId = new Map<string, string>();
@@ -247,16 +250,16 @@ export function useClipboardActions({ application, selection }: { application: E
     for (const rowId of input.group.rows) {
       const source = sourceSignalsById.get(rowId as SignalId);
       if (source) {
-        const id = signalId(allocateId(source.type === "commentRow" ? "commentRow" : "signal"));
-        const signal: Signal = { ...source, id };
+        const id = moving ? source.id : signalId(allocateId(source.type === "commentRow" ? "commentRow" : "signal"));
+        const signal: Signal = moving ? source : copySignalWithFreshValueChangeIds(source, id, () => allocateId("signalValueChange"));
         createdSignals.push(signal);
         newIdByOldId.set(rowId, id);
         newSignalIdByOldId.set(rowId as SignalId, id);
       } else {
         const sourceSpacer = sourceSpacers.get(rowId);
         if (!sourceSpacer) { setStatus(`Cannot ${operation} Group: a source row is missing.`); return; }
-        const id = spacerId(allocateId("spacer"));
-        createdSpacers.push({ ...sourceSpacer, id });
+        const id = moving ? sourceSpacer.id : spacerId(allocateId("spacer"));
+        createdSpacers.push(moving ? sourceSpacer : { ...sourceSpacer, id });
         newIdByOldId.set(rowId, id);
       }
     }
@@ -284,7 +287,7 @@ export function useClipboardActions({ application, selection }: { application: E
     }
     const result = application.executeBatch(nextCommandId(`${operation}_group_batch`), commands);
     if (result.ok) {
-      if (operation === "paste" && input.cutLinks?.length) groupRef.current = { ...input, cutLinks: [] };
+      if (operation === "paste" && input.move) groupRef.current = { ...input, cutLinks: [], move: false };
       selection.selectGroup(newGroupId);
       setStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${input.group.name} group`);
     } else setStatus(`Cannot ${operation} Group: its linked references could not be preserved.`);

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import { canonicalFixture } from "../fixtures/canonical.js";
 import { startInCycleSample } from "./cycle-startup.js";
 import { snapshotAnnotationIds, waitForCreatedAnnotationId } from "./annotation-identity.js";
 
@@ -48,6 +49,18 @@ test("Signal Cut/Paste restores the same stable ID and name in the target Group"
   await signal.click();
   const originalName = await signal.getAttribute("data-name");
   const ribbon = page.getByTestId("ribbon");
+  const saveDocument = async () => {
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+    const downloadPromise = page.waitForEvent("download");
+    await ribbon.getByRole("button", { name: "Save", exact: true }).click();
+    const path = await (await downloadPromise).path();
+    expect(path).toBeTruthy();
+    const saved = JSON.parse(readFileSync(path!, "utf8")) as { signals: Array<{ id: string; values?: Array<{ id?: string; start: number; value: string | number }> }> };
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+    return saved;
+  };
+  const before = await saveDocument();
+  const sourceSignal = before.signals.find((item) => item.id === "sig_cycle_request")!;
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   await ribbon.getByRole("button", { name: "Cut", exact: true }).click();
   await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toHaveCount(0);
@@ -57,6 +70,78 @@ test("Signal Cut/Paste restores the same stable ID and name in the target Group"
   await expect(restored).toBeVisible();
   await expect(restored).toHaveAttribute("data-name", originalName!);
   await expect(restored).toHaveAttribute("data-group-id", "grp_cycle_payload");
+  const after = await saveDocument();
+  const restoredSignal = after.signals.find((item) => item.id === "sig_cycle_request")!;
+  expect(restoredSignal.values?.map(({ id }) => id)).toEqual(sourceSignal.values?.map(({ id }) => id));
+});
+
+test("Clock Duplicate and Copy/Paste allocate fresh enable-change IDs through Home", async ({ page }) => {
+  const source = canonicalFixture();
+  const clockSource = source.signals.find((signal) => signal.type === "clock");
+  if (clockSource?.type !== "clock") throw new Error("Canonical fixture must contain a Clock Signal.");
+  const clock = {
+    ...clockSource,
+    id: "sig_clipboard_clock" as typeof clockSource.id,
+    name: "CLIPBOARD_CLK",
+    display: { ...clockSource.display, name: "CLIPBOARD_CLK" },
+    enable: [
+      { id: "clock_enable_start", start: 1, value: 1 },
+      { id: "clock_enable_stop", start: 5, value: 0 },
+    ],
+  };
+  const document = {
+    ...source,
+    timeline: { ...source.timeline, referenceClock: clock.id, labelAnchors: [] },
+    signalGroups: [{ ...source.signalGroups[0]!, rows: [clock.id], spacers: [] }],
+    signals: [clock],
+    transactions: [],
+    annotations: [],
+    annotationGroups: [],
+    timeGroups: [],
+    constraints: [],
+  };
+  await page.goto("/");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "clock-copy.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  let savedPath: string | undefined;
+  const save = async () => {
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+    savedPath = await (await downloadPromise).path() ?? undefined;
+    expect(savedPath).toBeTruthy();
+    const saved = JSON.parse(readFileSync(savedPath!, "utf8")) as { signals: Array<{ id: string; name: string; type: string; enable?: Array<{ id?: string; start: number; value: number }> }> };
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+    return saved;
+  };
+  const hostClock = host.locator(`[data-role='frozen-row'][data-row-id='${clock.id}']`);
+  await expect(hostClock).toBeVisible();
+  const originalEnableIds = (await save()).signals.find((signal) => signal.id === clock.id)!.enable!.map((change) => change.id!);
+  await hostClock.click();
+  const ribbon = page.getByTestId("ribbon");
+  await ribbon.getByRole("button", { name: "Duplicate", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const afterDuplicate = await save();
+  const duplicate = afterDuplicate.signals.find((signal) => signal.name === "CLIPBOARD_CLK_duplicate")!;
+  expect(duplicate.type).toBe("clock");
+  const duplicateIds = duplicate.enable!.map((change) => change.id!);
+  expect(duplicateIds).toHaveLength(originalEnableIds.length);
+  expect(duplicateIds.some((id) => originalEnableIds.includes(id))).toBe(false);
+
+  await hostClock.click();
+  await ribbon.getByRole("button", { name: "Copy", exact: true }).click();
+  await ribbon.getByRole("button", { name: "Paste", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const afterPaste = await save();
+  const pasted = afterPaste.signals.find((signal) => signal.name === "CLIPBOARD_CLK_copy")!;
+  const pastedIds = pasted.enable!.map((change) => change.id!);
+  expect(pastedIds).toHaveLength(originalEnableIds.length);
+  expect(pastedIds.some((id) => [...originalEnableIds, ...duplicateIds].includes(id))).toBe(false);
+  expect(new Set([...originalEnableIds, ...duplicateIds, ...pastedIds]).size).toBe(originalEnableIds.length + duplicateIds.length + pastedIds.length);
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  expect(await save()).toEqual(afterPaste);
 });
 
 test("same-document multi-Signal Cut/Paste restores Transaction links atomically and through Save/Open", async ({ page }) => {
