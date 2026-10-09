@@ -114,6 +114,8 @@ button, input, select { font: inherit; font-size: var(--ds-font-size); }
 .view-mode button.active { border-color: #1675d1; background: #e7f2ff; color: #0b63b5; }
 .column-headings { display: grid; grid-template-columns: 230px 210px minmax(640px, 1fr); height: 34px; position: relative; z-index: 20; border-bottom: 1px solid #b9c4d2; background: #f5f7fa; color: #435069; font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .05em; }
 .column-headings span { display: flex; align-items: center; padding: 0 12px; border-right: 1px solid #d6dde6; }
+/* The Signals / Transactions header cell sits against the left pane edge; its own divider read as a stray thin bar beside the More button. */
+.column-headings > .left-column-heading { border-right: 0; }
 .cycle-viewport { position: relative; height: 250px; overflow: auto; background: #fbfcfe; }
 .desktop-workspace { min-height: 0; display: grid; grid-template-columns: var(--gui-left-width) minmax(0, 1fr) var(--gui-inspector-width); grid-template-rows: var(--gui-workspace-header-height, 37px) minmax(260px, 1fr) 10px var(--gui-bottom-height); }
 .workspace-header { grid-column: 1 / 4; grid-row: 1; min-width: 0; min-height: 0; z-index: 30; }

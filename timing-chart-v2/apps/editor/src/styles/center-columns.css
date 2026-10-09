@@ -368,8 +368,8 @@
    this doesn't collide with "unclear checkbox meaning"-style ambiguity
    the Goal's Visual Quality checklist calls out for state that depends on
    color alone. */
-.cycle-viewport[data-active-pane="transaction"] .transaction-lanes { box-shadow: inset 0 0 0 2px var(--ds-focus-color, #2678bc); }
-.cycle-viewport[data-active-pane="signal"] .surface-host { box-shadow: inset 0 0 0 2px var(--ds-focus-color, #2678bc); }
+/* active pane ring removed: the active pane stays available as data-active-pane and in the status bar */
+/* active pane ring removed: the active pane stays available as data-active-pane and in the status bar */
 
 /* Signal Split View (#200): Upper/Lower panes each keep the ruler's
    existing `position: sticky` behavior (native to each pane's own

@@ -257,7 +257,8 @@ export function useEditorSecondarySurfaces(
       onCancel={() => dialog.setBottomResetToken((value) => value + 1)}
     />
   );
-  const workspaceHeader = (
+  // Combined shows two headers: Transactions over the Transaction pane and Signals / Groups over the Signal pane (like Cycle).
+  const renderTreeHeader = (transactionHeader: boolean) => (
     <SignalTreeColumnHeader
       treeTypeFilter={workspace.treeTypeFilter}
       onTreeTypeFilterChange={(value) =>
@@ -297,7 +298,7 @@ export function useEditorSecondarySurfaces(
       onMoveSelectedSignalsToGroup={input.actions.moveSelectedSignalsToGroup}
       onCloseMoreMenu={dialog.closeTreeMoreMenu}
       timeScaleLabel={
-        workspace.viewMode === "Transaction"
+        transactionHeader
           ? (() => {
               // Transaction Mode GUI realignment: the reference mockup's own
               // Time Scale readout is "TRANSACTION CYCLE (TC) | REFERENCE:
@@ -313,7 +314,7 @@ export function useEditorSecondarySurfaces(
             : "Time Scale: Cycle    Axis: Time"
       }
       transactionMode={
-        workspace.viewMode === "Transaction"
+        transactionHeader
           ? {
               filter: workspace.transactionTreeFilter,
               onFilterChange: workspace.setTransactionTreeFilter,
@@ -334,6 +335,8 @@ export function useEditorSecondarySurfaces(
       }
     />
   );
+  const workspaceHeader = renderTreeHeader(workspace.viewMode === "Transaction" || workspace.viewMode === "Split");
+  const workspaceSignalHeader = workspace.viewMode === "Split" ? renderTreeHeader(false) : undefined;
   // #429/#397 P0-2: Transaction Mode's "Transactions | Signals" tabs are
   // sidebar browse tabs. The center remains the Transaction timeline in both
   // states; only the left rail content changes.
@@ -561,6 +564,7 @@ export function useEditorSecondarySurfaces(
   return {
     surfaceCommands,
     workspaceHeader,
+    workspaceSignalHeader,
     workspaceTransactionTree,
     workspaceViewportContent,
     workspaceViewportLegend,

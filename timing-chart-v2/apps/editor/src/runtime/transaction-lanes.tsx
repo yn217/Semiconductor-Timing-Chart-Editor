@@ -272,7 +272,7 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
       button.dataset.dragSnapLayoutReads = "0";
     }
     dragThresholdCrossed.current = false;
-    const scrollViewport = buttonRef.current?.closest<HTMLElement>(".cycle-viewport") ?? undefined;
+    const scrollViewport = buttonRef.current?.closest<HTMLElement>(".split-transaction-pane")?.querySelector<HTMLElement>("[data-role='transaction-track-viewport']") ?? buttonRef.current?.closest<HTMLElement>(".cycle-viewport") ?? undefined;
     setDrag({ edge, documentEpoch, startClientX: event.clientX, scrollViewport, surfaceLeft: scrollViewport?.getBoundingClientRect().left });
     setPreview({ start: transaction.start, end: transaction.end });
   };
@@ -377,7 +377,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   useLayoutEffect(() => {
     if (!selectedId || (viewMode !== "Transaction" && viewMode !== "Split")) return;
     const laneRoot = owner.current;
-    const viewport = laneRoot?.closest<HTMLElement>(".cycle-viewport");
+    const viewport = laneRoot?.querySelector<HTMLElement>("[data-role='transaction-track-viewport']") && laneRoot.closest(".split-transaction-pane") ? laneRoot.querySelector<HTMLElement>("[data-role='transaction-track-viewport']") : laneRoot?.closest<HTMLElement>(".cycle-viewport");
     const target = laneRoot?.querySelector<HTMLElement>(`[data-transaction-id="${CSS.escape(selectedId)}"]`);
     if (!viewport || !target || target.dataset.hiddenInFold === "true") return;
     const viewportRect = viewport.getBoundingClientRect();
@@ -404,6 +404,8 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
     const laneRoot = owner.current;
     const viewport = laneRoot?.closest<HTMLElement>(".cycle-viewport");
     if (!viewport) { setHorizontalSourceWindow(undefined); return; }
+    // Combined: the clipped Track region follows the Signal pane's nested Timeline owner (scroll events do not bubble to `.cycle-viewport`).
+    const scrollSource = laneRoot?.querySelector<HTMLElement>("[data-role='transaction-track-viewport']") ?? viewport;
     const update = () => {
       const next = getVisibleSourceWindow(viewport);
       // A temporarily unavailable geometry window is not permission to mount
@@ -414,10 +416,12 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
     update();
     const refreshFrame = requestAnimationFrame(update);
     viewport.addEventListener("scroll", update, { passive: true });
+    if (scrollSource !== viewport) scrollSource.addEventListener("scroll", update, { passive: true });
     window.addEventListener("resize", update);
     return () => {
       cancelAnimationFrame(refreshFrame);
       viewport.removeEventListener("scroll", update);
+      if (scrollSource !== viewport) scrollSource.removeEventListener("scroll", update);
       window.removeEventListener("resize", update);
     };
   }, [documentEpoch, document.timeline.cycleCount, getVisibleSourceWindow, presentationRevision, viewMode, zoom]);
@@ -741,7 +745,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
         </span>;
       })}
     </div>
-      <div className="transaction-track" data-transaction-track="true" style={{ height: totalHeight }}>
+      <div className="transaction-track-viewport" data-role="transaction-track-viewport"><div className="transaction-track" data-transaction-track="true" style={{ height: totalHeight }}>
       <div className="transaction-geometry-guides" data-total-guide-count={cycleXs.length} data-mounted-guide-count={visibleGuideXs.length} aria-hidden="true">{visibleGuideXs.map((value) => <i className="transaction-geometry-line" key={`cycle-${value.cycle}`} data-cycle={value.cycle} style={{ left: value.x }} />)}</div>
       <div className="transaction-bookmark-markers" aria-label="Transaction bookmarks">{visibleBookmarks.map((bookmark) => { const left = x(bookmark.start); if (left === undefined) return null; const containingFold = bookmark.id === selectedBookmarkId ? (rawDocument.timeGroups ?? []).find((group) => group.presentation?.collapsed && bookmark.start >= group.start && bookmark.start < group.end) : undefined; return <button type="button" key={bookmark.id} data-bookmark-id={bookmark.id} data-source-cycle={bookmark.start} data-selected={String(bookmark.id === selectedBookmarkId)} aria-pressed={bookmark.id === selectedBookmarkId} {...(containingFold === undefined ? {} : { "data-inside-collapsed": containingFold.name })} aria-label={`Go to bookmark ${bookmark.name}`} title={`${bookmark.name}: ${bookmark.start}`} style={{ left }} onClick={() => onNavigateBookmark?.(bookmark.start, bookmark.id)} />; })}{hiddenBookmarkSummaries.map((summary) => { const left = x(summary.end) ?? x(summary.start); return left === undefined ? null : <button type="button" key={`fold-bookmarks-${summary.start}-${summary.end}`} className="transaction-fold-bookmark-summary" data-hidden-bookmark-count={summary.count} data-fold-start={summary.start} data-fold-end={summary.end} aria-label={`${summary.count} bookmarks inside collapsed range`} title={`${summary.count} bookmarks inside collapsed range`} style={{ left }} onClick={() => onNavigateBookmark?.(summary.start)} />; })}</div>
       {visibleGroupHeaders.map((header) => <div key={header.key} className="transaction-group-header-band" aria-hidden="true" style={{ top: header.trackTop, height: GROUP_HEADER_HEIGHT }} />)}
@@ -769,6 +773,6 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
           return <TransactionBar key={transaction.id} transaction={transaction} documentEpoch={documentEpoch} viewMode={viewMode} row={row} color={resolvedColor} selected={isTransactionSelected(transaction.id)} cycleCount={document.timeline.cycleCount} getBoundaryX={getScaledBoundaryX} boundaryXByCycle={boundaryXByCycle} visibleBoundaryXs={cycleXs} foldRanges={foldRanges} onSnap={onSnap} onSelect={onSelect} commands={commands} {...(onContextMenu === undefined ? {} : { onContextMenu })} />;
         })}
       </div>)}
-    </div>
+    </div></div>
   </section>;
 }

@@ -132,6 +132,7 @@ export interface EditorSecondarySurfacesInput {
 export interface EditorSecondarySurfacesOutput {
   readonly surfaceCommands: EditorSurfaceCommandController;
   readonly workspaceHeader: ReactNode;
+  readonly workspaceSignalHeader?: ReactNode;
   readonly workspaceTransactionTree: ReactNode;
   readonly workspaceViewportContent: ReactNode;
   readonly workspaceViewportLegend: ReactNode;
