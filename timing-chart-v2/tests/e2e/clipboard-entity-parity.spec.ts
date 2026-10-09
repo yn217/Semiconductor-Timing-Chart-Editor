@@ -75,6 +75,107 @@ test("Signal Cut/Paste restores the same stable ID and name in the target Group"
   expect(restoredSignal.values?.map(({ id }) => id)).toEqual(sourceSignal.values?.map(({ id }) => id));
 });
 
+test("Value Signal Duplicate and Copy/Paste allocate fresh nested IDs through Home and preserve them across Undo/Redo and Save/Open", async ({ page }) => {
+  const source = canonicalFixture();
+  const data = source.signals.find((signal) => signal.id === "sig_data");
+  if (data?.type === "clock" || data?.type === "commentRow" || !data) throw new Error("Canonical fixture must contain a Value Signal.");
+  const valueSignal = {
+    ...data,
+    values: [
+      { id: "value_data_reset", start: 0, value: "00", comment: "reset" },
+      { id: "value_data_payload", start: 4, value: "A5", displayLabel: "payload" },
+    ],
+  };
+  const extraSignal = {
+    ...valueSignal,
+    id: "sig_extra" as typeof valueSignal.id,
+    name: "EXTRA",
+    source: { ...valueSignal.source, signalName: "EXTRA" },
+    display: { ...valueSignal.display, name: "EXTRA" },
+    values: [
+      { id: "value_extra_reset", start: 0, value: "00", comment: "reset" },
+      { id: "value_extra_payload", start: 4, value: "5A", displayLabel: "payload" },
+    ],
+  };
+  const document = {
+    ...source,
+    signalGroups: [{ ...source.signalGroups[0]!, rows: [source.signals[0]!.id, valueSignal.id, extraSignal.id], spacers: [] }],
+    signals: [source.signals[0]!, valueSignal, extraSignal],
+    transactions: [],
+    annotations: [],
+    annotationGroups: [],
+    timeGroups: [],
+    constraints: [],
+  };
+  await page.goto("/");
+  const input = page.locator("input[type='file'][accept='.json,.tcd']");
+  await input.setInputFiles({ name: "value-signal-identity.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const ribbon = page.getByTestId("ribbon");
+  const home = () => page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true });
+  const save = async () => {
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+    const downloadPromise = page.waitForEvent("download");
+    await ribbon.getByRole("button", { name: "Save", exact: true }).click();
+    const path = await (await downloadPromise).path();
+    expect(path).toBeTruthy();
+    const saved = JSON.parse(readFileSync(path!, "utf8")) as { signals: Array<Record<string, any>> };
+    await home().click();
+    return { path: path!, saved };
+  };
+  const dataRow = host.locator(`[data-role='frozen-row'][data-row-id='${valueSignal.id}']`);
+  const extraRow = host.locator(`[data-role='frozen-row'][data-row-id='${extraSignal.id}']`);
+  await expect(dataRow).toBeVisible();
+  const before = await save();
+
+  await dataRow.click();
+  await home().click();
+  await ribbon.getByRole("button", { name: "Duplicate", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const duplicated = await save();
+  const originalIds = new Set(["value_data_reset", "value_data_payload"]);
+  const oneCopy = duplicated.saved.signals.find((signal) => signal.name === "DATA_duplicate")!;
+  expect(oneCopy).toBeTruthy();
+  expect(oneCopy.values.map(({ id: _id, ...change }) => change)).toEqual(valueSignal.values.map(({ id: _id, ...change }) => change));
+  expect(oneCopy.values.map(({ id }) => id).every((id: string) => !originalIds.has(id))).toBe(true);
+  await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
+  expect((await save()).saved).toEqual(before.saved);
+  await ribbon.getByRole("button", { name: "Redo", exact: true }).click();
+  expect((await save()).saved).toEqual(duplicated.saved);
+
+  await dataRow.click();
+  await home().click();
+  await ribbon.getByRole("button", { name: "Copy", exact: true }).click();
+  await ribbon.getByRole("button", { name: "Paste", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const pasted = await save();
+  const singlePaste = pasted.saved.signals.find((signal) => signal.name === "DATA_copy")!;
+  expect(singlePaste).toBeTruthy();
+  expect(singlePaste.values.map(({ id: _id, ...change }) => change)).toEqual(valueSignal.values.map(({ id: _id, ...change }) => change));
+
+  await dataRow.click();
+  await extraRow.click({ modifiers: ["Control"] });
+  await home().click();
+  await ribbon.getByRole("button", { name: "Duplicate", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const multi = await save();
+  const allChangeIds = multi.saved.signals.flatMap((signal) => signal.values?.map((change: { id?: string }) => change.id).filter((id: string | undefined): id is string => id !== undefined) ?? []);
+  expect(new Set(allChangeIds).size).toBe(allChangeIds.length);
+  for (const sourceSignal of [valueSignal, extraSignal]) {
+    const copies = multi.saved.signals.filter((signal) => signal.source.signalName === sourceSignal.source.signalName && signal.id !== sourceSignal.id);
+    expect(copies.length).toBeGreaterThanOrEqual(2);
+    for (const copy of copies) {
+      expect(copy.values.map(({ id: _id, ...change }) => change)).toEqual(sourceSignal.values.map(({ id: _id, ...change }) => change));
+      expect(copy.values.every(({ id }: { id?: string }) => typeof id === "string" && !sourceSignal.values.some((sourceChange) => sourceChange.id === id))).toBe(true);
+    }
+  }
+
+  await input.setInputFiles(pasted.path);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  expect((await save()).saved).toEqual(pasted.saved);
+});
+
 test("Clock Duplicate and Copy/Paste allocate fresh enable-change IDs through Home", async ({ page }) => {
   const source = canonicalFixture();
   const clockSource = source.signals.find((signal) => signal.type === "clock");
