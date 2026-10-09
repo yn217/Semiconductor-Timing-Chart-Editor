@@ -343,7 +343,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     const name = `${kind === "clock" ? "CLOCK" : kind.toUpperCase()}_${input.document.signals.length + 1}`;
     const signal = kind === "clock"
       ? { id, name, type: "clock" as const, role: "internal" as const, source: { instancePath: [], signalName: name }, display: { name }, generator: { start: 0, period: 2, duty: 0.5, phase: 0, initial: 0 as 0 | 1, polarity: "positive" as const }, edgeCounter: { show: false, mode: "both" as const, startNumber: 1, countFrom: "signal-start" as const, labelEvery: 1, position: "above" as const, offset: { x: 0, y: -6 } } }
-      : valueSignal(id, name, "internal", [{ start: 0, value: kind === "state" ? "IDLE" : kind === "bus" ? "00" : kind === "event" ? "NONE" : 0 }], kind === "bus" ? { type: "bus", width: 8, displayFormat: "hex" } : { type: kind === "signal" ? "binary" : kind });
+      : valueSignal(id, name, "internal", [{ id: nextEntityId("signalValueChange", input.document), start: 0, value: kind === "state" ? "IDLE" : kind === "bus" ? "00" : kind === "event" ? "NONE" : 0 }], kind === "bus" ? { type: "bus", width: 8, displayFormat: "hex" } : { type: kind === "signal" ? "binary" : kind });
     const result = input.commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", { id: input.nextCommandId("tree_add_signal"), type: "signal.create", signal, targetGroupId: targetGroup.id, index });
     if (result.ok) input.selection.selectSignal(id);
   };
@@ -367,7 +367,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
       } else {
         const type = definition.kind;
         const initialValue = type === "state" ? "IDLE" : type === "bus" ? "0" : type === "event" ? "NONE" : 0;
-        const signal = valueSignal(id, definition.signalName, "internal", [{ start: 0, value: initialValue }], type === "bus" ? { type, width: definition.width ?? 1, displayFormat: "hex" } : { type });
+        const signal = valueSignal(id, definition.signalName, "internal", [{ id: allocateId("signalValueChange"), start: 0, value: initialValue }], type === "bus" ? { type, width: definition.width ?? 1, displayFormat: "hex" } : { type });
         signals.push({ ...signal, source: { ...signal.source, instancePath: definition.instancePath } });
       }
     }

@@ -212,10 +212,16 @@ test("quick-start", async ({ page }) => {
   await ribbon.getByRole("button", { name: "Select All Signals", exact: true }).click();
   await ribbon.getByRole("button", { name: "Delete", exact: true }).click();
   await expect(page.locator(".editor-shell")).toHaveAttribute("data-signal-count", "0");
+  let expectedSignalCount = 0;
   const add = async (kind: string) => {
     await page.getByRole("button", { name: "Add signal or group", exact: true }).click();
     await page.getByRole("menu", { name: "Add signal or group" }).getByRole("menuitem", { name: kind, exact: true }).click();
-    await expect(host).toHaveAttribute("data-editor-idle", "true");
+    if (kind === "Group") await expect(page.getByTestId("inspector").getByLabel("Inspector group name")).toBeVisible();
+    else {
+      expectedSignalCount += 1;
+      await expect(page.locator(".editor-shell")).toHaveAttribute("data-signal-count", String(expectedSignalCount));
+      await expect(host).toHaveAttribute("data-editor-idle", "true");
+    }
   };
   await add("Group");
   const inspector = page.getByTestId("inspector");

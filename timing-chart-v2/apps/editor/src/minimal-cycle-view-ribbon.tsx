@@ -70,10 +70,11 @@ function Ribbon({ tab, document, revision, range, history, zoom, cyclesPerTc, on
     if (!target) return;
     const id = nextEntityId("signal", document);
     const name = type === "event" ? `${type.toUpperCase()}_${document.signals.length + 1}` : `SIGNAL_${document.signals.length + 1}`;
-    const signal = type === "bus" ? valueSignal(id, name, "internal", [{ start: 0, value: "00" }], { type: "bus", width: 8, displayFormat: "hex" })
-      : type === "state" ? valueSignal(id, name, "internal", [{ start: 0, value: "IDLE" }], { type: "state" })
-      : type === "event" ? valueSignal(id, name, "internal", [{ start: 0, value: "NONE" }], { type: "event" })
-      : valueSignal(id, name, "internal", [{ start: 0, value: 0 }], { type });
+    const initialChangeId = nextEntityId("signalValueChange", document);
+    const signal = type === "bus" ? valueSignal(id, name, "internal", [{ id: initialChangeId, start: 0, value: "00" }], { type: "bus", width: 8, displayFormat: "hex" })
+      : type === "state" ? valueSignal(id, name, "internal", [{ id: initialChangeId, start: 0, value: "IDLE" }], { type: "state" })
+      : type === "event" ? valueSignal(id, name, "internal", [{ id: initialChangeId, start: 0, value: "NONE" }], { type: "event" })
+      : valueSignal(id, name, "internal", [{ id: initialChangeId, start: 0, value: 0 }], { type });
     const result = commands.createSignal(signal, target.group.id, target.index);
     if (result.ok) onSignalCreated(signalId(id));
   };
