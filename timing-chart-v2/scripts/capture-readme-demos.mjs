@@ -1,9 +1,11 @@
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 
-// Always capture the current source, never silently reuse a previous checkout's dist.
-const build = spawnSync(process.execPath, ["../../node_modules/vite/bin/vite.js", "build"], {
-  cwd: "apps/editor", stdio: "inherit", windowsHide: true,
+// Build workspace packages from source before the editor bundle. Building only
+// Vite can silently capture stale package dist outputs from a prior checkout.
+const windows = process.platform === "win32";
+const build = spawnSync(windows ? (process.env.ComSpec ?? "cmd.exe") : "npm", windows ? ["/d", "/s", "/c", "npm run build"] : ["run", "build"], {
+  cwd: process.cwd(), stdio: "inherit", windowsHide: true,
 });
 if (build.error) throw build.error;
 if (build.status !== 0 || !existsSync("apps/editor/dist/index.html")) throw new Error("Production build failed; no demo capture was started.");

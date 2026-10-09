@@ -6,7 +6,7 @@ import { parseDocument, parseScenarioDocumentModel, serializeScenarioDocumentMod
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 describe("Scenario canonical model adapter", () => {
-  it("remaps nested Phase IDs across repeated copies and preserves them through Save/Open", () => {
+  it("remaps scenario-owned Phase and Signal value IDs across repeated copies and preserves them through Save/Open", () => {
     const base = canonicalFixture();
     const model = scenarioModelFromV2({ ...base, transactions: [
       { id: "tx_first" as never, name: "First", start: 0, end: 8, phases: [
@@ -24,9 +24,18 @@ describe("Scenario canonical model adapter", () => {
     const ids = twice.scenarios.flatMap((scenario) => scenario.transactions.flatMap((tx) => tx.phases!.map((phase) => phase.id)));
     expect(new Set(ids).size).toBe(9);
     expect(JSON.stringify(twice.scenarios[0])).toBe(sourceBytes);
+    const sourceValueIds = Object.values(source.signalStates).flatMap((state) => !state ? [] : (state.kind === "clock" ? state.enable ?? [] : state.values).flatMap(({ id }) => id === undefined ? [] : [id]));
+    const copiedValueIds = twice.scenarios.slice(1).flatMap((scenario) => Object.values(scenario.signalStates).flatMap((state) => !state ? [] : (state.kind === "clock" ? state.enable ?? [] : state.values).flatMap(({ id }) => id === undefined ? [] : [id])));
+    expect(new Set([...sourceValueIds, ...copiedValueIds]).size).toBe(sourceValueIds.length + copiedValueIds.length);
     for (const copy of twice.scenarios.slice(1)) {
       expect(copy.transactions.map((tx) => tx.phases!.map(({ id: _id, ...phase }) => phase))).toEqual(source.transactions.map((tx) => tx.phases!.map(({ id: _id, ...phase }) => phase)));
       expect(Object.keys(copy.signalStates)).toEqual(Object.keys(source.signalStates));
+      for (const [signalId, state] of Object.entries(source.signalStates)) {
+        const copiedState = copy.signalStates[signalId as keyof typeof copy.signalStates];
+        const copiedChanges = copiedState ? (copiedState.kind === "clock" ? copiedState.enable ?? [] : copiedState.values) : [];
+        const sourceChanges = state ? (state.kind === "clock" ? state.enable ?? [] : state.values) : [];
+        expect(copiedChanges.map(({ id: _id, ...change }) => change)).toEqual(sourceChanges.map(({ id: _id, ...change }) => change));
+      }
     }
     expect(validateScenarioDocumentModel(twice)).toEqual([]);
     expect(parseScenarioDocumentModel(serializeScenarioDocumentModel(twice))).toEqual({ ok: true, model: twice, validated: true });

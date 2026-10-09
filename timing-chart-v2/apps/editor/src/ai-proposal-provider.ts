@@ -121,7 +121,7 @@ export function buildTypedSignalProposal(document: CanonicalDocument, revision: 
     const valueProblem = valueSignalValueProblem(type, initialValue);
     if (valueProblem) return { ok: false, message: `initialValue is invalid: ${valueProblem}` };
     const normalizedName = name.trim();
-    const signal: ValueSignal = { id: nextEntityId("signal", document) as SignalId, name: normalizedName, type, role: role as SignalRole, source: { instancePath: [], signalName: normalizedName }, display: { name: normalizedName }, values: [{ start: 0, value: initialValue }], ...(type === "bus" ? { width: (width as number | undefined) ?? 8, displayFormat: "hex" as const } : {}) };
+    const signal: ValueSignal = { id: nextEntityId("signal", document) as SignalId, name: normalizedName, type, role: role as SignalRole, source: { instancePath: [], signalName: normalizedName }, display: { name: normalizedName }, values: [{ id: nextEntityId("signalValueChange", document), start: 0, value: initialValue }], ...(type === "bus" ? { width: (width as number | undefined) ?? 8, displayFormat: "hex" as const } : {}) };
     return { ok: true, proposal: proposal(revision, `Create ${type} signal ${normalizedName} in ${group.name}`, [command({ type: "signal.create", signal, targetGroupId: group.id, index: group.rows.length }, "typed_create_signal")]) };
   }
   const signalId = args.signalId;
@@ -587,7 +587,7 @@ function buildExtendedProposal(request: AIProposalRequest): AIProposalResult {
     const type = (createSignal[1]?.toLowerCase() || "binary") as ValueSignal["type"];
     const name = createSignal[2]!.trim();
     const id = nextEntityId("signal", document) as SignalId;
-    const values = [{ start: 0, value: type === "state" ? "IDLE" : type === "event" ? "NONE" : type === "bus" ? "00" : 0 }] as ValueSignal["values"];
+    const values = [{ id: nextEntityId("signalValueChange", document), start: 0, value: type === "state" ? "IDLE" : type === "event" ? "NONE" : type === "bus" ? "00" : 0 }] as ValueSignal["values"];
     const signal = { id, name, type, role: "internal" as const, source: { instancePath: [], signalName: name }, display: { name }, values, ...(type === "bus" ? { width: 8, displayFormat: "hex" as const } : {}) } as ValueSignal;
     return { ok: true, proposal: proposal(revision, `Create ${type} signal ${name} in ${group.name}`, [command({ type: "signal.create", signal, targetGroupId: group.id, index: group.rows.length }, "create_signal")]) };
   }
