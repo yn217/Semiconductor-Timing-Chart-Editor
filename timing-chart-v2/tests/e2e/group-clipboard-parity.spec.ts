@@ -52,11 +52,29 @@ test("duplicates a 2000-row Group with fresh identities and exact one-step Undo/
   expect(copied.rows.every((id: SignalId) => !originalIds.has(id))).toBe(true);
   expect(new Set(after.signals.map((signal: { id: string }) => signal.id)).size).toBe(4000);
   const byId = new Map(after.signals.map((signal: { id: string }) => [signal.id, signal]));
+  const sourceChangeIds: string[] = [];
+  const copiedChangeIds: string[] = [];
   copied.rows.forEach((id: string, index: number) => {
-    const { id: _originalId, ...original } = before.signals[index];
-    const { id: _copiedId, ...copy } = byId.get(id) as Record<string, unknown>;
-    expect(copy).toEqual(original);
+    const originalSignal = before.signals[index] as Record<string, any>;
+    const copiedSignal = byId.get(id) as Record<string, any>;
+    const { id: _originalId, ...original } = originalSignal;
+    const { id: _copiedId, ...copy } = copiedSignal;
+    expect(copy.type).toBe(original.type);
+    expect(copy.name).toBe(original.name);
+    expect(copy.role).toBe(original.role);
+    expect(copy.source).toEqual(original.source);
+    expect(copy.display).toEqual(original.display);
+    expect(signalChanges(copiedSignal).map(({ id: _changeId, ...change }: Record<string, unknown>) => change))
+      .toEqual(signalChanges(originalSignal).map(({ id: _changeId, ...change }: Record<string, unknown>) => change));
+    const originalIds = signalChanges(originalSignal).map(({ id: changeId }: Record<string, unknown>) => changeId).filter((changeId): changeId is string => typeof changeId === "string");
+    const copiedIds = signalChanges(copiedSignal).map(({ id: changeId }: Record<string, unknown>) => changeId).filter((changeId): changeId is string => typeof changeId === "string");
+    expect(copiedIds).toHaveLength(originalIds.length);
+    expect(copiedIds.some((changeId) => originalIds.includes(changeId))).toBe(false);
+    expect(new Set(copiedIds).size).toBe(copiedIds.length);
+    sourceChangeIds.push(...originalIds);
+    copiedChangeIds.push(...copiedIds);
   });
+  expect(new Set([...sourceChangeIds, ...copiedChangeIds]).size).toBe(sourceChangeIds.length + copiedChangeIds.length);
   await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
   expect(await save()).toEqual(before);
