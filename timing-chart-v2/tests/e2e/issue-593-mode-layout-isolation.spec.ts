@@ -25,7 +25,7 @@ const setMode = async (page: Page, mode: "Cycle" | "Transaction" | "Combined") =
   await expect(page.getByTestId("left-workspace-rail")).toHaveAttribute("data-workspace-owner", `${mode}Workspace`);
   await expect(page.getByTestId("left-workspace-rail")).toHaveCount(1);
   const viewport = page.getByTestId("cycle-viewport");
-  await expect(viewport).toHaveAttribute("data-time-viewport-owner", mode === "Cycle" ? "cycle-inner" : mode === "Transaction" ? "transaction-viewport" : "combined-viewport");
+  await expect(viewport).toHaveAttribute("data-time-viewport-owner", mode === "Cycle" ? "cycle-inner" : mode === "Transaction" ? "transaction-viewport" : "combined-inner");
   await expect(viewport).toHaveAttribute("data-content-width-owner", mode === "Cycle" ? "cycle-geometry" : mode === "Transaction" ? "transaction-lanes" : "combined-source-time");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true", { timeout: 30_000 });
   await page.waitForTimeout(300);

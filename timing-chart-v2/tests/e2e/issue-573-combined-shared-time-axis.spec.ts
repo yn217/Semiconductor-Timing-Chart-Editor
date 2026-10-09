@@ -22,13 +22,14 @@ test(`Combined: same source cycle maps to the same screen X in Transaction and C
   // Vertical navigation and interaction ownership are independent: scrolling the Cycle waveform pane must not move the Transaction pane's
   // own vertical scroll, while the shared horizontal axis stays in lockstep.
   const cycleViewport = page.getByTestId("cycle-viewport");
+  const owner = cycleViewport.locator("[data-role='timeline-viewport']");
   const transactionPane = page.locator(".split-transaction-pane");
   const transactionScrollBefore = await transactionPane.evaluate((el) => el.scrollTop);
   await cycleViewport.evaluate(async (el) => { el.scrollTop = 40; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
   expect(await transactionPane.evaluate((el) => el.scrollTop)).toBe(transactionScrollBefore);
 
   // Shared horizontal scroll: scrolling the Cycle viewport horizontally must move the Transaction bars by the same source-time mapping.
-  await cycleViewport.evaluate(async (el) => { el.scrollLeft = 200; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
+  await owner.evaluate(async (el) => { el.scrollLeft = 200; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
   await page.waitForTimeout(200);
   const after = await x();
   if (before.barLeft !== undefined && after.barLeft !== undefined) {

@@ -2,6 +2,7 @@ import { useEffect, useRef, type KeyboardEventHandler, type PointerEventHandler,
 import { LEFT_PANE_MAX_WIDTH, LEFT_PANE_MIN_WIDTH, type ViewMode } from "./workspace/use-workspace-ui-state.js";
 import { CursorOverlayOwner } from "./runtime/cursor-overlay-owner.js";
 import { mountTimelineHorizontalScrollbar } from "./runtime/timeline-horizontal-scrollbar-owner.js";
+import { mountCombinedTransactionPaneScroll } from "./runtime/combined-transaction-pane-scroll.js";
 
 /**
  * #625: the horizontal scroll track belongs to the Timeline only. The viewport's native horizontal scrollbar is hidden and this
@@ -25,7 +26,7 @@ export interface EditorWorkspaceViewModel {
   readonly view: { readonly documentEpoch: number; readonly viewMode: string; readonly signalSplitEnabled: boolean; readonly signalSplitRatio: number; readonly gridEnabled: boolean; readonly snapEnabled: boolean; readonly rulerEnabled: boolean; readonly zoom?: number; readonly cursorPresentationRevision?: number; readonly cursor: { readonly a?: number; readonly b?: number; readonly deltaCycles?: number } };
   readonly layout: { readonly leftPaneWidth: number; readonly frozenPaneMinWidth: number; readonly frozenPaneWidth: number; readonly bottomVisible: boolean; readonly bottomHeight: number; readonly bottomMaxHeight: number; readonly inspectorVisible: boolean; readonly inspectorWidth: number };
   readonly refs: { readonly viewport: RefObject<HTMLDivElement | null>; readonly gridLayer: RefObject<HTMLDivElement | null>; readonly ruler: RefObject<HTMLDivElement | null>; readonly host: RefObject<HTMLDivElement | null>; readonly viewportLower: RefObject<HTMLDivElement | null>; readonly rulerLower: RefObject<HTMLDivElement | null>; readonly hostLower: RefObject<HTMLDivElement | null>; readonly gridLayerLower: RefObject<HTMLDivElement | null> };
-  readonly content: { readonly header: ReactNode; readonly transactionTree: ReactNode; readonly viewportContent: ReactNode; readonly viewportLegend: ReactNode; readonly leftRail?: ReactNode; readonly bottom: ReactNode; readonly inspector: ReactNode };
+  readonly content: { readonly header: ReactNode; readonly signalHeader?: ReactNode; readonly transactionTree: ReactNode; readonly viewportContent: ReactNode; readonly viewportLegend: ReactNode; readonly leftRail?: ReactNode; readonly bottom: ReactNode; readonly inspector: ReactNode };
   readonly interactions: {
     readonly onInspectorKeyDown: KeyboardEventHandler<HTMLDivElement>; readonly onInspectorPointerDown: PointerEventHandler<HTMLDivElement>; readonly onInspectorPointerMove: PointerEventHandler<HTMLDivElement>; readonly onInspectorPointerUp: PointerEventHandler<HTMLDivElement>;
     readonly onLeftPaneKeyDown: KeyboardEventHandler<HTMLDivElement>; readonly onLeftPanePointerDown: PointerEventHandler<HTMLDivElement>; readonly onLeftPanePointerMove: PointerEventHandler<HTMLDivElement>; readonly onLeftPanePointerUp: PointerEventHandler<HTMLDivElement>;
@@ -48,13 +49,17 @@ export interface EditorWorkspaceViewProps {
 type SplitDividerHandlers = Readonly<{ signalSplitRatio: number; onKeyDown: KeyboardEventHandler<HTMLElement>; onPointerDown: PointerEventHandler<HTMLElement>; onPointerMove: PointerEventHandler<HTMLElement>; onPointerUp: PointerEventHandler<HTMLElement> }>;
 
 /** Combined-only (internal ViewMode "Split") panes: the Transaction pane and the pane divider (#615). */
-function CombinedModePanes({ transactionContent, signalSplitRatio, onKeyDown: onSignalSplitKeyDown, onPointerDown: onSignalSplitPointerDown, onPointerMove: onSignalSplitPointerMove, onPointerUp: onSignalSplitPointerUp }: SplitDividerHandlers & Readonly<{ transactionContent: ReactNode }>) {
+function CombinedModePanes({ transactionContent, signalHeader, signalSplitRatio, onKeyDown: onSignalSplitKeyDown, onPointerDown: onSignalSplitPointerDown, onPointerMove: onSignalSplitPointerMove, onPointerUp: onSignalSplitPointerUp }: SplitDividerHandlers & Readonly<{ transactionContent: ReactNode; signalHeader?: ReactNode }>) {
+  const pane = useRef<HTMLDivElement>(null);
+  // The Signal pane's nested Timeline viewport is the single horizontal owner; the Transaction pane (its own clipped region) mirrors it.
+  useEffect(() => (pane.current ? mountCombinedTransactionPaneScroll(pane.current) : undefined), []);
   return <>
-    <div className="split-transaction-pane" data-pane="transaction" tabIndex={0} aria-label="Transaction pane">
+    <div className="split-transaction-pane" ref={pane} data-pane="transaction" tabIndex={0} aria-label="Transaction pane">
       <div className="combined-pane-heading combined-pane-heading-transaction" data-testid="combined-transaction-heading" role="heading" aria-level={2}>Transactions</div>
       {transactionContent}
     </div>
     <div className="combined-split-divider" data-testid="combined-split-divider" role="separator" aria-label="Resize Transaction and Cycle panes" aria-orientation="horizontal" aria-valuemin={15} aria-valuemax={85} aria-valuenow={Math.round(signalSplitRatio * 100)} tabIndex={0} onKeyDown={onSignalSplitKeyDown} onPointerDown={onSignalSplitPointerDown} onPointerMove={onSignalSplitPointerMove} onPointerUp={onSignalSplitPointerUp} onPointerCancel={onSignalSplitPointerUp} />
+    {signalHeader && <div className="combined-signal-header">{signalHeader}</div>}
   </>;
 }
 
@@ -104,7 +109,7 @@ function CombinedWorkspaceChrome({ viewModel }: EditorWorkspaceViewProps) {
 
 function CombinedWorkspacePanes({ viewModel }: EditorWorkspaceViewProps) {
   const { view, content, interactions } = viewModel;
-  return <CombinedModePanes transactionContent={content.viewportContent} signalSplitRatio={view.signalSplitRatio} onKeyDown={interactions.onSignalSplitKeyDown} onPointerDown={interactions.onSignalSplitPointerDown} onPointerMove={interactions.onSignalSplitPointerMove} onPointerUp={interactions.onSignalSplitPointerUp} />;
+  return <CombinedModePanes transactionContent={content.viewportContent} signalHeader={content.signalHeader} signalSplitRatio={view.signalSplitRatio} onKeyDown={interactions.onSignalSplitKeyDown} onPointerDown={interactions.onSignalSplitPointerDown} onPointerMove={interactions.onSignalSplitPointerMove} onPointerUp={interactions.onSignalSplitPointerUp} />;
 }
 
 function CycleWorkspaceRail({ content }: Readonly<{ content: ReactNode }>) {
@@ -134,7 +139,7 @@ type WorkspaceOwnerPlan = Readonly<{
   mode: ViewMode;
   name: "CycleWorkspace" | "TransactionWorkspace" | "CombinedWorkspace";
   /** Explicit presentation authority; semantic time remains the shared source-cycle contract. */
-  timeViewportOwner: "cycle-inner" | "transaction-viewport" | "combined-viewport";
+  timeViewportOwner: "cycle-inner" | "transaction-viewport" | "combined-inner";
   contentWidthOwner: "cycle-geometry" | "transaction-lanes" | "combined-source-time";
   headerAbove: ReactNode;
   panelChrome: ReactNode;
@@ -177,7 +182,7 @@ function createWorkspaceOwnerPlan(viewModel: EditorWorkspaceViewModel): Workspac
       return {
         mode,
         name: "CombinedWorkspace",
-        timeViewportOwner: "combined-viewport",
+        timeViewportOwner: "combined-inner",
         contentWidthOwner: "combined-source-time",
         headerAbove: <CombinedWorkspace viewModel={viewModel} />,
         panelChrome: <CombinedWorkspaceChrome viewModel={viewModel} />,
@@ -249,7 +254,7 @@ export function EditorWorkspaceView({
         {workspace.upperPane}
         <TimelinePaneContents gridLayer={gridLayer} ruler={ruler} host={host} gridEnabled={viewModel.view.gridEnabled} rulerEnabled={viewModel.view.rulerEnabled} snapEnabled={viewModel.view.snapEnabled} body={workspace.timelineBody} combined={workspace.mode === "Split"} />
       </div>
-      {workspace.timeViewportOwner === "cycle-inner" && <TimelineHorizontalScrollbar viewport={viewport} viewMode={viewMode} leftPaneWidth={viewModel.layout.leftPaneWidth} />}
+      {(workspace.timeViewportOwner === "cycle-inner" || workspace.timeViewportOwner === "combined-inner") && <TimelineHorizontalScrollbar viewport={viewport} viewMode={viewMode} leftPaneWidth={viewModel.layout.leftPaneWidth} />}
       {workspace.auxiliary}
     </section>
     {workspace.rail}

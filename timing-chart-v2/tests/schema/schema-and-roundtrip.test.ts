@@ -18,7 +18,7 @@ import {
   type TimeGroupId,
   type TransactionId,
 } from "@timing-chart-v2/schema";
-import { canonicalFixture } from "../fixtures/canonical.js";
+import { canonicalFixture, canonicalFixtureWithStableValueIds } from "../fixtures/canonical.js";
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
@@ -41,7 +41,7 @@ describe("canonical v2 schema and roundtrip", () => {
   });
 
   it("persists Legend canvas-corner mode and offset through Save/Open serialization", () => {
-    const source = canonicalFixture();
+    const source = canonicalFixtureWithStableValueIds();
     const document = { ...source, legend: { ...source.legend, positionMode: "canvas-corner" as const, corner: "bottom-right" as const, position: { x: 14, y: 22 } } };
     expect(validateCanonicalDocument(document)).toEqual([]);
     const reopened = parseDocument(serializeCanonicalDocument(document));
@@ -51,7 +51,7 @@ describe("canonical v2 schema and roundtrip", () => {
     expect(serializeCanonicalDocument(reopened.document)).toBe(serializeCanonicalDocument(document));
   });
   it("persists an optional physical timebase without changing cycle coordinates", () => {
-    const document = clone(canonicalFixture());
+    const document = canonicalFixtureWithStableValueIds();
     document.timeline.physicalTimebase = { referenceFrequencyHz: 100_000_000, unit: "ns" };
     expect(validateCanonicalDocument(document)).toEqual([]);
     const reopened = parseDocument(serializeCanonicalDocument(document));
@@ -85,7 +85,7 @@ describe("canonical v2 schema and roundtrip", () => {
   });
 
   it("round-trips Transaction Groups and semantic Transaction presentation fields", () => {
-    const document = clone(canonicalFixture());
+    const document = canonicalFixtureWithStableValueIds();
     const groupId = "txn_group_roundtrip";
     document.transactionGroups = [{ id: groupId as never, name: "Transfers", color: "#123456", order: 2 }];
     document.transactions = [{ id: "txn_roundtrip" as never, name: "Read", start: 1, end: 3, groupId: groupId as never, color: "#abcdef", description: "payload" }];
@@ -97,7 +97,8 @@ describe("canonical v2 schema and roundtrip", () => {
     const data = document.signals.find((signal) => signal.id === "sig_data");
     const clock = document.signals.find((signal) => signal.id === "sig_clk");
     if (!data || !clock) throw new Error("canonical fixture must contain sig_data and sig_clk");
-    const auxiliary = { ...data, id: "sig_aux" as SignalId, name: "AUX", source: { ...data.source, signalName: "AUX" }, display: { ...data.display, name: "AUX" } };
+    data.values = data.values.map((value, index) => ({ ...value, id: `value_sig_data_${index}` }));
+    const auxiliary = { ...data, id: "sig_aux" as SignalId, name: "AUX", source: { ...data.source, signalName: "AUX" }, display: { ...data.display, name: "AUX" }, values: data.values.map((value, index) => ({ ...value, id: `value_sig_aux_${index}` })) };
     document.signals = [...document.signals, auxiliary];
     document.signalGroups = [...document.signalGroups, { id: "grp_aux" as GroupId, name: "Auxiliary", rows: [auxiliary.id] }];
     document.bookmarks = [{ id: "bookmark_phase" as BookmarkId, name: "Phase boundary", start: 3, comment: "round-trip specimen" }];
@@ -120,7 +121,7 @@ describe("canonical v2 schema and roundtrip", () => {
   });
   it("exposes a compiled Draft 2020-12 schema and deterministic Save/Open/Save", () => {
     expect(canonicalSchema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
-    const original = canonicalFixture();
+    const original = canonicalFixtureWithStableValueIds();
     expect(validateCanonicalDocument(original)).toEqual([]);
     const first = serializeCanonicalDocument(original);
     const reopened = parseDocument(first);

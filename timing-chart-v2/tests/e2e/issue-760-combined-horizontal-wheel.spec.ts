@@ -9,17 +9,20 @@ for (const size of [{ width: 1280, height: 720 }]) {
     await page.goto("/");
     await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
     const viewport = page.getByTestId("cycle-viewport");
+    const owner = viewport.locator("[data-role='timeline-viewport']");
     await expect(page.getByTestId("combined-split-divider")).toBeVisible();
-    await expect.poll(() => viewport.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeGreaterThan(200);
+    await expect.poll(() => owner.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeGreaterThan(200);
     const canon = () => page.evaluate(() => [document.querySelector("[data-testid='revision-status']")?.textContent, document.querySelector("[data-testid='history-status']")?.textContent, document.querySelector("[data-testid='dirty-status']")?.textContent]);
     const before = await canon();
-    expect(await viewport.evaluate((el) => el.scrollLeft)).toBe(0);
+    expect(await owner.evaluate((el) => el.scrollLeft)).toBe(0);
     const box = (await viewport.boundingBox())!;
-    for (const [label, y] of [["Transaction pane", box.y + 60], ["Signal pane", box.y + box.height - 40]] as const) {
-      await viewport.evaluate((el) => { el.scrollLeft = 0; });
+    // The viewport runs under the Bottom editor (like Cycle), so locate the Signal pane relative to the divider, not the viewport bottom.
+    const dividerBox = (await page.getByTestId("combined-split-divider").boundingBox())!;
+    for (const [label, y] of [["Transaction pane", box.y + 60], ["Signal pane", dividerBox.y + 30]] as const) {
+      await owner.evaluate((el) => { el.scrollLeft = 0; });
       await page.mouse.move(box.x + 700, y);
       await page.mouse.wheel(400, 0);
-      await expect.poll(() => viewport.evaluate((el) => el.scrollLeft), { message: `wheel over ${label}` }).toBeGreaterThan(0);
+      await expect.poll(() => owner.evaluate((el) => el.scrollLeft), { message: `wheel over ${label}` }).toBeGreaterThan(0);
     }
     expect(await canon()).toEqual(before);
   });
