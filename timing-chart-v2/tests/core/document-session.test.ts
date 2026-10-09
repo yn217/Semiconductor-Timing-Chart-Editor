@@ -131,6 +131,16 @@ describe("DocumentSession atomic Open/Save", () => {
     expect(second).toEqual(first);
   });
 
+  it("returns the exact Open-capacity diagnostic when a committed snapshot cannot be reopened", () => {
+    const base = canonicalFixture();
+    const session = new DocumentSession({ ...base, document: { ...base.document, title: "x".repeat(DOCUMENT_RESOURCE_BUDGET.openFileBytes) } });
+    const before = session.getSnapshot();
+    const result = session.save();
+    expect(result).toMatchObject({ ok: false, problems: [expect.objectContaining({ code: "OPEN_FILE_TOO_LARGE", detail: expect.stringContaining("metric=openFileBytes") })] });
+    expect(session.getSnapshot()).toBe(before);
+    expect(session.metrics().commits).toBe(0);
+  });
+
   it("rejects a product-budget overflow at the canonical commit boundary atomically", () => {
     const base = canonicalFixture();
     const session = new DocumentSession({

@@ -257,7 +257,15 @@ export class DocumentSession implements CanonicalStore, CanonicalMutationPort {
     // The snapshot is owned by this session and can only be established by
     // validated construction, validated Open, or validated commit. Keep the
     // trust boundary explicit and avoid validating it a second time here.
-    return { ok: true, text: serializeValidatedCanonicalDocument(this.#snapshot.document) };
+    try {
+      return { ok: true, text: serializeValidatedCanonicalDocument(this.#snapshot.document) };
+    } catch (error) {
+      const problems = (error as { problems?: unknown })?.problems;
+      return {
+        ok: false,
+        problems: Array.isArray(problems) ? problems as readonly DocumentProblem[] : [{ code: "SAVE_SERIALIZE_FAILED", path: "$", message: error instanceof Error ? error.message : "Document could not be serialized." }],
+      };
+    }
   }
 }
 

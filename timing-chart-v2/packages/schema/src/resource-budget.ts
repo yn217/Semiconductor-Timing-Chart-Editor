@@ -3,6 +3,8 @@ import type { CanonicalDocument, DocumentProblem } from "./types.js";
 /** Deterministic product limits applied before a document enters the session. */
 export const DOCUMENT_RESOURCE_BUDGET = Object.freeze({
   inputBytes: 50 * 1024 * 1024,
+  /** File > Open and File > Save must accept the same serialized document size. */
+  openFileBytes: 32 * 1024 * 1024,
   signalCount: 10_000,
   groupCount: 2_000,
   annotationCount: 20_000,

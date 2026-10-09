@@ -2,7 +2,7 @@ import { migrateThroughRegistry } from "./migration.js";
 import { validateCanonicalDocument } from "./validation.js";
 import { scanJsonSyntax } from "./json-syntax.js";
 import type { CanonicalDocument, DocumentProblem, MigrationWarning, ParseDocumentResult, ParseScenarioDocumentResult, ScenarioDocumentModel } from "./types.js";
-import { validateDocumentInputBytes, validateDocumentInputComplexity, validateDocumentResourceBudget } from "./resource-budget.js";
+import { DOCUMENT_RESOURCE_BUDGET, validateDocumentInputBytes, validateDocumentInputComplexity, validateDocumentResourceBudget } from "./resource-budget.js";
 import { validateScenarioDocumentModel } from "./scenario-model.js";
 import { opaqueDerivedId } from "./stable-id.js";
 
@@ -196,7 +196,7 @@ export function serializeScenarioDocumentModel(model: ScenarioDocumentModel, ind
     Object.assign(error, { name: "ScenarioDocumentSerializationError", problems });
     throw error;
   }
-  return `${JSON.stringify(sortObjectKeys(model), null, indent)}\n`;
+  return assertSerializableForOpen(`${JSON.stringify(sortObjectKeys(model), null, indent)}\n`, "ScenarioDocumentSerializationError");
 }
 
 /**
@@ -205,7 +205,28 @@ export function serializeScenarioDocumentModel(model: ScenarioDocumentModel, ind
  * serializeCanonicalDocument() below remains the validating entry point.
  */
 export function serializeValidatedCanonicalDocument(document: CanonicalDocument, indent = 2): string {
-  return `${JSON.stringify(sortObjectKeys(document), null, indent)}\n`;
+  return assertSerializableForOpen(`${JSON.stringify(sortObjectKeys(document), null, indent)}\n`, "CanonicalSerializationError");
+}
+
+/** Keep saved bytes within the same capacity gates used by the production Open path. */
+function assertSerializableForOpen(text: string, errorName: string): string {
+  const byteLength = utf8ByteLength(text);
+  const problems = byteLength > DOCUMENT_RESOURCE_BUDGET.openFileBytes
+    ? [{
+        code: "OPEN_FILE_TOO_LARGE",
+        path: "$",
+        message: `Save rejected: serialized document is ${byteLength.toLocaleString()} bytes; the Open limit is ${DOCUMENT_RESOURCE_BUDGET.openFileBytes.toLocaleString()} bytes.`,
+        expected: String(DOCUMENT_RESOURCE_BUDGET.openFileBytes),
+        value: byteLength,
+        detail: `save-failure:capacity;metric=openFileBytes;current=${byteLength};limit=${DOCUMENT_RESOURCE_BUDGET.openFileBytes}`,
+      }]
+    : validateDocumentInputComplexity(JSON.parse(text) as unknown);
+  if (problems.length > 0) {
+    const error = new Error(`Cannot serialize document within the current Open capacity (${problems.length} problem(s)).`);
+    Object.assign(error, { name: errorName, problems });
+    throw error;
+  }
+  return text;
 }
 
 function utf8ByteLength(value: string): number {

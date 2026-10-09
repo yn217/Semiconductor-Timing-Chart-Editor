@@ -1,6 +1,6 @@
-import { isTrustedParsedCanonicalDocument, parseDocument, parseScenarioDocumentModel, serializeValidatedCanonicalDocument, type CanonicalDocument, type DocumentProblem, type ParsedCanonicalDocument, type ScenarioDocumentModel } from "@timing-chart-v2/schema";
+import { DOCUMENT_RESOURCE_BUDGET, isTrustedParsedCanonicalDocument, parseDocument, parseScenarioDocumentModel, serializeValidatedCanonicalDocument, type CanonicalDocument, type DocumentProblem, type ParsedCanonicalDocument, type ScenarioDocumentModel } from "@timing-chart-v2/schema";
 
-export const MAX_OPEN_FILE_BYTES = 32 * 1024 * 1024;
+export const MAX_OPEN_FILE_BYTES = DOCUMENT_RESOURCE_BUDGET.openFileBytes;
 
 /** Pure Open boundary: parsing/migration stays independent of the editor shell. */
 export function parseOpenDocument(text: string): ReturnType<typeof parseDocument> {
