@@ -54,10 +54,7 @@ function CombinedModePanes({ transactionContent, signalHeader, signalSplitRatio,
   // The Signal pane's nested Timeline viewport is the single horizontal owner; the Transaction pane (its own clipped region) mirrors it.
   useEffect(() => (pane.current ? mountCombinedTransactionPaneScroll(pane.current) : undefined), []);
   return <>
-    <div className="split-transaction-pane" ref={pane} data-pane="transaction" tabIndex={0} aria-label="Transaction pane">
-      <div className="combined-pane-heading combined-pane-heading-transaction" data-testid="combined-transaction-heading" role="heading" aria-level={2}>Transactions</div>
-      {transactionContent}
-    </div>
+    <div className="split-transaction-pane" ref={pane} data-pane="transaction" tabIndex={0} aria-label="Transaction pane">{transactionContent}</div>
     <div className="combined-split-divider" data-testid="combined-split-divider" role="separator" aria-label="Resize Transaction and Cycle panes" aria-orientation="horizontal" aria-valuemin={15} aria-valuemax={85} aria-valuenow={Math.round(signalSplitRatio * 100)} tabIndex={0} onKeyDown={onSignalSplitKeyDown} onPointerDown={onSignalSplitPointerDown} onPointerMove={onSignalSplitPointerMove} onPointerUp={onSignalSplitPointerUp} onPointerCancel={onSignalSplitPointerUp} />
     {signalHeader && <div className="combined-signal-header">{signalHeader}</div>}
   </>;
