@@ -19,7 +19,19 @@ function documentWithSignalCount(count: number): CanonicalDocument {
     const id = `budget_signal_${index}` as SignalId;
     return { ...template, id, name, source: { ...template.source, signalName: name }, display: { ...template.display, name } };
   });
-  const signals = [...base.signals, ...additions];
+  // This is a current-format Product Budget fixture, not a legacy-migration
+  // fixture. Stable change IDs avoid adding the legitimate Open migration
+  // diagnostic to the Problems count before the budget operation is tested.
+  const signals = [...base.signals, ...additions].map((signal) => {
+    if (signal.type === "clock") {
+      return signal.enable === undefined ? signal : {
+        ...signal,
+        enable: signal.enable.map((change, index) => ({ ...change, id: `${signal.id}_enable_${index}` })),
+      };
+    }
+    if (signal.type === "commentRow") return signal;
+    return { ...signal, values: signal.values.map((change, index) => ({ ...change, id: `${signal.id}_change_${index}` })) };
+  });
   return {
     ...base,
     document: { ...base.document, title: `Resource budget ${count}` },
