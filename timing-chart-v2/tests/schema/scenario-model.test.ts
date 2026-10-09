@@ -1,9 +1,36 @@
 import { describe, expect, it } from "vitest";
 import { scenarioModelFromV2, projectScenarioAsV2, updateScenarioModelFromV2Projection, validateScenarioDocumentModel, renameScenario, deleteScenario, duplicateScenario, listHandshakeMissingCaseSuggestions, createScenariosFromHandshakeSuggestions } from "../../packages/schema/src/scenario-model.js";
 import { compareScenarioSignalStreams } from "../../packages/schema/src/scenario-comparison.js";
+import { canonicalReferences, type CanonicalReferenceKind } from "../../packages/schema/src/reference-registry.js";
+import { canonicalEntityInventory } from "../../packages/schema/src/canonical-inventory.js";
 import { validateCanonicalDocument } from "../../packages/schema/src/validation.js";
 import { parseDocument, parseScenarioDocumentModel, serializeScenarioDocumentModel } from "../../packages/schema/src/serialization.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
+
+const SCENARIO_COPY_REFERENCE_OWNERSHIP = {
+  "signal.enum": { owner: "shared", target: "shared" },
+  "timeline.referenceClock": { owner: "shared", target: "shared" },
+  "timeGroup.parent": { owner: "scenario", target: "scenario" },
+  "signal.edgeCounter.marker": { owner: "shared", target: "scenario" },
+  "annotation.anchor": { owner: "scenario", target: "shared" },
+  "annotation.ghostTraceSource": { owner: "scenario", target: "shared" },
+  "annotation.markerSpanStart": { owner: "scenario", target: "shared" },
+  "annotation.markerSpanEnd": { owner: "scenario", target: "shared" },
+  "transaction.linkedSignal": { owner: "scenario", target: "shared" },
+  "transaction.group": { owner: "scenario", target: "scenario" },
+  "annotationGroup.member": { owner: "scenario", target: "scenario" },
+  "timeGroup.resumeLabelAnchor": { owner: "scenario", target: "scenario" },
+  "constraint.handshakeRequest": { owner: "scenario", target: "shared" },
+  "constraint.handshakeAcknowledge": { owner: "scenario", target: "shared" },
+  "constraint.handshakeStableSignal": { owner: "scenario", target: "shared" },
+  "constraint.latencyRangeRequest": { owner: "scenario", target: "shared" },
+  "constraint.latencyRangeAcknowledge": { owner: "scenario", target: "shared" },
+  "constraint.latencyTrigger": { owner: "scenario", target: "shared" },
+  "constraint.latencyResponse": { owner: "scenario", target: "shared" },
+  "labelAnchor.ownerTimeGroup": { owner: "scenario", target: "scenario" },
+  "signalGroup.row": { owner: "shared", target: "shared" },
+  "spacer.ownerGroup": { owner: "shared", target: "shared" },
+} as const satisfies Readonly<Record<CanonicalReferenceKind, Readonly<{ owner: "shared" | "scenario"; target: "shared" | "scenario" }>>>;
 
 describe("Scenario canonical model adapter", () => {
   it("remaps scenario-owned Phase and Signal value IDs across repeated copies and preserves them through Save/Open", () => {
@@ -171,10 +198,20 @@ describe("Scenario canonical model adapter", () => {
 
   it("duplicates Scenario-owned identities and rewrites only their internal references", () => {
     const base = scenarioModelFromV2(canonicalFixture());
+    const baseScenario = base.scenarios[0]!;
+    const clockState = baseScenario.signalStates.sig_clk;
+    if (clockState?.kind !== "clock") throw new Error("Fixture must provide Clock Scenario state.");
     const source = {
-      ...base.scenarios[0]!,
+      ...baseScenario,
       timeline: { ...base.scenarios[0]!.timeline, labelAnchors: [{ id: "anchor_resume" as never, source: 8, display: 2, ownerTimeGroupId: "time_group_parent" as never }] },
       bookmarks: [{ id: "bookmark_one" as never, name: "One", start: 2 }],
+      signalStates: {
+        ...baseScenario.signalStates,
+        sig_clk: {
+          ...clockState,
+          edgeCounter: { ...clockState.edgeCounter, countFrom: "marker" as const, anchorId: "bookmark_one" },
+        },
+      },
       timeGroups: [
         { id: "time_group_parent" as never, name: "Parent", start: 2, end: 8, presentation: { collapsed: true, foldStyle: "axis-break" as const, resumeLabelAnchorId: "anchor_resume" as never } },
         { id: "time_group_child" as never, parentId: "time_group_parent" as never, name: "Child", start: 3, end: 5 },
@@ -201,6 +238,37 @@ describe("Scenario canonical model adapter", () => {
     expect(copy.annotations[0]?.sourceSignalId).toBe("sig_data");
     expect(copy.constraints[0]?.data).toEqual({ signalId: "sig_data" });
     expect(validateScenarioDocumentModel(duplicated)).toEqual([]);
+
+    const sourceProjection = projectScenarioAsV2(model, source.id);
+    const copyProjection = projectScenarioAsV2(duplicated, copy.id);
+    const sourceEntities = canonicalEntityInventory(sourceProjection);
+    const copiedEntities = canonicalEntityInventory(copyProjection);
+    const copiedIdsBySourcePath = new Map(
+      sourceEntities.map((entity) => {
+        const copied = copiedEntities.find((candidate) => candidate.kind === entity.kind && candidate.path === entity.path);
+        if (!copied) throw new Error(`Scenario copy omitted ${entity.kind} at ${entity.path}.`);
+        return [entity.id, copied.id] as const;
+      }),
+    );
+    const mappedScenarioId = (id: string, kind: CanonicalReferenceKind): string => {
+      const copiedId = copiedIdsBySourcePath.get(id);
+      if (copiedId === undefined) throw new Error(`${kind} should point to a Scenario-owned stable ID '${id}'.`);
+      return copiedId;
+    };
+    const expectedReferences = canonicalReferences(sourceProjection).map((reference) => {
+      const ownership = SCENARIO_COPY_REFERENCE_OWNERSHIP[reference.kind];
+      return {
+        ...reference,
+        ownerId: ownership.owner === "scenario" ? mappedScenarioId(reference.ownerId, reference.kind) : reference.ownerId,
+        targetId: ownership.target === "scenario" ? mappedScenarioId(reference.targetId, reference.kind) : reference.targetId,
+      };
+    });
+    expect(canonicalReferences(copyProjection)).toEqual(expectedReferences);
+    expect(canonicalReferences(copyProjection)).toContainEqual(expect.objectContaining({
+      kind: "signal.edgeCounter.marker",
+      targetId: copy.bookmarks[0]?.id,
+      path: "$.signals[0].edgeCounter.anchorId",
+    }));
   });
 
   it("reports changed source-cycle ranges by shared Signal ID without scanning cycle extent", () => {
