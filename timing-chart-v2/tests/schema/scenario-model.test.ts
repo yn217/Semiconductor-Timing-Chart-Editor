@@ -217,6 +217,79 @@ describe("Scenario canonical model adapter", () => {
     expect(compareScenarioSignalStreams(model, first.id, first.id)).toEqual([]);
   });
 
+  it("compares duplicated Clock semantics without nested identity noise and preserves marker meaning", () => {
+    const sourceDocument = canonicalFixture();
+    const sourceClock = sourceDocument.signals.find((signal) => signal.type === "clock");
+    if (sourceClock?.type !== "clock") throw new Error("Fixture must contain a Clock Signal.");
+    const markerId = "bookmark_clock_origin" as never;
+    const clock = {
+      ...sourceClock,
+      enable: [
+        { id: "clock_enable_on", start: 1, value: 1 },
+        { id: "clock_enable_off", start: 5, value: 0 },
+      ],
+      edgeCounter: { ...sourceClock.edgeCounter, show: true, countFrom: "marker" as const, anchorId: markerId },
+    };
+    const model = scenarioModelFromV2({
+      ...sourceDocument,
+      bookmarks: [{ id: markerId, name: "Clock origin", start: 3 }],
+      signals: sourceDocument.signals.map((signal) => signal.id === clock.id ? clock : signal),
+    });
+    const original = model.scenarios[0]!;
+    const duplicatedModel = duplicateScenario(model, original.id);
+    const duplicate = duplicatedModel.scenarios[1]!;
+    const originalClock = original.signalStates[clock.id];
+    const duplicateClock = duplicate.signalStates[clock.id];
+    if (originalClock?.kind !== "clock" || duplicateClock?.kind !== "clock") throw new Error("Clock state must be present in both Scenarios.");
+
+    expect(duplicateClock.enable?.map(({ id }) => id)).not.toEqual(originalClock.enable?.map(({ id }) => id));
+    expect(duplicateClock.edgeCounter.anchorId).not.toBe(originalClock.edgeCounter.anchorId);
+    expect(duplicate.bookmarks[0]?.id).toBe(duplicateClock.edgeCounter.anchorId);
+    expect(compareScenarioSignalStreams(duplicatedModel, original.id, duplicate.id)).toEqual([]);
+    const parsed = parseScenarioDocumentModel(serializeScenarioDocumentModel(duplicatedModel));
+    expect(parsed).toMatchObject({ ok: true, model: duplicatedModel, validated: true });
+    if (!parsed.ok) throw new Error("Duplicated Scenario document must round-trip.");
+    expect(compareScenarioSignalStreams(parsed.model, original.id, duplicate.id)).toEqual([]);
+
+    const changedEnable = {
+      ...duplicate,
+      signalStates: {
+        ...duplicate.signalStates,
+        [clock.id]: { ...duplicateClock, enable: duplicateClock.enable!.map((change, index) => index === 0 ? { ...change, value: 0 } : change) },
+      },
+    };
+    expect(compareScenarioSignalStreams({ ...duplicatedModel, scenarios: [original, changedEnable] }, original.id, duplicate.id)).toEqual([
+      { signalId: clock.id, ranges: [{ start: 0, end: 8 }] },
+    ]);
+
+    const changedBookmark = { ...duplicate, bookmarks: duplicate.bookmarks.map((bookmark) => ({ ...bookmark, start: bookmark.start + 1 })) };
+    expect(compareScenarioSignalStreams({ ...duplicatedModel, scenarios: [original, changedBookmark] }, original.id, duplicate.id)).toEqual([
+      { signalId: clock.id, ranges: [{ start: 0, end: 8 }] },
+    ]);
+
+    const changedEdgeCounter = {
+      ...duplicate,
+      signalStates: {
+        ...duplicate.signalStates,
+        [clock.id]: { ...duplicateClock, edgeCounter: { ...duplicateClock.edgeCounter, startNumber: duplicateClock.edgeCounter.startNumber + 1 } },
+      },
+    };
+    expect(compareScenarioSignalStreams({ ...duplicatedModel, scenarios: [original, changedEdgeCounter] }, original.id, duplicate.id)).toEqual([
+      { signalId: clock.id, ranges: [{ start: 0, end: 8 }] },
+    ]);
+
+    const changedGenerator = {
+      ...duplicate,
+      signalStates: {
+        ...duplicate.signalStates,
+        [clock.id]: { ...duplicateClock, generator: { ...duplicateClock.generator, period: duplicateClock.generator.period + 1 } },
+      },
+    };
+    expect(compareScenarioSignalStreams({ ...duplicatedModel, scenarios: [original, changedGenerator] }, original.id, duplicate.id)).toEqual([
+      { signalId: clock.id, ranges: [{ start: 0, end: 8 }] },
+    ]);
+  });
+
   it("generates only explicitly selected Handshake cases from constraint-owned stable IDs", () => {
     const source = canonicalFixture();
     const template = source.signals[1]!;

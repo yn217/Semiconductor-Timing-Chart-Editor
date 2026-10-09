@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 import { scenarioModelFromV2, serializeScenarioDocumentModel } from "@timing-chart-v2/schema";
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
+import { canonicalFixture } from "../fixtures/canonical.js";
 import { documentState, expectViewOnly } from "./view-only.js";
 import { startInCycleMode } from "./cycle-startup.js";
 import { readWave } from "./wave-probe.js";
@@ -117,4 +118,67 @@ test("Scenario v3 switches as view state and management survives Undo/Redo and S
   await expect(page.getByTestId("active-scenario")).toHaveValue(base.id);
   await expect(page.getByTestId("active-scenario").locator("option")).toHaveCount(3);
   await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+});
+
+test("duplicated Clock compares equal after fresh enable and marker IDs through Undo/Redo and Save/Open", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  const sourceDocument = canonicalFixture();
+  const sourceClock = sourceDocument.signals.find((signal) => signal.type === "clock");
+  if (sourceClock?.type !== "clock") throw new Error("Fixture must contain a Clock Signal.");
+  const markerId = "bookmark_clock_origin" as never;
+  const clock = {
+    ...sourceClock,
+    enable: [
+      { id: "clock_enable_on", start: 1, value: 1 },
+      { id: "clock_enable_off", start: 5, value: 0 },
+    ],
+    edgeCounter: { ...sourceClock.edgeCounter, show: true, countFrom: "marker" as const, anchorId: markerId },
+  };
+  const sourceModel = scenarioModelFromV2({
+    ...sourceDocument,
+    bookmarks: [{ id: markerId, name: "Clock origin", start: 3 }],
+    signals: sourceDocument.signals.map((signal) => signal.id === clock.id ? clock : signal),
+  });
+  const originalScenarioId = sourceModel.scenarios[0]!.id;
+  const input = page.locator("input[type='file'][accept='.json,.tcd']");
+  await input.setInputFiles({ name: "scenario-clock-identity.tcd", mimeType: "application/json", buffer: Buffer.from(serializeScenarioDocumentModel(sourceModel)) });
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await page.getByTestId("scenario-duplicate").click();
+  const duplicateScenarioId = await page.getByTestId("active-scenario").inputValue();
+  expect(duplicateScenarioId).not.toBe(originalScenarioId);
+
+  const ribbon = page.getByTestId("ribbon");
+  await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByTestId("active-scenario").locator("option")).toHaveCount(1);
+  await ribbon.getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(page.getByTestId("active-scenario").locator("option")).toHaveCount(2);
+  await expect(page.getByTestId("active-scenario")).toHaveValue(duplicateScenarioId);
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  const downloadPromise = page.waitForEvent("download");
+  await ribbon.getByRole("button", { name: "Save", exact: true }).first().click();
+  const savedBytes = await readFile((await (await downloadPromise).path())!);
+  const saved = JSON.parse(savedBytes.toString("utf8")) as {
+    scenarios: Array<{
+      id: string;
+      bookmarks: Array<{ id: string; start: number }>;
+      signalStates: Record<string, { kind: string; enable?: Array<{ id?: string; start: number; value: number }>; edgeCounter?: { anchorId?: string } }>;
+    }>;
+  };
+  const originalSaved = saved.scenarios.find((scenario) => scenario.id === originalScenarioId)!;
+  const duplicateSaved = saved.scenarios.find((scenario) => scenario.id === duplicateScenarioId)!;
+  const originalState = originalSaved.signalStates[clock.id]!;
+  const duplicateState = duplicateSaved.signalStates[clock.id]!;
+  expect(duplicateState.enable?.map((change) => change.id)).not.toEqual(originalState.enable?.map((change) => change.id));
+  expect(duplicateState.edgeCounter?.anchorId).not.toBe(originalState.edgeCounter?.anchorId);
+  expect(duplicateState.edgeCounter?.anchorId).toBe(duplicateSaved.bookmarks[0]?.id);
+
+  await input.setInputFiles({ name: "scenario-clock-identity-saved.tcd", mimeType: "application/json", buffer: savedBytes });
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await page.getByTestId("active-scenario").selectOption(duplicateScenarioId);
+  await page.getByTestId("scenario-compare-toggle").click();
+  await page.getByTestId("scenario-compare-target").selectOption(originalScenarioId);
+  await expect(page.getByTestId("scenario-no-differences")).toHaveText("No waveform differences");
+  await expect(page.locator("[data-role='scenario-difference-overlay']")).toHaveCount(0);
 });

@@ -1,4 +1,4 @@
-import type { ScenarioDocumentModel, ScenarioId, ScenarioSignalState, SignalId } from "./types.js";
+import type { EdgeCounterSettings, ScenarioDocumentModel, ScenarioId, ScenarioSignalState, SignalId, TimingScenario } from "./types.js";
 
 export type ScenarioSignalDifference = Readonly<{
   signalId: SignalId;
@@ -7,6 +7,49 @@ export type ScenarioSignalDifference = Readonly<{
 
 function sameValue(left: unknown, right: unknown): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function edgeCounterSemantics(scenario: TimingScenario, settings: EdgeCounterSettings): unknown {
+  const configuration = {
+    show: settings.show,
+    mode: settings.mode,
+    startNumber: settings.startNumber,
+    countFrom: settings.countFrom,
+    labelEvery: settings.labelEvery,
+    position: settings.position,
+    offset: { x: settings.offset.x, y: settings.offset.y },
+  };
+  if (settings.countFrom !== "marker") return configuration;
+  const anchorId = settings.anchorId;
+  const bookmark = anchorId === undefined ? undefined : scenario.bookmarks.find((candidate) => candidate.id === anchorId);
+  return {
+    ...configuration,
+    ...(bookmark === undefined
+      ? { unresolvedAnchorId: anchorId ?? null }
+      : { anchorCycle: bookmark.start }),
+  };
+}
+
+function clockSemantics(scenario: TimingScenario, state: Extract<ScenarioSignalState, { kind: "clock" }>): unknown {
+  const generator = state.generator;
+  return {
+    kind: "clock",
+    generator: {
+      start: generator.start,
+      period: generator.period,
+      duty: generator.duty,
+      phase: generator.phase,
+      initial: generator.initial,
+      polarity: generator.polarity,
+      suppressedPeriods: [...(generator.suppressedPeriods ?? [])],
+    },
+    enable: (state.enable ?? []).map(({ start, value, displayLabel }) => ({
+      start,
+      value,
+      ...(displayLabel === undefined ? {} : { displayLabel }),
+    })),
+    edgeCounter: edgeCounterSemantics(scenario, state.edgeCounter),
+  };
 }
 
 function stateAt(state: ScenarioSignalState | undefined, cycle: number): unknown {
@@ -48,7 +91,9 @@ export function compareScenarioSignalStreams(
     const leftState = left.signalStates[definition.id];
     const rightState = right.signalStates[definition.id];
     if (leftState?.kind === "clock" || rightState?.kind === "clock") {
-      if (!sameValue(leftState, rightState) && end > start) differences.push({ signalId: definition.id, ranges: [{ start, end }] });
+      const leftClock = leftState?.kind === "clock" ? clockSemantics(left, leftState) : undefined;
+      const rightClock = rightState?.kind === "clock" ? clockSemantics(right, rightState) : undefined;
+      if (!sameValue(leftClock, rightClock) && end > start) differences.push({ signalId: definition.id, ranges: [{ start, end }] });
       continue;
     }
     const boundaries = new Set<number>([start, end]);

@@ -268,6 +268,9 @@ export function duplicateScenario(document: ScenarioDocumentModel, scenarioId: S
     if (state.kind === "clock") return [signalId, {
       ...state,
       ...(state.enable === undefined ? {} : { enable: state.enable.map((change) => ({ ...change, ...(change.id === undefined ? {} : { id: signalValueChangeIds.get(change.id)! }) })) }),
+      edgeCounter: state.edgeCounter.countFrom === "marker" && state.edgeCounter.anchorId !== undefined
+        ? { ...state.edgeCounter, anchorId: bookmarkIds.get(state.edgeCounter.anchorId as BookmarkId) ?? state.edgeCounter.anchorId }
+        : state.edgeCounter,
     }];
     return [signalId, { ...state, values: state.values.map((change) => ({ ...change, ...(change.id === undefined ? {} : { id: signalValueChangeIds.get(change.id)! }) })) }];
   }));
