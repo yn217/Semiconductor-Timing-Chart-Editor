@@ -1303,6 +1303,64 @@ describe("deterministic document export", () => {
     }
   });
 
+  it("exports distinct Marker, multiline Callout, and Bracket shapes through SVG, PNG, and PDF", async () => {
+    const base = canonicalFixture();
+    const signalId = base.signals[1]!.id;
+    const anchor = (cycle: number) => ({ signalId, cycle, point: "cycle-start" as const });
+    const snapshot = {
+      revision: 0,
+      document: {
+        ...base,
+        annotations: [
+          { id: "ann_marker_multi" as AnnotationId, type: "marker" as const, label: "Marker label", visible: true, anchor: anchor(2) },
+          { id: "ann_callout_multi" as AnnotationId, type: "callout" as const, label: "Callout line one\nCallout line two", visible: true, anchor: anchor(3) },
+          { id: "ann_bracket_multi" as AnnotationId, type: "bracket" as const, label: "Bracket label", visible: true, start: anchor(1), end: anchor(5) },
+        ],
+      },
+    };
+    const service = new DeterministicExportService();
+    const hasPrimitiveShapes = (svg: string) => {
+      expect(svg).toContain('data-annotation-id="ann_marker_multi"');
+      expect(svg).toContain('<line data-role="marker-tick"');
+      expect(svg).toContain('data-annotation-id="ann_callout_multi"');
+      const callout = svg.match(/<g data-annotation-id="ann_callout_multi"[\s\S]*?<\/g>/)?.[0] ?? "";
+      expect((callout.match(/<tspan/g) ?? []).length).toBe(2);
+      expect(svg).toContain('data-annotation-id="ann_bracket_multi"');
+      expect(svg).toContain('data-role="annotation-bracket-caps"');
+    };
+
+    const svg = new TextDecoder().decode(await service.export({ format: "svg", snapshot }));
+    hasPrimitiveShapes(svg);
+    const pdf = new TextDecoder().decode(await service.export({ format: "pdf", snapshot }));
+    expect(pdf.startsWith("%PDF-1.4")).toBe(true);
+    hasPrimitiveShapes(pdf);
+
+    const NativeBlob = globalThis.Blob;
+    const capturedSvgParts: BlobPart[][] = [];
+    class CapturedBlob extends NativeBlob {
+      constructor(parts: BlobPart[], options?: BlobPropertyBag) {
+        if (options?.type === "image/svg+xml") capturedSvgParts.push([...parts]);
+        super(parts, options);
+      }
+    }
+    const context = { scale: vi.fn(), fillRect: vi.fn(), drawImage: vi.fn(), fillStyle: "" };
+    const canvas = { width: 0, height: 0, getContext: vi.fn(() => context), toBlob: (callback: BlobCallback) => callback(new NativeBlob(["PNG-bytes"], { type: "image/png" })) };
+    class FakeImage { src = ""; async decode() { return undefined; } }
+    vi.stubGlobal("Blob", CapturedBlob);
+    vi.stubGlobal("Image", FakeImage);
+    vi.stubGlobal("document", { createElement: vi.fn(() => canvas) });
+    try {
+      const png = await service.export({ format: "png", snapshot });
+      const rasterSource = await new NativeBlob(capturedSvgParts[0]!, { type: "image/svg+xml" }).text();
+      expect(capturedSvgParts).toHaveLength(1);
+      hasPrimitiveShapes(rasterSource);
+      expect(new TextDecoder().decode(png)).toBe("PNG-bytes");
+      expect(context.drawImage).toHaveBeenCalledOnce();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("shares the same folded time mapping across waveforms, transactions, and annotations", () => {
     const scene = buildExportScene(foldedFixture(), { format: "svg", scope: "document", foldPolicy: "respect" });
     // The DMA transaction (source 2..12) ends inside the collapsed [5,15) range and must clamp to
