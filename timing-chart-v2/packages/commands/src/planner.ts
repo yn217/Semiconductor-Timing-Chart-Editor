@@ -23,7 +23,7 @@ import type {
   ValueSignal,
   EnumDefinition,
 } from "@timing-chart-v2/schema";
-import { ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_LABEL_PLACEMENTS, MAX_MEASUREMENT_LANE, annotationsForReferences, canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesFromOwner, referencesToAny, referencesToSignal, referencesToTimeGroup, validateEnumDefinition, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
+import { ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_LABEL_PLACEMENTS, MAX_MEASUREMENT_LANE, annotationsForReferences, canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesFromOwner, referencesTo, referencesToAny, referencesToSignal, referencesToTimeGroup, validateEnumDefinition, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
 import type { ChangeSet, SemanticCommand } from "./types.js";
 import type { CommandPolicyCode } from "./policy.js";
 import { mergeChangeSets } from "./changeset.js";
@@ -176,6 +176,7 @@ function deleteSignals(document: CanonicalDocument, signalIds: readonly SignalId
     const linkedSignals = transaction.linkedSignals.filter((id) => !selectedIds.has(id));
     return linkedSignals.length === transaction.linkedSignals.length ? transaction : { ...transaction, linkedSignals };
   });
+  const rowGroupIds = new Set(references.filter((reference) => reference.kind === "signalGroup.row").map((reference) => reference.ownerId));
   const referenceDeleted = document.timeline.referenceClock !== undefined && selectedIds.has(document.timeline.referenceClock);
   const nextTimeline = referenceDeleted ? (() => { const { referenceClock: _removed, ...timeline } = document.timeline; return timeline; })() : document.timeline;
   const removedSignals = signalIds;
@@ -184,7 +185,7 @@ function deleteSignals(document: CanonicalDocument, signalIds: readonly SignalId
     ...document,
     timeline: nextTimeline,
     signals: document.signals.filter((signal) => !selectedIds.has(signal.id)),
-    signalGroups: document.signalGroups.map((group) => ({ ...group, rows: group.rows.filter((row) => !selectedIds.has(row as SignalId)) })),
+    signalGroups: document.signalGroups.map((group) => rowGroupIds.has(group.id) ? { ...group, rows: group.rows.filter((row) => !selectedIds.has(row as SignalId)) } : group),
     transactions,
   };
   const changeSet: ChangeSet = { removedSignals, rowOrder: removedSignals, transactionSemantics: linkedTransactions.map((transaction) => transaction.id), minimapOverview: true, ...(referenceDeleted ? { timelineSemantics: true, geometryScreenX: true } : {}) };
@@ -1156,7 +1157,8 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
     }
     case "spacer.delete": {
-      const groupIndex = document.signalGroups.findIndex((group) => group.spacers?.some((spacer) => spacer.id === command.spacerId));
+      const ownerReference = referencesFromOwner(document, command.spacerId).find((reference) => reference.kind === "spacer.ownerGroup");
+      const groupIndex = document.signalGroups.findIndex((group) => group.id === ownerReference?.targetId);
       const group = document.signalGroups[groupIndex];
       const spacer = group?.spacers?.find((item) => item.id === command.spacerId);
       if (!group || !spacer) return fail("invalid", "SPACER_NOT_FOUND", "$.spacerId", `Spacer '${command.spacerId}' does not exist.`);
@@ -1232,14 +1234,14 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       if (semanticEqual(current, next)) return fail("no-op", "NO_OP", "$", "Enum definition is unchanged.");
       const nextDefinitions = [...definitions]; nextDefinitions[index] = next;
       const displayChanged = !semanticEqual(current.entries, next.entries);
-      const dependents = displayChanged ? document.signals.filter((signal) => signal.type === "state" && signal.enumId === command.enumId).map((signal) => signal.id) : [];
+      const dependents = displayChanged ? referencesTo(document, "enum", command.enumId).filter((reference) => reference.kind === "signal.enum").map((reference) => reference.ownerId as SignalId) : [];
       const changeSet: ChangeSet = { fullDocumentReplace: true, ...(dependents.length ? { waveSemantics: dependents, geometryLocal: dependents, geometryScreenX: true } : {}) };
       return { ok: true, document: { ...document, enumDefinitions: nextDefinitions }, changeSet, inverseChangeSet: changeSet };
     }
     case "enum.delete": {
       const definitions = document.enumDefinitions ?? [];
       if (!definitions.some((definition) => definition.id === command.enumId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.enumId", `Enum '${command.enumId}' does not exist.`);
-      const dependent = document.signals.filter((signal) => signal.type !== "clock" && signal.type !== "commentRow" && signal.enumId === command.enumId).map((signal) => signal.id);
+      const dependent = referencesTo(document, "enum", command.enumId).filter((reference) => reference.kind === "signal.enum").map((reference) => reference.ownerId as SignalId);
       if (dependent.length > 0) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.enumId", `Enum '${command.enumId}' is referenced by ${dependent.length} Signal(s): ${dependent.join(", ")}.`);
       return { ok: true, document: { ...document, enumDefinitions: definitions.filter((definition) => definition.id !== command.enumId) }, changeSet: { fullDocumentReplace: true }, inverseChangeSet: { fullDocumentReplace: true } };
     }
@@ -1774,7 +1776,8 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
     case "annotation.delete": {
       const annotation = document.annotations.find((item) => item.id === command.annotationId);
       if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
-      const annotationGroups = (document.annotationGroups ?? []).map((group) => ({ ...group, annotationIds: group.annotationIds.filter((id) => id !== annotation.id) }));
+      const membershipOwners = new Set(referencesTo(document, "annotation", annotation.id).filter((reference) => reference.kind === "annotationGroup.member").map((reference) => reference.ownerId));
+      const annotationGroups = (document.annotationGroups ?? []).map((group) => membershipOwners.has(group.id) ? { ...group, annotationIds: group.annotationIds.filter((id) => id !== annotation.id) } : group);
       const changeSet: ChangeSet = { annotationPosition: [annotation.id], annotationStyle: [annotation.id], minimapOverview: true, ...(annotationGroups.some((group, index) => !semanticEqual(group, document.annotationGroups?.[index])) ? { annotationGroups: annotationGroups.map((group) => group.id) } : {}) };
       return { ok: true, document: { ...document, annotations: document.annotations.filter((item) => item.id !== annotation.id), annotationGroups }, changeSet, inverseChangeSet: changeSet };
     }
@@ -2105,6 +2108,8 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
     case "bookmark.delete": {
       const bookmark = document.bookmarks.find((item) => item.id === command.bookmarkId);
       if (!bookmark) return fail("invalid", "BOOKMARK_NOT_FOUND", "$.bookmarkId", `Bookmark '${command.bookmarkId}' does not exist.`);
+      const dependents = referencesTo(document, "bookmark", bookmark.id).filter((reference) => reference.kind === "signal.edgeCounter.marker");
+      if (dependents.length > 0) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.bookmarkId", `Bookmark '${bookmark.id}' is used by Clock edge counters: ${dependents.map((reference) => reference.ownerId).join(", ")}.`);
       const changeSet: ChangeSet = { bookmarkPosition: [bookmark.id], minimapOverview: true };
       return { ok: true, document: { ...document, bookmarks: document.bookmarks.filter((item) => item.id !== bookmark.id) }, changeSet, inverseChangeSet: changeSet };
     }
@@ -2145,7 +2150,8 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
     case "labelAnchor.delete": {
       const anchor = document.timeline.labelAnchors.find((item) => item.id === command.labelAnchorId);
       if (!anchor) return fail("invalid", "LABEL_ANCHOR_NOT_FOUND", "$.labelAnchorId", `Label Anchor '${command.labelAnchorId}' does not exist.`);
-      if (anchor.ownerTimeGroupId !== undefined) return fail("invalid", "LABEL_ANCHOR_OWNED_BY_TIME_GROUP", "$.labelAnchorId", "This Label Anchor is owned by a Time Group; remove it by editing/deleting the Time Group instead.");
+      const ownerReference = referencesTo(document, "label-anchor", anchor.id).find((reference) => reference.kind === "timeGroup.resumeLabelAnchor");
+      if (anchor.ownerTimeGroupId !== undefined || ownerReference !== undefined) return fail("invalid", "LABEL_ANCHOR_OWNED_BY_TIME_GROUP", "$.labelAnchorId", "This Label Anchor is owned by a Time Group; remove it by editing/deleting the Time Group instead.");
       const changeSet: ChangeSet = { timelineSemantics: true, geometryScreenX: true, minimapOverview: true };
       return { ok: true, document: { ...document, timeline: { ...document.timeline, labelAnchors: document.timeline.labelAnchors.filter((item) => item.id !== anchor.id) } }, changeSet, inverseChangeSet: changeSet };
     }

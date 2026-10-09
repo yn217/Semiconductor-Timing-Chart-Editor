@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { commandPlannerMetrics, planCommand } from "@timing-chart-v2/commands";
-import { canonicalReferenceMetrics, type ConstraintId, type SignalId } from "@timing-chart-v2/schema";
+import { canonicalReferenceMetrics, type BookmarkId, type ConstraintId, type SignalId } from "@timing-chart-v2/schema";
 import { generatePerformanceDocument } from "../../packages/testing/src/index.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
@@ -11,6 +11,19 @@ describe("planner reference-index scaling", () => {
     const document = { ...base, constraints: [{ id: "constraint_requires_signal" as ConstraintId, type: "latency", data: { triggerSignalId: signalId, responseSignalId: base.signals[0]!.id } }] };
     const result = planCommand(document, { id: "cmd_delete_constraint_signal" as never, type: "signal.delete", signalId });
     expect(result).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "SIGNAL_HAS_DEPENDENTS", message: expect.stringContaining("constraint_requires_signal") }] });
+  });
+
+  it("blocks deletion of a Bookmark used as a Clock edge-counter anchor", () => {
+    const base = canonicalFixture();
+    const bookmarkId = "bookmark_edge_anchor" as BookmarkId;
+    const clock = base.signals[0]!;
+    const document = {
+      ...base,
+      bookmarks: [{ id: bookmarkId, name: "Origin", start: 1 }],
+      signals: [{ ...clock, type: "clock" as const, edgeCounter: { ...clock.edgeCounter, countFrom: "marker" as const, anchorId: bookmarkId } }, ...base.signals.slice(1)],
+    };
+    const result = planCommand(document, { id: "cmd_delete_referenced_bookmark" as never, type: "bookmark.delete", bookmarkId });
+    expect(result).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "MISSING_CROSS_REFERENCE", message: expect.stringContaining(clock.id) }] });
   });
 
   it("keeps multi-row invalidation and bulk deletion on indexed target queries at product-scale fixture size", () => {
