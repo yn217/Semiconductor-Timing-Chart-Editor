@@ -260,6 +260,8 @@
 .hierarchy-browser table[data-instance-path-alignment="left"] .hierarchy-instance-path { text-align: left; }
 .hierarchy-browser table[data-instance-path-alignment="center"] .hierarchy-instance-path { text-align: center; }
 .hierarchy-browser table[data-instance-path-alignment="right"] .hierarchy-instance-path { text-align: right; }
+.hierarchy-browser table[data-hierarchy-display-mode="split"] th.hierarchy-instance-path,
+.hierarchy-browser table[data-hierarchy-display-mode="split"] td.hierarchy-instance-path { width: var(--hierarchy-instance-path-width); max-width: var(--hierarchy-instance-path-width); }
 
 .surface-host [data-role="tree-signal-role"],
 .surface-host [data-role="signal-role"] {

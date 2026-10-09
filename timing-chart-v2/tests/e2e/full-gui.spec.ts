@@ -464,6 +464,11 @@ test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registra
   await displayMode.selectOption("full");
   await expect(hierarchy.locator("[data-hierarchy-row-id='sig_cycle_data']")).toContainText("dut.data[7:0]");
   await displayMode.selectOption("split");
+  const instancePathWidth = hierarchy.getByLabel("Instance Path width");
+  const instancePathHeader = hierarchy.locator("th.hierarchy-instance-path");
+  const initialInstancePathWidth = await instancePathHeader.evaluate((element) => element.getBoundingClientRect().width);
+  await instancePathWidth.fill("340");
+  await expect.poll(() => instancePathHeader.evaluate((element) => element.getBoundingClientRect().width)).toBeGreaterThan(initialInstancePathWidth + 80);
   const instancePathAlignment = hierarchy.getByLabel("Instance Path alignment");
   for (const alignment of ["left", "center", "right"] as const) {
     await instancePathAlignment.selectOption(alignment);
