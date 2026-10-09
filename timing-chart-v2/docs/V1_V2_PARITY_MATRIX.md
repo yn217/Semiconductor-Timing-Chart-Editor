@@ -18,6 +18,19 @@ The machine-readable source of truth is
 `Command Owner`, `View Owner`, `Export Owner`, `Unit`, `E2E`, `Visual`,
 `Save/Open`, `Performance`, and `Notes`.
 
+### Current-main evidence correction — 2026-10-09
+
+For `GUI-ANNOTATION-PRESENTATION` / owner #378, the live label-placement
+ordering assertion is no longer merely authored or unrun. The focused
+`annotation-multiline-and-export-shapes.spec.ts` case
+`annotation label placement presets move the live label between its semantic
+endpoints and above/below` passed 1/1 in current-main Chromium on 2026-10-09,
+with tracing disabled and a run-owned local server. It proves live rendered
+positions satisfy Start < Center < End and Above < Center < Below. This
+corrects the older execution note in the machine-readable row; it does not
+close the separate Golden Sample 14 full visual/property matrix tracked by
+#777, so `GUI-ANNOTATION-PRESENTATION` remains open pending that evidence.
+
 The complete pre-V2 GitHub Issue universe is recorded in
 [`v1-v2-source-manifest.json`](./v1-v2-source-manifest.json). It was enumerated
 from all repository Issues (`state=all`, filtered to issue number `< 161`),
