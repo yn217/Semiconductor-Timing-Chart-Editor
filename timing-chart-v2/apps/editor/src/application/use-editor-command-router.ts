@@ -5,6 +5,7 @@ import { UiCommandRegistry } from "@timing-chart-v2/ui";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
 import type { SelectionOwner } from "./use-selection-owner.js";
 import type { ClipboardActions } from "./clipboard-actions.js";
+import { repairSelectionAgainstDocument } from "./selection-history-repair.js";
 
 export interface EditorCommandRouterInput {
   readonly application: EditorApplicationOwner;
@@ -23,18 +24,20 @@ export function useEditorCommandRouter(input: EditorCommandRouterInput): EditorC
 
   const repairSelectionAfterHistoryChange = (result: CommandResult) => {
     if (!result.ok) return;
-    const removedIds = result.changeSet.removedSignals ?? [];
-    const currentSignalId = input.selection.refs.signalId.current;
-    if (currentSignalId && removedIds.includes(currentSignalId)) {
-      input.selection.clear();
-      return;
-    }
+    const current = input.selection.refs.state.current;
+    const repaired = repairSelectionAgainstDocument(current, result.snapshot.document);
+    if (repaired !== current) input.selection.selectTarget(repaired);
     const addedIds = result.changeSet.addedSignals ?? [];
-    const nothingSelected = !input.selection.refs.signalId.current
-      && !input.selection.refs.groupId.current
-      && !input.selection.refs.spacerId.current
-      && !input.selection.refs.annotationId.current
-      && !input.selection.refs.transactionId.current;
+    const nothingSelected = current.signalId === undefined
+      && current.signalIds.size === 0
+      && current.groupId === undefined
+      && current.spacerId === undefined
+      && current.annotationId === undefined
+      && current.annotationIds.size === 0
+      && current.transactionId === undefined
+      && current.transactionIds.size === 0
+      && current.transactionPhaseId === undefined
+      && !current.legendSelected;
     if (nothingSelected && addedIds.length === 1) input.selection.selectSignal(addedIds[0]!);
   };
 
