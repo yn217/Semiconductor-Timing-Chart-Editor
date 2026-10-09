@@ -1,7 +1,7 @@
 import { useTransactionDisclosure } from "./workspace/use-transaction-disclosure.js";
 import { bottomTransactionActionIds } from "./runtime/transaction-selection-index.js";
 import type { AIBridgeStatus, AIBridgeViewOperation } from "./ai-bridge-client.js";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type {
   Dispatch,
   KeyboardEvent,
@@ -261,7 +261,9 @@ export function useEditorSecondarySurfaces(
       onCancel={() => dialog.setBottomResetToken((value) => value + 1)}
     />
   );
+  const [menuHeader, setMenuHeader] = useState(false);
   // Combined shows two headers: Transactions over the Transaction pane and Signals / Groups over the Signal pane (like Cycle).
+  // Both headers share one menu state; only the header that opened a menu renders it (two open instances would dismiss each other as peers).
   const renderTreeHeader = (transactionHeader: boolean) => (
     <SignalTreeColumnHeader
       treeTypeFilter={workspace.treeTypeFilter}
@@ -271,14 +273,16 @@ export function useEditorSecondarySurfaces(
       treeFilter={workspace.treeFilter}
       onTreeFilterChange={workspace.setTreeFilter}
       onClearTreeFilter={() => workspace.setTreeFilter("")}
-      addMenuOpen={dialog.treeAddMenuOpen}
+      addMenuOpen={dialog.treeAddMenuOpen && menuHeader === transactionHeader}
       onToggleAddMenu={(origin) => {
         refs.menuOriginRef.current = origin;
+        setMenuHeader(transactionHeader);
         dialog.setTreeAddMenuOpen((value) => !value);
       }}
-      moreMenuOpen={dialog.treeMoreMenuOpen}
+      moreMenuOpen={dialog.treeMoreMenuOpen && menuHeader === transactionHeader}
       onToggleMoreMenu={(origin) => {
         refs.menuOriginRef.current = origin;
+        setMenuHeader(transactionHeader);
         dialog.setTreeMoreMenuOpen((value) => !value);
       }}
       onAddEntity={input.actions.addTreeEntity}
