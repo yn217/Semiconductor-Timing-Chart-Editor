@@ -1,19 +1,28 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CommandResult } from "@timing-chart-v2/commands";
 import type { Annotation, CanonicalDocument, DocumentProblem, Signal, SignalGroup, Transaction } from "@timing-chart-v2/schema";
 import { normalizeDocument, parseJsonInput, scanJsonSyntax, serializeCanonicalDocument } from "@timing-chart-v2/schema";
 import { replaceSelectedJsonObject } from "./json-selection.js";
 import { selectedJsonProblem } from "./json-problems.js";
+import { advancedJsonDraftStaleReason, captureAdvancedJsonDraftBase, resolveAdvancedJsonEntityTarget } from "./advanced-json-draft-base.js";
 
-export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, selectedAnnotation, selectedTransaction, onReplaceDocument, onDiagnostic }: { readonly document: CanonicalDocument; readonly selectedSignal: Signal | undefined; readonly selectedGroup: SignalGroup | undefined; readonly selectedAnnotation: Annotation | undefined; readonly selectedTransaction: Transaction | undefined; readonly onReplaceDocument: (document: CanonicalDocument) => CommandResult; readonly onDiagnostic: (diagnostic: DocumentProblem | readonly DocumentProblem[] | undefined) => void }) {
+export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, selectedAnnotation, selectedTransaction, documentEpoch, projectionGeneration, revision, onReplaceDocument, onDiagnostic }: { readonly document: CanonicalDocument; readonly selectedSignal: Signal | undefined; readonly selectedGroup: SignalGroup | undefined; readonly selectedAnnotation: Annotation | undefined; readonly selectedTransaction: Transaction | undefined; readonly documentEpoch: number; readonly projectionGeneration: number; readonly revision: number; readonly onReplaceDocument: (document: CanonicalDocument) => CommandResult; readonly onDiagnostic: (diagnostic: DocumentProblem | readonly DocumentProblem[] | undefined) => void }) {
   const [scope, setScope] = useState<"selected" | "document">("document");
   const selected = selectedSignal ?? selectedGroup ?? selectedAnnotation ?? selectedTransaction;
+  const selectedTarget = useMemo(() => selected === undefined ? undefined : selectedSignal !== undefined
+    ? { kind: "signal" as const, id: selected.id, value: selected }
+    : selectedGroup !== undefined ? { kind: "group" as const, id: selected.id, value: selected }
+      : selectedAnnotation !== undefined ? { kind: "annotation" as const, id: selected.id, value: selected }
+        : { kind: "transaction" as const, id: selected.id, value: selected }, [selected, selectedSignal, selectedGroup, selectedAnnotation, selectedTransaction]);
   const text = useMemo(() => scope === "document" ? serializeCanonicalDocument(document) : "", [document, scope]);
   const selectedText = JSON.stringify(selected ?? {}, null, 2);
   const sourceText = scope === "selected" ? selectedText : text;
+  const draftContext = { document, documentEpoch, projectionGeneration, revision } as const;
+  const draftBaseRef = useRef(captureAdvancedJsonDraftBase(scope, draftContext, selectedTarget));
   const [advanced, setAdvanced] = useState(false);
   const [draft, setDraft] = useState(sourceText);
   const [userEdited, setUserEdited] = useState(false);
+  const [staleDraft, setStaleDraft] = useState(false);
   const [status, setStatus] = useState("Read only");
   const draftChanged = advanced && userEdited && draft !== sourceText;
   const changeScope = (nextScope: "selected" | "document") => {
@@ -22,6 +31,8 @@ export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, sel
     // source rather than treating it as an unsolicited live refresh.
     setDraft(nextScope === "selected" ? selectedText : serializeCanonicalDocument(document));
     setUserEdited(false);
+    setStaleDraft(false);
+    draftBaseRef.current = captureAdvancedJsonDraftBase(nextScope, draftContext, selectedTarget);
     onDiagnostic(undefined);
     setStatus(nextScope === "selected" ? "Selected Object" : "Read only");
   };
@@ -33,10 +44,20 @@ export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, sel
       setStatus("Unapplied changes — review or cancel before switching source");
       return;
     }
+    draftBaseRef.current = captureAdvancedJsonDraftBase(scope, draftContext, selectedTarget);
+    setStaleDraft(false);
     setDraft(sourceText);
     setUserEdited(false);
-  }, [sourceText, draftChanged, userEdited]);
-  const cancel = () => { setDraft(sourceText); setUserEdited(false); onDiagnostic(undefined); setStatus("Draft cancelled"); };
+  }, [sourceText, draftChanged, userEdited, scope, document, documentEpoch, projectionGeneration, revision, selectedTarget]);
+  const reloadLatest = () => {
+    draftBaseRef.current = captureAdvancedJsonDraftBase(scope, draftContext, selectedTarget);
+    setDraft(sourceText);
+    setUserEdited(false);
+    setStaleDraft(false);
+    onDiagnostic(undefined);
+    setStatus("Latest source loaded");
+  };
+  const cancel = () => { reloadLatest(); setStatus("Draft cancelled"); };
   const parseDraft = (): unknown => {
     try {
       const parsed = parseJsonInput(draft);
@@ -69,10 +90,17 @@ export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, sel
     const value = parseDraft();
     if (value === undefined) return;
     if (scope === "document") { const problems = validateDocumentValue(value as CanonicalDocument); if (problems.length === 0) { onDiagnostic(undefined); setStatus("Valid"); } else { const diagnostics = problems.map((problem, index) => ({ ...problem, severity: "error" as const, operation: "document.json.validate", operationLabel: "Validate Advanced JSON", source: "validation" as const, stage: "validate" as const, recommendation: "Correct the reported path and validate again.", detail: `advanced-json:validate:${index}` })); const problem = problems[0]!; onDiagnostic(diagnostics); setStatus(`Invalid: ${problem.code} · ${problem.path}`); } }
-    else if (!selected) { onDiagnostic(selectedJsonProblem("SELECTED_OBJECT_REQUIRED", "$", "Select an object before validating selected JSON.")); setStatus("No selected object"); }
+    else if (!draftBaseRef.current.selectedTarget) { onDiagnostic(selectedJsonProblem("SELECTED_OBJECT_REQUIRED", "$", "Select an object before validating selected JSON.")); setStatus("No selected object"); }
     else if (typeof value !== "object" || value === null || Array.isArray(value)) { onDiagnostic(selectedJsonProblem("SELECTED_OBJECT_SHAPE", "$", "Selected JSON must be an object.")); setStatus("Invalid selected object"); }
-    else if ((value as { id?: unknown }).id !== selected.id) { onDiagnostic(selectedJsonProblem("SELECTED_OBJECT_ID_MISMATCH", "$.id", "Selected object ID cannot change.")); setStatus("Invalid selected object ID"); }
-    else { const problems = validateDocumentValue(replaceSelectedJsonObject(document, value, selectedSignal, selectedGroup, selectedAnnotation, selectedTransaction)); if (problems.length === 0) { onDiagnostic(undefined); setStatus("Valid"); } else { const diagnostics = problems.map((problem, index) => ({ ...problem, severity: "error" as const, operation: "document.json.validate", operationLabel: "Validate Advanced JSON", source: "validation" as const, stage: "validate" as const, recommendation: "Correct the reported path and validate again.", detail: `advanced-json:validate:${index}` })); const problem = problems[0]!; onDiagnostic(diagnostics); setStatus(`Invalid: ${problem.code} · ${problem.path}`); } }
+    else if ((value as { id?: unknown }).id !== draftBaseRef.current.selectedTarget.id) { onDiagnostic(selectedJsonProblem("SELECTED_OBJECT_ID_MISMATCH", "$.id", "Selected object ID cannot change.")); setStatus("Invalid selected object ID"); }
+    else {
+      const target = resolveAdvancedJsonEntityTarget(document, draftBaseRef.current.selectedTarget);
+      if (!target) { setStatus("Stale draft — selected object no longer exists"); return; }
+      const next = replaceSelectedJsonObject(document, value, target.kind === "signal" ? target.value as Signal : undefined, target.kind === "group" ? target.value as SignalGroup : undefined, target.kind === "annotation" ? target.value as Annotation : undefined, target.kind === "transaction" ? target.value as Transaction : undefined);
+      const problems = validateDocumentValue(next);
+      if (problems.length === 0) { onDiagnostic(undefined); setStatus("Valid"); }
+      else { const diagnostics = problems.map((problem, index) => ({ ...problem, severity: "error" as const, operation: "document.json.validate", operationLabel: "Validate Advanced JSON", source: "validation" as const, stage: "validate" as const, recommendation: "Correct the reported path and validate again.", detail: `advanced-json:validate:${index}` })); const problem = problems[0]!; onDiagnostic(diagnostics); setStatus(`Invalid: ${problem.code} · ${problem.path}`); }
+    }
   };
   const copy = async () => {
     const reportFailure = (reason: string) => {
@@ -90,14 +118,23 @@ export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, sel
   };
   const apply = () => {
     if (!advanced) return;
+    const staleReason = advancedJsonDraftStaleReason(draftBaseRef.current, draftContext);
+    if (staleReason) {
+      setStaleDraft(true);
+      const message = `${staleReason} Reload latest or cancel before applying.`;
+      onDiagnostic({ code: "STALE_JSON_DRAFT", path: "$", message, severity: "error", operation: "document.json.apply", operationLabel: "Apply Advanced JSON", source: "validation", stage: "validate", recommendation: "Reload the latest JSON or cancel this draft, then reapply the intended edit.", detail: "advanced-json:stale-base" });
+      setStatus(`Stale draft — ${staleReason}`);
+      return;
+    }
     const value = parseDraft();
     if (value === undefined) return; // Preserve parse/resource diagnostics, including line and column.
     if (typeof value !== "object" || value === null || Array.isArray(value)) { setStatus("JSON object required"); return; }
     let next = value as CanonicalDocument;
     if (scope === "selected") {
-      if (!selected) { setStatus("No selected object"); return; }
-      if ((value as { id?: unknown }).id !== selected.id) { setStatus("Selected object ID cannot change"); return; }
-      next = replaceSelectedJsonObject(document, value, selectedSignal, selectedGroup, selectedAnnotation, selectedTransaction);
+      const target = resolveAdvancedJsonEntityTarget(document, draftBaseRef.current.selectedTarget);
+      if (!target) { setStatus("Stale draft — selected object no longer exists"); return; }
+      if ((value as { id?: unknown }).id !== target.id) { setStatus("Selected object ID cannot change"); return; }
+      next = replaceSelectedJsonObject(document, value, target.kind === "signal" ? target.value as Signal : undefined, target.kind === "group" ? target.value as SignalGroup : undefined, target.kind === "annotation" ? target.value as Annotation : undefined, target.kind === "transaction" ? target.value as Transaction : undefined);
     }
     const normalized = normalizeDocument(next);
     const problems = normalized.ok ? [] : normalized.problems;
@@ -114,7 +151,8 @@ export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, sel
     if (!result.ok) { setStatus(`Apply failed: ${result.reason}`); return; }
     setAdvanced(false);
     setUserEdited(false);
+    setStaleDraft(false);
     setStatus("Applied");
   };
-  return <section className="json-panel" data-testid="json-panel"><div className="json-toolbar"><strong>JSON</strong><button type="button" data-testid="json-advanced-toggle" aria-pressed={advanced} onClick={() => setAdvanced((value) => !value)}>{advanced ? "Read Only" : "Advanced Editable"}</button><span aria-label="JSON editing mode">{advanced ? "Advanced" : "Read only"}</span>{advanced && draftChanged && <span data-testid="json-unapplied-status">● Unapplied changes</span>}<select aria-label="JSON scope" value={scope} onChange={(event) => changeScope(event.target.value as typeof scope)}><option value="selected">Selected Object</option><option value="document">Whole Document</option></select><button type="button" onClick={format}>Format</button><button type="button" onClick={validate}>Validate</button><button type="button" onClick={() => void copy()}>Copy</button>{advanced && <><button type="button" data-testid="cancel-advanced-json" onClick={cancel} disabled={!draftChanged}>Cancel</button><button type="button" data-testid="apply-advanced-json" onClick={apply} disabled={!draftChanged}>Apply JSON</button></>}<output>{status}</output></div>{advanced ? <textarea aria-label="Advanced JSON" value={draft} onChange={(event) => { setUserEdited(true); setDraft(event.target.value); }} spellCheck={false} /> : <pre>{scope === "selected" ? selectedText : text}</pre>}</section>;
+  return <section className="json-panel" data-testid="json-panel"><div className="json-toolbar"><strong>JSON</strong><button type="button" data-testid="json-advanced-toggle" aria-pressed={advanced} onClick={() => setAdvanced((value) => !value)}>{advanced ? "Read Only" : "Advanced Editable"}</button><span aria-label="JSON editing mode">{advanced ? "Advanced" : "Read only"}</span>{advanced && draftChanged && <span data-testid="json-unapplied-status">● Unapplied changes</span>}<select aria-label="JSON scope" value={scope} onChange={(event) => changeScope(event.target.value as typeof scope)}><option value="selected">Selected Object</option><option value="document">Whole Document</option></select><button type="button" onClick={format}>Format</button><button type="button" onClick={validate}>Validate</button><button type="button" onClick={() => void copy()}>Copy</button>{advanced && draftChanged && <button type="button" data-testid="cancel-advanced-json" onClick={cancel}>Cancel</button>}{advanced && staleDraft && <button type="button" data-testid="reload-latest-advanced-json" onClick={reloadLatest}>Reload latest</button>}{advanced && draftChanged && <button type="button" data-testid="apply-advanced-json" onClick={apply}>Apply JSON</button>}<output>{status}</output></div>{advanced ? <textarea aria-label="Advanced JSON" value={draft} onChange={(event) => { if (!userEdited || !draftChanged) draftBaseRef.current = captureAdvancedJsonDraftBase(scope, draftContext, selectedTarget); setUserEdited(true); setDraft(event.target.value); }} spellCheck={false} /> : <pre>{scope === "selected" ? selectedText : text}</pre>}</section>;
 }

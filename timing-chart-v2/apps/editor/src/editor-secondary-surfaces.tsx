@@ -475,6 +475,9 @@ export function useEditorSecondarySurfaces(
       selectedGroup={bottom.group}
       selectedAnnotation={bottom.annotation}
       selectedTransaction={bottom.transaction}
+      documentEpoch={input.documentEpoch}
+      projectionGeneration={input.projectionGeneration}
+      revision={input.revision}
       onReplaceDocument={input.actions.replaceDocument}
       onDiagnostic={(next) => {
         const nextDiagnostics = next === undefined ? [] : Array.isArray(next) ? next : [next];
