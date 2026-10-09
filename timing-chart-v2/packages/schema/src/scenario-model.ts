@@ -224,6 +224,14 @@ export function deleteScenario(document: ScenarioDocumentModel, scenarioId: Scen
   return next;
 }
 
+function scenarioEntityIds(document: ScenarioDocumentModel): Set<string> {
+  const used = new Set<string>(document.scenarios.map((scenario) => scenario.id));
+  for (const scenario of document.scenarios) {
+    for (const entity of canonicalEntityInventory(projectScenarioAsV2(document, scenario.id))) used.add(entity.id);
+  }
+  return used;
+}
+
 /**
  * Duplicate one Scenario with fresh IDs for all Scenario-owned entities.
  * Shared Signal IDs and references to them intentionally remain unchanged.
@@ -231,10 +239,7 @@ export function deleteScenario(document: ScenarioDocumentModel, scenarioId: Scen
 export function duplicateScenario(document: ScenarioDocumentModel, scenarioId: ScenarioId, name?: string): ScenarioDocumentModel {
   const source = document.scenarios.find((scenario) => scenario.id === scenarioId);
   if (!source) throw new Error(`Scenario '${scenarioId}' does not exist.`);
-  const used = new Set<string>(document.scenarios.map((scenario) => scenario.id));
-  for (const scenario of document.scenarios) {
-    for (const item of canonicalEntityInventory(projectScenarioAsV2(document, scenario.id))) used.add(item.id);
-  }
+  const used = scenarioEntityIds(document);
   const allocate = (kind: string, id: string): string => {
     const next = opaqueDerivedId(`scenario-copy:${source.id}:${kind}:${id}`, used);
     used.add(next);
@@ -424,7 +429,7 @@ function valueAt(state: ScenarioSignalState, cycle: number): string | number | u
   return value ?? state.values[0]?.value;
 }
 
-function applyHandshakeCase(scenario: TimingScenario, suggestion: HandshakeMissingCaseSuggestion): TimingScenario {
+function applyHandshakeCase(scenario: TimingScenario, suggestion: HandshakeMissingCaseSuggestion, usedIds: Set<string>): TimingScenario {
   const start = handshakeCaseStart(scenario);
   const requestState = scenario.signalStates[suggestion.requestSignalId];
   const acknowledgeState = scenario.signalStates[suggestion.acknowledgeSignalId];
@@ -435,7 +440,11 @@ function applyHandshakeCase(scenario: TimingScenario, suggestion: HandshakeMissi
   const acknowledgeActive = activeLevel(constraint, ["acknowledgePolarity", "ackPolarity", "ackActiveLevel"]);
   const requestIdle = requestActive === 1 ? 0 : 1;
   const acknowledgeIdle = acknowledgeActive === 1 ? 0 : 1;
-  const events = (cycles: readonly Readonly<{ cycle: number; value: number | string }>[]) => cycles.map(({ cycle, value }) => ({ start: cycle, value }));
+  const events = (signalId: SignalId, cycles: readonly Readonly<{ cycle: number; value: number | string }>[]) => cycles.map(({ cycle, value }, index) => {
+    const id = opaqueDerivedId(`handshake:${scenario.id}:${suggestion.constraintId}:${suggestion.kind}:${signalId}:${index}`, usedIds);
+    usedIds.add(id);
+    return { id, start: cycle, value };
+  });
   const cases: Record<HandshakeMissingCaseKind, Readonly<{ request: readonly Readonly<{ cycle: number; value: number | string }>[]; acknowledge: readonly Readonly<{ cycle: number; value: number | string }>[]; end: number }>> = {
     "ack-before-request": { request: [{ cycle: start + 2, value: requestActive }, { cycle: start + 4, value: requestIdle }], acknowledge: [{ cycle: start, value: acknowledgeActive }, { cycle: start + 3, value: acknowledgeIdle }], end: start + 5 },
     "request-before-ack": { request: [{ cycle: start, value: requestActive }, { cycle: start + 3, value: requestIdle }], acknowledge: [{ cycle: start + 2, value: acknowledgeActive }, { cycle: start + 3, value: acknowledgeIdle }], end: start + 4 },
@@ -449,21 +458,21 @@ function applyHandshakeCase(scenario: TimingScenario, suggestion: HandshakeMissi
   const selected = cases[suggestion.kind];
   if (selected.end > scenario.timeline.end) throw new Error("Timeline is too short for this Handshake case.");
   let signalStates = { ...scenario.signalStates };
-  signalStates[suggestion.requestSignalId] = replaceSignalSpan(requestState, start, selected.end, events(selected.request));
-  signalStates[suggestion.acknowledgeSignalId] = replaceSignalSpan(acknowledgeState, start, selected.end, events(selected.acknowledge));
+  signalStates[suggestion.requestSignalId] = replaceSignalSpan(requestState, start, selected.end, events(suggestion.requestSignalId, selected.request));
+  signalStates[suggestion.acknowledgeSignalId] = replaceSignalSpan(acknowledgeState, start, selected.end, events(suggestion.acknowledgeSignalId, selected.acknowledge));
   if (suggestion.kind === "reset-during-transaction") {
     if (!suggestion.resetSignalId) throw new Error("Reset case requires an explicitly configured Reset Signal ID.");
     const resetState = signalStates[suggestion.resetSignalId];
     if (resetState?.kind !== "values") throw new Error("Reset case requires a value-signal Reset state.");
     const resetActive = activeLevel(constraint, ["resetPolarity"]);
-    signalStates[suggestion.resetSignalId] = replaceSignalSpan(resetState, start, selected.end, events([{ cycle: start + 2, value: resetActive === 1 ? 1 : 0 }, { cycle: start + 3, value: resetActive === 1 ? 0 : 1 }]));
+    signalStates[suggestion.resetSignalId] = replaceSignalSpan(resetState, start, selected.end, events(suggestion.resetSignalId, [{ cycle: start + 2, value: resetActive === 1 ? 1 : 0 }, { cycle: start + 3, value: resetActive === 1 ? 0 : 1 }]));
   }
   if (suggestion.kind === "stable-data-while-stalled") {
     for (const id of suggestion.stableSignalIds) {
       const state = signalStates[id];
       const held = state ? valueAt(state, start) : undefined;
       if (state?.kind !== "values" || held === undefined) throw new Error(`Stable Signal '${id}' has no value to hold during the generated stall.`);
-      signalStates[id] = replaceSignalSpan(state, start, selected.end, [{ start, value: held }]);
+      signalStates[id] = replaceSignalSpan(state, start, selected.end, events(id, [{ cycle: start, value: held }]));
     }
   }
   return { ...scenario, name: `${scenario.name} · ${suggestion.title}`, signalStates };
@@ -493,7 +502,7 @@ export function createScenariosFromHandshakeSuggestions(
     if (!created) throw new Error("Selected Handshake case did not create a Scenario.");
     const copiedConstraint = created.constraints[sourceConstraintIndex];
     if (!copiedConstraint) throw new Error("Duplicated Scenario is missing its Handshake constraint.");
-    const generated = applyHandshakeCase(created, { ...suggestion, constraintId: copiedConstraint.id });
+    const generated = applyHandshakeCase(created, { ...suggestion, constraintId: copiedConstraint.id }, scenarioEntityIds(duplicated));
     next = { ...duplicated, scenarios: duplicated.scenarios.map((candidate) => candidate.id === created.id ? generated : candidate) };
     const problems = validateScenarioDocumentModel(next);
     if (problems.length > 0) throw new Error(`Generated Handshake Scenario is invalid (${problems.map((problem) => problem.code).join(", ")}).`);

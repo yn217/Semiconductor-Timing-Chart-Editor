@@ -233,18 +233,45 @@ describe("Scenario canonical model adapter", () => {
     expect(suggestions.map((item) => item.kind)).toEqual(["ack-before-request", "request-before-ack", "same-cycle", "backpressure", "consecutive-transfer", "stable-data-while-stalled"]);
 
     const selected = suggestions.find((item) => item.kind === "same-cycle")!;
-    const result = createScenariosFromHandshakeSuggestions(model, sourceScenario.id, [selected.key]);
+    const stableCase = suggestions.find((item) => item.kind === "stable-data-while-stalled")!;
+    const result = createScenariosFromHandshakeSuggestions(model, sourceScenario.id, [selected.key, stableCase.key]);
     expect(model.scenarios).toHaveLength(1);
-    expect(result.document.scenarios).toHaveLength(2);
-    expect(result.createdScenarioIds).toHaveLength(1);
+    expect(result.document.scenarios).toHaveLength(3);
+    expect(result.createdScenarioIds).toHaveLength(2);
     expect(result.document.scenarios[1]?.constraints[0]?.id).not.toBe(sourceScenario.constraints[0]?.id);
     const generated = result.document.scenarios[1]!;
+    const stableGenerated = result.document.scenarios[2]!;
     expect(generated.transactions[0]!.phases![0]!.id).not.toBe("phase_handshake");
     expect(sourceScenario.transactions[0]!.phases![0]!.id).toBe("phase_handshake");
     const reqValues = generated.signalStates[request.id]!;
     const ackValues = generated.signalStates[acknowledge.id]!;
-    expect(reqValues).toMatchObject({ kind: "values", values: expect.arrayContaining([{ start: 0, value: 0 }, { start: 1, value: 1 }]) });
-    expect(ackValues).toMatchObject({ kind: "values", values: expect.arrayContaining([{ start: 0, value: 0 }, { start: 1, value: 1 }]) });
+    expect(reqValues.kind).toBe("values");
+    expect(ackValues.kind).toBe("values");
+    if (reqValues.kind !== "values" || ackValues.kind !== "values") throw new Error("Generated Handshake Signals must use value state.");
+    expect(reqValues.values).toEqual(expect.arrayContaining([expect.objectContaining({ start: 0, value: 0 }), expect.objectContaining({ start: 1, value: 1 })]));
+    expect(ackValues.values).toEqual(expect.arrayContaining([expect.objectContaining({ start: 0, value: 0 }), expect.objectContaining({ start: 1, value: 1 })]));
+    const originalEvents = duplicateScenario(model, sourceScenario.id).scenarios[1]!;
+    const retainedRequest = (generated.signalStates[request.id] as Extract<typeof reqValues, { kind: "values" }>).values.find((change) => change.start === 3);
+    const retainedRequestBeforeGeneration = (originalEvents.signalStates[request.id] as Extract<typeof reqValues, { kind: "values" }>).values.find((change) => change.start === 3);
+    expect(retainedRequest?.id).toBe(retainedRequestBeforeGeneration?.id);
+    const stablePayload = stableGenerated.signalStates[payload.id];
+    expect(stablePayload?.kind).toBe("values");
+    if (stablePayload?.kind !== "values") throw new Error("Generated stable-data Signal must use value state.");
+    expect(stablePayload.values).toEqual(expect.arrayContaining([expect.objectContaining({ start: 0, value: "00" })]));
+    const generatedEvents = [
+      ...reqValues.values.filter((change) => change.start === 0 || change.start === 1),
+      ...ackValues.values.filter((change) => change.start === 0 || change.start === 1),
+      ...stablePayload.values.filter((change) => change.start === 0),
+    ];
+    expect(generatedEvents.every((change) => typeof change.id === "string" && change.id.length > 0)).toBe(true);
+    const allChanges = result.document.scenarios.flatMap((scenario) => Object.values(scenario.signalStates).flatMap((state) => !state ? [] : state.kind === "clock" ? state.enable ?? [] : state.values));
+    const allChangeIds = allChanges.flatMap((change) => typeof change.id === "string" ? [change.id] : []);
+    expect(new Set(allChangeIds).size).toBe(allChangeIds.length);
+    const repeatedGeneration = createScenariosFromHandshakeSuggestions(result.document, sourceScenario.id, [selected.key]);
+    const repeatedIds = repeatedGeneration.document.scenarios.flatMap((scenario) => Object.values(scenario.signalStates).flatMap((state) => !state ? [] : (state.kind === "clock" ? state.enable ?? [] : state.values).flatMap((change) => change.id ? [change.id] : [])));
+    expect(new Set(repeatedIds).size).toBe(repeatedIds.length);
+    const reopened = parseScenarioDocumentModel(serializeScenarioDocumentModel(result.document));
+    expect(reopened).toMatchObject({ ok: true, model: result.document, validated: true });
     expect(validateScenarioDocumentModel(result.document)).toEqual([]);
     expect(() => createScenariosFromHandshakeSuggestions(model, sourceScenario.id, ["unknown"])).toThrow("Unknown or unsupported");
 
@@ -260,8 +287,15 @@ describe("Scenario canonical model adapter", () => {
     const extendedGenerated = createScenariosFromHandshakeSuggestions(extendedModel, extendedScenario.id, ["handshake:constraint_handshake:x-propagation", "handshake:constraint_handshake:reset-during-transaction"]);
     const xScenario = extendedGenerated.document.scenarios[1]!;
     const resetScenario = extendedGenerated.document.scenarios[2]!;
-    expect(xScenario.signalStates[logicRequest.id]).toMatchObject({ kind: "values", values: expect.arrayContaining([{ start: 1, value: "X" }]) });
-    expect(resetScenario.signalStates[reset.id]).toMatchObject({ kind: "values", values: expect.arrayContaining([{ start: 2, value: 0 }, { start: 3, value: 1 }]) });
+    const generatedX = xScenario.signalStates[logicRequest.id];
+    const generatedReset = resetScenario.signalStates[reset.id];
+    expect(generatedX?.kind).toBe("values");
+    expect(generatedReset?.kind).toBe("values");
+    if (generatedX?.kind !== "values" || generatedReset?.kind !== "values") throw new Error("Generated X/reset Signals must use value state.");
+    expect(generatedX.values).toEqual(expect.arrayContaining([expect.objectContaining({ start: 1, value: "X", id: expect.any(String) })]));
+    expect(generatedReset.values).toEqual(expect.arrayContaining([expect.objectContaining({ start: 2, value: 0, id: expect.any(String) }), expect.objectContaining({ start: 3, value: 1, id: expect.any(String) })]));
+    const extendedChangeIds = extendedGenerated.document.scenarios.flatMap((scenario) => Object.values(scenario.signalStates).flatMap((state) => !state ? [] : (state.kind === "clock" ? state.enable ?? [] : state.values).flatMap((change) => change.id ? [change.id] : [])));
+    expect(new Set(extendedChangeIds).size).toBe(extendedChangeIds.length);
     expect(validateScenarioDocumentModel(extendedGenerated.document)).toEqual([]);
   });
 });
