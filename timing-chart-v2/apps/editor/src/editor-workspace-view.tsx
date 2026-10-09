@@ -196,15 +196,13 @@ function createWorkspaceOwnerPlan(viewModel: EditorWorkspaceViewModel): Workspac
 }
 
 function TimelinePaneContents({ gridLayer, ruler, host, gridEnabled, rulerEnabled, snapEnabled, body, combined = false }: Readonly<{ gridLayer: RefObject<HTMLDivElement | null>; ruler: RefObject<HTMLDivElement | null>; host: RefObject<HTMLDivElement | null>; gridEnabled: boolean; rulerEnabled: boolean; snapEnabled: boolean; body: ReactNode; combined?: boolean }>) {
-  return <>
-  {combined && <div className="combined-pane-heading combined-pane-heading-waveforms" data-testid="combined-waveforms-heading" role="heading" aria-level={2}>Waveforms</div>}
-  <div className={`split-signal-content${combined ? "" : " non-split-signal-content"}`}>
+  return <div className={`split-signal-content${combined ? "" : " non-split-signal-content"}`}>
     <div className="geometry-grid" ref={gridLayer} data-testid="geometry-grid" data-grid-enabled={String(gridEnabled)} aria-hidden="true" />
     <div className="cycle-ruler" data-testid="cycle-ruler" aria-label="Cycle ruler" hidden={!rulerEnabled}><div className="cycle-ruler-content" ref={ruler} /></div>
     <div className="range-selection-band" data-role="range-selection-band" data-testid="range-selection-band" aria-hidden="true" hidden />
     {body}
     <div className="surface-host" ref={host} data-testid="cycle-surface" data-snap-enabled={String(snapEnabled)} />
-  </div></>;
+  </div>;
 }
 
 function LeftPaneResizer({ width, interactions, className }: Readonly<{ width: number; interactions: EditorWorkspaceViewModel["interactions"]; className?: string }>) {
