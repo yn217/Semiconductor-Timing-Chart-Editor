@@ -26,6 +26,15 @@ export type CanonicalReferenceKind =
   | "signalGroup.row"
   | "spacer.ownerGroup";
 
+export const CANONICAL_REFERENCE_KINDS = Object.freeze([
+  "signal.enum", "timeline.referenceClock", "timeGroup.parent", "signal.edgeCounter.marker",
+  "annotation.anchor", "annotation.ghostTraceSource", "annotation.markerSpanStart", "annotation.markerSpanEnd",
+  "transaction.linkedSignal", "transaction.group", "annotationGroup.member", "timeGroup.resumeLabelAnchor",
+  "constraint.handshakeRequest", "constraint.handshakeAcknowledge", "constraint.handshakeStableSignal",
+  "constraint.latencyRangeRequest", "constraint.latencyRangeAcknowledge", "constraint.latencyTrigger", "constraint.latencyResponse",
+  "labelAnchor.ownerTimeGroup", "signalGroup.row", "spacer.ownerGroup",
+] as const satisfies readonly CanonicalReferenceKind[]);
+
 /** Stable-ID schema fields that are intentionally enumerated by this registry. */
 export const CANONICAL_REFERENCE_SCHEMA_PATHS = Object.freeze([
   "$.timeline.referenceClock",

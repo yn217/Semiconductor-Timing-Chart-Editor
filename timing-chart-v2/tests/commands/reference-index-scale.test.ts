@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { commandPlannerMetrics, planCommand } from "@timing-chart-v2/commands";
-import { canonicalReferenceMetrics, type BookmarkId, type ConstraintId, type SignalId } from "@timing-chart-v2/schema";
+import { canonicalReferenceMetrics, type AnnotationId, type BookmarkId, type ConstraintId, type SignalId } from "@timing-chart-v2/schema";
 import { generatePerformanceDocument } from "../../packages/testing/src/index.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
@@ -24,6 +24,16 @@ describe("planner reference-index scaling", () => {
     };
     const result = planCommand(document, { id: "cmd_delete_referenced_bookmark" as never, type: "bookmark.delete", bookmarkId });
     expect(result).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "MISSING_CROSS_REFERENCE", message: expect.stringContaining(clock.id) }] });
+  });
+
+  it("invalidates Marker positioning when a referenced row changes visibility", () => {
+    const base = canonicalFixture();
+    const signal = base.signals[1]!;
+    const markerId = "marker_visibility_dependency" as AnnotationId;
+    const document = { ...base, annotations: [{ id: markerId, type: "marker" as const, label: "M", visible: true, anchor: { cycle: 2, point: "cycle-start" as const }, verticalSpan: { mode: "rows" as const, startRowId: signal.id, endRowId: base.signals[0]!.id } }] };
+    const result = planCommand(document, { id: "cmd_hide_marker_boundary" as never, type: "signal.setVisibility", signalId: signal.id, visible: false });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.changeSet.annotationPosition).toContain(markerId);
   });
 
   it("keeps multi-row invalidation and bulk deletion on indexed target queries at product-scale fixture size", () => {

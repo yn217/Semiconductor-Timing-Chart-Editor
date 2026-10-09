@@ -127,7 +127,7 @@ function annotationsForSignals(document: CanonicalDocument, signalIds: SignalId 
   const affected = new Set(Array.isArray(signalIds) ? signalIds : [signalIds]);
   plannerMetrics.affectedSignalCount += affected.size;
   const references = referencesToAny(document, "signal", affected)
-    .filter((reference) => reference.kind === "annotation.anchor" || reference.kind === "annotation.ghostTraceSource");
+    .filter((reference) => reference.kind === "annotation.anchor" || reference.kind === "annotation.ghostTraceSource" || reference.kind === "annotation.markerSpanStart" || reference.kind === "annotation.markerSpanEnd");
   return annotationsForReferences(document, references).map((annotation) => annotation.id);
 }
 
