@@ -144,7 +144,7 @@ export function MinimalCycleView() {
     activePane, setActivePane,
   } = workspace;
   const { bottomMaxHeight, setBottomHeight, resetBottomHeight, ribbonProps: bottomRibbonProps } = useBottomPanelSizing(host, setRawBottomHeight, setBottomVisible, bottomVisible, bottomHeight);
-  const presentation = useEditorPresentationState({ hostRef: host, mode: viewMode, selection: selection.state, selectionRef: selection.refs.state });
+  const presentation = useEditorPresentationState({ hostRef: host, mode: viewMode, selection: selection.state, selectionRef: selection.refs.state, initialMinimapEnabled: visualReference });
   const {
     arrowPickStatus, setArrowPickStatus,
     gridEnabled, setGridEnabled, gridEnabledRef,

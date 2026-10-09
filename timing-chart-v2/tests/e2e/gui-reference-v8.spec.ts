@@ -16,7 +16,7 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
       const box = element.getBoundingClientRect();
       return { x: box.x, y: box.y, width: box.width, height: box.height };
     };
-    const rowY = (selector: string) => Array.from(document.querySelectorAll<HTMLElement>(selector)).map((element) => Math.round(element.getBoundingClientRect().y));
+    const rowY = (selector: string) => Array.from(document.querySelectorAll<HTMLElement>(selector)).map((element) => ({ id: element.dataset.rowId ?? element.dataset.signalId ?? "", y: Math.round(element.getBoundingClientRect().y) }));
     const ribbon = document.querySelector<HTMLElement>("[data-testid='ribbon']")!;
     return {
       title: rect(".app-titlebar"), tabs: rect(".ribbon-tabs"), ribbon: rect("[data-testid='ribbon']"),
@@ -110,7 +110,9 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   await page.getByRole("menu", { name: "More tree actions" }).getByRole("menuitem", { name: "Expand All Groups" }).click();
   await expect(page.locator("[data-role='left-row'][data-row-id='sig_cycle_reset_n']")).toBeVisible();
   expect(metrics.rowY.left.length).toBeGreaterThan(0);
-  expect(Math.max(...metrics.rowY.left.map((y, index) => Math.abs((y - (metrics.rowY.frozen[index] ?? y)) - 44)))).toBeLessThanOrEqual(1);
+  const frozenYById = new Map(metrics.rowY.frozen.map(({ id, y }) => [id, y]));
+  expect(metrics.rowY.left.every(({ id }) => frozenYById.has(id))).toBe(true);
+  expect(Math.max(...metrics.rowY.left.map(({ id, y }) => Math.abs(y - frozenYById.get(id)!)))).toBeLessThanOrEqual(1);
   const signalWaveRows = await page.locator("[data-role='wave-owner'][data-signal-id]").evaluateAll((owners) => owners.map((owner) => {
     const id = (owner as HTMLElement).dataset.signalId;
     const frozen = document.querySelector<HTMLElement>(`[data-role='frozen-row'][data-row-id='${id}']`);
