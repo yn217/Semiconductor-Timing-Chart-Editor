@@ -8,6 +8,11 @@ export type RecordedAction = SemanticCommand | Readonly<{ id: CommandId; type: "
  * History keeps the most recent 1,000 committed actions across Undo and Redo.
  * Entries retain canonical snapshot references; no serialization or deep clone
  * is performed for retention accounting or eviction.
+ * Resource budgets are immutable for a running build. Canonical Undo/Redo
+ * restores pass through DocumentSession.commit() and are revalidated; Scenario
+ * restores select immutable models that were validated before entering History.
+ * If budgets ever become runtime-configurable, restore targets must be rejected
+ * (without moving the History cursor) when they exceed the active policy.
  */
 export const HISTORY_RETENTION_POLICY = Object.freeze({
   maxEntries: 1000,

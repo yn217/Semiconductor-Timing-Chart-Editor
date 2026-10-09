@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ScenarioCommandHistorySession } from "../../packages/history/src/scenario-session.js";
+import { DOCUMENT_RESOURCE_BUDGET, type BookmarkId } from "@timing-chart-v2/schema";
 import { createScenariosFromHandshakeSuggestions, projectScenarioAsV2, scenarioModelFromV2 } from "../../packages/schema/src/scenario-model.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
@@ -128,4 +129,38 @@ describe("ScenarioCommandHistorySession", () => {
     expect(session.activeScenarioId()).toBe(generated.createdScenarioIds[1]);
     expect(session.scenarioModel().scenarios.map((scenario) => scenario.transactions[0]!.phases![0]!.id)).toEqual(phaseIds);
   });
+
+  it("rejects a canonical edit that crosses the aggregate Scenario bookmark budget atomically", () => {
+    const base = canonicalFixture();
+    const bookmarks = Array.from({ length: DOCUMENT_RESOURCE_BUDGET.bookmarkCount / 2 }, (_, index) => ({ id: `scenario_budget_a_${index}` as BookmarkId, name: `A ${index}`, start: 0 }));
+    const document = { ...base, bookmarks };
+    const model = scenarioModelFromV2(document);
+    const first = model.scenarios[0]!;
+    const second = {
+      ...first,
+      id: "scenario_budget_second" as typeof first.id,
+      name: "Second",
+      bookmarks: bookmarks.map((bookmark, index) => ({ ...bookmark, id: `scenario_budget_b_${index}` as BookmarkId, name: `B ${index}` })),
+    };
+    const initial = { ...model, scenarios: [first, second] };
+    const session = new ScenarioCommandHistorySession(initial);
+    const beforeSnapshot = session.getSnapshot();
+    const beforeModel = session.scenarioModel();
+    const beforeHistory = session.historyState();
+    const rejected = session.execute({ id: "scenario_budget_overflow" as never, type: "bookmark.create", bookmark: { id: "scenario_budget_extra" as BookmarkId, name: "Over limit", start: 1 } });
+
+    expect(rejected).toMatchObject({
+      ok: false,
+      reason: "invalid",
+      problems: [expect.objectContaining({
+        code: "RESOURCE_LIMIT_EXCEEDED",
+        path: "$.scenarios[*].bookmarks",
+        value: DOCUMENT_RESOURCE_BUDGET.bookmarkCount + 1,
+        detail: `resource-budget;metric=scenario.bookmarks;current=${DOCUMENT_RESOURCE_BUDGET.bookmarkCount + 1};limit=${DOCUMENT_RESOURCE_BUDGET.bookmarkCount}`,
+      })],
+    });
+    expect(session.getSnapshot()).toBe(beforeSnapshot);
+    expect(session.scenarioModel()).toBe(beforeModel);
+    expect(session.historyState()).toEqual(beforeHistory);
+  }, 30_000);
 });
