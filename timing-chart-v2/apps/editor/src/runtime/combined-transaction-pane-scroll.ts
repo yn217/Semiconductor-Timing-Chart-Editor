@@ -36,14 +36,13 @@ export function mountCombinedTransactionPaneScroll(pane: HTMLElement): () => voi
   viewport.addEventListener("scroll", onOwnerScroll, { passive: true, capture: true });
   pane.addEventListener("scroll", onRegionScroll, { passive: true, capture: true });
   viewport.addEventListener("wheel", onWheel, { passive: false });
-  // The lanes (and so the region) mount after the pane; keep the mirror correct across re-renders and resizes.
-  const observer = new MutationObserver(mirror);
-  observer.observe(pane, { childList: true, subtree: true });
+  // React commits the TransactionLanes subtree before this effect runs, so the
+  // clipped track viewport is present for this initial synchronization. Later
+  // owner changes are propagated by the scroll listeners above.
   mirror();
   return () => {
     viewport.removeEventListener("scroll", onOwnerScroll, true);
     pane.removeEventListener("scroll", onRegionScroll, true);
     viewport.removeEventListener("wheel", onWheel);
-    observer.disconnect();
   };
 }

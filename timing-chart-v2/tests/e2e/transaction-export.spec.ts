@@ -4,6 +4,8 @@ import { startInCycleSample } from "./cycle-startup.js";
 
 startInCycleSample(test);
 
+const releaseViewports = [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] as const;
+
 async function ready(page: Page) {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
@@ -40,7 +42,8 @@ async function linkSignal(page: Page, name: string) {
   await linked.getByRole("option", { name: new RegExp(name) }).click();
 }
 
-test("creates, edits, links, saves and reopens one canonical Transaction", async ({ page }) => {
+for (const viewport of releaseViewports) test(`creates, edits, links, saves and reopens one canonical Transaction at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+  await page.setViewportSize(viewport);
   await ready(page);
   await createTransaction(page);
   const inspector = page.getByTestId("inspector");
@@ -326,7 +329,8 @@ test("keeps TransactionLanes mounted across ten repeated semantic moves", async 
   console.log(`[transaction-repeated-move] ${JSON.stringify({ durationsMs: durations, mountSerial })}`);
 });
 
-test("exports deterministic SVG plus PNG and PDF from Canonical ExportScene", async ({ page }) => {
+for (const viewport of releaseViewports) test(`exports deterministic SVG plus PNG and PDF from Canonical ExportScene at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+  await page.setViewportSize(viewport);
   await ready(page);
   const host = page.getByTestId("cycle-surface");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
