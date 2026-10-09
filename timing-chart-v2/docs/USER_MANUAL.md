@@ -43,6 +43,7 @@ Semiconductor Timing Chart Editor は、一般的なドローソフトではな�
 
 代表的なタブ:
 
+- File
 - Home
 - Insert
 - Timeline
@@ -51,7 +52,7 @@ Semiconductor Timing Chart Editor は、一般的なドローソフトではな�
 - Check
 - AI
 
-Homeには頻繁に使うNew / Open / Save / Undo / Redo / Cut / Copy / Paste / Delete / Duplicate / Select All / Zoom / Fit / Grid / Snap / Ruler等があります。
+FileにはNew / Open / Save / Save As / Recent / Properties / Exportがあります。HomeにはUndo / Redo / Cut / Copy / Paste / Delete / Duplicate / Select All / Zoom / Fit / Grid / Snap / Ruler等があります。HomeのMoreからもFile系コマンドを利用できます。
 
 ## 3.2 Signal Tree
 
@@ -110,18 +111,19 @@ Bottom    = 時間データ / List / Bulk / Detailed edit
 
 ## 4.1 New
 
-**Home → New**
+**File → New**
 
 標準Signalを持つ新しい文書を作成します。
-空から作る場合はHome → Select All Signals → Deleteで標準Signalを削除します。
+空から作る場合はHome → Select All Signals → Deleteで標準Signalを削除します。Homeから操作する場合は、More → File → Newを選びます。
 
 編集中の変更がある場合は、誤って失わないよう確認が入ります。
 
 ## 4.2 Open
 
-**Home → Open**
+**File → Open**
 
 保存済みTiming Chartファイルを開きます。
+Homeから操作する場合は、More → File → Openを選びます。
 
 Openは現在のDocumentを置換する操作です。
 失敗時には現在の文書を壊さず、Problems等へ理由を表示する設計です。
@@ -130,9 +132,10 @@ Production Openには入力ファイルのResource Budgetがあり、極端に�
 
 ## 4.3 Save / Save As
 
-**Home → Save / Save As**
+**File → Save / Save As**
 
 Canonical DocumentをJSON系ファイルとして保存します。
+Homeから操作する場合は、More → File → SaveまたはSave Asを選びます。
 
 保存されるのはSemantic/Persistentな情報です。Zoomや通常のScroll位置などの一時表示状態はCanonicalには入りません。
 
@@ -166,9 +169,9 @@ InsertまたはSignal TreeのAddからSignalを追加します。
 
 | Type | 用途 |
 |---|---|
-| Binary | 0 / 1 / X / Z |
-| Logic | Logic系値 |
-| Bus | 数値、Hex、Binary、Symbolic、X/Z |
+| Signal (binary) | 0 / 1 / X / Z |
+| Level (logic) | Logic系値 |
+| Bus | 数値、Hex、Binary、Symbol、X/Z |
 | State | 状態名、Enum |
 | Event | Event / Pulse的なイベント列 |
 | Clock | Generatorから生成するClock |
@@ -247,16 +250,16 @@ Transitions表にはStart / End / Duration / Value / Comment等が表示され�
 
 Binary SignalではBottom Signal内の **Generate Waveform** を使えます。
 
-代表項目:
+Generatorを開くと、最初に次の項目が表示されます。
 
 - Start
 - Period
-- Width / Duty
-- Repeat Count / Infinite
-- Initial
-- Active
-- Phase
-- Suppressed periods
+- Mode (Width / Duty)
+- Width または Duty (Modeに応じて一方を表示)
+- Repeat (Count / Infinite)
+- Count (RepeatがCountの場合)
+
+Initial、Active、Phase、Suppressedは **Advanced** を開くと表示されます。
 
 用途:
 
@@ -279,7 +282,7 @@ BusではValueを数値/文字列表現として扱います。
 - Decimal
 - Signed
 - Unsigned
-- Symbolic / Enum
+- Symbol (Enum label)
 
 表示形式はWaveform、Bottom、Inspectorで同じFormatterを使う方針です。
 
