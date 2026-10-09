@@ -7,8 +7,15 @@ export const DOCUMENT_RESOURCE_BUDGET = Object.freeze({
   groupCount: 2_000,
   annotationCount: 20_000,
   transactionCount: 10_000,
+  // Bound repeated full Scenario projections/validation passes in a v3 document.
+  scenarioCount: 100,
   cycleCount: 100_000,
   valueChangeCount: 1_000_000,
+  // Keep each traversed nested timeline/relationship collection at or below
+  // the maximum source-cycle domain, independently of import JSON limits.
+  transactionLinkedSignalCount: 100_000,
+  transactionPhaseCount: 100_000,
+  clockSuppressedPeriodCount: 100_000,
   transactionGroupCount: 2_000,
   annotationGroupCount: 2_000,
   enumDefinitionCount: 5_000,
@@ -84,6 +91,9 @@ export function validateDocumentResourceBudget(document: CanonicalDocument): rea
   const timeline = candidate.timeline !== null && typeof candidate.timeline === "object" ? candidate.timeline as Record<string, unknown> : {};
   const labelAnchors = Array.isArray(timeline.labelAnchors) ? timeline.labelAnchors : [];
   const enumEntryCount = enumDefinitions.reduce((total, entry) => total + (entry !== null && typeof entry === "object" && Array.isArray((entry as Record<string, unknown>).entries) ? ((entry as Record<string, unknown>).entries as unknown[]).length : 0), 0);
+  const transactionLinkedSignalCount = countNestedArrayItems(transactions, "linkedSignals");
+  const transactionPhaseCount = countNestedArrayItems(transactions, "phases");
+  const clockSuppressedPeriodCount = countClockSuppressedPeriods(signals);
   const valueChangeCount = countSignalChangePoints(signals);
   const metrics: readonly BudgetMetric[] = [
     { name: "signals", path: "$.signals", current: signals.length, limit: DOCUMENT_RESOURCE_BUDGET.signalCount },
@@ -92,6 +102,9 @@ export function validateDocumentResourceBudget(document: CanonicalDocument): rea
     { name: "transactions", path: "$.transactions", current: transactions.length, limit: DOCUMENT_RESOURCE_BUDGET.transactionCount },
     { name: "cycles", path: "$.timeline.cycleCount", current: typeof timeline.cycleCount === "number" ? timeline.cycleCount : 0, limit: DOCUMENT_RESOURCE_BUDGET.cycleCount },
     { name: "valueChanges", path: "$.signals[*].values|$.signals[*].enable", current: valueChangeCount, limit: DOCUMENT_RESOURCE_BUDGET.valueChangeCount },
+    { name: "transactionLinkedSignals", path: "$.transactions[*].linkedSignals", current: transactionLinkedSignalCount, limit: DOCUMENT_RESOURCE_BUDGET.transactionLinkedSignalCount },
+    { name: "transactionPhases", path: "$.transactions[*].phases", current: transactionPhaseCount, limit: DOCUMENT_RESOURCE_BUDGET.transactionPhaseCount },
+    { name: "clockSuppressedPeriods", path: "$.signals[*].generator.suppressedPeriods", current: clockSuppressedPeriodCount, limit: DOCUMENT_RESOURCE_BUDGET.clockSuppressedPeriodCount },
     { name: "transactionGroups", path: "$.transactionGroups", current: transactionGroups.length, limit: DOCUMENT_RESOURCE_BUDGET.transactionGroupCount },
     { name: "annotationGroups", path: "$.annotationGroups", current: annotationGroups.length, limit: DOCUMENT_RESOURCE_BUDGET.annotationGroupCount },
     { name: "enumDefinitions", path: "$.enumDefinitions", current: enumDefinitions.length, limit: DOCUMENT_RESOURCE_BUDGET.enumDefinitionCount },
@@ -109,4 +122,27 @@ export function validateDocumentResourceBudget(document: CanonicalDocument): rea
     value: current,
     detail: `resource-budget;metric=${name};current=${current};limit=${limit}`,
   }));
+}
+
+/** Count persistent nested arrays whose contents are traversed by product consumers. */
+export function countNestedArrayItems(owners: Iterable<unknown>, key: string): number {
+  let total = 0;
+  for (const owner of owners) {
+    if (owner === null || typeof owner !== "object") continue;
+    const value = (owner as Record<string, unknown>)[key];
+    if (Array.isArray(value)) total += value.length;
+  }
+  return total;
+}
+
+export function countClockSuppressedPeriods(signals: Iterable<unknown>): number {
+  let total = 0;
+  for (const signal of signals) {
+    if (signal === null || typeof signal !== "object") continue;
+    const generator = (signal as Record<string, unknown>).generator;
+    if (generator === null || typeof generator !== "object") continue;
+    const periods = (generator as Record<string, unknown>).suppressedPeriods;
+    if (Array.isArray(periods)) total += periods.length;
+  }
+  return total;
 }

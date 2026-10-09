@@ -22,7 +22,7 @@ import type {
   SignalValueChange,
 } from "./types.js";
 import { canonicalEntityInventory, type CanonicalEntityKind } from "./canonical-inventory.js";
-import { countSignalChangePoints, DOCUMENT_RESOURCE_BUDGET, validateDocumentResourceBudget, validateDocumentInputComplexity } from "./resource-budget.js";
+import { countClockSuppressedPeriods, countNestedArrayItems, countSignalChangePoints, DOCUMENT_RESOURCE_BUDGET, validateDocumentResourceBudget, validateDocumentInputComplexity } from "./resource-budget.js";
 import { isStableId, opaqueDerivedId } from "./stable-id.js";
 import { validateCanonicalDocument } from "./validation.js";
 
@@ -505,6 +505,11 @@ export function validateScenarioDocumentModel(input: unknown): readonly Document
   if (problems.length > 0) return problems;
 
   const typed = input as ScenarioDocumentModel;
+  if (typed.scenarios.length > DOCUMENT_RESOURCE_BUDGET.scenarioCount) {
+    const current = typed.scenarios.length;
+    const limit = DOCUMENT_RESOURCE_BUDGET.scenarioCount;
+    return [{ code: "RESOURCE_LIMIT_EXCEEDED", path: "$.scenarios", message: `Scenario resource limit exceeded for scenarios: ${current.toLocaleString()} exceeds ${limit.toLocaleString()}.`, expected: String(limit), value: current, detail: `resource-budget;metric=scenario.scenarios;current=${current};limit=${limit}` }];
+  }
   const scenarioIds = new Map<string, number>();
   const definitions = new Map<string, ScenarioSignalDefinition>();
   typed.signalDefinitions.forEach((definition, index) => {
@@ -533,13 +538,16 @@ export function validateScenarioDocumentModel(input: unknown): readonly Document
   // Document-wide entities are registered once; scenario-specific entities
   // must remain globally unique across all scenario projections.
   let registeredSharedIds = false;
-  const aggregate = { annotations: 0, annotationGroups: 0, transactions: 0, transactionGroups: 0, bookmarks: 0, timeGroups: 0, constraints: 0, labelAnchors: 0, valueChanges: 0 };
+  const aggregate = { scenarios: 0, annotations: 0, annotationGroups: 0, transactions: 0, transactionGroups: 0, bookmarks: 0, timeGroups: 0, constraints: 0, labelAnchors: 0, valueChanges: 0, transactionLinkedSignals: 0, transactionPhases: 0, clockSuppressedPeriods: 0 };
   const aggregateLimits: ReadonlyArray<readonly [keyof typeof aggregate, number, string]> = [
     ["annotations", DOCUMENT_RESOURCE_BUDGET.annotationCount, "annotations"], ["annotationGroups", DOCUMENT_RESOURCE_BUDGET.annotationGroupCount, "annotationGroups"],
     ["transactions", DOCUMENT_RESOURCE_BUDGET.transactionCount, "transactions"], ["transactionGroups", DOCUMENT_RESOURCE_BUDGET.transactionGroupCount, "transactionGroups"],
     ["bookmarks", DOCUMENT_RESOURCE_BUDGET.bookmarkCount, "bookmarks"], ["timeGroups", DOCUMENT_RESOURCE_BUDGET.timeGroupCount, "timeGroups"],
     ["constraints", DOCUMENT_RESOURCE_BUDGET.constraintCount, "constraints"], ["labelAnchors", DOCUMENT_RESOURCE_BUDGET.labelAnchorCount, "labelAnchors"],
     ["valueChanges", DOCUMENT_RESOURCE_BUDGET.valueChangeCount, "valueChanges"],
+    ["transactionLinkedSignals", DOCUMENT_RESOURCE_BUDGET.transactionLinkedSignalCount, "transactions[*].linkedSignals"],
+    ["transactionPhases", DOCUMENT_RESOURCE_BUDGET.transactionPhaseCount, "transactions[*].phases"],
+    ["clockSuppressedPeriods", DOCUMENT_RESOURCE_BUDGET.clockSuppressedPeriodCount, "signalStates[*].generator.suppressedPeriods"],
   ];
 
   typed.scenarios.forEach((scenario, scenarioIndex) => {
@@ -605,7 +613,7 @@ export function validateScenarioDocumentModel(input: unknown): readonly Document
     }
     const projectionProblems = validateCanonicalDocument(projection);
     problems.push(...projectionProblems);
-    const perScenarioBudget = validateDocumentResourceBudget(projection).filter((item) => !["$.annotations", "$.annotationGroups", "$.transactions", "$.transactionGroups", "$.bookmarks", "$.timeGroups", "$.constraints", "$.timeline.labelAnchors", "$.signals[*].values|$.signals[*].enable"].includes(item.path));
+    const perScenarioBudget = validateDocumentResourceBudget(projection).filter((item) => !["$.annotations", "$.annotationGroups", "$.transactions", "$.transactionGroups", "$.bookmarks", "$.timeGroups", "$.constraints", "$.timeline.labelAnchors", "$.signals[*].values|$.signals[*].enable", "$.transactions[*].linkedSignals", "$.transactions[*].phases", "$.signals[*].generator.suppressedPeriods"].includes(item.path));
     problems.push(...perScenarioBudget);
     if (projectionProblems.length === 0) {
       for (const entry of canonicalEntityInventory(projection)) {
@@ -627,6 +635,9 @@ export function validateScenarioDocumentModel(input: unknown): readonly Document
     aggregate.constraints += scenario.constraints.length;
     aggregate.labelAnchors += scenario.timeline.labelAnchors.length;
     aggregate.valueChanges += countSignalChangePoints(Object.values(scenario.signalStates));
+    aggregate.transactionLinkedSignals += countNestedArrayItems(scenario.transactions, "linkedSignals");
+    aggregate.transactionPhases += countNestedArrayItems(scenario.transactions, "phases");
+    aggregate.clockSuppressedPeriods += countClockSuppressedPeriods(Object.values(scenario.signalStates));
   });
 
   for (const [metric, limit, pathName] of aggregateLimits) {
