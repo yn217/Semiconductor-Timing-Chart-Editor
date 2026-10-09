@@ -24,12 +24,20 @@ function generatedSignal(id: SignalId, index: number): Signal {
     role: "internal",
     source: { instancePath: ["generated"], signalName: `GEN_${index}` },
     display: { name: `GEN_${index}` },
-    values: [{ start: 0, value: "0" }, { start: 4, value: "1" }],
+    values: [{ id: `value_${id}_0`, start: 0, value: "0" }, { id: `value_${id}_1`, start: 4, value: "1" }],
   };
 }
 
+function fixtureWithStableValueIds(): CanonicalDocument {
+  const document = canonicalFixture();
+  for (const signal of document.signals) {
+    if (signal.type !== "clock" && "values" in signal) signal.values = signal.values.map((value, index) => ({ ...value, id: `value_${signal.id}_${index}` }));
+  }
+  return document;
+}
+
 function variedPropertyFixture(): CanonicalDocument {
-  const base = canonicalFixture();
+  const base = fixtureWithStableValueIds();
   const commentId = "sig_comment_property" as SignalId;
   const spacerId = "spacer_property" as SpacerId;
   const auxiliaryGroupId = "grp_aux_property" as GroupId;
@@ -163,7 +171,7 @@ describe("SemanticCommand state machine foundation", () => {
       { name: "group-rename", command: { id: commandId("metamorphic_group_rename"), type: "group.rename", groupId: "grp_main" as GroupId, name: "Main Renamed" } },
     ];
     for (const testCase of cases) {
-      const session = new CommandHistorySession(canonicalFixture());
+      const session = new CommandHistorySession(fixtureWithStableValueIds());
       const before = waveformSemantics(session.getSnapshot().document);
       const result = session.execute(testCase.command);
       expect(result, testCase.name).toMatchObject({ ok: true });
@@ -215,13 +223,13 @@ describe("SemanticCommand state machine foundation", () => {
     const signals = [...base.signals, ...additions];
     const document = { ...base, signals, signalGroups: [{ ...base.signalGroups[0]!, rows: signals.map((signal) => signal.id) }] };
     const session = new CommandHistorySession(document);
-    const accepted = session.execute({ id: commandId("property_budget_accept"), type: "signal.create", signal: { ...template, id: "property_budget_at_limit" as SignalId, name: "PROPERTY_BUDGET_AT_LIMIT", source: { ...template.source, signalName: "PROPERTY_BUDGET_AT_LIMIT" }, display: { ...template.display, name: "PROPERTY_BUDGET_AT_LIMIT" } }, targetGroupId: "grp_main", index: signals.length });
+    const accepted = session.execute({ id: commandId("property_budget_accept"), type: "signal.create", signal: { ...template, id: "property_budget_at_limit" as SignalId, name: "PROPERTY_BUDGET_AT_LIMIT", values: template.values.map((change, changeIndex) => ({ ...change, id: `value_property_budget_at_limit_${changeIndex}` })), source: { ...template.source, signalName: "PROPERTY_BUDGET_AT_LIMIT" }, display: { ...template.display, name: "PROPERTY_BUDGET_AT_LIMIT" } }, targetGroupId: "grp_main", index: signals.length });
     expect(accepted).toMatchObject({ ok: true });
     expect(session.getSnapshot().document.signals).toHaveLength(DOCUMENT_RESOURCE_BUDGET.signalCount);
 
     const atLimit = session.getSnapshot();
     const beforeHistory = session.historyState();
-    const rejected = session.execute({ id: commandId("property_budget_reject"), type: "signal.create", signal: { ...template, id: "property_budget_overflow" as SignalId, name: "PROPERTY_BUDGET_OVERFLOW", source: { ...template.source, signalName: "PROPERTY_BUDGET_OVERFLOW" }, display: { ...template.display, name: "PROPERTY_BUDGET_OVERFLOW" } }, targetGroupId: "grp_main", index: DOCUMENT_RESOURCE_BUDGET.signalCount });
+    const rejected = session.execute({ id: commandId("property_budget_reject"), type: "signal.create", signal: { ...template, id: "property_budget_overflow" as SignalId, name: "PROPERTY_BUDGET_OVERFLOW", values: template.values.map((change, changeIndex) => ({ ...change, id: `value_property_budget_overflow_${changeIndex}` })), source: { ...template.source, signalName: "PROPERTY_BUDGET_OVERFLOW" }, display: { ...template.display, name: "PROPERTY_BUDGET_OVERFLOW" } }, targetGroupId: "grp_main", index: DOCUMENT_RESOURCE_BUDGET.signalCount });
     expect(rejected).toMatchObject({ ok: false, reason: "invalid", problems: [expect.objectContaining({ code: "RESOURCE_LIMIT_EXCEEDED", path: "$.signals" })] });
     expect(session.getSnapshot()).toBe(atLimit);
     expect(session.historyState()).toEqual(beforeHistory);

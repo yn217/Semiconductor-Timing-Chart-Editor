@@ -36,7 +36,7 @@ const owners: readonly EpochOwner[] = [
     // #763: unapplied Phase drafts are document-relative; a DocumentEpoch change drops them all.
     owner: "retained transaction phase drafts",
     file: "apps/editor/src/editor-secondary-surfaces.tsx",
-    markers: [/clearAllPhaseDrafts\(\)/, /\[input\.documentEpoch\]/],
+    markers: [/clearAllPhaseDrafts\(\)/, /\[\s*input\.documentEpoch(?:,\s*input\.projectionGeneration)?\s*\]/],
   },
   {
     owner: "bookmark selection state",
@@ -47,7 +47,7 @@ const owners: readonly EpochOwner[] = [
     // #772: unapplied Bookmark drafts are document-relative; a DocumentEpoch change drops them all (same owner as #763's Phase drafts).
     owner: "retained bookmark drafts",
     file: "apps/editor/src/editor-secondary-surfaces.tsx",
-    markers: [/clearAllBookmarkDrafts\(\)/, /\[input\.documentEpoch\]/],
+    markers: [/clearAllBookmarkDrafts\(\)/, /\[\s*input\.documentEpoch(?:,\s*input\.projectionGeneration)?\s*\]/],
   },
   {
     owner: "document-relative UI reset",
