@@ -250,10 +250,27 @@ export function duplicateScenario(document: ScenarioDocumentModel, scenarioId: S
   const transactionIds = new Map(source.transactions.map((item) => [item.id, allocate("transaction", item.id) as TransactionId]));
   const phaseIds = new Map(source.transactions.flatMap((item) => (item.phases ?? []).map((phase) => [phase.id, allocate("transactionPhase", phase.id) as TransactionPhaseId] as const)));
   const constraintIds = new Map(source.constraints.map((item) => [item.id, allocate("constraint", item.id) as ConstraintId]));
+  const signalValueChangeIds = new Map<string, string>();
+  for (const state of Object.values(source.signalStates)) {
+    if (!state) continue;
+    const changes = state.kind === "clock" ? state.enable ?? [] : state.values;
+    for (const change of changes) {
+      if (change.id !== undefined) signalValueChangeIds.set(change.id, allocate("signalValueChange", change.id));
+    }
+  }
+  const signalStates = Object.fromEntries(Object.entries(source.signalStates).map(([signalId, state]) => {
+    if (!state) return [signalId, state];
+    if (state.kind === "clock") return [signalId, {
+      ...state,
+      ...(state.enable === undefined ? {} : { enable: state.enable.map((change) => ({ ...change, ...(change.id === undefined ? {} : { id: signalValueChangeIds.get(change.id)! }) })) }),
+    }];
+    return [signalId, { ...state, values: state.values.map((change) => ({ ...change, ...(change.id === undefined ? {} : { id: signalValueChangeIds.get(change.id)! }) })) }];
+  }));
   const copied: TimingScenario = {
     ...source,
     id: copiedScenarioId,
     name: name ?? `${source.name} Copy`,
+    signalStates,
     timeline: {
       ...source.timeline,
       labelAnchors: source.timeline.labelAnchors.map((item) => ({
