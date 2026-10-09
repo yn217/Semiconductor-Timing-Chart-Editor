@@ -4,7 +4,8 @@ import { expect, test } from "@playwright/test";
 
 const samplePath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../samples/old/pre-reset-2026-10-02/acceptance-429/sample-transaction-mode-closure.tcd.json");
 
-test("Selecting a Transaction keeps detail in the Inspector while Bottom remains table-first (#703)", async ({ page }) => {
+for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }]) test(`Selecting a Transaction keeps detail in the Inspector while Bottom remains table-first (#703) at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+  await page.setViewportSize(viewport);
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(samplePath);
@@ -19,5 +20,9 @@ test("Selecting a Transaction keeps detail in the Inspector while Bottom remains
   await expect(bottom.getByTestId("apply-transaction-properties")).toBeDisabled();
   await expect(bottom.getByTestId("transaction-properties-unapplied")).toHaveCount(0);
   await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("1"); // cycle 10 at 10 cycles/TC (#750)
-  await expect(page.getByTestId("inspector").getByTestId("transaction-linked-signals")).toBeVisible();
+  const inspector = page.getByTestId("inspector");
+  await expect(inspector.getByTestId("inspector-linked-signal-summary")).toBeVisible();
+  await expect(inspector.getByTestId("transaction-linked-signals")).toHaveCount(0);
+  await inspector.getByTestId("manage-transaction-links").click();
+  await expect(page.getByTestId("transaction-linked-signals")).toBeVisible();
 });

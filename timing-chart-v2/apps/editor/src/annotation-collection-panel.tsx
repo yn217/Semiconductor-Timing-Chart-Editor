@@ -4,6 +4,7 @@ import type { Annotation, AnnotationId, AnnotationType, CanonicalDocument } from
 import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
 import { AnnotationList } from "./annotation-list.js";
 import { downloadText } from "./download-text.js";
+import { isActiveProjectionContextFresh } from "./runtime/active-projection-context.js";
 
 const ANNOTATION_PRESETS: readonly { readonly label: string; readonly type: AnnotationType }[] = [
   { label: "Arrow (Duration)", type: "arrow" },
@@ -18,11 +19,12 @@ const ANNOTATION_PRESETS: readonly { readonly label: string; readonly type: Anno
  * belongs to InspectorAnnotationEditor; this component owns list actions and
  * explicit create/import/export only, so row selection never changes its
  * layout or creates another property-draft owner. */
-export function AnnotationCollectionPanel({ annotations, selectedId, document, documentEpoch, revision, onSelect, onCreate, onDuplicate, onDelete, commands, onImportDiagnostic }: {
+export function AnnotationCollectionPanel({ annotations, selectedId, document, documentEpoch, projectionGeneration, revision, onSelect, onCreate, onDuplicate, onDelete, commands, onImportDiagnostic }: {
   readonly annotations: readonly Annotation[];
   readonly selectedId: AnnotationId | undefined;
   readonly document: CanonicalDocument;
   readonly documentEpoch: number;
+  readonly projectionGeneration: number;
   readonly revision: number;
   readonly onSelect: (id: AnnotationId) => void;
   readonly onCreate: (type: AnnotationType) => void;
@@ -36,15 +38,15 @@ export function AnnotationCollectionPanel({ annotations, selectedId, document, d
   const fileInput = useRef<HTMLInputElement>(null);
   const requestId = useRef(0);
   const mounted = useRef(false);
-  const latest = useRef({ documentEpoch, revision, annotations, commands, onSelect, onImportDiagnostic });
-  latest.current = { documentEpoch, revision, annotations, commands, onSelect, onImportDiagnostic };
+  const latest = useRef({ documentEpoch, projectionGeneration, revision, annotations, commands, onSelect, onImportDiagnostic });
+  latest.current = { documentEpoch, projectionGeneration, revision, annotations, commands, onSelect, onImportDiagnostic };
   useEffect(() => {
     mounted.current = true;
     return () => { mounted.current = false; requestId.current += 1; };
   }, []);
   const selected = selectedId === undefined ? undefined : annotations.find((annotation) => annotation.id === selectedId);
   const importAnnotations = async (file: File) => {
-    const token = { documentEpoch, revision, target: "annotation-collection", requestId: ++requestId.current };
+    const token = { documentEpoch, projectionGeneration, revision, target: "annotation-collection", requestId: ++requestId.current };
     try {
       if (file.size > DOCUMENT_RESOURCE_BUDGET.inputBytes) {
         setImportStatus(`Import rejected: file exceeds ${DOCUMENT_RESOURCE_BUDGET.inputBytes.toLocaleString()} bytes.`);
@@ -52,8 +54,8 @@ export function AnnotationCollectionPanel({ annotations, selectedId, document, d
       }
       const text = await file.text();
       const current = latest.current;
-      if (!mounted.current || requestId.current !== token.requestId || current.documentEpoch !== token.documentEpoch || current.revision !== token.revision || token.target !== "annotation-collection") {
-        const message = "Annotation import cancelled because the document changed while the file was being read. Retry the import on the current document.";
+      if (!mounted.current || requestId.current !== token.requestId || !isActiveProjectionContextFresh(token, current) || token.target !== "annotation-collection") {
+        const message = "Annotation import cancelled because the document or Scenario context changed while the file was being read. Retry the import on the current document.";
         current.onImportDiagnostic(message);
         if (mounted.current) setImportStatus(message);
         return;
@@ -87,7 +89,7 @@ export function AnnotationCollectionPanel({ annotations, selectedId, document, d
       if (firstId !== undefined) current.onSelect(firstId);
       setImportStatus(`Imported ${imported.length} annotation${imported.length === 1 ? "" : "s"}`);
     } catch (error) {
-      if (mounted.current) setImportStatus(error instanceof Error ? error.message : "Invalid annotations JSON");
+      if (mounted.current && requestId.current === token.requestId && isActiveProjectionContextFresh(token, latest.current)) setImportStatus(error instanceof Error ? error.message : "Invalid annotations JSON");
     }
   };
 

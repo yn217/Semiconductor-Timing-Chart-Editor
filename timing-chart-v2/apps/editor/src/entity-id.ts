@@ -4,7 +4,7 @@ import { canonicalEntityIds, type CanonicalDocument } from "@timing-chart-v2/sch
 // retained (#275: a module-global Set of every generated id grew without bound across create/delete/New/Open cycles).
 let entitySequence = 0;
 
-export type EntityIdScope = "bookmark" | "time" | "labelAnchor" | "annotation" | "annotationGroup" | "constraint" | "transaction" | "transactionGroup" | "signal" | "group" | "commentRow" | "spacer";
+export type EntityIdScope = "bookmark" | "time" | "labelAnchor" | "annotation" | "annotationGroup" | "constraint" | "transaction" | "transactionPhase" | "transactionGroup" | "signal" | "signalValueChange" | "group" | "commentRow" | "spacer";
 
 /** Create an operation-scoped allocator so bulk actions scan Canonical IDs once. */
 export function createEntityIdAllocator(document: CanonicalDocument): (scope: EntityIdScope) => string {

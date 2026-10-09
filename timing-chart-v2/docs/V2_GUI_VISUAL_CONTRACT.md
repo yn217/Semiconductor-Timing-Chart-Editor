@@ -1,10 +1,13 @@
 # V2 GUI Visual / Interaction Contract
 
 Status: reconstructed from historical V1 GUI reference sources and the
-approved V2 v8 executable reference. This is a normative migration contract;
-it is not a redesign proposal. The historical V1 sources are external inputs
-when supplied and mapped; they are not assumed to be present in the current V2
-tree.
+approved V2 v8 executable reference. V2 v8 is the approved visual replacement
+for the historical Left, Bottom Signal, Bottom Annotation, Bottom Problems,
+and Bottom JSON panel references (product decision #1095, 2026-10-09). Their
+one-to-one V1 pixel-match obligations are retired; the requirements for
+functionality, interaction, stable identity, persistence, and export remain.
+Other V1 facts below are historical inputs, not normative visual targets where
+they conflict with the approved V2 v8 reference.
 
 ## Source excavation record
 
@@ -41,12 +44,12 @@ also cover `1280x720` and the `1024` class.
 | Panel background | `#fff` | mixed white/blue-gray | Panel surfaces are white; shell background may be neutral. |
 | Selected background | `#eef6ff` | component-local | Shared selected token must be used for tree, columns, and editors. |
 | Hover background | `#f1f6fc` | component-local | Shared hover token must be used. |
-| Left width | 330px | 330px default with bounded 280–420px view-only splitter; frozen label and waveform offsets share the width token | Preserve 330px default and bounded resize behavior. |
+| Left width | 330px (historical V1) | 330px normal-product default with bounded 280–420px view-only splitter; approved V2 v8 visual-reference width is 265px | Keep the current normal-product resize behavior and shared geometry offsets. For visual acceptance, use the approved V2 v8 width; do not require V1 pixel matching. |
 | Inspector width | 300px | 300px default with bounded 240–420px view-only resize | Preserve 300px default with bounded resize. |
 | Ribbon height | 146px | current shell is 76px header plus local surfaces | V1 multi-group ribbon target is 146px after title/tab rows. |
 | Title height | 32px | 76px app header | V1 title/app bar target is 32px. |
 | Tab row height | 38px | not equivalent in current shell | Preserve 38px ribbon tab row. |
-| Bottom height | 270px | current canvas/editor split differs | Preserve 270px Cycle View target, resizable/collapsible. |
+| Bottom height | 270px (historical V1) | normal-product editor is bounded/resizable; approved V2 v8 visual-reference height is 240px | Preserve functional tab/editor access and bounded resize/collapse behavior. For visual acceptance, use V2 v8; no V1 panel pixel match is required. |
 | Status height | 27px | 32px shell row | V1 status target is 27px. |
 
 ## Required composition
@@ -73,12 +76,12 @@ one-row toolbar, or a large dead canvas gap is non-compliant.
 | Component | V1 source facts | V2 required behavior |
 |---|---|---|
 | Ribbon | `ribbon-tabs` has File/Home/Insert/Transaction/Annotation/View/Check/AI; `.ribbon` is grouped with captions and separators; tools are 48px minimum × 74px | Restore the same task grouping and density. No horizontal Ribbon scrollbar at 1672x941. Overflow uses compact controls, split/dropdown, tab responsibility, or responsive collapse; commands are not deleted. |
-| Left Tree | 330px pane; 42px header; search row; 32px group headers; 36px rows; role badge, name, eye, more menu | Keep tree and waveform boundary distinct. In the locked V8 visual state the header contains the Signals / Groups title and Add menu while the search control occupies the following 35px row; use stable IDs and SemanticCommands for selection, visibility, reorder, group, and context actions. |
+| Left Tree | Historical V1: 330px pane; 42px header; search row; 32px group headers; 36px rows; role badge, name, eye, more menu | Use the approved V2 v8 structure: the header contains the Signals / Groups title and Add menu while search occupies the following 35px row. Keep tree and waveform boundary distinct; use stable IDs and SemanticCommands for selection, visibility, reorder, group, and context actions. No one-to-one V1 panel pixel matching is required. |
 | Role column | V1 role badge is a separate 20px visual column (`i`, `o`, `wire`, comment) | Role is never text injected into waveform lanes. Preserve role styling and column alignment. |
 | Signal column | V1 row grid reserves 145px label area in the canvas and ellipsizes labels | Maintain a distinct label column, stable width/resizing, and shared row geometry with the tree. |
 | Waveform viewport | V1 `.wave` has 920px minimum width; ruler is 34px; rows are 35px minimum; waveform is primary surface | Use actual WaveDrom geometry through the adapter. In the locked V8 state, Screen Geometry expands the viewport to the full center column after the frozen label column; ruler/grid positions use the same display scale. Canvas bounds, ruler, and labels are compared; trace interior is separately conformance-tested. |
 | Inspector | right 300px pane; 42px header; 12px body padding; grouped sections; 92px property labels | Remain visible beside canvas and bottom. Full editor fields are real transient drafts applied through SemanticCommand, not disabled placeholders. |
-| Bottom Editor | center-only; 270px target; 38px tabs; Signal/Annotation/Problems/JSON; Transaction only in Transaction/Split; Follow Selection + Pin | Preserve tab availability and distinction between Follow Selection and Pin. Keep spreadsheet-like signal event table. The approved V8 Cycle reference opens with `clk` selected and places the compact Clock context toolbar at the top of the Bottom editor; generic drag/property controls remain available in normal editing and Inspector surfaces. |
+| Bottom Editor | Historical V1: center-only; 270px target; 38px tabs; Signal/Annotation/Problems/JSON; Transaction only in Transaction/Split; Follow Selection + Pin | Follow the approved V2 v8 composition. Preserve context-appropriate tab availability, distinction between Follow Selection and Pin, and spreadsheet-like signal event editing. The V8 Cycle reference opens with `clk` selected and places the compact Clock context toolbar at the top; generic drag/property controls remain available in normal editing and Inspector surfaces. No one-to-one V1 panel pixel matching is required. |
 | MiniMap | Inspector bottom; 80px mini canvas; blue viewport indicator | Visible in Inspector, click-pan and viewport-drag-pan change screen state only. |
 | Status | 27px bar; Ready, signal/annotation/problem counts, time range, zoom | Keep stable left/right ordering and expose derived state without canonical mutation. |
 | View mode | right side of ribbon tab row; segmented Cycle/Transaction/Split | View-only switch: Canonical/History/Dirty/Validation/WaveDrom/LocalGeometry counters all remain zero. |
@@ -116,12 +119,12 @@ one-row toolbar, or a large dead canvas gap is non-compliant.
 | Component | V1 | V2 current | Gap / required change |
 |---|---|---|---|
 | Ribbon | 146px grouped Office-style surface, no scroll at reference viewport | sparse/locally composed controls; current styles permit `overflow-x` in ribbon implementations | Match V1 grouping, dimensions, and zero-scroll acceptance. |
-| Left Tree | dedicated 330px Signal/Group pane with search and role/visibility columns | tokenized 330px default pane with bounded 280–420px splitter; frozen label remains a separate derived column | Preserve the V1 pane boundary while keeping stable-column behavior and shared geometry offsets. |
+| Left Tree | Historical V1: dedicated 330px Signal/Group pane with search and role/visibility columns | normal-product 330px default with bounded 280–420px splitter; approved V2 v8 visual-reference width is 265px; frozen label remains a separate derived column | Keep current resize, stable-column, and shared-geometry behavior. The V1 visual comparison obligation is retired by #1095. |
 | Role column | role badge in tree and canvas, separate from trace | V2 has role and frozen label surfaces | Preserve the boundary and tokenized badge styling. |
 | Signal column | 145px canvas label area, 36px rows | V2 layout defaults role 62px/name 178px and 30px rows | Contract gap: adopt measured V1-compatible tokens or document an approved exception. |
 | Waveform viewport | center remaining width; ruler 34px; no dead blank region | V2 reference mode now derives the wave width from the available center column and scales ruler/grid screen positions from the adapter's local geometry; normal mode retains its scrollable width | Keep center-first composition and validate bounds independently of trace paths. The V8 real-browser wave-owner width gate is >890px at 1672px viewport. |
 | Inspector | fixed 300px default, continuous beside bottom | capability exists with tokenized 300px default and 240–420px view-only resize; Inspector is a bounded vertical flex surface so the MiniMap remains anchored below the scrollable editor | Complete remaining Inspector visual/field parity; resize and collapse behavior are covered by `gui-inspector-resize.spec.ts`; V8 MiniMap placement is covered by `gui-reference-v8.spec.ts`. |
-| Bottom | center-only, 270px, 38px tabs | center editor uses a bounded 180–420px view-only splitter and existing collapse toggle; V8 reference state now selects `clk` and uses the compact Clock toolbar composition | Keep the splitter/collapse metrics and complete the remaining V1 tab/editor visual matrix. Current geometry gate is exact; pixel diff remains diagnostic/open. |
+| Bottom | Historical V1: center-only, 270px, 38px tabs | center editor uses a bounded 180–420px view-only splitter and existing collapse toggle; V2 v8 reference state selects `clk` and uses the compact Clock toolbar composition | Keep functional tab/context behavior and bounded splitter/collapse. Apply current V2 v8 visual checks; do not retain a V1 tab/editor pixel-match gate. |
 | MiniMap | Inspector lower section, 80px canvas | V2 MiniMap component exists | Match placement/size and retain functional pan behavior. |
 | Status | 27px, derived counts and range | V2 status bar uses 32px row | Align height and field ordering with V1. |
 | View Mode | right side of tab row | V2 selector exists in app surface | Lock position, dimensions, and view-only counter invariant. |

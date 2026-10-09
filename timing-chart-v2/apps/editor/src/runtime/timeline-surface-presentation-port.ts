@@ -2,6 +2,7 @@ import type { MutableRefObject } from "react";
 import type { AnnotationId, GroupId, SignalGroupStyle, SignalId } from "@timing-chart-v2/schema";
 import type { TimelineViewportRuntime } from "./timeline-viewport-runtime.js";
 import type { SelectedClockEdge } from "./edge-counter-projection.js";
+import type { ScenarioSignalDifference } from "@timing-chart-v2/schema";
 
 type TimelineRange = Readonly<{ start: number; end: number }>;
 
@@ -26,6 +27,7 @@ export interface TimelineSurfacePresentationPort {
   readonly selectedCycleRef: MutableRefObject<number>;
   readonly selectedEdgeRef: MutableRefObject<SelectedClockEdge | undefined>;
   readonly selectedAnnotationRef: MutableRefObject<AnnotationId | undefined>;
+  readonly scenarioDifferencesRef: MutableRefObject<readonly ScenarioSignalDifference[]>;
   readonly gridEnabledRef: MutableRefObject<boolean>;
   readonly snapEnabledRef: MutableRefObject<boolean>;
   readonly treeFocusRowIdRef: MutableRefObject<string | undefined>;

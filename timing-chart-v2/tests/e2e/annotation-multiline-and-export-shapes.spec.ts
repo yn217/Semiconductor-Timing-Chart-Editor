@@ -224,3 +224,53 @@ test("Callout's multi-line label survives a real Save/Open round trip, in both t
   expect(groupMatch![0]).toContain("Line two");
   expect(groupMatch![0]).toContain("Line three");
 });
+
+test("Marker and Bracket keep their distinct stable identities, labels, and offsets through Save/Open", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+
+  const editor = page.getByTestId("annotation-editor");
+  const marker = await addAnnotation(page, "marker");
+  const markerId = await marker.getAttribute("data-annotation-id");
+  await editor.getByLabel("Annotation label", { exact: true }).fill("Clock edge marker");
+  await editor.getByLabel("Annotation label X", { exact: true }).fill("23");
+  await editor.getByLabel("Annotation label Y", { exact: true }).fill("-11");
+  await editor.getByTestId("apply-annotation-properties").click();
+
+  const bracket = await addAnnotation(page, "bracket");
+  const bracketId = await bracket.getAttribute("data-annotation-id");
+  await editor.getByLabel("Annotation label", { exact: true }).fill("Setup window");
+  await editor.getByLabel("Annotation label X", { exact: true }).fill("-17");
+  await editor.getByLabel("Annotation label Y", { exact: true }).fill("9");
+  await editor.getByTestId("apply-annotation-properties").click();
+  expect(markerId).toBeTruthy();
+  expect(bracketId).toBeTruthy();
+  expect(bracketId).not.toBe(markerId);
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  const saveDownload = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await saveDownload).path();
+  expect(savedPath).toBeTruthy();
+  const fs = await import("node:fs");
+  const saved = JSON.parse(fs.readFileSync(savedPath!, "utf-8")) as { annotations: Array<{ id: string; type: string; label: string; labelOffset?: { x: number; y: number } }>; bookmarks: Array<{ id: string }> };
+  expect(saved.bookmarks.some((bookmark) => bookmark.id === markerId || bookmark.id === bracketId)).toBe(false);
+  expect(saved.annotations).toEqual(expect.arrayContaining([
+    expect.objectContaining({ id: markerId, type: "marker", label: "Clock edge marker", labelOffset: { x: 23, y: -11 } }),
+    expect.objectContaining({ id: bracketId, type: "bracket", label: "Setup window", labelOffset: { x: -17, y: 9 } }),
+  ]));
+
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const reopenedMarker = host.locator(`[data-role='annotation-owner'][data-annotation-id='${markerId}']`);
+  const reopenedBracket = host.locator(`[data-role='annotation-owner'][data-annotation-id='${bracketId}']`);
+  await expect(reopenedMarker).toHaveAttribute("data-annotation-type", "marker");
+  await expect(reopenedBracket).toHaveAttribute("data-annotation-type", "bracket");
+  await expect(reopenedMarker.locator("[data-role='annotation-label']")).toHaveText("Clock edge marker");
+  await expect(reopenedBracket.locator("[data-role='annotation-label']")).toHaveText("Setup window");
+  await expect(reopenedMarker.locator("[data-role='annotation-body']")).toHaveCSS("height", "28px");
+  await expect(reopenedBracket.locator("[data-role='annotation-bracket-caps']")).toHaveCount(1);
+});

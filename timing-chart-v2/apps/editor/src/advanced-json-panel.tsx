@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CommandResult } from "@timing-chart-v2/commands";
 import type { Annotation, CanonicalDocument, DocumentProblem, Signal, SignalGroup, Transaction } from "@timing-chart-v2/schema";
-import { scanJsonSyntax, serializeCanonicalDocument, validateCanonicalDocument, validateDocumentInputBytes, validateDocumentInputComplexity, validateDocumentResourceBudget } from "@timing-chart-v2/schema";
+import { normalizeDocument, parseJsonInput, scanJsonSyntax, serializeCanonicalDocument } from "@timing-chart-v2/schema";
 import { replaceSelectedJsonObject } from "./json-selection.js";
 import { selectedJsonProblem } from "./json-problems.js";
 
@@ -39,14 +39,15 @@ export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, sel
   const cancel = () => { setDraft(sourceText); setUserEdited(false); onDiagnostic(undefined); setStatus("Draft cancelled"); };
   const parseDraft = (): unknown => {
     try {
-      const value = JSON.parse(draft);
-      const budgetProblem = [...validateDocumentInputBytes(new TextEncoder().encode(draft).byteLength), ...validateDocumentInputComplexity(value)][0];
+      const parsed = parseJsonInput(draft);
+      const budgetProblem = parsed.ok ? undefined : parsed.problems[0];
+      if (budgetProblem?.line !== undefined || budgetProblem?.code === "JSON_SYNTAX") throw new Error(budgetProblem.message);
       if (budgetProblem) {
         onDiagnostic({ ...budgetProblem, severity: "error", operation: "document.json.parse", operationLabel: "Parse Advanced JSON", source: "validation", stage: "parse", recommendation: "Reduce the JSON input size or nesting/complexity, then retry.", detail: "advanced-json:resource-budget" });
         setStatus(`Invalid: ${budgetProblem.code} · ${budgetProblem.path}`);
         return undefined;
       }
-      onDiagnostic(undefined); return value;
+      onDiagnostic(undefined); return parsed.ok ? parsed.value : undefined;
     } catch (error) {
       const diagnostic = scanJsonSyntax(draft);
       const detail = error instanceof Error ? error.message : "Invalid JSON.";
@@ -56,10 +57,10 @@ export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, sel
       return undefined;
     }
   };
-  const validateDocumentValue = (value: CanonicalDocument): readonly DocumentProblem[] => [
-    ...validateCanonicalDocument(value),
-    ...validateDocumentResourceBudget(value),
-  ];
+  const validateDocumentValue = (value: CanonicalDocument): readonly DocumentProblem[] => {
+    const normalized = normalizeDocument(value);
+    return normalized.ok ? [] : normalized.problems;
+  };
   const format = () => {
     const value = parseDraft();
     if (value !== undefined) { setDraft(JSON.stringify(value, null, 2)); setStatus("Formatted"); }
@@ -90,14 +91,16 @@ export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, sel
   const apply = () => {
     if (!advanced) return;
     const value = parseDraft();
-    if (value === undefined || typeof value !== "object" || value === null || Array.isArray(value)) { setStatus("JSON object required"); return; }
+    if (value === undefined) return; // Preserve parse/resource diagnostics, including line and column.
+    if (typeof value !== "object" || value === null || Array.isArray(value)) { setStatus("JSON object required"); return; }
     let next = value as CanonicalDocument;
     if (scope === "selected") {
       if (!selected) { setStatus("No selected object"); return; }
       if ((value as { id?: unknown }).id !== selected.id) { setStatus("Selected object ID cannot change"); return; }
       next = replaceSelectedJsonObject(document, value, selectedSignal, selectedGroup, selectedAnnotation, selectedTransaction);
     }
-    const problems = validateDocumentValue(next);
+    const normalized = normalizeDocument(next);
+    const problems = normalized.ok ? [] : normalized.problems;
     if (problems.length > 0) {
       const diagnostics = problems.map((problem, index) => ({ ...problem, severity: "error" as const, operation: "document.json.validate", operationLabel: "Validate Advanced JSON", source: "validation" as const, stage: "validate" as const, recommendation: "Correct the reported document or resource limits, then apply again.", detail: `advanced-json:validate:${index}` }));
       const problem = diagnostics[0]!;
@@ -106,7 +109,8 @@ export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, sel
       return;
     }
     onDiagnostic(undefined);
-    const result = onReplaceDocument(next);
+    if (!normalized.ok) return;
+    const result = onReplaceDocument(normalized.document);
     if (!result.ok) { setStatus(`Apply failed: ${result.reason}`); return; }
     setAdvanced(false);
     setUserEdited(false);

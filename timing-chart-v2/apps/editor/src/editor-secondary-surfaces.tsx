@@ -1,4 +1,5 @@
 import { useTransactionDisclosure } from "./workspace/use-transaction-disclosure.js";
+import { bottomTransactionActionIds } from "./runtime/transaction-selection-index.js";
 import type { AIBridgeStatus, AIBridgeViewOperation } from "./ai-bridge-client.js";
 import { useCallback, useEffect } from "react";
 import type {
@@ -46,7 +47,7 @@ import { TransactionEditor } from "./transaction-editor.js";
 import { TransactionLanes } from "./runtime/transaction-lanes.js";
 import { TransactionTree } from "./transaction-tree.js";
 import {
-  TransactionLinkedSummary,
+  TransactionLinkedEditor,
   TransactionPhaseSummary,
   clearAllPhaseDrafts,
 } from "./transaction-bottom-tabs.js";
@@ -108,6 +109,7 @@ export function useEditorSecondarySurfaces(
     document: input.document,
     validationDiagnostics: input.validationDiagnostics,
     documentEpoch: input.documentEpoch,
+    projectionGeneration: input.projectionGeneration,
     revision: input.revision,
     mode: workspace.viewMode === "Split" ? "Combined" : workspace.viewMode,
     selectedSignalId: input.annotationTargetSignalId,
@@ -155,9 +157,10 @@ export function useEditorSecondarySurfaces(
   };
   const signalEditor = (
     <SignalEditor
-      key={`${input.documentEpoch}:${bottom.signal?.id ?? "none"}:${dialog.bottomResetToken}`}
+      key={`${input.documentEpoch}:${input.projectionGeneration}:${bottom.signal?.id ?? "none"}:${dialog.bottomResetToken}`}
       signal={bottom.signal}
       documentEpoch={input.documentEpoch}
+      projectionGeneration={input.projectionGeneration}
       revision={input.revision}
       onImportDiagnostic={(message) => reportStaleImport("event", message)}
       cycleCount={input.document.timeline.cycleCount}
@@ -210,10 +213,12 @@ export function useEditorSecondarySurfaces(
     />
   );
   const annotationEditor = <AnnotationCollectionPanel
+    key={`${input.documentEpoch}:${input.projectionGeneration}`}
     annotations={input.document.annotations}
     selectedId={bottom.annotation?.id}
     document={input.document}
     documentEpoch={input.documentEpoch}
+    projectionGeneration={input.projectionGeneration}
     revision={input.revision}
     onSelect={input.actions.selectAnnotation}
     onCreate={input.actions.createSelectedAnnotationForType}
@@ -224,9 +229,9 @@ export function useEditorSecondarySurfaces(
   />;
   const transactionEditor = (
     <TransactionEditor
-      key={`${input.documentEpoch}:${dialog.bottomResetToken}`}
+      key={`${input.documentEpoch}:${input.projectionGeneration}:${dialog.bottomResetToken}`}
       transaction={bottom.transaction}
-      selectedTransactionIds={selected.transactionIds}
+      selectedTransactionIds={bottomTransactionActionIds(bottom.transaction, selected.transactionIds, workspace.bottomPinned || !workspace.followSelection)}
       document={input.document}
       cyclesPerTc={workspace.cyclesPerTc}
       history={input.history}
@@ -237,12 +242,11 @@ export function useEditorSecondarySurfaces(
       onRedo={redo}
       onDelete={input.actions.deleteBottomTransaction}
       onCancel={() => dialog.setBottomResetToken((value) => value + 1)}
-      onToggleTransactionSignal={input.actions.toggleTransactionSignal}
     />
   );
   const bookmarkEditor = (
     <BookmarkEditor
-      key={`${input.documentEpoch}:${bottom.bookmark?.id ?? "none"}:${dialog.bottomResetToken}`}
+      key={`${input.documentEpoch}:${input.projectionGeneration}:${bottom.bookmark?.id ?? "none"}:${dialog.bottomResetToken}`}
       bookmark={bottom.bookmark}
       document={input.document}
       history={input.history}
@@ -356,7 +360,7 @@ export function useEditorSecondarySurfaces(
     input.actions.setTransactionsVisibility(input.document.transactions.map((transaction) => transaction.id), visible);
   };
   // #763: unapplied Phase drafts belong to one document; a replacement (New/Open) drops them all so an identical ID in the next document cannot inherit one.
-  useEffect(() => { clearAllPhaseDrafts(); clearAllBookmarkDrafts(); }, [input.documentEpoch]);
+  useEffect(() => { clearAllPhaseDrafts(); clearAllBookmarkDrafts(); }, [input.documentEpoch, input.projectionGeneration]);
   const workspaceViewportContent = workspace.viewMode !== "Cycle" ? (
     <TransactionLanes
         disclosure={disclosure}
@@ -367,6 +371,7 @@ export function useEditorSecondarySurfaces(
         zoom={input.zoom}
         selectedId={selected.transactionId}
         selectedIds={selected.transactionIds}
+        selectedPhaseId={input.selected.transactionPhaseId}
         {...(selected.bookmark?.id === undefined ? {} : { selectedBookmarkId: selected.bookmark.id })}
         filter={
           workspace.viewMode === "Transaction"
@@ -376,6 +381,7 @@ export function useEditorSecondarySurfaces(
         getBoundaryX={transactionBoundaryX}
         getVisibleSourceWindow={transactionVisibleSourceWindow}
         onSelect={input.actions.selectTransaction}
+        onSelectPhase={input.actions.selectTransactionPhase}
         onSnap={(clientX, surfaceLeft, horizontalScroll) =>
           refs.snapTransactionCycle.current(clientX, surfaceLeft, horizontalScroll)
         }
@@ -455,9 +461,9 @@ export function useEditorSecondarySurfaces(
   ) : workspace.bottomTab === "Transaction" ? (
     transactionEditor
   ) : workspace.bottomTab === "Phases" ? (
-    <TransactionPhaseSummary transaction={selected.transaction} transactions={input.document.transactions ?? []} commands={surfaceCommands} cyclesPerTc={workspace.cyclesPerTc} />
+    <TransactionPhaseSummary transaction={bottom.transaction} transactions={input.document.transactions ?? []} commands={surfaceCommands} cyclesPerTc={workspace.cyclesPerTc} />
   ) : workspace.bottomTab === "Linked Signals" ? (
-    <TransactionLinkedSummary transaction={selected.transaction} document={input.document} />
+    <TransactionLinkedEditor transaction={bottom.transaction} document={input.document} onToggle={input.actions.toggleTransactionSignal} />
   ) : workspace.bottomTab === "Bookmarks" ? (
     bookmarkEditor
   ) : workspace.bottomTab === "Problems" ? (
@@ -511,7 +517,7 @@ export function useEditorSecondarySurfaces(
   }, [input.document.annotations, refs.host]);
   const workspaceInspector = (
     <InspectorPanel
-      key={`${input.documentEpoch}:${inspectorSelectionKey}:${dialog.inspectorResetToken}`}
+      key={`${input.documentEpoch}:${input.projectionGeneration}:${inspectorSelectionKey}:${dialog.inspectorResetToken}`}
       signal={inspectorSignal}
       selectedCycle={input.timeline.selectedCycle}
       selectedSignalIds={inspectorSignalIds}
@@ -552,7 +558,10 @@ export function useEditorSecondarySurfaces(
       }}
       onClose={() => dialog.setInspectorVisible(false)}
       onDeleteBookmark={input.actions.deleteBottomBookmark}
-      onToggleTransactionSignal={input.actions.toggleTransactionSignal}
+      onManageTransactionLinks={() => {
+        workspace.setBottomTab("Linked Signals");
+        input.setBottomVisible(true);
+      }}
       onGroupPreview={(groupId, style) => {
         refs.groupStylePreviewRef.current(groupId, style);
         refreshGroupStylePreview(refs.host.current!, groupId, style);

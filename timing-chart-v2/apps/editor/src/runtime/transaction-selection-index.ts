@@ -3,6 +3,11 @@ import type { Transaction, TransactionId } from "@timing-chart-v2/schema";
 type IndexedTransaction = Readonly<{ index: number; transaction: Transaction }>;
 const indexes = new WeakMap<readonly Transaction[], ReadonlyMap<TransactionId, IndexedTransaction>>();
 
+/** A fixed Bottom editor cannot borrow bulk action targets from live selection. */
+export function bottomTransactionActionIds(target: Transaction | undefined, liveIds: ReadonlySet<TransactionId>, fixed: boolean): ReadonlySet<TransactionId> {
+  return fixed ? new Set(target === undefined ? [] : [target.id]) : liveIds;
+}
+
 function indexTransactions(transactions: readonly Transaction[]): ReadonlyMap<TransactionId, IndexedTransaction> {
   let index = indexes.get(transactions);
   if (index) return index;

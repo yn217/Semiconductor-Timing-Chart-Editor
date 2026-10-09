@@ -1,13 +1,15 @@
 import { cyclesToTc, tcToCycles } from "./transaction-tc.js";
 import { newPhaseUid, startOrder, stripPhaseUid, toDraftPhases, validatePhases, type DraftPhase } from "./transaction-phase-model.js";
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import type { CanonicalDocument, Transaction, TransactionPhase } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, SignalId, Transaction, TransactionId, TransactionPhase } from "@timing-chart-v2/schema";
 import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
+import { EditorIconButton } from "./editor-icon.js";
+import { TransactionLinkedSignals } from "./transaction-linked-signals.js";
 
 function phasesEqual(left: readonly TransactionPhase[], right: readonly TransactionPhase[]): boolean {
   return left.length === right.length && left.every((phase, index) => {
     const other = right[index];
-    return other !== undefined && phase.name === other.name && phase.start === other.start && phase.end === other.end;
+    return other !== undefined && phase.id === other.id && phase.name === other.name && phase.start === other.start && phase.end === other.end;
   });
 }
 
@@ -53,7 +55,8 @@ export function addPhaseToDraft(transaction: Transaction): void {
   if (!canAddPhase(transaction)) return;
   const rows = draftRowsOrCommitted(transaction).map((phase) => ({ ...phase }));
   const nextStart = Math.max(transaction.start, ...rows.map((phase) => phase.end));
-  rows.push({ name: `Phase ${rows.length + 1}`, start: nextStart, end: nextStart + 1, uid: newPhaseUid() });
+  const id = newPhaseUid() as TransactionPhase["id"];
+  rows.push({ id, name: `Phase ${rows.length + 1}`, start: nextStart, end: nextStart + 1, uid: id });
   phaseDrafts.set(transaction.id, { base: transaction.phases ?? [], rows });
   bumpPhaseDrafts();
 }
@@ -110,6 +113,8 @@ export function TransactionPhaseEditor({ transaction, commands, compact = false,
     setError("");
   }, [transaction?.id, transaction?.start, transaction?.end, transaction?.phases]);
   const lastTransactionId = useRef<string | undefined>(transaction?.id);
+  const [editingUid, setEditingUid] = useState<string>();
+  const heldOrder = useRef<readonly string[]>([]);
   useEffect(() => {
     if (lastTransactionId.current === transaction?.id) return;
     lastTransactionId.current = transaction?.id;
@@ -122,7 +127,8 @@ export function TransactionPhaseEditor({ transaction, commands, compact = false,
   const addPhase = () => {
     const nextStart = Math.max(rangeStart, ...rows.map((phase) => phase.end));
     if (nextStart >= rangeEnd) return;
-    setRows((current) => [...current, { name: `Phase ${current.length + 1}`, start: nextStart, end: nextStart + 1, uid: newPhaseUid() }]);
+    const id = newPhaseUid() as TransactionPhase["id"];
+    setRows((current) => [...current, { id, name: `Phase ${current.length + 1}`, start: nextStart, end: nextStart + 1, uid: id }]);
   };
   const apply = () => {
     if (!changed) return;
@@ -143,8 +149,6 @@ export function TransactionPhaseEditor({ transaction, commands, compact = false,
   const updateRow = (uid: string, patch: Partial<TransactionPhase>) => setRows((current) => current.map((item) => item.uid === uid ? { ...item, ...patch } : item));
   // Start-time projection. While a row is being edited the visible order is held (a row must not jump under the caret on every
   // keystroke); it re-projects as soon as focus leaves the row, and on add / delete / revert / apply.
-  const [editingUid, setEditingUid] = useState<string>();
-  const heldOrder = useRef<readonly string[]>([]);
   const projected = [...rows].sort(startOrder);
   const displayRows = editingUid !== undefined && heldOrder.current.length === rows.length && heldOrder.current.every((uid) => rows.some((row) => row.uid === uid))
     ? heldOrder.current.map((uid) => rows.find((row) => row.uid === uid)!)
@@ -181,8 +185,6 @@ export function TransactionPhaseSummary({ transaction, transactions, commands, c
   return <TransactionPhaseEditor transaction={transaction} {...(transactions === undefined ? {} : { transactions })} commands={commands} {...(cyclesPerTc === undefined ? {} : { cyclesPerTc })} />;
 }
 
-export function TransactionLinkedSummary({ transaction, document }: { readonly transaction: Transaction | undefined; readonly document: CanonicalDocument }) {
-  const linked = new Set(transaction?.linkedSignals ?? []);
-  const signals = document.signals.filter((signal) => linked.has(signal.id));
-  return <section className="transaction-bottom-summary" data-testid="transaction-bottom-linked-signals"><header><strong>Linked Signals ({signals.length})</strong><span>{transaction?.name ?? "Select a Transaction"}</span></header>{signals.length === 0 ? <p className="inspector-note">No linked signals. Manage links in the Inspector.</p> : <div className="transaction-bottom-linked-list">{signals.map((signal) => <span key={signal.id}>{signal.display.name}</span>)}</div>}</section>;
+export function TransactionLinkedEditor({ transaction, document, onToggle }: { readonly transaction: Transaction | undefined; readonly document: CanonicalDocument; readonly onToggle: (transactionId: TransactionId, signalId: SignalId) => void }) {
+  return <section className="transaction-bottom-summary" data-testid="transaction-bottom-linked-signals">{transaction ? <TransactionLinkedSignals key={transaction.id} transaction={transaction} document={document} onToggle={(signalId) => onToggle(transaction.id, signalId)} renderUnlinkButton={(label, onClick) => <EditorIconButton label={label} icon="close" onClick={onClick} />} /> : <><header><strong>Linked Signals (0)</strong><span>Select a Transaction</span></header><p className="inspector-note">Select a Transaction to manage linked Signals.</p></>}</section>;
 }

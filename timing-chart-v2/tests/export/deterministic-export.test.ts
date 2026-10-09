@@ -139,6 +139,15 @@ describe("deterministic document export", () => {
     expect(svg).not.toContain(`<text x="12" y="${scene.height - 12}">`);
   });
 
+  it("exports a canvas-corner Legend using the plot bounds and persisted offset", () => {
+    const base = canonicalFixture();
+    const document = { ...base, legend: { ...base.legend, show: true, positionMode: "canvas-corner" as const, corner: "top-right" as const, position: { x: 12, y: 18 } } };
+    const scene = buildExportScene(document, { format: "svg", scope: "document" });
+    expect(scene.legendPosition.x).toBeGreaterThan(document.legend.position.x);
+    expect(scene.legendPosition.y).toBeGreaterThanOrEqual(document.legend.position.y);
+    expect(renderExportSvg(scene)).toContain(`transform="translate(${scene.legendPosition.x} ${scene.legendPosition.y})"`);
+  });
+
   it("preserves vertical Legend orientation in SVG export", () => {
     const base = canonicalFixture();
     const labels = ["Input", "Output"];
@@ -1249,6 +1258,107 @@ describe("deterministic document export", () => {
     expect(svg).toContain(">1000<");
     expect(svg).toContain('data-layer="axis-breaks"');
     expect(svg).toContain('data-axis-break-id="tg_export"');
+  });
+
+  it("carries standalone LabelAnchor ruler labels into PNG raster input and PDF output", async () => {
+    const base = canonicalFixture();
+    const document = { ...base, timeline: { ...base.timeline, cycleCount: 20, end: 20, labelAnchors: [{ id: "la_multiformat" as never, source: 5, display: 1000 }] } };
+    const snapshot = { revision: 0, document };
+    const service = new DeterministicExportService();
+    const svg = new TextDecoder().decode(await service.export({ format: "svg", snapshot }));
+    expect(svg).toContain(">1000<");
+    expect(svg).not.toContain('data-axis-break-id=');
+
+    // The Node PDF path embeds the same deterministic SVG bytes in its
+    // canonical comment; this guards shared ruler mapping without parsing a
+    // lossy image representation.
+    const pdf = new TextDecoder().decode(await service.export({ format: "pdf", snapshot }));
+    expect(pdf.startsWith("%PDF-1.4")).toBe(true);
+    expect(pdf).toContain(">1000<");
+
+    const NativeBlob = globalThis.Blob;
+    const capturedSvgParts: BlobPart[][] = [];
+    class CapturedBlob extends NativeBlob {
+      constructor(parts: BlobPart[], options?: BlobPropertyBag) {
+        if (options?.type === "image/svg+xml") capturedSvgParts.push([...parts]);
+        super(parts, options);
+      }
+    }
+    const context = { scale: vi.fn(), fillRect: vi.fn(), drawImage: vi.fn(), fillStyle: "" };
+    const canvas = { width: 0, height: 0, getContext: vi.fn(() => context), toBlob: (callback: BlobCallback) => callback(new NativeBlob(["PNG-bytes"], { type: "image/png" })) };
+    class FakeImage { src = ""; async decode() { return undefined; } }
+    vi.stubGlobal("Blob", CapturedBlob);
+    vi.stubGlobal("Image", FakeImage);
+    vi.stubGlobal("document", { createElement: vi.fn(() => canvas) });
+    try {
+      const png = await service.export({ format: "png", snapshot });
+      const rasterSource = await new NativeBlob(capturedSvgParts[0]!, { type: "image/svg+xml" }).text();
+      expect(capturedSvgParts).toHaveLength(1);
+      expect(rasterSource).toContain(">1000<");
+      expect(rasterSource).not.toContain('data-axis-break-id=');
+      expect(new TextDecoder().decode(png)).toBe("PNG-bytes");
+      expect(context.drawImage).toHaveBeenCalledOnce();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("exports distinct Marker, multiline Callout, and Bracket shapes through SVG, PNG, and PDF", async () => {
+    const base = canonicalFixture();
+    const signalId = base.signals[1]!.id;
+    const anchor = (cycle: number) => ({ signalId, cycle, point: "cycle-start" as const });
+    const snapshot = {
+      revision: 0,
+      document: {
+        ...base,
+        annotations: [
+          { id: "ann_marker_multi" as AnnotationId, type: "marker" as const, label: "Marker label", visible: true, anchor: anchor(2) },
+          { id: "ann_callout_multi" as AnnotationId, type: "callout" as const, label: "Callout line one\nCallout line two", visible: true, anchor: anchor(3) },
+          { id: "ann_bracket_multi" as AnnotationId, type: "bracket" as const, label: "Bracket label", visible: true, start: anchor(1), end: anchor(5) },
+        ],
+      },
+    };
+    const service = new DeterministicExportService();
+    const hasPrimitiveShapes = (svg: string) => {
+      expect(svg).toContain('data-annotation-id="ann_marker_multi"');
+      expect(svg).toContain('<line data-role="marker-tick"');
+      expect(svg).toContain('data-annotation-id="ann_callout_multi"');
+      const callout = svg.match(/<g data-annotation-id="ann_callout_multi"[\s\S]*?<\/g>/)?.[0] ?? "";
+      expect((callout.match(/<tspan/g) ?? []).length).toBe(2);
+      expect(svg).toContain('data-annotation-id="ann_bracket_multi"');
+      expect(svg).toContain('data-role="annotation-bracket-caps"');
+    };
+
+    const svg = new TextDecoder().decode(await service.export({ format: "svg", snapshot }));
+    hasPrimitiveShapes(svg);
+    const pdf = new TextDecoder().decode(await service.export({ format: "pdf", snapshot }));
+    expect(pdf.startsWith("%PDF-1.4")).toBe(true);
+    hasPrimitiveShapes(pdf);
+
+    const NativeBlob = globalThis.Blob;
+    const capturedSvgParts: BlobPart[][] = [];
+    class CapturedBlob extends NativeBlob {
+      constructor(parts: BlobPart[], options?: BlobPropertyBag) {
+        if (options?.type === "image/svg+xml") capturedSvgParts.push([...parts]);
+        super(parts, options);
+      }
+    }
+    const context = { scale: vi.fn(), fillRect: vi.fn(), drawImage: vi.fn(), fillStyle: "" };
+    const canvas = { width: 0, height: 0, getContext: vi.fn(() => context), toBlob: (callback: BlobCallback) => callback(new NativeBlob(["PNG-bytes"], { type: "image/png" })) };
+    class FakeImage { src = ""; async decode() { return undefined; } }
+    vi.stubGlobal("Blob", CapturedBlob);
+    vi.stubGlobal("Image", FakeImage);
+    vi.stubGlobal("document", { createElement: vi.fn(() => canvas) });
+    try {
+      const png = await service.export({ format: "png", snapshot });
+      const rasterSource = await new NativeBlob(capturedSvgParts[0]!, { type: "image/svg+xml" }).text();
+      expect(capturedSvgParts).toHaveLength(1);
+      hasPrimitiveShapes(rasterSource);
+      expect(new TextDecoder().decode(png)).toBe("PNG-bytes");
+      expect(context.drawImage).toHaveBeenCalledOnce();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("shares the same folded time mapping across waveforms, transactions, and annotations", () => {

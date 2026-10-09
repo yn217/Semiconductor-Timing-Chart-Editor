@@ -289,7 +289,7 @@
         "labelEvery": { "type": "integer", "minimum": 1 },
         "position": { "enum": ["above", "below"] },
         "offset": { "$ref": "#/$defs/offset" },
-        "anchorId": { "type": "string" }
+        "anchorId": { "$ref": "#/$defs/stableId" }
       }
     },
     "signal": {
@@ -323,7 +323,7 @@
         "edgeCounter": { "$ref": "#/$defs/edgeCounter" },
         "width": { "type": "integer", "minimum": 1 },
         "displayFormat": { "enum": ["hex", "binary", "decimal", "signed", "unsigned", "symbolic"] },
-        "enumId": { "type": "string", "minLength": 1 },
+        "enumId": { "$ref": "#/$defs/stableId" },
         "resetSemantics": { "$ref": "#/$defs/resetSemantics" },
         "title": { "type": "string" },
         "body": { "type": "string" },
@@ -587,8 +587,9 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["name", "start", "end"],
+            "required": ["id", "name", "start", "end"],
             "properties": {
+              "id": { "$ref": "#/$defs/stableId" },
               "name": { "type": "string" },
               "start": { "type": "number", "minimum": 0 },
               "end": { "type": "number", "exclusiveMinimum": 0 }
@@ -663,6 +664,8 @@
         "orientation": { "enum": ["horizontal", "vertical"] },
         "usedRolesOnly": { "type": "boolean" },
         "position": { "$ref": "#/$defs/offset" },
+        "positionMode": { "enum": ["free", "canvas-corner"] },
+        "corner": { "enum": ["top-left", "top-right", "bottom-left", "bottom-right"] },
         "items": {
           "type": "array",
           "uniqueItems": true,

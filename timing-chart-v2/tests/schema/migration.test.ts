@@ -75,6 +75,22 @@ describe("migrateV1", () => {
     expect(warnings.some((warning) => warning.code === "MIGRATION_DUPLICATE_CHANGE_ID_REPAIRED")).toBe(true);
   });
 
+  it("assigns deterministic collision-free IDs to legacy value and Clock enable changes", () => {
+    const source = v1Document({
+      signals: [
+        { id: "sig_clk", name: "CLK", type: "clock", generator: { start: 0, period: 2, duty: 0.5, phase: 0, initial: 0, polarity: "positive" }, enable: [{ start: 0, value: 1 }] },
+        { id: "sig_data", name: "DATA", type: "binary", role: "input", values: [{ start: 0, value: 0 }, { start: 3, value: 1 }] },
+      ],
+    });
+    const first = migrateV1(source).document;
+    const second = migrateV1(source).document;
+    const ids = first.signals.flatMap((signal) => signal.type === "clock" ? (signal.enable ?? []).map((change) => change.id) : signal.type === "commentRow" ? [] : signal.values.map((change) => change.id));
+    expect(ids.every((id) => typeof id === "string" && id.length > 0)).toBe(true);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(second.signals.flatMap((signal) => signal.type === "clock" ? (signal.enable ?? []).map((change) => change.id) : signal.type === "commentRow" ? [] : signal.values.map((change) => change.id))).toEqual(ids);
+    expect(validateCanonicalDocument(first)).toHaveLength(0);
+  });
+
   it("falls back to the real clock signal (with a warning) when the legacy referenceClock names a non-clock or missing ID", () => {
     const source = v1Document({
       timeline: { cycleCount: 10, referenceClock: "sig_data" }, // sig_data is a binary signal, not a clock

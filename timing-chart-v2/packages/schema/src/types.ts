@@ -7,6 +7,7 @@ export type RowId = SignalId | SpacerId;
 export type AnnotationId = StableId<"annotation">;
 export type AnnotationGroupId = StableId<"annotationGroup">;
 export type TransactionId = StableId<"transaction">;
+export type TransactionPhaseId = StableId<"transactionPhase">;
 export type TransactionGroupId = StableId<"transactionGroup">;
 export type BookmarkId = StableId<"bookmark">;
 export type TimeGroupId = StableId<"time-group">;
@@ -301,7 +302,7 @@ export interface TimeGroup {
   readonly presentation?: TimeGroupPresentation;
 }
 
-export interface TransactionPhase { readonly name: string; readonly start: number; readonly end: number }
+export interface TransactionPhase { readonly id: TransactionPhaseId; readonly name: string; readonly start: number; readonly end: number }
 export interface TransactionGroup { readonly id: TransactionGroupId; readonly name: string; readonly color?: string; readonly order: number }
 export interface TransactionTimeScale { readonly clockCyclesPerTransactionCycle: number; readonly majorInterval: number; readonly minorInterval: number; readonly showSecondaryClock?: boolean }
 
@@ -335,6 +336,9 @@ export interface Legend {
   readonly orientation: "horizontal" | "vertical";
   readonly usedRolesOnly: boolean;
   readonly position: PixelOffset;
+  /** `free` uses timeline-local absolute coordinates; `canvas-corner` uses a plot-corner anchor plus position offset. */
+  readonly positionMode?: "free" | "canvas-corner";
+  readonly corner?: "top-left" | "top-right" | "bottom-left" | "bottom-right";
   readonly items?: readonly LegendEntry[];
   readonly style?: JsonObject;
 }

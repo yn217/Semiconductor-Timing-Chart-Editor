@@ -1,6 +1,6 @@
 import { type ChangeSet, type CommandResult, type SemanticCommand } from "@timing-chart-v2/commands";
 import type { CanonicalSessionMetrics, CanonicalSnapshot } from "@timing-chart-v2/core";
-import { deleteScenario, duplicateScenario, projectScenarioAsV2, renameScenario, updateScenarioModelFromV2Projection, validateScenarioDocumentModel, type CanonicalDocument, type CommandId, type ScenarioDocumentModel, type ScenarioId } from "@timing-chart-v2/schema";
+import { deleteScenario, duplicateScenario, projectScenarioAsV2, renameScenario, updateScenarioModelFromV2Projection, validateScenarioDocumentModel, type CanonicalDocument, type CommandId, type DocumentProblem, type ScenarioDocumentModel, type ScenarioId } from "@timing-chart-v2/schema";
 import { CommandHistorySession } from "./session.js";
 import { HISTORY_RETENTION_POLICY, type HistoryMetrics, type HistoryState, type RecordedAction } from "./types.js";
 
@@ -189,7 +189,10 @@ export class ScenarioCommandHistorySession {
     } catch (error) {
       this.#archiveProjectionMetrics();
       this.#activeProjection = this.#createProjection(before, this.#activeScenarioId);
-      return { ok: false, reason: "invalid", problems: [{ code: "SCENARIO_RECONCILIATION_FAILED", path: "$.scenarios", message: error instanceof Error ? error.message : "Scenario projection could not be reconciled." }] };
+      const problems = error !== null && typeof error === "object" && "problems" in error && Array.isArray(error.problems)
+        ? error.problems as DocumentProblem[]
+        : [{ code: "SCENARIO_RECONCILIATION_FAILED", path: "$.scenarios", message: error instanceof Error ? error.message : "Scenario projection could not be reconciled." } satisfies DocumentProblem];
+      return { ok: false, reason: "invalid", problems };
     }
     this.#model = after;
     this.#revision += 1;

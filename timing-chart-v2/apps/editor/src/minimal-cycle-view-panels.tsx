@@ -3,11 +3,12 @@ import { createPortal } from "react-dom";
 import type { RefObject } from "react";
 import { getGestureHint, subscribeGestureHint } from "./runtime/active-gesture-cancellation.js";
 import { cycleUnitWord } from "./transaction-tc.js";
-import type { GroupId, SignalGroup, SpacerId } from "@timing-chart-v2/schema";
-import { compareScenarioSignalStreams, type ScenarioDocumentModel, type ScenarioId } from "@timing-chart-v2/schema";
+import type { GroupId, SignalGroup, SignalId, SpacerId } from "@timing-chart-v2/schema";
+import { compareScenarioSignalStreams, type ScenarioDocumentModel, type ScenarioId, type ScenarioSignalDifference } from "@timing-chart-v2/schema";
 import { ContextMenuSurface } from "./context-menu-surface.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
 import { EditorIcon } from "./editor-icon.js";
+import { ModalBackdrop } from "./modal-backdrop.js";
 import { RibbonIcon } from "./ribbon-icon.js";
 import { signalTypeLabel } from "./runtime/signal-type-registry.js";
 import { usePeerMenuSurface } from "./runtime/peer-menu-surface.js";
@@ -40,7 +41,7 @@ export function ContextMenuPanel({ contextMenu, hasSelectedClipboard, clipboardA
 
 const VIEW_MODE_TITLE_LABEL: Record<"Cycle" | "Transaction" | "Split", string> = { Cycle: "Cycle View", Transaction: "Transaction View", Split: "Combined View" };
 
-export function MinimalCycleViewTitleBar({ title, dirty, viewMode, scenarios, scenarioModel, activeScenarioId, onScenarioChange, onScenarioEnable, onScenarioRename, onScenarioDuplicate, onScenarioDelete }: {
+export function MinimalCycleViewTitleBar({ title, dirty, viewMode, scenarios, scenarioModel, activeScenarioId, onScenarioChange, onScenarioEnable, onScenarioRename, onScenarioDuplicate, onScenarioDelete, onRevealScenarioDifference, onScenarioComparisonChange }: {
   readonly title: string;
   readonly dirty: boolean;
   readonly viewMode: "Cycle" | "Transaction" | "Split";
@@ -52,6 +53,8 @@ export function MinimalCycleViewTitleBar({ title, dirty, viewMode, scenarios, sc
   readonly onScenarioRename?: (id: ScenarioId, name: string) => void;
   readonly onScenarioDuplicate?: (id: ScenarioId) => void;
   readonly onScenarioDelete?: (id: ScenarioId) => void;
+  readonly onRevealScenarioDifference?: (signalId: SignalId, range: Readonly<{ start: number; end: number }>) => void;
+  readonly onScenarioComparisonChange?: (differences: readonly ScenarioSignalDifference[]) => void;
 }) {
   // Historical showcase documents may include a view mode in their saved
   // title. Mode is workspace presentation, so do not let that stale suffix
@@ -61,15 +64,18 @@ export function MinimalCycleViewTitleBar({ title, dirty, viewMode, scenarios, sc
   const [scenarioName, setScenarioName] = useState(activeScenario?.name ?? "");
   const [compareOpen, setCompareOpen] = useState(false);
   const [comparisonScenarioId, setComparisonScenarioId] = useState<ScenarioId | undefined>(() => scenarios?.find((scenario) => scenario.id !== activeScenarioId)?.id);
+  // Resolve against the incoming model synchronously; effects repair state only after render.
+  const comparisonTargetId = scenarios?.find((scenario) => scenario.id === comparisonScenarioId && scenario.id !== activeScenarioId)?.id ?? scenarios?.find((scenario) => scenario.id !== activeScenarioId)?.id;
   useEffect(() => setScenarioName(activeScenario?.name ?? ""), [activeScenario?.id, activeScenario?.name]);
   useEffect(() => {
     if (comparisonScenarioId === activeScenarioId || !scenarios?.some((scenario) => scenario.id === comparisonScenarioId)) {
       setComparisonScenarioId(scenarios?.find((scenario) => scenario.id !== activeScenarioId)?.id);
     }
   }, [activeScenarioId, comparisonScenarioId, scenarios]);
-  const differences = useMemo(() => scenarioModel && activeScenarioId && comparisonScenarioId
-    ? compareScenarioSignalStreams(scenarioModel, activeScenarioId, comparisonScenarioId)
-    : [], [scenarioModel, activeScenarioId, comparisonScenarioId]);
+  const differences = useMemo(() => scenarioModel && activeScenario && comparisonTargetId
+    ? compareScenarioSignalStreams(scenarioModel, activeScenario.id, comparisonTargetId)
+    : [], [scenarioModel, activeScenario, comparisonTargetId]);
+  useEffect(() => onScenarioComparisonChange?.(compareOpen ? differences : []), [compareOpen, differences, onScenarioComparisonChange]);
   return <header className="app-titlebar"><span className="appmark">∿</span><h1 data-testid="titlebar-document-title" aria-label={`${displayTitle}${dirty ? " (unsaved changes)" : ""}`}>{displayTitle}{dirty && <span className="document-dirty-indicator" data-testid="titlebar-unsaved-indicator" aria-label="Unsaved changes">*</span>}</h1>
     {scenarios ? <div className="scenario-controls" data-testid="scenario-controls" aria-label="Scenario controls">
       <label>Scenario<select aria-label="Active Scenario" data-testid="active-scenario" value={activeScenarioId ?? ""} onChange={(event) => onScenarioChange?.(event.target.value as ScenarioId)}>{scenarios.map((scenario) => <option key={scenario.id} value={scenario.id}>{scenario.name}</option>)}</select></label>
@@ -79,12 +85,12 @@ export function MinimalCycleViewTitleBar({ title, dirty, viewMode, scenarios, sc
       <button type="button" data-testid="scenario-delete" disabled={scenarios.length <= 1} onClick={() => activeScenarioId && onScenarioDelete?.(activeScenarioId)}>Delete</button>
       <button type="button" data-testid="scenario-compare-toggle" disabled={scenarios.length <= 1 || scenarioModel === undefined} aria-expanded={compareOpen} onClick={() => setCompareOpen((open) => !open)}>Compare</button>
       {compareOpen && scenarioModel && <section className="scenario-comparison-popover" data-testid="scenario-comparison" aria-label="Scenario comparison">
-        <label>Compare {activeScenario?.name ?? "Scenario"} with<select aria-label="Compare with Scenario" data-testid="scenario-compare-target" value={comparisonScenarioId ?? ""} onChange={(event) => setComparisonScenarioId(event.target.value as ScenarioId)}>{scenarios.filter((scenario) => scenario.id !== activeScenarioId).map((scenario) => <option key={scenario.id} value={scenario.id}>{scenario.name}</option>)}</select></label>
+        <label>Compare {activeScenario?.name ?? "Scenario"} with<select aria-label="Compare with Scenario" data-testid="scenario-compare-target" value={comparisonTargetId ?? ""} onChange={(event) => setComparisonScenarioId(event.target.value as ScenarioId)}>{scenarios.filter((scenario) => scenario.id !== activeScenarioId).map((scenario) => <option key={scenario.id} value={scenario.id}>{scenario.name}</option>)}</select></label>
         <p>Different source-cycle ranges</p>
         {differences.length === 0 ? <span data-testid="scenario-no-differences">No waveform differences</span> : <ul>{differences.map((difference) => {
           const definition = scenarioModel.signalDefinitions.find((signal) => signal.id === difference.signalId);
           const name = definition?.type === "commentRow" ? definition.display.name : definition?.display.name ?? difference.signalId;
-          return <li key={difference.signalId} data-scenario-difference-signal-id={difference.signalId}><strong>{name}</strong>{difference.ranges.map((range) => <span key={`${range.start}:${range.end}`}> cycles {range.start}–{range.end - 1}</span>)}</li>;
+          return <li key={difference.signalId} data-scenario-difference-signal-id={difference.signalId}><strong>{name}</strong>{difference.ranges.map((range) => <span key={`${range.start}:${range.end}`}><span> cycles {range.start}–{range.end - 1}</span><button type="button" data-testid={`scenario-difference-reveal-${difference.signalId}-${range.start}`} aria-label={`Show difference for ${name}, cycles ${range.start} to ${range.end - 1}`} onClick={() => onRevealScenarioDifference?.(difference.signalId, range)}>Show in timeline</button></span>)}</li>;
         })}</ul>}
       </section>}
     </div> : onScenarioEnable ? <button type="button" data-testid="scenario-enable" onClick={onScenarioEnable}>Enable Scenarios</button> : null}
@@ -101,12 +107,12 @@ export type RenameDialogProps = {
 };
 
 export function RenameDialog({ dialogRef, draft, onDraftChange, error, onApply, onClose }: RenameDialogProps) {
-  return <div className="modal-backdrop" data-testid="rename-dialog-backdrop"><form ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="rename-dialog-title" className="document-properties rename-dialog" data-testid="rename-dialog" onSubmit={(event) => { event.preventDefault(); onApply(); }} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onClose(); } }}>
+  return <ModalBackdrop testId="rename-dialog-backdrop" onDismiss={onClose}><form ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="rename-dialog-title" className="document-properties rename-dialog" data-testid="rename-dialog" onSubmit={(event) => { event.preventDefault(); onApply(); }} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onClose(); } }}>
     <header><h2 id="rename-dialog-title">Rename</h2><button type="button" aria-label="Close rename dialog" onClick={onClose}><EditorIcon name="close" /></button></header>
     <label>New name<input autoFocus data-dialog-initial-focus aria-label="New name" value={draft} onChange={(event) => onDraftChange(event.target.value)} /></label>
     {error && <p role="alert" className="dialog-error">{error}</p>}
     <footer><button type="button" onClick={onClose}>Cancel</button><button type="submit" data-testid="apply-rename">Apply</button></footer>
-  </form></div>;
+  </form></ModalBackdrop>;
 }
 
 export type BulkRegistrationPreviewState = { readonly sourceText: string; readonly definitions: readonly BulkSignalDefinition[]; readonly errors: readonly string[] };
@@ -467,12 +473,12 @@ export function EditorStatusBar({ toolStatus, selectionStatus, signalCount, anno
 }
 
 export function BulkRegistrationDialog({ dialogRef, groups, text, onTextChange, groupId, onGroupIdChange, status, preview, onPreview, onApply, onClose }: BulkRegistrationDialogProps) {
-  return <div className="modal-backdrop"><section ref={dialogRef} role="dialog" aria-modal="true" aria-label="Bulk Signal Registration" className="document-properties bulk-registration">
+  return <ModalBackdrop onDismiss={onClose}><section ref={dialogRef} role="dialog" aria-modal="true" aria-label="Bulk Signal Registration" className="document-properties bulk-registration">
     <header><h2>Bulk Signal Registration</h2><button type="button" aria-label="Close bulk registration" onClick={onClose}><EditorIcon name="close" /></button></header>
     <p>One signal per line: <code>instance.path.signal [binary|bus|state|clock]</code></p>
     <textarea data-dialog-initial-focus aria-label="Bulk signal definitions" value={text} onChange={(event) => onTextChange(event.target.value)} rows={8} />
     <label>Target Group<select aria-label="Bulk registration target group" value={groupId ?? ""} onChange={(event) => onGroupIdChange(event.target.value as GroupId)}>{groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
     {preview && <div className={`bulk-preview ${preview.errors.length === 0 ? "valid" : "invalid"}`} data-testid="bulk-register-preview"><strong>{preview.errors.length === 0 ? `Ready to register ${preview.definitions.length} signal${preview.definitions.length === 1 ? "" : "s"}` : "Preview errors"}</strong>{preview.errors.length > 0 ? <ul>{preview.errors.map((error) => <li key={error}>{error}</li>)}</ul> : <ul>{preview.definitions.map((definition) => <li key={definition.path}>{definition.path} · {definition.kind}{definition.width === undefined ? "" : ` · width ${definition.width}`}</li>)}</ul>}</div>}
     <footer><output>{status}</output><button type="button" data-testid="bulk-register-preview-button" onClick={onPreview}>Preview</button><button type="button" data-testid="bulk-register-apply" onClick={onApply} disabled={!preview || preview.sourceText !== text || preview.errors.length > 0 || preview.definitions.length === 0}>Register Signals</button></footer>
-  </section></div>;
+  </section></ModalBackdrop>;
 }

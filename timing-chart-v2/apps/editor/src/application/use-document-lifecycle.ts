@@ -57,7 +57,7 @@ type LifecycleEffects = Readonly<{
 
 type DocumentApplicationPort = Pick<EditorApplicationOwner,
   "history" | "runtime" | "replaceSession" | "publishHistory" | "setProblem" | "setRuntimeDiagnostics"
-  | "replaceScenarioSession"
+  | "replaceScenarioSession" | "setOperationMessage"
 >;
 
 function openProblems(problems: readonly DocumentProblem[]): readonly DocumentProblem[] {
@@ -234,10 +234,10 @@ export function useDocumentLifecycle({
     }
     try {
       requestOpenText(decodeOpenDocumentBytes(bytes), requestId);
-    } catch {
+    } catch (error) {
       if (requestId !== requestIdRef.current) return;
       fileReadStartedAtRef.current = undefined;
-      application.setProblem("Open failed.");
+      application.setProblem(`Could not decode document: ${errorReason(error, "Invalid file bytes.")}`);
     }
   }, [application, requestOpenText]);
   const readFile = useCallback(async (file: File) => {
@@ -254,10 +254,12 @@ export function useDocumentLifecycle({
       const bytes = await file.arrayBuffer();
       if (requestId !== requestIdRef.current) return;
       requestOpenBytes(bytes, file.name, requestId);
-    } catch {
+    } catch (error) {
       if (requestId !== requestIdRef.current) return;
       fileReadStartedAtRef.current = undefined;
-      application.setProblem("Open failed.");
+      const diagnostic: DocumentProblem = { code: "OPEN_READ_FAILED", path: "$", message: `Could not read ${file.name || "selected file"}: ${errorReason(error, "File access failed.")}`, severity: "error", operation: "document.open", operationLabel: "Open document", source: "open", stage: "storage", recommendation: "Check file access permissions or choose another file, then retry Open.", detail: "open-failure:read" };
+      application.setProblem(diagnostic.message);
+      application.setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), diagnostic]);
     }
   }, [application, requestOpenBytes]);
 
@@ -304,6 +306,8 @@ export function useDocumentLifecycle({
     recordSaveMeasure("timing-chart-v2.save.download", downloadStartedAt, { characters: text.length });
     if (session.getSnapshot().revision === persistedRevision) session.markClean();
     application.publishHistory();
+    application.setProblem("");
+    application.setOperationMessage(`Saved: ${filename}`);
     application.setRuntimeDiagnostics((current) => current.filter((item) => !isSaveDiagnostic(item)));
     const recentWriteStartedAt = performance.now();
     const identity = createRecentIdentity(filename, savedDocument.document.id, text.length);
@@ -312,12 +316,12 @@ export function useDocumentLifecycle({
       const recentMetadataStartedAt = performance.now();
       try {
         publishRecentMetadata(identity, savedDocument.document.title);
-        application.setProblem("");
       } finally {
         recordSaveMeasure("timing-chart-v2.save.recent-metadata", recentMetadataStartedAt, { characters: text.length });
       }
     });
     recentWriteRef.current = recentWrite.catch((error: unknown) => {
+      if (application.runtime.session.current() !== session) return;
       const diagnostic = recentSaveWarning(error);
       application.setRuntimeDiagnostics((current) => [...current.filter((item) => item.code !== "SAVE_RECENT_FAILED"), diagnostic]);
       application.setProblem(`Saved successfully. ${diagnostic.message}`);

@@ -1,6 +1,7 @@
 import { planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
 import { measurementProfilePair, valueSignalValueProblem, type AnnotationId, type AnnotationType, type CanonicalDocument, type GroupId, type JsonObject, type MeasurementProfile, type SemanticAnchor, type SignalId, type SignalRole, type TimeGroup, type TimeGroupId, type TransactionGroupId, type TransactionId, type TransactionPhase, type TransitionAnchorKind, type ValueSignal } from "@timing-chart-v2/schema";
 import { nextCommandId } from "./command-id.js";
+import { canonicalEntityIds, isStableId } from "@timing-chart-v2/schema";
 import { nextEntityId } from "./entity-id.js";
 import { createAnnotation } from "./create-annotation.js";
 
@@ -120,7 +121,7 @@ export function buildTypedSignalProposal(document: CanonicalDocument, revision: 
     const valueProblem = valueSignalValueProblem(type, initialValue);
     if (valueProblem) return { ok: false, message: `initialValue is invalid: ${valueProblem}` };
     const normalizedName = name.trim();
-    const signal: ValueSignal = { id: nextEntityId("signal", document) as SignalId, name: normalizedName, type, role: role as SignalRole, source: { instancePath: [], signalName: normalizedName }, display: { name: normalizedName }, values: [{ start: 0, value: initialValue }], ...(type === "bus" ? { width: (width as number | undefined) ?? 8, displayFormat: "hex" as const } : {}) };
+    const signal: ValueSignal = { id: nextEntityId("signal", document) as SignalId, name: normalizedName, type, role: role as SignalRole, source: { instancePath: [], signalName: normalizedName }, display: { name: normalizedName }, values: [{ id: nextEntityId("signalValueChange", document), start: 0, value: initialValue }], ...(type === "bus" ? { width: (width as number | undefined) ?? 8, displayFormat: "hex" as const } : {}) };
     return { ok: true, proposal: proposal(revision, `Create ${type} signal ${normalizedName} in ${group.name}`, [command({ type: "signal.create", signal, targetGroupId: group.id, index: group.rows.length }, "typed_create_signal")]) };
   }
   const signalId = args.signalId;
@@ -301,7 +302,7 @@ export function buildTypedTransactionProposal(document: CanonicalDocument, revis
       if (typeof item !== "object" || item === null) return { ok: false, message: `phases[${index}] must contain a name, start, and end.` };
       const phase = item as Record<string, unknown>;
       if (typeof phase.name !== "string" || !phase.name.trim() || !Number.isSafeInteger(phase.start) || !Number.isSafeInteger(phase.end) || (phase.start as number) < (start as number) || (phase.end as number) > (end as number) || (phase.end as number) <= (phase.start as number)) return { ok: false, message: `phases[${index}] must be a named, non-empty source-cycle range inside the Transaction.` };
-      phases.push({ name: phase.name.trim(), start: phase.start as number, end: phase.end as number });
+      phases.push({ id: nextEntityId("transactionPhase", document) as TransactionPhase["id"], name: phase.name.trim(), start: phase.start as number, end: phase.end as number });
     }
     const orderedPhases = [...phases].sort((a, b) => a.start - b.start || a.end - b.end);
     if (orderedPhases.some((phase, index) => index > 0 && phase.start < orderedPhases[index - 1]!.end)) return { ok: false, message: "Transaction Phases must not overlap." };
@@ -343,17 +344,18 @@ export function buildTypedTransactionProposal(document: CanonicalDocument, revis
     const start = args.startCycle;
     const end = args.endCycle;
     if (typeof name !== "string" || !name.trim() || !Number.isSafeInteger(start) || !Number.isSafeInteger(end) || (start as number) < transaction.start || (end as number) > transaction.end || (end as number) <= (start as number)) return { ok: false, message: `${tool} requires a name and integer source-cycle boundaries inside the Transaction.` };
-    const phase = { name: name.trim(), start: start as number, end: end as number };
+    const phaseIndex = transaction.phases?.findIndex((phase) => phase.id === args.phaseId) ?? -1;
+    if (tool === "propose_update_phase" && (typeof args.phaseId !== "string" || phaseIndex < 0 || args.phaseIndex !== undefined)) return { ok: false, message: "propose_update_phase requires a stable phaseId that exists in the Transaction, not phaseIndex." };
+    if (tool === "propose_add_phase" && args.phaseId !== undefined && (typeof args.phaseId !== "string" || !isStableId(args.phaseId) || canonicalEntityIds(document).has(args.phaseId))) return { ok: false, message: "propose_add_phase requires an unused stable phaseId when supplied." };
+    const phase = { id: tool === "propose_update_phase" ? transaction.phases![phaseIndex]!.id : (args.phaseId ?? nextEntityId("transactionPhase", document)) as TransactionPhase["id"], name: name.trim(), start: start as number, end: end as number };
     if (tool === "propose_add_phase") return { ok: true, proposal: proposal(revision, `Add Phase ${phase.name} to ${transaction.name}`, [command({ type: "transaction.phaseAdd", transactionId: transaction.id, phase }, "typed_add_phase")]) };
-    const phaseIndex = args.phaseIndex;
-    if (!Number.isSafeInteger(phaseIndex) || (phaseIndex as number) < 0 || (phaseIndex as number) >= (transaction.phases?.length ?? 0)) return { ok: false, message: "propose_update_phase requires a phaseIndex that exists in the Transaction." };
-    return { ok: true, proposal: proposal(revision, `Update Phase ${phase.name} in ${transaction.name}`, [command({ type: "transaction.phaseUpdate", transactionId: transaction.id, phaseIndex: phaseIndex as number, phase }, "typed_update_phase")]) };
+    return { ok: true, proposal: proposal(revision, `Update Phase ${phase.name} in ${transaction.name}`, [command({ type: "transaction.phaseUpdate", transactionId: transaction.id, phaseIndex, phaseId: phase.id, phase }, "typed_update_phase")]) };
   }
   if (tool === "propose_delete_phase") {
-    const phaseIndex = args.phaseIndex;
-    if (!Number.isSafeInteger(phaseIndex) || (phaseIndex as number) < 0 || (phaseIndex as number) >= (transaction.phases?.length ?? 0)) return { ok: false, message: "propose_delete_phase requires a phaseIndex that exists in the Transaction." };
-    const phase = transaction.phases![phaseIndex as number]!;
-    return { ok: true, proposal: proposal(revision, `Delete Phase ${phase.name} from ${transaction.name}`, [command({ type: "transaction.phaseDelete", transactionId: transaction.id, phaseIndex: phaseIndex as number }, "typed_delete_phase")]) };
+    const phaseIndex = transaction.phases?.findIndex((phase) => phase.id === args.phaseId) ?? -1;
+    if (typeof args.phaseId !== "string" || phaseIndex < 0 || args.phaseIndex !== undefined) return { ok: false, message: "propose_delete_phase requires a stable phaseId that exists in the Transaction, not phaseIndex." };
+    const phase = transaction.phases![phaseIndex]!;
+    return { ok: true, proposal: proposal(revision, `Delete Phase ${phase.name} from ${transaction.name}`, [command({ type: "transaction.phaseDelete", transactionId: transaction.id, phaseIndex, phaseId: phase.id }, "typed_delete_phase")]) };
   }
   if (tool === "propose_link_signal" || tool === "propose_unlink_signal") {
     const signalId = args.signalId;
@@ -585,7 +587,7 @@ function buildExtendedProposal(request: AIProposalRequest): AIProposalResult {
     const type = (createSignal[1]?.toLowerCase() || "binary") as ValueSignal["type"];
     const name = createSignal[2]!.trim();
     const id = nextEntityId("signal", document) as SignalId;
-    const values = [{ start: 0, value: type === "state" ? "IDLE" : type === "event" ? "NONE" : type === "bus" ? "00" : 0 }] as ValueSignal["values"];
+    const values = [{ id: nextEntityId("signalValueChange", document), start: 0, value: type === "state" ? "IDLE" : type === "event" ? "NONE" : type === "bus" ? "00" : 0 }] as ValueSignal["values"];
     const signal = { id, name, type, role: "internal" as const, source: { instancePath: [], signalName: name }, display: { name }, values, ...(type === "bus" ? { width: 8, displayFormat: "hex" as const } : {}) } as ValueSignal;
     return { ok: true, proposal: proposal(revision, `Create ${type} signal ${name} in ${group.name}`, [command({ type: "signal.create", signal, targetGroupId: group.id, index: group.rows.length }, "create_signal")]) };
   }

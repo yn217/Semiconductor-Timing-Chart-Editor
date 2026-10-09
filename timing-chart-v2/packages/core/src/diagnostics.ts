@@ -1,5 +1,6 @@
 import type { CanonicalDocument, Signal, SignalId, SignalValueChange, ValueSignal } from "@timing-chart-v2/schema";
 import type { DocumentProblem } from "@timing-chart-v2/schema";
+import { constraintReferences } from "@timing-chart-v2/schema";
 
 /**
  * Derived timing/protocol diagnostics are advisory. They describe a valid
@@ -755,24 +756,14 @@ export function deriveTimingDiagnosticsIfInputsChanged(
 }
 
 function constraintSignalDependencies(constraint: CanonicalDocument["constraints"][number]): readonly SignalId[] {
-  const data = constraintData(constraint.data);
-  switch (constraint.type.toLowerCase()) {
-    case "handshake":
-      return [
-        textFrom(data, ["requestSignalId", "request", "reqSignalId", "req"]),
-        textFrom(data, ["acknowledgeSignalId", "ackSignalId", "acknowledge", "ack"]),
-        ...textListFrom(data, ["stableSignalIds", "dataSignalIds", "stableSignals", "dataSignals"]),
-      ].filter((id): id is string => id !== undefined) as SignalId[];
-    case "latency-range":
-      return [textFrom(data, ["requestSignalId"]), textFrom(data, ["acknowledgeSignalId"])].filter((id): id is string => id !== undefined) as SignalId[];
-    case "latency":
-      return [textFrom(data, ["triggerSignalId"]), textFrom(data, ["responseSignalId"])].filter((id): id is string => id !== undefined) as SignalId[];
-    default:
-      return [];
-  }
+  return constraintReferences([constraint])
+    .filter((reference) => reference.ownerId === constraint.id && reference.kind.startsWith("constraint."))
+    .map((reference) => reference.targetId as SignalId);
 }
 
 function handshakeStableSignalDependencies(constraint: CanonicalDocument["constraints"][number]): readonly SignalId[] {
   if (constraint.type.toLowerCase() !== "handshake") return [];
-  return textListFrom(constraintData(constraint.data), ["stableSignalIds", "dataSignalIds", "stableSignals", "dataSignals"]) as SignalId[];
+  return constraintReferences([constraint])
+    .filter((reference) => reference.ownerId === constraint.id && reference.kind === "constraint.handshakeStableSignal")
+    .map((reference) => reference.targetId as SignalId);
 }

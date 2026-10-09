@@ -42,7 +42,12 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
   const [snapshot, setSnapshot] = useState<CanonicalSnapshot>(() => runtime.session.snapshot());
   const [lastChangeSet, setLastChangeSet] = useState<ChangeSet>({ fullDocumentReplace: true });
   const [history, setHistory] = useState<HistoryState>(() => runtime.session.current().historyState());
-  const [problem, setProblem] = useState("");
+  const [problem, setProblemState] = useState("");
+  const [operationMessage, setOperationMessage] = useState("");
+  const setProblem = useCallback((value: Parameters<typeof setProblemState>[0]) => {
+    setProblemState(value);
+    setOperationMessage("");
+  }, []);
   const [validationPending, setValidationPending] = useState(false);
   const timingDiagnosticsDocumentRef = useRef(initialDocument);
   const timingDiagnosticsRef = useRef<readonly TimingDiagnostic[]>([]);
@@ -249,6 +254,8 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     lastChangeSet,
     history,
     problem,
+    operationMessage,
+    setOperationMessage,
     validationDiagnostics,
     validationPending,
     runtimeDiagnostics,

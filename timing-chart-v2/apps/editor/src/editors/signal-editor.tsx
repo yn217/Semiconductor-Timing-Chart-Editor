@@ -7,7 +7,7 @@ import { EventTable } from "../event-table.js";
 import { SignalGeneratorEditor } from "../signal-generator-editor.js";
 import { type SignalEditorProps } from "../timeline-toolbar.js";
 
-export function SignalEditor({ signal, documentEpoch, revision, cycleCount, bookmarks, enumDefinitions, history, groups, problem, onUndo, onRedo, onVisibility, onDelete, onDuplicate, onDropToGroup, onCancel, onClockPreview, clockCommands, signalCommands, onImportDiagnostic }: SignalEditorProps) {
+export function SignalEditor({ signal, documentEpoch, projectionGeneration, revision, cycleCount, bookmarks, enumDefinitions, history, groups, problem, onUndo, onRedo, onVisibility, onDelete, onDuplicate, onDropToGroup, onCancel, onClockPreview, clockCommands, signalCommands, onImportDiagnostic }: SignalEditorProps) {
   // #402: the Signal's *current* Group, derived from the live document
   // every render (never cached) -- the single source of truth for both
   // the "current group" check-state and the safe fallback below.
@@ -79,7 +79,7 @@ export function SignalEditor({ signal, documentEpoch, revision, cycleCount, book
         // to canonical type `binary` ("Signal") only, matching #400's own
         // scope; every other value-signal type keeps using the Event
         // Table alone exactly as before.
-        : <EventTable signal={signal} documentEpoch={documentEpoch} revision={revision} onImportDiagnostic={onImportDiagnostic} cycleCount={cycleCount} enumDefinitions={enumDefinitions} commands={signalCommands} generatorSlot={signal.type === "binary" ? <SignalGeneratorEditor signal={signal} cycleCount={cycleCount} commands={signalCommands} /> : undefined} />}
+        : <EventTable signal={signal} documentEpoch={documentEpoch} projectionGeneration={projectionGeneration} revision={revision} onImportDiagnostic={onImportDiagnostic} cycleCount={cycleCount} enumDefinitions={enumDefinitions} commands={signalCommands} generatorSlot={signal.type === "binary" ? <SignalGeneratorEditor signal={signal} cycleCount={cycleCount} commands={signalCommands} /> : undefined} />}
     </>}
   </section>;
 }

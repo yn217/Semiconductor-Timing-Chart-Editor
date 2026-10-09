@@ -6,6 +6,7 @@ export type ActiveEditorSession = CommandHistorySession | ScenarioCommandHistory
 /** Owns the replaceable document session lifecycle for the editor runtime. */
 export class EditorSessionController {
   private session: ActiveEditorSession;
+  private activeProjectionGeneration = 0;
 
   constructor(document: CanonicalDocument) {
     this.session = new CommandHistorySession(document);
@@ -19,19 +20,41 @@ export class EditorSessionController {
     return this.session.getSnapshot();
   }
 
+  /** Presentation context identity, independent of persisted revision and document lifetime. */
+  projectionGeneration(): number {
+    return this.activeProjectionGeneration;
+  }
+
+  private trackProjectionContext<T>(operation: () => T): T {
+    const session = this.session;
+    const scenarioId = this.activeScenarioId();
+    try {
+      return operation();
+    } finally {
+      if (session !== this.session || scenarioId !== this.activeScenarioId()) this.activeProjectionGeneration += 1;
+    }
+  }
+
   replace(document: CanonicalDocument | ParsedCanonicalDocument): CommandHistorySession {
-    this.session = new CommandHistorySession(document);
-    return this.session;
+    return this.trackProjectionContext(() => {
+      const session = new CommandHistorySession(document);
+      this.session = session;
+      return session;
+    });
   }
 
   replaceScenarioModel(model: ScenarioDocumentModel, activeScenarioId?: ScenarioId): ScenarioCommandHistorySession {
-    this.session = new ScenarioCommandHistorySession(model, activeScenarioId);
-    return this.session;
+    return this.trackProjectionContext(() => {
+      const session = new ScenarioCommandHistorySession(model, activeScenarioId);
+      this.session = session;
+      return session;
+    });
   }
 
   switchScenario(scenarioId: ScenarioId): ReturnType<ScenarioCommandHistorySession["switchScenario"]> {
     if (!(this.session instanceof ScenarioCommandHistorySession)) throw new Error("The current document does not use Scenario storage.");
-    return this.session.switchScenario(scenarioId);
+    const session = this.session;
+    return this.trackProjectionContext(() => session.switchScenario(scenarioId));
   }
 
   renameScenario(scenarioId: ScenarioId, name: string): ReturnType<ScenarioCommandHistorySession["renameScenario"]> {
@@ -41,17 +64,20 @@ export class EditorSessionController {
 
   duplicateScenario(scenarioId: ScenarioId, name?: string): ScenarioId {
     if (!(this.session instanceof ScenarioCommandHistorySession)) throw new Error("The current document does not use Scenario storage.");
-    return this.session.duplicateScenario(scenarioId, name);
+    const session = this.session;
+    return this.trackProjectionContext(() => session.duplicateScenario(scenarioId, name));
   }
 
   deleteScenario(scenarioId: ScenarioId): ReturnType<ScenarioCommandHistorySession["deleteScenario"]> {
     if (!(this.session instanceof ScenarioCommandHistorySession)) throw new Error("The current document does not use Scenario storage.");
-    return this.session.deleteScenario(scenarioId);
+    const session = this.session;
+    return this.trackProjectionContext(() => session.deleteScenario(scenarioId));
   }
 
   addGeneratedScenarios(model: ScenarioDocumentModel, createdScenarioIds: readonly ScenarioId[]): ReturnType<ScenarioCommandHistorySession["addGeneratedScenarios"]> {
     if (!(this.session instanceof ScenarioCommandHistorySession)) throw new Error("Generated Scenarios require a Scenario-aware document session.");
-    return this.session.addGeneratedScenarios(model, createdScenarioIds);
+    const session = this.session;
+    return this.trackProjectionContext(() => session.addGeneratedScenarios(model, createdScenarioIds));
   }
 
   activeScenarioId(): ScenarioId | undefined {
@@ -81,10 +107,10 @@ export class EditorSessionController {
   }
 
   undo(): ReturnType<CommandHistorySession["undo"]> {
-    return this.session.undo();
+    return this.trackProjectionContext(() => this.session.undo());
   }
 
   redo(): ReturnType<CommandHistorySession["redo"]> {
-    return this.session.redo();
+    return this.trackProjectionContext(() => this.session.redo());
   }
 }

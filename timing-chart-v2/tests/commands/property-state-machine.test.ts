@@ -3,7 +3,7 @@ import { CommandHistorySession } from "@timing-chart-v2/history";
 import { DocumentSession } from "@timing-chart-v2/core";
 import { DOCUMENT_RESOURCE_BUDGET, validateCanonicalDocument, type Annotation, type Bookmark, type CanonicalDocument, type CommandId, type GroupId, type Signal, type SignalId, type SpacerId, type TimeGroup, type Transaction } from "@timing-chart-v2/schema";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
-import { canonicalFixture } from "../fixtures/canonical.js";
+import { canonicalFixture, canonicalFixtureWithStableValueIds } from "../fixtures/canonical.js";
 
 const commandId = (value: string) => value as CommandId;
 const ACTIONS_PER_SEED = 320;
@@ -24,12 +24,12 @@ function generatedSignal(id: SignalId, index: number): Signal {
     role: "internal",
     source: { instancePath: ["generated"], signalName: `GEN_${index}` },
     display: { name: `GEN_${index}` },
-    values: [{ start: 0, value: "0" }, { start: 4, value: "1" }],
+    values: [{ id: `value_${id}_0`, start: 0, value: "0" }, { id: `value_${id}_1`, start: 4, value: "1" }],
   };
 }
 
 function variedPropertyFixture(): CanonicalDocument {
-  const base = canonicalFixture();
+  const base = canonicalFixtureWithStableValueIds();
   const commentId = "sig_comment_property" as SignalId;
   const spacerId = "spacer_property" as SpacerId;
   const auxiliaryGroupId = "grp_aux_property" as GroupId;
@@ -41,7 +41,7 @@ function variedPropertyFixture(): CanonicalDocument {
   const annotation: Annotation = { id: annotationId, type: "marker", label: "MARK", visible: true, anchor: { signalId: "sig_data" as SignalId, cycle: 2, point: "cycle-center" } };
   const bookmark: Bookmark = { id: bookmarkId, name: "MARK", start: 2 };
   const timeGroup: TimeGroup = { id: timeGroupId, name: "WINDOW", start: 1, end: 3 };
-  const transaction: Transaction = { id: transactionId, name: "TRANSACTION", start: 1, end: 3, laneId: "lane_0", linkedSignals: ["sig_data" as SignalId], phases: [{ name: "phase", start: 1, end: 2 }] };
+  const transaction: Transaction = { id: transactionId, name: "TRANSACTION", start: 1, end: 3, laneId: "lane_0", linkedSignals: ["sig_data" as SignalId], phases: [{ id: "phase_property" as import("@timing-chart-v2/schema").TransactionPhaseId, name: "phase", start: 1, end: 2 }] };
   return {
     ...base,
     signalGroups: [...base.signalGroups, { id: auxiliaryGroupId, name: "Auxiliary", rows: [commentId, spacerId], spacers: [{ id: spacerId, height: 12 }] }],
@@ -163,7 +163,7 @@ describe("SemanticCommand state machine foundation", () => {
       { name: "group-rename", command: { id: commandId("metamorphic_group_rename"), type: "group.rename", groupId: "grp_main" as GroupId, name: "Main Renamed" } },
     ];
     for (const testCase of cases) {
-      const session = new CommandHistorySession(canonicalFixture());
+      const session = new CommandHistorySession(canonicalFixtureWithStableValueIds());
       const before = waveformSemantics(session.getSnapshot().document);
       const result = session.execute(testCase.command);
       expect(result, testCase.name).toMatchObject({ ok: true });
@@ -215,13 +215,13 @@ describe("SemanticCommand state machine foundation", () => {
     const signals = [...base.signals, ...additions];
     const document = { ...base, signals, signalGroups: [{ ...base.signalGroups[0]!, rows: signals.map((signal) => signal.id) }] };
     const session = new CommandHistorySession(document);
-    const accepted = session.execute({ id: commandId("property_budget_accept"), type: "signal.create", signal: { ...template, id: "property_budget_at_limit" as SignalId, name: "PROPERTY_BUDGET_AT_LIMIT", source: { ...template.source, signalName: "PROPERTY_BUDGET_AT_LIMIT" }, display: { ...template.display, name: "PROPERTY_BUDGET_AT_LIMIT" } }, targetGroupId: "grp_main", index: signals.length });
+    const accepted = session.execute({ id: commandId("property_budget_accept"), type: "signal.create", signal: { ...template, id: "property_budget_at_limit" as SignalId, name: "PROPERTY_BUDGET_AT_LIMIT", values: template.values.map((change, changeIndex) => ({ ...change, id: `value_property_budget_at_limit_${changeIndex}` })), source: { ...template.source, signalName: "PROPERTY_BUDGET_AT_LIMIT" }, display: { ...template.display, name: "PROPERTY_BUDGET_AT_LIMIT" } }, targetGroupId: "grp_main", index: signals.length });
     expect(accepted).toMatchObject({ ok: true });
     expect(session.getSnapshot().document.signals).toHaveLength(DOCUMENT_RESOURCE_BUDGET.signalCount);
 
     const atLimit = session.getSnapshot();
     const beforeHistory = session.historyState();
-    const rejected = session.execute({ id: commandId("property_budget_reject"), type: "signal.create", signal: { ...template, id: "property_budget_overflow" as SignalId, name: "PROPERTY_BUDGET_OVERFLOW", source: { ...template.source, signalName: "PROPERTY_BUDGET_OVERFLOW" }, display: { ...template.display, name: "PROPERTY_BUDGET_OVERFLOW" } }, targetGroupId: "grp_main", index: DOCUMENT_RESOURCE_BUDGET.signalCount });
+    const rejected = session.execute({ id: commandId("property_budget_reject"), type: "signal.create", signal: { ...template, id: "property_budget_overflow" as SignalId, name: "PROPERTY_BUDGET_OVERFLOW", values: template.values.map((change, changeIndex) => ({ ...change, id: `value_property_budget_overflow_${changeIndex}` })), source: { ...template.source, signalName: "PROPERTY_BUDGET_OVERFLOW" }, display: { ...template.display, name: "PROPERTY_BUDGET_OVERFLOW" } }, targetGroupId: "grp_main", index: DOCUMENT_RESOURCE_BUDGET.signalCount });
     expect(rejected).toMatchObject({ ok: false, reason: "invalid", problems: [expect.objectContaining({ code: "RESOURCE_LIMIT_EXCEEDED", path: "$.signals" })] });
     expect(session.getSnapshot()).toBe(atLimit);
     expect(session.historyState()).toEqual(beforeHistory);

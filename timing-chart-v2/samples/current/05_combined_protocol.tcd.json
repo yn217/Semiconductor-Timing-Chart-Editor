@@ -553,16 +553,19 @@
       "laneId": "lane:bus",
       "phases": [
         {
+          "id": "phase_protocol_setup",
           "name": "Setup",
           "start": 8,
           "end": 12
         },
         {
+          "id": "phase_protocol_wait",
           "name": "Wait states",
           "start": 12,
           "end": 28
         },
         {
+          "id": "phase_protocol_ready",
           "name": "Ready",
           "start": 28,
           "end": 36

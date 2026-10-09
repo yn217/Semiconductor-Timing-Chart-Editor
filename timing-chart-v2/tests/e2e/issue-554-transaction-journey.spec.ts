@@ -53,10 +53,10 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await page.getByTestId("bottom-transaction-duplicate").click();
     await expect(treeRows).toHaveCount(countBefore + 2);
 
-    // 5) Linked Signal add/remove via the Inspector's Transaction panel (open the picker, link one, unlink it).
+    // 5) Linked Signal add/remove via the Bottom Linked Signals owner.
     await newRow.click();
-    const inspectorTab = page.getByRole("tab", { name: "Transaction", exact: true });
-    if (await inspectorTab.count()) await inspectorTab.click();
+    const inspector = page.getByTestId("inspector");
+    if (await inspector.getByTestId("manage-transaction-links").count()) await inspector.getByTestId("manage-transaction-links").click();
     const openPicker = page.getByTestId("open-linked-signal-picker");
     if (await openPicker.count() && await openPicker.isVisible()) {
       await openPicker.click();
@@ -71,6 +71,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
         if (await unlinkBtn.count()) await unlinkBtn.click();
       }
     }
+    await page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true }).click();
 
     // 6) Undo/Redo across the operations above must not error and must move History.
     const historyAfterOps = await page.getByTestId("history-status").innerText();

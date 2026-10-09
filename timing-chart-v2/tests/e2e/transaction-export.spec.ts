@@ -4,6 +4,8 @@ import { startInCycleSample } from "./cycle-startup.js";
 
 startInCycleSample(test);
 
+const releaseViewports = [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] as const;
+
 async function ready(page: Page) {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
@@ -32,13 +34,16 @@ async function createTransaction(page: Page, name = "DMA Read", start = 2, end =
   return editor;
 }
 
-async function linkSignal(inspector: import("@playwright/test").Locator, name: string) {
-  await inspector.getByTestId("open-linked-signal-picker").click();
-  await inspector.getByLabel("Search linked signals").fill(name);
-  await inspector.getByRole("option", { name: new RegExp(name) }).click();
+async function linkSignal(page: Page, name: string) {
+  await page.getByTestId("inspector").getByTestId("manage-transaction-links").click();
+  const linked = page.getByTestId("transaction-linked-signals");
+  await linked.getByTestId("open-linked-signal-picker").click();
+  await linked.getByLabel("Search linked signals").fill(name);
+  await linked.getByRole("option", { name: new RegExp(name) }).click();
 }
 
-test("creates, edits, links, saves and reopens one canonical Transaction", async ({ page }) => {
+for (const viewport of releaseViewports) test(`creates, edits, links, saves and reopens one canonical Transaction at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+  await page.setViewportSize(viewport);
   await ready(page);
   await createTransaction(page);
   const inspector = page.getByTestId("inspector");
@@ -49,13 +54,13 @@ test("creates, edits, links, saves and reopens one canonical Transaction", async
   // and full-replace-on-command semantics as Color/Group.
   await inspector.getByLabel("Transaction description").fill("AXI burst read across the shared bus");
   await inspector.getByTestId("apply-inspector-transaction").click();
-  await linkSignal(inspector, "REQUEST");
+  await linkSignal(page, "REQUEST");
   await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 0");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo" }).click();
-  await expect(inspector.getByTestId("linked-signal-list").getByRole("button", { name: "Unlink REQUEST" })).toHaveCount(0);
+  await expect(page.getByTestId("transaction-linked-signals").getByTestId("linked-signal-list").getByRole("button", { name: "Unlink REQUEST" })).toHaveCount(0);
   await page.getByTestId("ribbon").getByRole("button", { name: "Redo" }).click();
-  await expect(inspector.getByTestId("linked-signal-list").getByRole("button", { name: "Unlink REQUEST" })).toHaveCount(1);
+  await expect(page.getByTestId("transaction-linked-signals").getByTestId("linked-signal-list").getByRole("button", { name: "Unlink REQUEST" })).toHaveCount(1);
   const save = page.waitForEvent("download");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
@@ -324,7 +329,8 @@ test("keeps TransactionLanes mounted across ten repeated semantic moves", async 
   console.log(`[transaction-repeated-move] ${JSON.stringify({ durationsMs: durations, mountSerial })}`);
 });
 
-test("exports deterministic SVG plus PNG and PDF from Canonical ExportScene", async ({ page }) => {
+for (const viewport of releaseViewports) test(`exports deterministic SVG plus PNG and PDF from Canonical ExportScene at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+  await page.setViewportSize(viewport);
   await ready(page);
   const host = page.getByTestId("cycle-surface");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();

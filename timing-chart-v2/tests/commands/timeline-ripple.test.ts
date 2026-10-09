@@ -17,7 +17,7 @@ function rippleFixture() {
     bookmarks: [{ id: "bookmark_data" as BookmarkId, name: "Data", start: 4 }],
     timeGroups: [{ id: "time_wait" as TimeGroupId, name: "Wait", start: 2, end: 5, presentation: { resumeLabelAnchorId: "label_wait" as LabelAnchorId } }],
     annotations: [{ id: "ann_data" as AnnotationId, type: "text" as const, label: "Data", visible: true, anchor: { signalId: "sig_data" as SignalId, cycle: 4, point: "value-start" as const } }],
-    transactions: [{ id: "txn_data" as TransactionId, name: "Transfer", start: 4, end: 7, phases: [{ name: "Data", start: 4, end: 6 }] }],
+    transactions: [{ id: "txn_data" as TransactionId, name: "Transfer", start: 4, end: 7, phases: [{ id: "phase_data" as import("@timing-chart-v2/schema").TransactionPhaseId, name: "Data", start: 4, end: 6 }] }],
   };
 }
 
@@ -170,6 +170,31 @@ describe("timeline ripple commands", () => {
     }
   });
 
+  it("preserves standalone LabelAnchor identity and display through exact insert/delete ripple and history", () => {
+    const initial = rippleFixture();
+    const anchorId = "label_wait" as LabelAnchorId;
+    initial.timeGroups = [];
+    initial.timeline.labelAnchors = [{ id: anchorId, source: 5, display: 20 }];
+    const session = new CommandHistorySession(initial);
+
+    const inserted = session.execute({ id: commandId("cmd_standalone_anchor_insert"), type: "timeline.insert", at: 3, count: 2 });
+    expect(inserted.ok).toBe(true);
+    expect(session.getSnapshot().document.timeline.labelAnchors).toEqual([{ id: anchorId, source: 7, display: 20 }]);
+
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.timeline.labelAnchors).toEqual([{ id: anchorId, source: 5, display: 20 }]);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.timeline.labelAnchors).toEqual([{ id: anchorId, source: 7, display: 20 }]);
+
+    const deleted = session.execute({ id: commandId("cmd_standalone_anchor_delete"), type: "timeline.delete", start: 2, end: 4 });
+    expect(deleted.ok).toBe(true);
+    expect(session.getSnapshot().document.timeline.labelAnchors).toEqual([{ id: anchorId, source: 5, display: 20 }]);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.timeline.labelAnchors).toEqual([{ id: anchorId, source: 7, display: 20 }]);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.timeline.labelAnchors).toEqual([{ id: anchorId, source: 5, display: 20 }]);
+  });
+
   it("rejects a delete that would collapse distinct LabelAnchor sources", () => {
     const initial = rippleFixture();
     initial.timeline.labelAnchors = [
@@ -189,7 +214,7 @@ describe("timeline ripple commands", () => {
     const initial = rippleFixture();
     initial.timeGroups[0] = { ...initial.timeGroups[0]!, start: 2, end: 4 };
     initial.timeline.labelAnchors[0] = { ...initial.timeline.labelAnchors[0]!, source: 4 };
-    initial.transactions[0] = { ...initial.transactions[0]!, start: 2, end: 4, phases: [{ name: "Deleted", start: 2, end: 4 }] };
+    initial.transactions[0] = { ...initial.transactions[0]!, start: 2, end: 4, phases: [{ id: "phase_deleted" as import("@timing-chart-v2/schema").TransactionPhaseId, name: "Deleted", start: 2, end: 4 }] };
     const session = new CommandHistorySession(initial);
     const result = session.execute({ id: commandId("cmd_delete_ranges"), type: "timeline.delete", start: 2, end: 4 });
     expect(result.ok).toBe(true);

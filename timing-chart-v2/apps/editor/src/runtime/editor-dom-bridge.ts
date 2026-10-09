@@ -19,7 +19,8 @@ export function refreshTransactionLinkedRows(host: RefObject<HTMLDivElement | nu
 }
 
 export function attachDirtyUnloadGuard(dirty: boolean): () => void {
-  const onBeforeUnload = (event: BeforeUnloadEvent) => { if (!dirty) return; event.preventDefault(); event.returnValue = ""; };
+  if (!dirty) return () => {};
+  const onBeforeUnload = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
   window.addEventListener("beforeunload", onBeforeUnload);
   return () => window.removeEventListener("beforeunload", onBeforeUnload);
 }

@@ -6,14 +6,22 @@ import { buildTypedTransactionProposal } from "../../apps/editor/src/ai-proposal
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 describe("AI document-scoped freshness", () => {
+  it("rejects equal-revision proposals across Scenario switches and round trips", () => {
+    const proposal = { proposalEpoch: 5, currentEpoch: 5, proposalRevision: 7, currentRevision: 7, proposalGeneration: 2 };
+    expect(isAIPreviewFresh({ ...proposal, currentGeneration: 2 })).toBe(true);
+    expect(isAIPreviewFresh({ ...proposal, currentGeneration: 3 })).toBe(false);
+    expect(isAIPreviewFresh({ ...proposal, currentGeneration: 4 })).toBe(false);
+    expect(isAIPreviewFresh({ ...proposal, proposalGeneration: undefined, currentGeneration: 2 })).toBe(false);
+  });
+
   it("rejects same-revision proposals from an older document epoch synchronously", () => {
-    expect(isAIPreviewFresh({ proposalEpoch: 4, currentEpoch: 5, proposalRevision: 7, currentRevision: 7 })).toBe(false);
-    expect(isAIPreviewFresh({ proposalEpoch: 5, currentEpoch: 5, proposalRevision: 7, currentRevision: 7 })).toBe(true);
+    expect(isAIPreviewFresh({ proposalGeneration: 2, currentGeneration: 2, proposalEpoch: 4, currentEpoch: 5, proposalRevision: 7, currentRevision: 7 })).toBe(false);
+    expect(isAIPreviewFresh({ proposalGeneration: 2, currentGeneration: 2, proposalEpoch: 5, currentEpoch: 5, proposalRevision: 7, currentRevision: 7 })).toBe(true);
   });
 
   it("requires both the shared epoch and revision for a validated Apply", () => {
-    expect(isAIPreviewFresh({ proposalEpoch: undefined, currentEpoch: 5, proposalRevision: 7, currentRevision: 7 })).toBe(false);
-    expect(isAIPreviewFresh({ proposalEpoch: 5, currentEpoch: 5, proposalRevision: 6, currentRevision: 7 })).toBe(false);
+    expect(isAIPreviewFresh({ proposalGeneration: 2, currentGeneration: 2, proposalEpoch: undefined, currentEpoch: 5, proposalRevision: 7, currentRevision: 7 })).toBe(false);
+    expect(isAIPreviewFresh({ proposalGeneration: 2, currentGeneration: 2, proposalEpoch: 5, currentEpoch: 5, proposalRevision: 6, currentRevision: 7 })).toBe(false);
   });
 });
 

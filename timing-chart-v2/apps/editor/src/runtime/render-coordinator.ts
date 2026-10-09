@@ -1,12 +1,13 @@
 import { StableTimingChartRenderer, type TimingChartRenderer, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import type { RefObject } from "react";
-import type { Annotation, CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
+import type { Annotation, CanonicalDocument, ScenarioSignalDifference, SignalId } from "@timing-chart-v2/schema";
 import { projectAnnotationOverlays } from "./annotation-overlays.js";
 import { createDisplayTimeViewport, type DisplayTimeMapping, type DisplayTimeViewport } from "@timing-chart-v2/projection";
 import { projectEdgeCounters, type EdgeCounterProjectionMetrics, type SelectedClockEdge } from "./edge-counter-projection.js";
 import type { LocalGeometryMap } from "@timing-chart-v2/geometry";
 import type { RenderProjection } from "@timing-chart-v2/projection";
 import type { TimeAxisMetrics } from "./timeline-geometry-owner.js";
+import { projectScenarioDifferenceOverlays } from "./scenario-difference-overlays.js";
 
 interface AnnotationViewportProjectionCache {
   readonly document: CanonicalDocument;
@@ -58,6 +59,10 @@ export class RenderCoordinator {
 }
 
 export function refreshRendererEdgeCounters(renderer: Pick<TimingChartRenderer, "updateEdgeCounters">, document: CanonicalDocument, projection: RenderProjection, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, timeAxisMetrics: TimeAxisMetrics, range: { readonly start: number; readonly end: number }, selectedCycle: number, screenGeometryScale: number, selectedEdge?: SelectedClockEdge, metrics?: EdgeCounterProjectionMetrics): void { renderer.updateEdgeCounters(projectEdgeCounters(document, projection, geometryMaps, timeAxisMetrics.mapping, range, selectedCycle, screenGeometryScale, selectedEdge, metrics)); }
+
+export function refreshRendererScenarioDifferences(renderer: Pick<TimingChartRenderer, "updateScenarioDifferences">, differences: readonly ScenarioSignalDifference[], projection: RenderProjection, timeAxisMetrics: TimeAxisMetrics, viewport: DisplayTimeViewport): void {
+  renderer.updateScenarioDifferences(projectScenarioDifferenceOverlays(differences, projection, timeAxisMetrics, viewport));
+}
 
 /** Update only existing, geometry-stable Annotation owners; return false when a full reconciliation is required. */
 export function refreshRendererAnnotationStyles(renderer: Pick<TimingChartRenderer, "patchOverlays">, document: CanonicalDocument, projection: RenderProjection, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, timeAxisMetrics: TimeAxisMetrics, annotationIds: readonly string[]): boolean {

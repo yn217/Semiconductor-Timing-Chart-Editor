@@ -42,12 +42,13 @@ export interface EditorShellViewProps {
   readonly ribbon: EditorShellRibbonViewModel | ReactNode;
   readonly workspace: EditorWorkspaceViewModel | ReactNode;
   readonly dialogs: ReactNode;
+  readonly feedback?: ReactNode;
   readonly status: EditorShellStatusViewModel | ReactNode;
 }
 
 /** Owns the stable outer shell contract; feature owners supply its contents. */
 export function EditorShellView({
-  viewModel, titleBar, ribbon, workspace, dialogs, status,
+  viewModel, titleBar, ribbon, workspace, dialogs, status, feedback,
 }: EditorShellViewProps) {
   const {
     style, density, workspacePreset, inspectorVisible, bottomVisible, viewMode, rulerEnabled,
@@ -91,5 +92,5 @@ export function EditorShellView({
     data-cycle-count={cycleCount}
     data-signal-count={signalCount}
     data-transaction-count={transactionCount}
-  >{titleBar}{ribbonContent}{workspaceContent}{dialogs}{statusContent}</main>;
+  >{titleBar}{ribbonContent}{workspaceContent}{dialogs}{statusContent}{feedback}</main>;
 }

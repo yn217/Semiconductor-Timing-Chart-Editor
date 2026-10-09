@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
-import type { Annotation, AnnotationId, AnnotationType, Bookmark, BookmarkId, CanonicalDocument, CommandId, DocumentProblem, GroupId, Signal, SignalId, SpacerId, Transaction, TransactionGroup, TransactionId } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationId, AnnotationType, Bookmark, BookmarkId, CanonicalDocument, CommandId, DocumentProblem, GroupId, Signal, SignalId, SpacerId, Transaction, TransactionGroup, TransactionId, TransactionPhaseId } from "@timing-chart-v2/schema";
 import { resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import type { TimelineNavigationOwner } from "../runtime/use-timeline-navigation-owner.js";
 import type { BottomTab } from "../workspace/use-workspace-ui-state.js";
@@ -36,8 +36,6 @@ export interface EditorActionsInput {
   readonly nextCommandId: (operation: string) => CommandId;
   readonly selection: SelectionOwner;
   readonly diagnostics: readonly DocumentProblem[];
-  readonly selectedCycleRef: MutableRefObject<number>;
-  readonly setSelectedCycle: (cycle: number) => void;
   readonly hostRef: MutableRefObject<HTMLDivElement | null>;
   readonly viewportRef: MutableRefObject<HTMLDivElement | null>;
   readonly application: EditorApplicationOwner;
@@ -103,6 +101,7 @@ export interface EditorActions extends ReturnType<typeof createSelectionGroupAct
   readonly deleteBottomAnnotation: () => void;
   readonly deleteBottomTransaction: () => void;
   readonly selectTransaction: (id: TransactionId, additive?: boolean) => void;
+  readonly selectTransactionPhase: (transactionId: TransactionId, phaseId: TransactionPhaseId) => void;
   readonly selectTransactions: (ids: ReadonlySet<TransactionId>, primary?: TransactionId) => void;
   readonly toggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => CommandResult;
   readonly createTransaction: (groupId?: TransactionGroup["id"]) => void;
@@ -158,8 +157,6 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
   const selection = input.selection;
   const diagnostics = input.diagnostics;
   const snapshot = { document: input.document };
-  const selectedCycleRef = input.selectedCycleRef;
-  const setSelectedCycle = input.setSelectedCycle;
   const host = input.hostRef;
   const viewport = input.viewportRef;
 
@@ -232,7 +229,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     document,
   });
   const selectionActions = createSelectionActions({ document: input.document, selection: input.selection, hostRef: input.hostRef, selectedSignalId: input.selectedSignal?.id });
-  const { selectAnnotation, selectTransaction, selectTransactions, clearSelection, selectAllSignals, selectAllTransactions, selectHierarchySignal, revealSelectedInHierarchy } = selectionActions;
+  const { selectAnnotation, selectTransaction, selectTransactionPhase, selectTransactions, clearSelection, selectAllSignals, selectAllTransactions, selectHierarchySignal, revealSelectedInHierarchy } = selectionActions;
   const selectAIEntity = createSelectAIEntityAction({ selectSignal: selectHierarchySignal, selectGroup: input.selection.selectGroup, selectTransaction, selectAnnotation, selectBookmark });
   const revealAIEntity = createRevealAIEntityAction({ document: input.document, hostRef: input.hostRef, navigation: input.navigation, select: selectAIEntity });
   const selectAll = () => input.viewMode === "Transaction" ? selectAllTransactions() : input.selection.refs.state.current.annotationId !== undefined ? selectionActions.selectAllAnnotations() : selectAllSignals();
@@ -346,7 +343,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     const name = `${kind === "clock" ? "CLOCK" : kind.toUpperCase()}_${input.document.signals.length + 1}`;
     const signal = kind === "clock"
       ? { id, name, type: "clock" as const, role: "internal" as const, source: { instancePath: [], signalName: name }, display: { name }, generator: { start: 0, period: 2, duty: 0.5, phase: 0, initial: 0 as 0 | 1, polarity: "positive" as const }, edgeCounter: { show: false, mode: "both" as const, startNumber: 1, countFrom: "signal-start" as const, labelEvery: 1, position: "above" as const, offset: { x: 0, y: -6 } } }
-      : valueSignal(id, name, "internal", [{ start: 0, value: kind === "state" ? "IDLE" : kind === "bus" ? "00" : kind === "event" ? "NONE" : 0 }], kind === "bus" ? { type: "bus", width: 8, displayFormat: "hex" } : { type: kind === "signal" ? "binary" : kind });
+      : valueSignal(id, name, "internal", [{ id: nextEntityId("signalValueChange", input.document), start: 0, value: kind === "state" ? "IDLE" : kind === "bus" ? "00" : kind === "event" ? "NONE" : 0 }], kind === "bus" ? { type: "bus", width: 8, displayFormat: "hex" } : { type: kind === "signal" ? "binary" : kind });
     const result = input.commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", { id: input.nextCommandId("tree_add_signal"), type: "signal.create", signal, targetGroupId: targetGroup.id, index });
     if (result.ok) input.selection.selectSignal(id);
   };
@@ -370,7 +367,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
       } else {
         const type = definition.kind;
         const initialValue = type === "state" ? "IDLE" : type === "bus" ? "0" : type === "event" ? "NONE" : 0;
-        const signal = valueSignal(id, definition.signalName, "internal", [{ start: 0, value: initialValue }], type === "bus" ? { type, width: definition.width ?? 1, displayFormat: "hex" } : { type });
+        const signal = valueSignal(id, definition.signalName, "internal", [{ id: allocateId("signalValueChange"), start: 0, value: initialValue }], type === "bus" ? { type, width: definition.width ?? 1, displayFormat: "hex" } : { type });
         signals.push({ ...signal, source: { ...signal.source, instancePath: definition.instancePath } });
       }
     }
@@ -444,11 +441,9 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     });
     if (semanticCycle !== undefined) {
       const cycle = Math.max(0, Math.min(snapshot.document.timeline.cycleCount, semanticCycle));
-      selectedCycleRef.current = cycle;
-      setSelectedCycle(cycle);
-      if (host.current) host.current.dataset.selectedCycle = String(cycle);
+      input.navigation.navigateToCycle(cycle);
     }
-    if (target.kind === "timeline") viewport.current?.scrollTo({ left: 0, behavior: "smooth" });
+    else if (target.kind === "timeline") viewport.current?.scrollTo({ left: 0, behavior: "smooth" });
   };
   return {
     selectedBookmarkId,
@@ -471,6 +466,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     deleteBottomAnnotation,
     deleteBottomTransaction,
     selectTransaction,
+    selectTransactionPhase,
     selectTransactions,
     toggleTransactionSignal,
     createTransaction,

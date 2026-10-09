@@ -84,7 +84,7 @@ export function EventRow({ signal, enumDefinition, change, end, index, selected,
   };
   const reloadLatest = () => onDraftChange(undefined);
   const keepDraft = () => { if (draft) onDraftChange({ ...draft, base: committed, conflict: false }); };
-  return <form className={`event-row${selected ? " selected" : ""}${hasChanges ? " editing" : ""}`} role="row" data-event-id={change.id ?? `start-${change.start}`} data-event-start={change.start} draggable={false} onDragEnter={onDragOver} onDragOver={onDragOver} onDropCapture={onDrop} onDrop={onDrop} onDragEnd={onDragEnd} onClick={() => onSelect(change.start)} onSubmit={(event) => {
+  return <form className={`event-row${selected ? " selected" : ""}${hasChanges ? " editing" : ""}`} role="row" data-event-id={change.id} data-event-start={change.start} draggable={false} onDragEnter={onDragOver} onDragOver={onDragOver} onDropCapture={onDrop} onDrop={onDrop} onDragEnd={onDragEnd} onClick={() => onSelect(change.start)} onSubmit={(event) => {
     event.preventDefault();
     if (!hasChanges || externalConflict) return;
     const result = commands.replaceValue(signal.id, change.start, start, canonicalValueFromEditor(signal, enumDefinition, value), comment, (format || undefined) as ValueSignal["displayFormat"]);

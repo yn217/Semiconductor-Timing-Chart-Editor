@@ -5,6 +5,42 @@ import { documentState, expectViewOnly } from "./view-only.js";
 
 startInCycleSample(test);
 
+for (const field of ["show", "used roles only"] as const) {
+  test(`Legend dirty ${field} survives drag and Undo/Redo without persisting the draft`, async ({ page }) => {
+    const { legend } = await showLegend(page);
+    await legend.click();
+    const toggle = page.getByTestId("inspector").getByLabel(`Legend ${field}`, { exact: true });
+    const original = await toggle.isChecked();
+    await toggle.setChecked(!original);
+    const box = (await legend.boundingBox())!;
+    await page.mouse.move(box.x + 20, box.y + 15);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 55, box.y + 35, { steps: 3 });
+    await page.mouse.up();
+    await expect(toggle).toBeChecked({ checked: !original });
+    await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+    const committedX = await legend.getAttribute("data-legend-position-x");
+    const committedY = await legend.getAttribute("data-legend-position-y");
+    const ribbon = page.getByTestId("ribbon");
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+    await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
+    await expect(legend).toHaveAttribute("data-legend-position-x", "200");
+    await expect(legend).toHaveAttribute("data-legend-position-y", "140");
+    await expect(toggle).toBeChecked({ checked: !original });
+    await ribbon.getByRole("button", { name: "Redo", exact: true }).click();
+    await expect(legend).toHaveAttribute("data-legend-position-x", committedX!);
+    await expect(legend).toHaveAttribute("data-legend-position-y", committedY!);
+    await expect(toggle).toBeChecked({ checked: !original });
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+    const pending = page.waitForEvent("download");
+    await ribbon.getByRole("button", { name: "Save", exact: true }).click();
+    const saved = JSON.parse(await readFile((await (await pending).path())!, "utf8"));
+    expect(saved.legend[field === "show" ? "show" : "usedRolesOnly"]).toBe(original);
+    expect(saved.legend.position).toEqual({ x: Number(committedX), y: Number(committedY) });
+  });
+}
+
+
 async function showLegend(page: import("@playwright/test").Page) {
   await page.goto("/");
   const surface = page.getByTestId("cycle-surface");

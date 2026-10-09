@@ -224,7 +224,7 @@ function executeAIBridgeToolCore(tool: string, args: Record<string, unknown>, co
     const transactionId = args.transactionId;
     if (typeof transactionId !== "string" || !transactionId) throw new Error("get_transaction_phases requires a stable transactionId.");
     const transaction = indexById(context.document.transactions).get(transactionId);
-    return { transactionId, phases: transaction?.phases?.map((phase) => ({ name: phase.name, start: phase.start, end: phase.end })) ?? null };
+    return { transactionId, phases: transaction?.phases?.map((phase) => ({ id: phase.id, name: phase.name, start: phase.start, end: phase.end })) ?? null };
   }
   if (tool === "get_linked_signals") {
     const transactionId = args.transactionId;

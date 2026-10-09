@@ -14,6 +14,7 @@ import type {
   SignalValueChange,
   TimeGroup,
   Transaction,
+  TransactionPhaseId,
 } from "./types.js";
 
 type MutableRecord = Record<string, unknown>;
@@ -90,7 +91,7 @@ function normalizeChanges(value: unknown, fallback: string | number, warnings: M
     const explicitId = typeof source.id === "string" && source.id.length > 0 ? source.id : undefined;
     const id = explicitId !== undefined && !claimedIds.has(explicitId)
       ? (claimedIds.add(explicitId), explicitId)
-      : allocateMigrationId(`${basePath.replace(/[^a-zA-Z0-9]+/g, "_")}_value`, index, usedIds);
+      : allocateMigrationId(`legacy_${basePath.replace(/[^a-zA-Z0-9]+/g, "_").replace(/^_+/, "")}_value`, index, usedIds);
     if (explicitId !== undefined && id !== explicitId) warnings.push({ code: "MIGRATION_DUPLICATE_CHANGE_ID_REPAIRED", path: `${basePath}[${index}].id`, message: `Duplicate change-point ID '${explicitId}' was replaced with '${id}'.` });
     const result: MutableRecord = {
       id,
@@ -293,7 +294,7 @@ function normalizeTransaction(value: unknown, index: number, warnings: Migration
   const source = record(value);
   const phases = list(source.phases).map((phase, phaseIndex) => {
     const item = record(phase);
-    return { name: text(item.name), start: roundCycle(item.start, 0, warnings, `$.transactions[${index}].phases[${phaseIndex}].start`), end: roundCycle(item.end, 0, warnings, `$.transactions[${index}].phases[${phaseIndex}].end`) };
+    return { id: migrationId(item, "transactionPhase", phaseIndex, usedIds) as TransactionPhaseId, name: text(item.name), start: roundCycle(item.start, 0, warnings, `$.transactions[${index}].phases[${phaseIndex}].start`), end: roundCycle(item.end, 0, warnings, `$.transactions[${index}].phases[${phaseIndex}].end`) };
   });
   const result: MutableRecord = {
     id: migrationId(source, "transaction", index, usedIds),
@@ -482,6 +483,8 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
         orientation: legendSource.orientation === "vertical" ? "vertical" : "horizontal",
         usedRolesOnly: bool(legendSource.usedRolesOnly, legendSource.items === undefined || legendSource.items === "usedRolesOnly"),
         position: { x: number(legendPosition.x, 0), y: number(legendPosition.y, 0) },
+        positionMode: legendSource.positionMode === "canvas-corner" ? "canvas-corner" : "free",
+        ...(legendSource.corner === "top-left" || legendSource.corner === "top-right" || legendSource.corner === "bottom-left" || legendSource.corner === "bottom-right" ? { corner: legendSource.corner } : {}),
         ...(() => { const style = jsonObject(legendSource.style); return style ? { style } : {}; })(),
         ...(Array.isArray(legendSource.items) ? { items: structuredJson(legendSource.items) as NonNullable<CanonicalDocument["legend"]["items"]> } : {}),
       },

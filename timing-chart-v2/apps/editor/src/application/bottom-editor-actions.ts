@@ -43,17 +43,29 @@ export function createBottomEditorActions(input: BottomEditorActionsInput): Bott
   const deleteBottomSignal = () => {
     if (!input.bottomSignal) return;
     const result = input.editActions.deleteSignal(input.bottomSignal);
-    if (result.ok && !input.bottomPinnedRef.current && input.selectedSignalRef.current === input.bottomSignal) input.selection.clear();
+    if (result.ok && input.selection.refs.signalIds.current.has(input.bottomSignal)) {
+      const remaining = new Set(input.selection.refs.signalIds.current);
+      remaining.delete(input.bottomSignal);
+      input.selection.selectSignals(remaining, input.selectedSignalRef.current);
+    }
   };
   const deleteBottomAnnotation = () => {
     if (!input.bottomAnnotation) return;
     const result = input.editActions.deleteAnnotation(input.bottomAnnotation.id);
-    if (result.ok && !input.bottomPinnedRef.current && input.selectedAnnotationRef.current === input.bottomAnnotation.id) input.selection.clear();
+    if (result.ok && input.selection.refs.annotationIds.current.has(input.bottomAnnotation.id)) {
+      const remaining = new Set(input.selection.refs.annotationIds.current);
+      remaining.delete(input.bottomAnnotation.id);
+      input.selection.selectAnnotations(remaining, input.selectedAnnotationRef.current);
+    }
   };
   const deleteBottomTransaction = () => {
     if (!input.bottomTransaction) return;
     const result = input.editActions.deleteTransaction(input.bottomTransaction.id);
-    if (result.ok && !input.bottomPinnedRef.current && input.selectedTransactionRef.current === input.bottomTransaction.id) input.selection.clear();
+    if (result.ok && input.selection.refs.transactionIds.current.has(input.bottomTransaction.id)) {
+      const remaining = new Set(input.selection.refs.transactionIds.current);
+      remaining.delete(input.bottomTransaction.id);
+      input.selection.selectTransactions(remaining, input.selectedTransactionRef.current);
+    }
   };
   const toggleTransactionSignal = (transactionId: TransactionId, signalId: SignalId) => input.application.execute({
     id: input.nextCommandId("transaction_link"),

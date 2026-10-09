@@ -36,7 +36,7 @@ const owners: readonly EpochOwner[] = [
     // #763: unapplied Phase drafts are document-relative; a DocumentEpoch change drops them all.
     owner: "retained transaction phase drafts",
     file: "apps/editor/src/editor-secondary-surfaces.tsx",
-    markers: [/clearAllPhaseDrafts\(\)/, /\[input\.documentEpoch\]/],
+    markers: [/clearAllPhaseDrafts\(\)/, /\[\s*input\.documentEpoch(?:,\s*input\.projectionGeneration)?\s*\]/],
   },
   {
     owner: "bookmark selection state",
@@ -47,7 +47,7 @@ const owners: readonly EpochOwner[] = [
     // #772: unapplied Bookmark drafts are document-relative; a DocumentEpoch change drops them all (same owner as #763's Phase drafts).
     owner: "retained bookmark drafts",
     file: "apps/editor/src/editor-secondary-surfaces.tsx",
-    markers: [/clearAllBookmarkDrafts\(\)/, /\[input\.documentEpoch\]/],
+    markers: [/clearAllBookmarkDrafts\(\)/, /\[\s*input\.documentEpoch(?:,\s*input\.projectionGeneration)?\s*\]/],
   },
   {
     owner: "document-relative UI reset",
@@ -102,12 +102,22 @@ describe("document-relative transient state ownership", () => {
     expect(callback).toContain("renderer.update(projection)");
   });
   // #743: the failure boundary is commitDocumentReplacement (behaviour tested in tests/editor/document-replacement.test.ts); here we pin that the
-  // lifecycle hook goes through it and advances the epoch nowhere else, and that inside it the epoch advance follows the session replacement.
-  it("routes every replacement through commitDocumentReplacement (epoch advance strictly after session replacement, once)", () => {
+  // Canonical and Scenario documents have distinct session replacement APIs; both advance once after replacement succeeds.
+  it("advances once after successful canonical or Scenario session replacement", () => {
     const lifecycle = readFileSync(resolve(workspace, "apps/editor/src/application/use-document-lifecycle.ts"), "utf8");
     const boundary = readFileSync(resolve(workspace, "apps/editor/src/application/document-replacement.ts"), "utf8");
     expect(lifecycle).toContain("commitDocumentReplacement(");
-    expect(lifecycle.split("documentEpoch.advance()")).toHaveLength(2);
+    const scenarioStart = lifecycle.indexOf("const replaceScenarioDocument =");
+    const scenarioEnd = lifecycle.indexOf("const openText =", scenarioStart);
+    expect(scenarioStart).toBeGreaterThan(-1);
+    expect(scenarioEnd).toBeGreaterThan(scenarioStart);
+    const scenario = lifecycle.slice(scenarioStart, scenarioEnd);
+    const canonical = lifecycle.slice(0, scenarioStart) + lifecycle.slice(scenarioEnd);
+    expect(canonical.split("documentEpoch.advance()")).toHaveLength(2);
+    expect(scenario.split("documentEpoch.advance()")).toHaveLength(2);
+    expect(scenario.indexOf("application.replaceScenarioSession(model)")).toBeGreaterThan(-1);
+    expect(scenario.indexOf("application.runtime.documentEpoch.advance()")).toBeGreaterThan(scenario.indexOf("application.replaceScenarioSession(model)"));
+    expect(scenario.indexOf("applyReplacement({")).toBeGreaterThan(scenario.indexOf("application.runtime.documentEpoch.advance()"));
     expect(lifecycle.indexOf("commitDocumentReplacement(")).toBeLessThan(lifecycle.indexOf("applyReplacement({"));
     const replace = boundary.indexOf("port.replaceSession(");
     const advance = boundary.indexOf("port.advanceEpoch()");

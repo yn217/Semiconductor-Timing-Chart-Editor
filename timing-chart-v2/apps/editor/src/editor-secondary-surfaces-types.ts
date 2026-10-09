@@ -1,7 +1,7 @@
 import type { Dispatch, KeyboardEvent, MutableRefObject, ReactNode, RefObject, SetStateAction } from "react";
 import type { ChangeSet, CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { HistoryState } from "@timing-chart-v2/history";
-import type { Annotation, AnnotationId, Bookmark, CanonicalDocument, CommandId, DocumentProblem, GroupId, ScenarioDocumentModel, ScenarioId, Signal, SignalGroup, SignalGroupStyle, SignalId, Transaction, TransactionGroup, TransactionId } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationId, Bookmark, CanonicalDocument, CommandId, DocumentProblem, GroupId, ScenarioDocumentModel, ScenarioId, Signal, SignalGroup, SignalGroupStyle, SignalId, Transaction, TransactionGroup, TransactionId, TransactionPhaseId } from "@timing-chart-v2/schema";
 import type { UiCommandRegistry } from "@timing-chart-v2/ui";
 import type { EditorApplicationOwner } from "./application/use-editor-application-owner.js";
 import type { EditorActions } from "./application/use-editor-actions.js";
@@ -22,6 +22,7 @@ export interface EditorSecondarySurfacesInput {
   readonly validationDiagnostics: readonly DocumentProblem[];
   readonly validationPending: boolean;
   readonly documentEpoch: number;
+  readonly projectionGeneration: number;
   readonly revision: number;
   readonly transactionPresentationRevision: number;
   readonly history: HistoryState;
@@ -53,6 +54,7 @@ export interface EditorSecondarySurfacesInput {
     readonly transactionIds: ReadonlySet<TransactionId>;
     readonly bookmark: Bookmark | undefined;
     readonly transactionId: TransactionId | undefined;
+    readonly transactionPhaseId: TransactionPhaseId | undefined;
     readonly legendSelected: boolean;
   };
   readonly bottom: {

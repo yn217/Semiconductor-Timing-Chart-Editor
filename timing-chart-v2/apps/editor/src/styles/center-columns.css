@@ -17,6 +17,10 @@
 
 .surface-host [data-role="annotation-overlay-surface"] { grid-column: 3; grid-row: 1; z-index: 12; pointer-events: none; }
 
+.surface-host [data-role="scenario-difference-overlay-surface"] { grid-column: 3; grid-row: 1; z-index: 11; pointer-events: none; }
+
+.surface-host [data-role="scenario-difference-overlay"] { position: absolute; left: 0; top: 0; box-sizing: border-box; border: 1px solid #b45d00; background: color-mix(in srgb, #ffb02e 24%, transparent); pointer-events: none; }
+
 .surface-host [data-role="interactive-overlay-surface"] { grid-column: 3; grid-row: 1; z-index: 15; pointer-events: none; }
 
 .surface-host [data-role="snap-vertical-guide"] { position: absolute; top: 0; width: 1px; background: color-mix(in srgb, #2374e1 70%, transparent); }
@@ -266,6 +270,8 @@
    descendant phase `<small>`s too. Absent the property (no Transaction or
    Group color authored), both fall back to the original static blue. */
 .transaction-phases small { position: absolute; top: 0; bottom: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border-inline-start: 1px solid color-mix(in srgb, var(--transaction-color, #2e70ad) 70%, black); background: color-mix(in srgb, var(--transaction-color, #2e70ad) 18%, white); font-size: 9px; line-height: 15px; }
+.transaction-phase-hit-target { position: absolute; z-index: 6; height: 12px; padding: 0; border: 1px solid transparent; background: transparent; cursor: pointer; }
+.transaction-phase-hit-target[data-selected="true"] { border-color: var(--ds-selection-border, #287ac0); outline: 2px solid var(--ds-selection-border, #287ac0); background: color-mix(in srgb, var(--transaction-color, #2e70ad) 38%, transparent); }
 .transaction-axis-break-gap { position: absolute; top: 0; bottom: 0; z-index: 2; background: var(--canvas-background, #f8fafc); border-inline: 1px solid #94a3b8; pointer-events: none; }
 .transaction-axis-segment { position: absolute; inset-block: 0; z-index: 1; border: 1px solid color-mix(in srgb, var(--transaction-color, #2e70ad) 85%, black); border-radius: 4px; background: color-mix(in srgb, var(--transaction-color, #2e70ad) 25%, white); pointer-events: none; }
 .transaction-hidden-in-fold { position: absolute; left: 8px; right: 8px; height: 30px; border: 1px dashed #94a3b8; background: #eef2f7; color: #475569; font-size: 11px; text-align: left; padding: 0 8px; z-index: 4; }
@@ -274,6 +280,8 @@
 [data-fold-affordance="start-hidden"] { left: 0; }
 [data-fold-affordance="end-hidden"] { right: 0; }
 .transaction-lane > button { position: absolute; top: 4px; z-index: 1; min-width: 18px; height: 20px; display: grid; grid-template-columns: 5px minmax(0,1fr) 5px; align-items: center; overflow: hidden; padding: 0; border: 1px solid color-mix(in srgb, var(--transaction-color, #2e70ad) 85%, black); border-radius: 4px; background: color-mix(in srgb, var(--transaction-color, #2e70ad) 25%, white); color: #174d7c; font-size: 10px; }
+.transaction-lane > button.transaction-phase-hit-target { z-index: 6; min-width: 0; height: 12px; display: block; overflow: visible; padding: 0; border: 1px solid transparent; border-radius: 0; background: transparent; color: inherit; font-size: inherit; }
+.transaction-lane > button.transaction-phase-hit-target[data-selected="true"] { border-color: var(--ds-selection-border, #287ac0); outline: 2px solid var(--ds-selection-border, #287ac0); background: color-mix(in srgb, var(--transaction-color, #2e70ad) 38%, transparent); }
 .transaction-track > .transaction-lane > button { z-index: 4; }
 .transaction-lane > button[data-selected="true"] { outline: 2px solid var(--ds-selection-border, #287ac0); background: color-mix(in srgb, var(--transaction-color, #2e70ad) 45%, white); }
 .transaction-lane > button > i { height: 100%; cursor: ew-resize; }

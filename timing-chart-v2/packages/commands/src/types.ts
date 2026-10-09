@@ -125,8 +125,8 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "transaction.rename"; transactionId: TransactionId; name: string }>
   | Readonly<{ id: CommandId; type: "transaction.update"; transactionId: TransactionId; name: string; start: number; end: number; laneId?: string; phases?: readonly TransactionPhase[]; groupId?: TransactionGroup["id"]; color?: string; description?: string; visible?: boolean; clearLaneId?: boolean; clearPhases?: boolean; clearGroupId?: boolean; clearColor?: boolean; clearDescription?: boolean; clearVisible?: boolean }>
   | Readonly<{ id: CommandId; type: "transaction.phaseAdd"; transactionId: TransactionId; phase: TransactionPhase }>
-  | Readonly<{ id: CommandId; type: "transaction.phaseUpdate"; transactionId: TransactionId; phaseIndex: number; phase: TransactionPhase }>
-  | Readonly<{ id: CommandId; type: "transaction.phaseDelete"; transactionId: TransactionId; phaseIndex: number }>
+  | Readonly<{ id: CommandId; type: "transaction.phaseUpdate"; transactionId: TransactionId; phaseIndex: number; phaseId?: TransactionPhase["id"]; phase: TransactionPhase }>
+  | Readonly<{ id: CommandId; type: "transaction.phaseDelete"; transactionId: TransactionId; phaseIndex: number; phaseId?: TransactionPhase["id"] }>
   | Readonly<{ id: CommandId; type: "transaction.move"; transactionId: TransactionId; start: number }>
   | Readonly<{ id: CommandId; type: "transaction.resize"; transactionId: TransactionId; edge: "start" | "end"; value: number }>
   | Readonly<{ id: CommandId; type: "transaction.moveLane"; transactionId: TransactionId; laneId: string }>

@@ -11,6 +11,8 @@
     "node": ">=22.12.0"
   },
   "scripts": {
+    "release:verify": "node scripts/release-verify.mjs",
+    "release:smoke": "node scripts/run-playwright.mjs --config=playwright.release.config.ts --workers=1",
     "dev": "npm --workspace @timing-chart-v2/editor run dev",
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "check:runtime-owner-types": "node scripts/check-runtime-owner-types.mjs",
@@ -71,7 +73,7 @@
     "@vitejs/plugin-react": "5.0.2",
     "typescript": "5.9.2",
     "vite": "7.3.6",
-    "vitest": "3.2.7",
+    "vitest": "4.1.11",
     "pngjs": "^7.0.0"
   }
 }

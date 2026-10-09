@@ -71,7 +71,8 @@ test("Combined routes a real Transaction bar drag to the Transaction pane only",
   const viewport = page.getByTestId("cycle-viewport");
   const bar = page.locator('[data-transaction-id="demo_txn_read"]');
   await expect(bar).toBeVisible();
-  await bar.click();
+  // The bar is wider than the viewport and its centre carries Phase hit targets; click its leading edge.
+  await bar.click({ position: { x: 24, y: 4 } });
   const beforeHistory = await page.getByTestId("history-status").textContent();
   const beforeStart = await page.getByTestId("inspector").getByLabel("Transaction start").inputValue();
   const box = await bar.locator(":scope > span").boundingBox();
@@ -135,7 +136,7 @@ test("low-level view mode pointerdown cancels a Transaction drag before pointeru
   await page.goto("/?transaction-demo");
   await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
   const bar = page.locator('[data-transaction-id="demo_txn_read"]');
-  await bar.click();
+  await bar.click({ position: { x: 24, y: 4 } });
   const row = page.locator('[data-transaction-row-id="demo_txn_read"]');
   const before = await row.textContent();
   const box = await bar.locator(":scope > span").boundingBox();

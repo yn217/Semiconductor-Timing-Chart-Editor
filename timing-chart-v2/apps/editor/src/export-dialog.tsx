@@ -3,10 +3,16 @@ import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import type { DocumentProblem } from "@timing-chart-v2/schema";
 import type { EditorExportController } from "./application/editor-export-controller.js";
 
-function useExportDialogFocusLoop(dialogRef: RefObject<HTMLElement | null>, restoreFocusRef?: RefObject<HTMLElement | null>): void {
+function useExportDialogFocusLoop(dialogRef: RefObject<HTMLElement | null>, restoreFocusRef: RefObject<HTMLElement | null> | undefined, onDismiss: () => void, dismissible: boolean): void {
+  const dismissRef = useRef(onDismiss);
+  const dismissibleRef = useRef(dismissible);
+  dismissRef.current = onDismiss;
+  dismissibleRef.current = dismissible;
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return undefined;
+    const backdrop = dialog.parentElement;
+    if (!backdrop) return undefined;
     const previous = restoreFocusRef?.current ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
     const focusable = () => [...dialog.querySelectorAll<HTMLElement>("button, input, select, textarea, [tabindex]:not([tabindex='-1'])")].filter((item) => !item.hasAttribute("disabled") && item.getClientRects().length > 0);
     focusable()[0]?.focus();
@@ -19,9 +25,17 @@ function useExportDialogFocusLoop(dialogRef: RefObject<HTMLElement | null>, rest
       if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     };
+    const onBackdropClick = (event: MouseEvent) => {
+      // Child clicks must reach React's delegated listener on the root.
+      if (event.target !== backdrop) return;
+      event.stopPropagation();
+      if (dismissibleRef.current) dismissRef.current();
+    };
     dialog.addEventListener("keydown", onKeyDown);
+    backdrop.addEventListener("click", onBackdropClick);
     return () => {
       dialog.removeEventListener("keydown", onKeyDown);
+      backdrop.removeEventListener("click", onBackdropClick);
       if (previous?.isConnected) requestAnimationFrame(() => previous.focus());
       if (restoreFocusRef?.current === previous) restoreFocusRef.current = null;
     };
@@ -47,7 +61,6 @@ export function ExportDialog({ snapshot, range, restoreFocusRef, onDiagnostic, o
   const abortRef = useRef<AbortController | null>(null);
   const mountedRef = useRef(false);
   const dialogRef = useRef<HTMLElement>(null);
-  useExportDialogFocusLoop(dialogRef, restoreFocusRef);
   useEffect(() => {
     mountedRef.current = true;
     return () => { mountedRef.current = false; abortRef.current?.abort(); };
@@ -56,6 +69,7 @@ export function ExportDialog({ snapshot, range, restoreFocusRef, onDiagnostic, o
   const progressText = (stage: string) => ({ preparing: "Preparing chart…", drawing: "Drawing export…", encoding: "Encoding file…", rasterizing: "Rasterizing image…", finalizing: "Finalizing PDF…" }[stage] ?? "Working…");
   const cancel = () => abortRef.current?.abort();
   const close = () => { cancel(); onClose(); };
+  useExportDialogFocusLoop(dialogRef, restoreFocusRef, close, !busy);
   const runExport = async (fileFormat: "svg" | "png" | "pdf", deliver: (bytes: Uint8Array) => Promise<void> | void, failureCode: "EXPORT_FAILED" | "CLIPBOARD_FAILED", failurePath: string, failureOperation: string, failureLabel: string, successText: string) => {
     if (abortRef.current) return;
     const abort = new AbortController();

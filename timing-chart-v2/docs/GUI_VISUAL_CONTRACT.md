@@ -1,6 +1,19 @@
 # GUI Visual Acceptance Contract
 
-This document is normative. The original GUI mockup images are Golden Visual References, not loose inspiration.
+This document is normative. The approved V2 v8 executable reference is the current-release visual authority. Original V1 GUI mockups are retained as historical inputs, not current-release pixel-match obligations.
+
+### Historical panel replacement decision (#1095)
+
+On 2026-10-09 the product owner explicitly approved V2 v8 as the formal
+replacement for the five historical V1 panel references: Left, Bottom Signal,
+Bottom Annotation, Bottom Problems, and Bottom JSON. Their one-to-one V1
+visual mapping/pixel-match obligation is closed by this product decision.
+The V1 files remain unchanged for historical traceability.
+
+This is not acceptance of unverified functionality. Current V2 layout,
+interaction, stable identity, Save/Open, and Export requirements remain in
+force, as do V2 visual regression checks and WaveDrom fidelity checks.
+No Golden file, tolerance, threshold, or mask is changed by this decision.
 
 ## 1. Reference viewport
 Golden images were designed at approximately `1672 x 941` px.
@@ -27,17 +40,25 @@ The approved v8 executable reference is fixed at `references/v2-gui-reference-v8
 
 The Bottom Context Editor belongs to the **center column**. Left Signal Tree and Right Inspector remain vertically continuous beside it.
 
-## 3. Approximate Golden metrics at 1672 x 941
-These are layout acceptance targets, not arbitrary suggestions.
+## 3. Current V2 v8 metrics at 1672 x 941
+The approved V2 v8 values above are the current visual acceptance targets.
+The older dimensions below are retained only as historical V1 measurements;
+they are not acceptance targets and must not override the V2 v8 executable
+reference or its `gui-reference.json` manifest.
 
-- Left Signal/Group panel: `330 px`
-- Right Inspector: `300 px`
-- Center: remaining width, roughly `1040 px`
-- Title/menu/Ribbon boundary: `y=217 px`
-- Center waveform region: `338 px` in the Cycle View fixture
-- Bottom Context Editor: `270 px` in the Cycle View fixture
+| Region | Historical V1 measurement | Current V2 v8 target |
+|---|---:|---:|
+| Left Signal/Group panel | `330 px` | `265 px` |
+| Right Inspector | `300 px` | `297 px` |
+| Center | roughly `1040 px` | remaining width after V2 side panels |
+| Title/menu/Ribbon boundary | `y=217 px` | `y=167 px` workspace start |
+| Center waveform region | `338 px` in the Cycle fixture | remaining center workspace above Bottom |
+| Bottom Context Editor | `270 px` in the Cycle fixture | `240 px` |
 
-Structural metric tolerance at the reference viewport: normally ±8 px unless browser/font platform differences require an explicitly documented exception.
+V2 layout/interaction, stable identity, Save/Open, and Export requirements
+remain independently binding. The historical Left, Bottom Signal, Bottom
+Annotation, Bottom Problems, and Bottom JSON references have no one-to-one V1
+pixel-match obligation following the approved #1095 replacement decision.
 
 ## 4. Ribbon contract
 The Golden UI uses an Office-like Ribbon with command groups and separators.

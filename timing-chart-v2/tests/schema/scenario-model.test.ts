@@ -6,6 +6,44 @@ import { parseDocument, parseScenarioDocumentModel, serializeScenarioDocumentMod
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 describe("Scenario canonical model adapter", () => {
+  it("remaps scenario-owned Phase and Signal value IDs across repeated copies and preserves them through Save/Open", () => {
+    const base = canonicalFixture();
+    const model = scenarioModelFromV2({ ...base, transactions: [
+      { id: "tx_first" as never, name: "First", start: 0, end: 8, phases: [
+        { id: "phase_address" as never, name: "Address", start: 0, end: 2 },
+        { id: "phase_data" as never, name: "Data", start: 2, end: 8 },
+      ] },
+      { id: "tx_second" as never, name: "Second", start: 0, end: 8, phases: [
+        { id: "phase_response" as never, name: "Response", start: 0, end: 8 },
+      ] },
+    ] });
+    const source = model.scenarios[0]!;
+    const sourceBytes = JSON.stringify(source);
+    const once = duplicateScenario(model, source.id);
+    const twice = duplicateScenario(once, source.id);
+    const ids = twice.scenarios.flatMap((scenario) => scenario.transactions.flatMap((tx) => tx.phases!.map((phase) => phase.id)));
+    expect(new Set(ids).size).toBe(9);
+    expect(JSON.stringify(twice.scenarios[0])).toBe(sourceBytes);
+    const sourceValueIds = Object.values(source.signalStates).flatMap((state) => !state ? [] : (state.kind === "clock" ? state.enable ?? [] : state.values).flatMap(({ id }) => id === undefined ? [] : [id]));
+    const copiedValueIds = twice.scenarios.slice(1).flatMap((scenario) => Object.values(scenario.signalStates).flatMap((state) => !state ? [] : (state.kind === "clock" ? state.enable ?? [] : state.values).flatMap(({ id }) => id === undefined ? [] : [id])));
+    expect(new Set([...sourceValueIds, ...copiedValueIds]).size).toBe(sourceValueIds.length + copiedValueIds.length);
+    for (const copy of twice.scenarios.slice(1)) {
+      expect(copy.transactions.map((tx) => tx.phases!.map(({ id: _id, ...phase }) => phase))).toEqual(source.transactions.map((tx) => tx.phases!.map(({ id: _id, ...phase }) => phase)));
+      expect(Object.keys(copy.signalStates)).toEqual(Object.keys(source.signalStates));
+      for (const [signalId, state] of Object.entries(source.signalStates)) {
+        const copiedState = copy.signalStates[signalId as keyof typeof copy.signalStates];
+        const copiedChanges = copiedState ? (copiedState.kind === "clock" ? copiedState.enable ?? [] : copiedState.values) : [];
+        const sourceChanges = state ? (state.kind === "clock" ? state.enable ?? [] : state.values) : [];
+        expect(copiedChanges.map(({ id: _id, ...change }) => change)).toEqual(sourceChanges.map(({ id: _id, ...change }) => change));
+      }
+    }
+    expect(validateScenarioDocumentModel(twice)).toEqual([]);
+    expect(parseScenarioDocumentModel(serializeScenarioDocumentModel(twice))).toEqual({ ok: true, model: twice, validated: true });
+    const copy = once.scenarios[1]!;
+    const malformed = { ...once, scenarios: [source, { ...copy, transactions: copy.transactions.map((tx, index) => index ? tx : { ...tx, phases: tx.phases!.map((phase, index) => index ? phase : { ...phase, id: source.transactions[0]!.phases![0]!.id }) }) }] };
+    expect(validateScenarioDocumentModel(malformed)).toContainEqual(expect.objectContaining({ code: "DUPLICATE_ID", entityId: "phase_address", path: "$.scenarios[1].transactions[0].phases[0].id" }));
+    expect(parseScenarioDocumentModel(JSON.stringify(malformed))).toMatchObject({ ok: false, kind: "validation" });
+  });
   it("moves v2 timing ownership into one Scenario and projects the exact v2 semantics back", () => {
     const source = canonicalFixture();
     const model = scenarioModelFromV2(source);
@@ -189,7 +227,7 @@ describe("Scenario canonical model adapter", () => {
     const payload = { ...template, id: "sig_payload" as typeof template.id, name: "PAYLOAD", values: [{ start: 0, value: "00" }, { start: 5, value: "01" }] };
     const handshake = { id: "constraint_handshake" as never, type: "handshake", data: { requestSignalId: request.id, acknowledgeSignalId: acknowledge.id, requestPolarity: "active-low", acknowledgePolarity: "active-low", stableSignalIds: [payload.id] } };
     const v2 = { ...source, timeline: { ...source.timeline, end: 12, cycleCount: 12 }, signals: [source.signals[0]!, request, acknowledge, payload], signalGroups: [{ ...source.signalGroups[0]!, rows: [source.signals[0]!.id, request.id, acknowledge.id, payload.id] }], constraints: [handshake] };
-    const model = scenarioModelFromV2(v2);
+    const model = scenarioModelFromV2({ ...v2, transactions: [{ id: "tx_handshake" as never, name: "Transfer", start: 0, end: 8, phases: [{ id: "phase_handshake" as never, name: "Data", start: 0, end: 8 }] }] });
     const sourceScenario = model.scenarios[0]!;
     const suggestions = listHandshakeMissingCaseSuggestions(model, sourceScenario.id);
     expect(suggestions.map((item) => item.kind)).toEqual(["ack-before-request", "request-before-ack", "same-cycle", "backpressure", "consecutive-transfer", "stable-data-while-stalled"]);
@@ -201,6 +239,8 @@ describe("Scenario canonical model adapter", () => {
     expect(result.createdScenarioIds).toHaveLength(1);
     expect(result.document.scenarios[1]?.constraints[0]?.id).not.toBe(sourceScenario.constraints[0]?.id);
     const generated = result.document.scenarios[1]!;
+    expect(generated.transactions[0]!.phases![0]!.id).not.toBe("phase_handshake");
+    expect(sourceScenario.transactions[0]!.phases![0]!.id).toBe("phase_handshake");
     const reqValues = generated.signalStates[request.id]!;
     const ackValues = generated.signalStates[acknowledge.id]!;
     expect(reqValues).toMatchObject({ kind: "values", values: expect.arrayContaining([{ start: 0, value: 0 }, { start: 1, value: 1 }]) });

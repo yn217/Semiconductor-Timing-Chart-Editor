@@ -22,6 +22,18 @@ const source = readFileSync(resolve(import.meta.dirname, "../../scripts/ai-bridg
 const capabilityMatrix = readFileSync(resolve(import.meta.dirname, "../../docs/AI_MCP_CAPABILITY_MATRIX.md"), "utf8");
 
 describe("Agent Bridge security boundaries (#395 item 11)", () => {
+  it("targets Phase edits by stable IDs and permits a named Phase in a batch", () => {
+    for (const name of ["propose_update_phase", "propose_delete_phase"]) {
+      const tool = source.split("\n").find((line) => line.includes(`name: "${name}"`));
+      expect(tool).toContain('phaseId: { type: "string", minLength: 1 }');
+      expect(tool).toContain('required: ["editorSessionId", "transactionId", "phaseId"');
+      expect(tool).not.toContain("phaseIndex");
+      expect(tool).toContain("additionalProperties: false");
+    }
+    const add = source.split("\n").find((line) => line.includes('name: "propose_add_phase"'));
+    expect(add).toContain('phaseId: { type: "string", minLength: 1 }');
+  });
+
   it("binds to localhost only, never a wildcard/all-interfaces address", () => {
     expect(source).toMatch(/HOST\s*=\s*["']127\.0\.0\.1["']/);
     // Comments are allowed to mention 0.0.0.0 (this file's own header

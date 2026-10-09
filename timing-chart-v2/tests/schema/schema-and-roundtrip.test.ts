@@ -18,13 +18,40 @@ import {
   type TimeGroupId,
   type TransactionId,
 } from "@timing-chart-v2/schema";
-import { canonicalFixture } from "../fixtures/canonical.js";
+import { canonicalFixture, canonicalFixtureWithStableValueIds } from "../fixtures/canonical.js";
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 describe("canonical v2 schema and roundtrip", () => {
+  it("assigns deterministic stable IDs to legacy v2 Transaction Phases and preserves them on Save/Open", () => {
+    const legacy = { ...canonicalFixture(), transactions: [{ id: "transaction_legacy_phase", name: "Legacy", start: 1, end: 6, phases: [{ name: "Address", start: 1, end: 3 }, { name: "Data", start: 3, end: 6 }] }] };
+    const first = parseDocument(JSON.stringify(legacy));
+    const second = parseDocument(JSON.stringify(legacy));
+    expect(first.ok).toBe(true);
+    expect(second.ok).toBe(true);
+    if (!first.ok || !second.ok) return;
+    const ids = first.document.transactions[0]?.phases?.map((phase) => phase.id);
+    expect(ids).toEqual(second.document.transactions[0]?.phases?.map((phase) => phase.id));
+    expect(ids).toHaveLength(2);
+    expect(ids?.every((id) => id.startsWith("id_"))).toBe(true);
+    expect(first.warnings).toContainEqual(expect.objectContaining({ code: "MIGRATED_TRANSACTION_PHASE_IDS" }));
+    const reopened = parseDocument(serializeCanonicalDocument(first.document));
+    expect(reopened.ok).toBe(true);
+    if (reopened.ok) expect(reopened.document.transactions[0]?.phases?.map((phase) => phase.id)).toEqual(ids);
+  });
+
+  it("persists Legend canvas-corner mode and offset through Save/Open serialization", () => {
+    const source = canonicalFixtureWithStableValueIds();
+    const document = { ...source, legend: { ...source.legend, positionMode: "canvas-corner" as const, corner: "bottom-right" as const, position: { x: 14, y: 22 } } };
+    expect(validateCanonicalDocument(document)).toEqual([]);
+    const reopened = parseDocument(serializeCanonicalDocument(document));
+    expect(reopened.ok).toBe(true);
+    if (!reopened.ok) return;
+    expect(reopened.document.legend).toMatchObject({ positionMode: "canvas-corner", corner: "bottom-right", position: { x: 14, y: 22 } });
+    expect(serializeCanonicalDocument(reopened.document)).toBe(serializeCanonicalDocument(document));
+  });
   it("persists an optional physical timebase without changing cycle coordinates", () => {
-    const document = clone(canonicalFixture());
+    const document = canonicalFixtureWithStableValueIds();
     document.timeline.physicalTimebase = { referenceFrequencyHz: 100_000_000, unit: "ns" };
     expect(validateCanonicalDocument(document)).toEqual([]);
     const reopened = parseDocument(serializeCanonicalDocument(document));
@@ -58,7 +85,7 @@ describe("canonical v2 schema and roundtrip", () => {
   });
 
   it("round-trips Transaction Groups and semantic Transaction presentation fields", () => {
-    const document = clone(canonicalFixture());
+    const document = canonicalFixtureWithStableValueIds();
     const groupId = "txn_group_roundtrip";
     document.transactionGroups = [{ id: groupId as never, name: "Transfers", color: "#123456", order: 2 }];
     document.transactions = [{ id: "txn_roundtrip" as never, name: "Read", start: 1, end: 3, groupId: groupId as never, color: "#abcdef", description: "payload" }];
@@ -70,12 +97,13 @@ describe("canonical v2 schema and roundtrip", () => {
     const data = document.signals.find((signal) => signal.id === "sig_data");
     const clock = document.signals.find((signal) => signal.id === "sig_clk");
     if (!data || !clock) throw new Error("canonical fixture must contain sig_data and sig_clk");
-    const auxiliary = { ...data, id: "sig_aux" as SignalId, name: "AUX", source: { ...data.source, signalName: "AUX" }, display: { ...data.display, name: "AUX" } };
+    data.values = data.values.map((value, index) => ({ ...value, id: `value_sig_data_${index}` }));
+    const auxiliary = { ...data, id: "sig_aux" as SignalId, name: "AUX", source: { ...data.source, signalName: "AUX" }, display: { ...data.display, name: "AUX" }, values: data.values.map((value, index) => ({ ...value, id: `value_sig_aux_${index}` })) };
     document.signals = [...document.signals, auxiliary];
     document.signalGroups = [...document.signalGroups, { id: "grp_aux" as GroupId, name: "Auxiliary", rows: [auxiliary.id] }];
     document.bookmarks = [{ id: "bookmark_phase" as BookmarkId, name: "Phase boundary", start: 3, comment: "round-trip specimen" }];
     document.timeGroups = [{ id: "time_wait" as TimeGroupId, name: "Wait", start: 2, end: 4, comment: "folded interval", presentation: { collapsed: true, foldStyle: "axis-break", foldLabel: "WAIT" } }];
-    document.transactions = [{ id: "transaction_read" as TransactionId, name: "Read", source: "CPU", destination: "Memory", start: 1, end: 6, phases: [{ name: "Address", start: 1, end: 3 }, { name: "Data", start: 3, end: 6 }], linkedSignals: [data.id], color: "#335577", description: "multi-feature specimen", visible: true }];
+    document.transactions = [{ id: "transaction_read" as TransactionId, name: "Read", source: "CPU", destination: "Memory", start: 1, end: 6, phases: [{ id: "phase_address" as never, name: "Address", start: 1, end: 3 }, { id: "phase_data" as never, name: "Data", start: 3, end: 6 }], linkedSignals: [data.id], color: "#335577", description: "multi-feature specimen", visible: true }];
     document.annotations = [
       { id: "annotation_marker" as AnnotationId, type: "marker", label: "Mark", visible: true, color: "#aa2200", anchor: { signalId: data.id, cycle: 3, point: "cycle-center" }, verticalSpan: { mode: "rows", startRowId: clock.id, endRowId: auxiliary.id } },
       { id: "annotation_bracket" as AnnotationId, type: "bracket", label: "Bracket", visible: true, color: "#004488", start: { signalId: data.id, cycle: 1, point: "cycle-start" }, end: { signalId: data.id, cycle: 5, point: "cycle-end" }, lineType: "orthogonal", style: { strokeWidth: 4, strokeStyle: "dashed" } },
@@ -93,7 +121,7 @@ describe("canonical v2 schema and roundtrip", () => {
   });
   it("exposes a compiled Draft 2020-12 schema and deterministic Save/Open/Save", () => {
     expect(canonicalSchema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
-    const original = canonicalFixture();
+    const original = canonicalFixtureWithStableValueIds();
     expect(validateCanonicalDocument(original)).toEqual([]);
     const first = serializeCanonicalDocument(original);
     const reopened = parseDocument(first);

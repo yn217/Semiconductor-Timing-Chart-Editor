@@ -5,7 +5,7 @@ import { applySelectionDecorationToHost } from "./selection-decoration.js";
 
 /** Owns editor-only visual toggles and transient selection decoration state.
  * None of these values are canonical document fields or history entries. */
-export function useEditorPresentationState(input: { readonly hostRef: MutableRefObject<HTMLDivElement | null>; readonly mode: string; readonly selection: SelectionState; readonly selectionRef: MutableRefObject<SelectionState> }) {
+export function useEditorPresentationState(input: { readonly hostRef: MutableRefObject<HTMLDivElement | null>; readonly mode: string; readonly selection: SelectionState; readonly selectionRef: MutableRefObject<SelectionState>; readonly initialMinimapEnabled?: boolean }) {
   const [arrowPickStatus, setArrowPickStatus] = useState<"idle" | "from" | "to">("idle");
   const [gridEnabled, setGridEnabled] = useState(true);
   const gridEnabledRef = useRef(true);
@@ -14,7 +14,8 @@ export function useEditorPresentationState(input: { readonly hostRef: MutableRef
   const snapEnabledRef = useRef(true);
   snapEnabledRef.current = snapEnabled;
   const [rulerEnabled, setRulerEnabled] = useState(true);
-  const [minimapEnabled, setMinimapEnabled] = useState(true);
+  // CAD/EDA canvases prioritize chart area; MiniMap remains available via View when requested.
+  const [minimapEnabled, setMinimapEnabled] = useState(input.initialMinimapEnabled ?? false);
   const [showSignalNames, setShowSignalNames] = useState(true);
   const [showRoles, setShowRoles] = useState(true);
   const [showAnnotations, setShowAnnotations] = useState(true);

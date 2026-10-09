@@ -32,3 +32,11 @@ export function canonicalFixture(): CanonicalDocument {
     transactions: [], constraints: [], checkSettings: {},
   };
 }
+
+export function canonicalFixtureWithStableValueIds(): CanonicalDocument {
+  const document = JSON.parse(JSON.stringify(canonicalFixture())) as CanonicalDocument;
+  for (const signal of document.signals) {
+    if (signal.type !== "clock" && "values" in signal) signal.values = signal.values.map((value, index) => ({ ...value, id: `value_${signal.id}_${index}` }));
+  }
+  return document;
+}

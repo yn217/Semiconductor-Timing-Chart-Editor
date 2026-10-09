@@ -55,6 +55,17 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     // Cycle waveform occupies the lower pane.
     const transactionPaneBox = (await page.locator(".split-transaction-pane").boundingBox())!;
     const signalPaneBox = (await page.locator(".split-signal-content").boundingBox())!;
+    // Combined headers: Transactions above the Transaction pane, Signals / Groups between the divider and the Signal pane.
+    const transactionHeading = page.getByTestId("transaction-tree-title");
+    const signalHeading = page.locator(".combined-signal-header").getByText("Signals / Groups");
+    await expect(transactionHeading).toBeVisible();
+    await expect(signalHeading).toBeVisible();
+    await expect(transactionHeading).toHaveText("Transactions");
+    const transactionHeadingBox = (await transactionHeading.boundingBox())!;
+    const signalHeadingBox = (await signalHeading.boundingBox())!;
+    expect(transactionHeadingBox.y + transactionHeadingBox.height).toBeLessThanOrEqual(transactionPaneBox.y + 1);
+    expect(signalHeadingBox.y).toBeGreaterThanOrEqual(transactionPaneBox.y + transactionPaneBox.height);
+    expect(signalHeadingBox.y + signalHeadingBox.height).toBeLessThanOrEqual(signalPaneBox.y + 1);
     const lanesBox = (await lanes.boundingBox())!;
     const surfaceBox = (await surface.boundingBox())!;
     expect(transactionPaneBox.y + transactionPaneBox.height).toBeLessThanOrEqual(signalPaneBox.y + 1);
@@ -79,6 +90,35 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
   });
 }
 
+for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
+  test(`Combined pane ratio survives a Cycle mode round-trip without document edits at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await openSampleAInSplitMode(page);
+    const surface = page.getByTestId("cycle-surface");
+    const baseline = {
+      revision: await surface.getAttribute("data-canonical-revision"),
+      history: await page.getByTestId("history-status").innerText(),
+      dirty: await page.getByTestId("dirty-status").innerText(),
+    };
+    const divider = page.getByTestId("combined-split-divider");
+    const originalRatio = await divider.getAttribute("aria-valuenow");
+    const dividerBox = (await divider.boundingBox())!;
+    await page.mouse.move(dividerBox.x + dividerBox.width / 2, dividerBox.y + dividerBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(dividerBox.x + dividerBox.width / 2, dividerBox.y + dividerBox.height / 2 + 48);
+    await page.mouse.up();
+    await expect.poll(() => divider.getAttribute("aria-valuenow")).not.toBe(originalRatio);
+    const resizedRatio = await divider.getAttribute("aria-valuenow");
+
+    await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+    await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
+    await expect(page.getByTestId("combined-split-divider")).toHaveAttribute("aria-valuenow", resizedRatio!);
+    await expect(surface).toHaveAttribute("data-canonical-revision", baseline.revision!);
+    await expect(page.getByTestId("history-status")).toHaveText(baseline.history);
+    await expect(page.getByTestId("dirty-status")).toHaveText(baseline.dirty);
+  });
+}
+
 test("Cycle/Transaction Split: linked Signal cross-highlight uses stable IDs and stays aligned after Zoom", async ({ page }) => {
   await openSampleAInSplitMode(page);
   const lanes = page.getByTestId("transaction-lanes");
@@ -86,7 +126,7 @@ test("Cycle/Transaction Split: linked Signal cross-highlight uses stable IDs and
 
   // Selecting a Transaction cross-highlights its linked Signals by stable
   // Signal ID (not name/row-index) in the frozen label column.
-  await lanes.locator("[data-transaction-id='txn_read0']").click();
+  await lanes.locator("[data-transaction-id='txn_read0']").click({ position: { x: 12, y: 8 } });
   const request = host.locator("[data-role='frozen-row'][data-row-id='sig_request']");
   await expect(request).toHaveAttribute("data-transaction-linked", "true");
   const resetN = host.locator("[data-role='frozen-row'][data-row-id='sig_reset_n']");
@@ -108,7 +148,9 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await openSampleAInSplitMode(page);
     const surface = page.getByTestId("cycle-surface");
     const transactionId = "txn_read0";
-    await page.getByTestId("transaction-lanes").locator(`[data-transaction-id='${transactionId}']`).click();
+    // The lower 12px strip of a phased bar is the Phase hit target; select
+    // the Transaction from its distinct upper bar area.
+    await page.getByTestId("transaction-lanes").locator(`[data-transaction-id='${transactionId}']`).click({ position: { x: 12, y: 8 } });
     const linkedRow = surface.locator("[data-role='frozen-row'][data-row-id='sig_request']");
     const unrelatedRow = surface.locator("[data-role='frozen-row'][data-row-id='sig_reset_n']");
     const linkedWave = surface.locator("[data-role='wave-owner'][data-signal-id='sig_request']");

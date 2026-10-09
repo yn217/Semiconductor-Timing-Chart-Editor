@@ -2,13 +2,18 @@ import { describe, expect, it, vi } from "vitest";
 import { commandPlannerMetrics, commandPolicyCodes, commandPolicyDescriptors, planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
 import { deriveTimingDiagnostics, TIMING_DIAGNOSTIC_CATEGORIES } from "@timing-chart-v2/core";
-import { DEFAULT_MEASUREMENT_LAYOUT, MAX_MEASUREMENT_LANE, canonicalReferenceMetrics, parseDocument, serializeValidatedCanonicalDocument, type Annotation, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type ConstraintId, type GroupId, type Signal, type SignalId, type SpacerId, type TransactionGroupId, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
+import { DEFAULT_MEASUREMENT_LAYOUT, MAX_MEASUREMENT_LANE, canonicalReferenceMetrics, parseDocument, serializeValidatedCanonicalDocument, type Annotation, type AnnotationId, type BookmarkId, type CanonicalDocument, type ClockSignal, type CommandId, type CommentRow, type ConstraintId, type GroupId, type Signal, type SignalId, type SpacerId, type TransactionGroupId, type TransactionId, type TransactionPhaseId, type ValueSignal } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import { valueChangeIdAllocator } from "../../packages/commands/src/value-change-id-allocator.js";
 import { generatePerformanceDocument } from "../../packages/testing/src/index.js";
 
 const commandId = (id: string) => id as CommandId;
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+const normalizeFixture = (document: CanonicalDocument): CanonicalDocument => {
+  const result = parseDocument(document);
+  if (!result.ok) throw new Error("Expected canonical fixture normalization to succeed.");
+  return result.document;
+};
 
 function extraSignal(id = "sig_extra"): Signal {
   const base = clone(canonicalFixture().signals[1]!);
@@ -303,7 +308,7 @@ describe("pure Semantic Command planning", () => {
   it("rejects Transaction resize that would clip or remove a Phase", () => {
     const document = canonicalFixture();
     document.timeline = { ...document.timeline, end: 20, cycleCount: 20 };
-    document.transactions = [{ id: "txn_phase_resize" as TransactionId, name: "Read", start: 0, end: 20, laneId: "lane_0", phases: [{ name: "Address", start: 0, end: 5 }, { name: "Data", start: 5, end: 15 }, { name: "Response", start: 15, end: 20 }] }];
+    document.transactions = [{ id: "txn_phase_resize" as TransactionId, name: "Read", start: 0, end: 20, laneId: "lane_0", phases: [{ id: "phase_resize_address" as TransactionPhaseId, name: "Address", start: 0, end: 5 }, { id: "phase_resize_data" as TransactionPhaseId, name: "Data", start: 5, end: 15 }, { id: "phase_resize_response" as TransactionPhaseId, name: "Response", start: 15, end: 20 }] }];
     const session = new CommandHistorySession(document);
     const rejected = session.execute({ id: commandId("cmd_resize_phase_reject"), type: "transaction.resize", transactionId: "txn_phase_resize" as TransactionId, edge: "start", value: 8 });
     expect(rejected).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_TRANSACTION_PHASE" }] });
@@ -314,7 +319,7 @@ describe("pure Semantic Command planning", () => {
   it("follows an edge-attached Phase and keeps the resize as one undoable change", () => {
     const document = canonicalFixture();
     document.timeline = { ...document.timeline, end: 20, cycleCount: 20 };
-    document.transactions = [{ id: "txn_phase_resize_end" as TransactionId, name: "Read", start: 2, end: 18, laneId: "lane_0", phases: [{ name: "Address", start: 2, end: 5 }, { name: "Data", start: 5, end: 15 }, { name: "Response", start: 15, end: 18 }] }];
+    document.transactions = [{ id: "txn_phase_resize_end" as TransactionId, name: "Read", start: 2, end: 18, laneId: "lane_0", phases: [{ id: "phase_resize_end_address" as TransactionPhaseId, name: "Address", start: 2, end: 5 }, { id: "phase_resize_end_data" as TransactionPhaseId, name: "Data", start: 5, end: 15 }, { id: "phase_resize_end_response" as TransactionPhaseId, name: "Response", start: 15, end: 18 }] }];
     const session = new CommandHistorySession(document);
     const acceptedEnd = session.execute({ id: commandId("cmd_resize_phase_end_follow"), type: "transaction.resize", transactionId: "txn_phase_resize_end" as TransactionId, edge: "end", value: 16 });
     expect(acceptedEnd.ok).toBe(true);
@@ -334,7 +339,7 @@ describe("pure Semantic Command planning", () => {
   it("allows gap-only edge resize and rejects interior Phase boundary crossing", () => {
     const document = canonicalFixture();
     document.timeline = { ...document.timeline, end: 30, cycleCount: 30 };
-    document.transactions = [{ id: "txn_phase_gaps" as TransactionId, name: "Read", start: 0, end: 25, laneId: "lane_0", phases: [{ name: "Data", start: 5, end: 10 }, { name: "Response", start: 15, end: 20 }] }];
+    document.transactions = [{ id: "txn_phase_gaps" as TransactionId, name: "Read", start: 0, end: 25, laneId: "lane_0", phases: [{ id: "phase_gap_data" as TransactionPhaseId, name: "Data", start: 5, end: 10 }, { id: "phase_gap_response" as TransactionPhaseId, name: "Response", start: 15, end: 20 }] }];
     const session = new CommandHistorySession(document);
     expect(session.execute({ id: commandId("cmd_resize_gap_start"), type: "transaction.resize", transactionId: "txn_phase_gaps" as TransactionId, edge: "start", value: 3 }).ok).toBe(true);
     expect(session.getSnapshot().document.transactions[0]).toMatchObject({ start: 3, end: 25, phases: document.transactions[0]!.phases });
@@ -351,7 +356,7 @@ describe("pure Semantic Command planning", () => {
     const original = {
       id: "txn_partial" as TransactionId, name: "Original", start: 1, end: 4, laneId: "lane_1",
       linkedSignals: ["sig_data" as SignalId], groupId: "txn_group_main" as never, color: "#ff0000", description: "Keep me",
-      phases: [{ name: "Data", start: 1, end: 3 }], category: "read", style: { emphasis: "strong" }, metadata: { owner: "test" }, links: { ticket: "T-1" },
+      phases: [{ id: "phase_partial_data" as TransactionPhaseId, name: "Data", start: 1, end: 3 }], category: "read", style: { emphasis: "strong" }, metadata: { owner: "test" }, links: { ticket: "T-1" },
     } as const;
     document.transactionGroups = [{ id: original.groupId, name: "Main", color: "#112233", order: 0 }];
     document.transactions = [original];
@@ -611,8 +616,9 @@ describe("pure Semantic Command planning", () => {
 
   it("keeps generated value-change IDs unique across repeated edits to one Signal", () => {
     const source = canonicalFixture();
-    const session = new CommandHistorySession({ ...source, timeline: { ...source.timeline, cycleCount: 128, end: 128 } });
-    const initialSignal = source.signals.find((item) => item.id === "sig_data");
+    const initialDocument = normalizeFixture({ ...source, timeline: { ...source.timeline, cycleCount: 128, end: 128 } });
+    const session = new CommandHistorySession(initialDocument);
+    const initialSignal = initialDocument.signals.find((item) => item.id === "sig_data");
     const initialValueCount = initialSignal && "values" in initialSignal ? initialSignal.values.length : 0;
     const allocationSpy = vi.spyOn(valueChangeIdAllocator, "allocate");
     const ids: string[] = [];
@@ -636,7 +642,13 @@ describe("pure Semantic Command planning", () => {
     for (let index = 0; index < ids.length; index += 1) expect(session.redo().ok).toBe(true);
     const reopened = parseDocument(saved);
     expect(reopened.ok).toBe(true);
-    if (reopened.ok) expect(reopened.document.signals.find((item) => item.id === "sig_data")).toEqual(session.getSnapshot().document.signals.find((item) => item.id === "sig_data"));
+    if (reopened.ok) {
+      const reopenedData = reopened.document.signals.find((item) => item.id === "sig_data");
+      const currentData = session.getSnapshot().document.signals.find((item) => item.id === "sig_data");
+      if (!reopenedData || reopenedData.type === "clock" || reopenedData.type === "commentRow" || !currentData || currentData.type === "clock" || currentData.type === "commentRow") throw new Error("Expected the edited Value Signal after Save/Open.");
+      expect(reopenedData.values.map(({ start, value }) => ({ start, value }))).toEqual(currentData.values.map(({ start, value }) => ({ start, value })));
+      expect(reopenedData.values.filter((change) => ids.includes(change.id ?? "")).map((change) => change.id)).toEqual(ids);
+    }
   });
 
   it("keeps reorder and visibility out of WaveDrom and Local Geometry domains", () => {
@@ -1536,7 +1548,9 @@ describe("command execution and atomic history", () => {
     expect(created.ok).toBe(true);
     const result = session.execute({ id: commandId("cmd_txn_phase_update"), type: "transaction.update", transactionId: "txn_phase" as TransactionId, name: "Transfer", start: 2, end: 8, phases: [{ name: "Address", start: 2, end: 4 }, { name: "Data", start: 4, end: 7 }] });
     expect(result.ok).toBe(true);
-    expect(session.getSnapshot().document.transactions[0]?.phases).toEqual([{ name: "Address", start: 2, end: 4 }, { name: "Data", start: 4, end: 7 }]);
+    const ownedPhases = session.getSnapshot().document.transactions[0]?.phases;
+    expect(ownedPhases).toMatchObject([{ name: "Address", start: 2, end: 4 }, { name: "Data", start: 4, end: 7 }]);
+    expect(ownedPhases?.every((phase) => phase.id.startsWith("transactionPhase_"))).toBe(true);
     expect(session.historyState().undoDepth).toBe(2);
     const rejected = session.execute({ id: commandId("cmd_txn_phase_invalid"), type: "transaction.update", transactionId: "txn_phase" as TransactionId, name: "Transfer", start: 2, end: 8, phases: [{ name: "Bad", start: 1, end: 3 }] });
     expect(rejected).toMatchObject({ ok: false, reason: "invalid" });
@@ -1548,11 +1562,14 @@ describe("command execution and atomic history", () => {
     expect(session.execute({ id: commandId("txn_crud_create"), type: "transaction.create", transaction: { id: transactionId, name: "Read", start: 1, end: 8, phases: [{ name: "Address", start: 1, end: 3 }] } }).ok).toBe(true);
     expect(session.execute({ id: commandId("txn_duplicate"), type: "transaction.duplicate", transactionId, newTransactionId: "txn_copy" as TransactionId }).ok).toBe(true);
     expect(session.getSnapshot().document.transactions.map((item) => item.id)).toEqual([transactionId, "txn_copy"]);
-    expect(session.getSnapshot().document.transactions[1]?.phases).toEqual([{ name: "Address", start: 1, end: 3 }]);
+    const sourcePhase = session.getSnapshot().document.transactions[0]?.phases?.[0];
+    const copiedPhase = session.getSnapshot().document.transactions[1]?.phases?.[0];
+    expect(copiedPhase).toMatchObject({ name: "Address", start: 1, end: 3 });
+    expect(copiedPhase?.id).not.toBe(sourcePhase?.id);
     expect(session.execute({ id: commandId("txn_phase_add"), type: "transaction.phaseAdd", transactionId, phase: { name: "Data", start: 3, end: 6 } }).ok).toBe(true);
     expect(session.execute({ id: commandId("txn_phase_update"), type: "transaction.phaseUpdate", transactionId, phaseIndex: 0, phase: { name: "Setup", start: 1, end: 2 } }).ok).toBe(true);
     expect(session.execute({ id: commandId("txn_phase_delete"), type: "transaction.phaseDelete", transactionId, phaseIndex: 1 }).ok).toBe(true);
-    expect(session.getSnapshot().document.transactions[0]?.phases).toEqual([{ name: "Setup", start: 1, end: 2 }]);
+    expect(session.getSnapshot().document.transactions[0]?.phases).toMatchObject([{ name: "Setup", start: 1, end: 2, id: sourcePhase?.id }]);
     const before = session.getSnapshot().document;
     expect(session.execute({ id: commandId("txn_phase_overlap"), type: "transaction.phaseAdd", transactionId, phase: { name: "Bad", start: 1, end: 4 } })).toMatchObject({ ok: false, reason: "invalid" });
     expect(session.getSnapshot().document).toEqual(before);
@@ -1709,7 +1726,7 @@ describe("command execution and atomic history", () => {
       align: "right",
       locked: false,
     };
-    const session = new CommandHistorySession({ ...canonicalFixture(), annotations: [marker, bracket] });
+    const session = new CommandHistorySession(normalizeFixture({ ...canonicalFixture(), annotations: [marker, bracket] }));
 
     expect(session.execute({ id: commandId("marker_presentation"), type: "annotation.updateProperties", annotationId: marker.id, label: "Marker updated", visible: false, color: "#bb3300", labelOffset: { x: 11, y: -6 }, style: { strokeWidth: 4, strokeStyle: "solid", fillColor: "#ddccaa", fillOpacity: 0.6 } }).ok).toBe(true);
     expect(session.execute({ id: commandId("marker_rotation"), type: "annotation.setRotation", annotationId: marker.id, rotation: 18 }).ok).toBe(true);
@@ -1753,7 +1770,7 @@ describe("command execution and atomic history", () => {
     const c: Annotation = { id: "ann_import_c" as AnnotationId, type: "text", label: "C", visible: true, anchor: { signalId: "sig_data" as SignalId, cycle: 3, point: "cycle-start" } };
     const groupA = { id: "ann_import_group_a" as never, name: "Primary", annotationIds: [a.id, b.id] };
     const groupC = { id: "ann_import_group_c" as never, name: "Secondary", annotationIds: [c.id] };
-    const initial = { ...canonicalFixture(), annotations: [a, b, c], annotationGroups: [groupA, groupC] };
+    const initial = normalizeFixture({ ...canonicalFixture(), annotations: [a, b, c], annotationGroups: [groupA, groupC] });
     const session = new CommandHistorySession(initial);
     const unchangedImport = session.execute({ id: commandId("annotation_collection_same"), type: "annotation.replaceCollection", annotations: [a, b, c] });
     expect(unchangedImport).toMatchObject({ ok: false, reason: "no-op" });

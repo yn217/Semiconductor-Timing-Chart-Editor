@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import type { CanonicalDocument } from "@timing-chart-v2/schema";
 import { effectiveLegendEntries } from "@timing-chart-v2/schema";
+import { legendOffsetFromCanvasPosition, resolveLegendPosition } from "@timing-chart-v2/schema";
 import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
 import { clampLegendToVisibleSurface, legendLocalPointFromClient, readLegendSurfaceGeometry } from "./legend-geometry.js";
 
@@ -12,6 +13,7 @@ export function LegendView({ document, commands, selected = false, onSelect }: {
   readonly onSelect?: () => void;
 }) {
   const [position, setPosition] = useState(document.legend.position);
+  const [renderPosition, setRenderPosition] = useState(document.legend.position);
   const [contentOffset, setContentOffset] = useState({ left: 0, top: 0 });
   const legendRef = useRef<HTMLElement>(null);
   const dragRef = useRef<{ readonly offsetX: number; readonly offsetY: number; readonly pointerId: number; readonly content: HTMLElement } | undefined>(undefined);
@@ -28,8 +30,17 @@ export function LegendView({ document, commands, selected = false, onSelect }: {
         : { left: geometry.contentLeft, top: geometry.contentTop });
       if (dragRef.current) return;
       const bounds = legend.getBoundingClientRect();
-      const visible = clampLegendToVisibleSurface(document.legend.position, { width: bounds.width, height: bounds.height }, geometry);
-      setPosition((current) => current.x === visible.x && current.y === visible.y ? current : visible);
+      const plot = { x: 0, y: 0, width: geometry.clientWidth, height: geometry.clientHeight };
+      const absolute = resolveLegendPosition(document.legend, plot, { width: bounds.width, height: bounds.height });
+      if (document.legend.positionMode === "canvas-corner") {
+        setPosition(document.legend.position);
+        setRenderPosition(absolute);
+      }
+      else {
+        const visible = clampLegendToVisibleSurface(document.legend.position, { width: bounds.width, height: bounds.height }, geometry);
+        setPosition((current) => current.x === visible.x && current.y === visible.y ? current : visible);
+        setRenderPosition(visible);
+      }
     };
     update();
     let scrollFrame: number | undefined;
@@ -62,26 +73,30 @@ export function LegendView({ document, commands, selected = false, onSelect }: {
       ownerDocument.removeEventListener("scroll", updateOnRelevantScroll, true);
       ownerWindow?.removeEventListener("resize", update);
     };
-  }, [document.legend.show, document.legend.position.x, document.legend.position.y]);
+  }, [document.legend.show, document.legend.position.x, document.legend.position.y, document.legend.positionMode, document.legend.corner]);
 
   if (!document.legend.show) return null;
   const entries = effectiveLegendEntries(document);
-  const commitPosition = (next: { readonly x: number; readonly y: number }) => {
+  const commitPosition = (point: { readonly x: number; readonly y: number }, geometry: ReturnType<typeof readLegendSurfaceGeometry>, size: { readonly width: number; readonly height: number }) => {
+    if (!geometry) return;
+    const plot = { x: 0, y: 0, width: geometry.clientWidth, height: geometry.clientHeight };
+    const next = legendOffsetFromCanvasPosition(document.legend, point, plot, size);
     if (next.x === document.legend.position.x && next.y === document.legend.position.y) return;
     const result = commands.updateLegend({ ...document.legend, position: next });
     setPosition(result.ok ? next : document.legend.position);
+    if (result.ok) setRenderPosition(point);
   };
   const nudge = (event: KeyboardEvent<HTMLElement>, content: HTMLElement) => {
     if (!(event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "ArrowUp" || event.key === "ArrowDown")) return;
     event.preventDefault();
     const amount = event.shiftKey ? 10 : 1;
     const next = {
-      x: position.x + (event.key === "ArrowLeft" ? -amount : event.key === "ArrowRight" ? amount : 0),
-      y: position.y + (event.key === "ArrowUp" ? -amount : event.key === "ArrowDown" ? amount : 0),
+      x: renderPosition.x + (event.key === "ArrowLeft" ? -amount : event.key === "ArrowRight" ? amount : 0),
+      y: renderPosition.y + (event.key === "ArrowUp" ? -amount : event.key === "ArrowDown" ? amount : 0),
     };
     const bounds = event.currentTarget.getBoundingClientRect();
     const geometry = readLegendSurfaceGeometry(content);
-    commitPosition(geometry ? clampLegendToVisibleSurface(next, { width: bounds.width, height: bounds.height }, geometry) : next);
+    commitPosition(geometry && document.legend.positionMode !== "canvas-corner" ? clampLegendToVisibleSurface(next, { width: bounds.width, height: bounds.height }, geometry) : next, geometry, { width: bounds.width, height: bounds.height });
   };
 
   return <aside
@@ -95,7 +110,9 @@ export function LegendView({ document, commands, selected = false, onSelect }: {
     tabIndex={0}
     data-legend-position-x={position.x}
     data-legend-position-y={position.y}
-    style={{ left: `${contentOffset.left + position.x}px`, top: `${contentOffset.top + position.y}px` }}
+    data-legend-render-x={renderPosition.x}
+    data-legend-render-y={renderPosition.y}
+    style={{ left: `${contentOffset.left + renderPosition.x}px`, top: `${contentOffset.top + renderPosition.y}px` }}
     onFocus={() => { if (!selected) onSelect?.(); }}
     onPointerDown={(event) => {
       if (event.button !== 0) return;
@@ -104,7 +121,7 @@ export function LegendView({ document, commands, selected = false, onSelect }: {
       if (!content || !geometry) return;
       if (!selected) onSelect?.();
       const local = legendLocalPointFromClient({ x: event.clientX, y: event.clientY }, geometry);
-      dragRef.current = { offsetX: local.x - position.x, offsetY: local.y - position.y, pointerId: event.pointerId, content };
+      dragRef.current = { offsetX: local.x - renderPosition.x, offsetY: local.y - renderPosition.y, pointerId: event.pointerId, content };
       event.currentTarget.setPointerCapture(event.pointerId);
     }}
     onKeyDown={(event) => {
@@ -114,6 +131,7 @@ export function LegendView({ document, commands, selected = false, onSelect }: {
         const drag = dragRef.current;
         dragRef.current = undefined;
         setPosition(document.legend.position);
+        setRenderPosition(document.legend.position);
         if (event.currentTarget.hasPointerCapture(drag.pointerId)) event.currentTarget.releasePointerCapture(drag.pointerId);
         return;
       }
@@ -129,11 +147,11 @@ export function LegendView({ document, commands, selected = false, onSelect }: {
       if (!geometry) return;
       const local = legendLocalPointFromClient({ x: event.clientX, y: event.clientY }, geometry);
       const bounds = event.currentTarget.getBoundingClientRect();
-      setPosition(clampLegendToVisibleSurface(
-        { x: local.x - drag.offsetX, y: local.y - drag.offsetY },
-        { width: bounds.width, height: bounds.height },
-        geometry,
-      ));
+      const desired = { x: local.x - drag.offsetX, y: local.y - drag.offsetY };
+      const plot = { x: 0, y: 0, width: geometry.clientWidth, height: geometry.clientHeight };
+      const next = document.legend.positionMode === "canvas-corner" ? desired : clampLegendToVisibleSurface(desired, { width: bounds.width, height: bounds.height }, geometry);
+      setRenderPosition(next);
+      setPosition(legendOffsetFromCanvasPosition(document.legend, next, plot, { width: bounds.width, height: bounds.height }));
     }}
     onPointerUp={(event) => {
       const drag = dragRef.current;
@@ -141,20 +159,18 @@ export function LegendView({ document, commands, selected = false, onSelect }: {
       const geometry = readLegendSurfaceGeometry(drag.content);
       const local = geometry ? legendLocalPointFromClient({ x: event.clientX, y: event.clientY }, geometry) : position;
       const bounds = event.currentTarget.getBoundingClientRect();
-      const next = geometry ? clampLegendToVisibleSurface(
-        { x: local.x - drag.offsetX, y: local.y - drag.offsetY },
-        { width: bounds.width, height: bounds.height },
-        geometry,
-      ) : position;
+      const desired = geometry ? { x: local.x - drag.offsetX, y: local.y - drag.offsetY } : renderPosition;
+      const next = geometry && document.legend.positionMode !== "canvas-corner" ? clampLegendToVisibleSurface(desired, { width: bounds.width, height: bounds.height }, geometry) : desired;
       dragRef.current = undefined;
       if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-      commitPosition(next);
+      commitPosition(next, geometry, { width: bounds.width, height: bounds.height });
     }}
     onPointerCancel={(event) => {
       const drag = dragRef.current;
       if (!drag || drag.pointerId !== event.pointerId) return;
       dragRef.current = undefined;
       setPosition(document.legend.position);
+      setRenderPosition(document.legend.position);
       if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     }}
   >

@@ -1,19 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { newPhaseUid, startOrder, stripPhaseUid, toDraftPhases, validatePhases } from "../../apps/editor/src/transaction-phase-model.js";
+import type { TransactionPhaseId } from "@timing-chart-v2/schema";
+const phaseA = "phase_a" as TransactionPhaseId;
+const phaseB = "phase_b" as TransactionPhaseId;
 
 describe("#751 Phase draft model", () => {
   it("keeps preserved source identity for committed rows and fresh uids for new rows", () => {
-    const draft = toDraftPhases([{ name: "A", start: 0, end: 2 }, { name: "B", start: 2, end: 4 }]);
-    expect(draft.map((phase) => phase.uid)).toEqual(["c0", "c1"]);
+    const draft = toDraftPhases([{ id: phaseA, name: "A", start: 0, end: 2 }, { id: phaseB, name: "B", start: 2, end: 4 }]);
+    expect(draft.map((phase) => phase.uid)).toEqual([phaseA, phaseB]);
     expect(newPhaseUid()).not.toBe(newPhaseUid());
-    expect(stripPhaseUid(draft[0]!)).toEqual({ name: "A", start: 0, end: 2 });
+    expect(stripPhaseUid(draft[0]!)).toEqual({ id: phaseA, name: "A", start: 0, end: 2 });
   });
 
   it("orders by Start time (then End, then uid) regardless of edit order, while uids stay attached to their row", () => {
-    const draft = toDraftPhases([{ name: "A", start: 0, end: 2 }, { name: "B", start: 2, end: 4 }]);
-    const edited = draft.map((phase) => (phase.uid === "c1" ? { ...phase, start: -1 + 0, end: 1 } : phase)); // B now starts before A
+    const draft = toDraftPhases([{ id: phaseA, name: "A", start: 0, end: 2 }, { id: phaseB, name: "B", start: 2, end: 4 }]);
+    const edited = draft.map((phase) => (phase.uid === phaseB ? { ...phase, start: 0, end: 1 } : phase)); // B now starts before A
     const ordered = [...edited].sort(startOrder);
-    expect(ordered.map((phase) => phase.uid)).toEqual(["c1", "c0"]);
+    expect(ordered.map((phase) => phase.uid)).toEqual([phaseB, phaseA]);
     // Deleting the displayed-first row removes B (by uid), not "index 0 of the original array".
     expect(edited.filter((phase) => phase.uid !== ordered[0]!.uid).map((phase) => phase.name)).toEqual(["A"]);
   });

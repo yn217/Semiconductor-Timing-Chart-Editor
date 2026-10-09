@@ -1,9 +1,39 @@
 import { describe, expect, it } from "vitest";
-import { annotationsForReferences, canonicalReferenceMetrics, canonicalReferences, referencesTo, referencesToAny, referencesToSignal, referencesToTimeGroup, validateCanonicalDocument } from "@timing-chart-v2/schema";
-import type { AnnotationId, BookmarkId, CanonicalDocument, LabelAnchorId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
+import { readFileSync } from "node:fs";
+import { annotationsForReferences, CANONICAL_REFERENCE_KINDS, CANONICAL_REFERENCE_SCHEMA_PATHS, canonicalReferenceMetrics, canonicalReferences, referencesFromOwner, referencesTo, referencesToAny, referencesToSignal, referencesToTimeGroup, validateCanonicalDocument } from "@timing-chart-v2/schema";
+import type { AnnotationGroupId, AnnotationId, BookmarkId, CanonicalDocument, ConstraintId, LabelAnchorId, SignalId, TimeGroupId, TransactionGroupId, TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
+type SchemaNode = { $ref?: string; properties?: Record<string, SchemaNode>; items?: SchemaNode; allOf?: SchemaNode[]; oneOf?: SchemaNode[]; anyOf?: SchemaNode[] };
+
+function stableIdReferencePaths(schema: SchemaNode & { $defs?: Record<string, SchemaNode> }): string[] {
+  const paths: string[] = [];
+  const walk = (node: SchemaNode, path: string, seen: ReadonlySet<string>): void => {
+    if (node.$ref !== undefined) {
+      if (node.$ref === "#/$defs/stableId") {
+        if (!path.endsWith(".id")) paths.push(path);
+        return;
+      }
+      const definition = node.$ref.split("/").at(-1)!;
+      if (seen.has(definition)) return;
+      const resolved = schema.$defs?.[definition];
+      if (resolved) walk(resolved, path, new Set([...seen, definition]));
+      return;
+    }
+    for (const [key, child] of Object.entries(node.properties ?? {})) walk(child, `${path}.${key}`, seen);
+    if (node.items) walk(node.items, `${path}[*]`, seen);
+    for (const child of [...(node.allOf ?? []), ...(node.oneOf ?? []), ...(node.anyOf ?? [])]) walk(child, path, seen);
+  };
+  walk(schema, "$", new Set());
+  return paths.sort();
+}
+
 describe("canonical stable-ID reference registry", () => {
+  it("mechanically covers every stableId reference field declared by the canonical JSON schema", () => {
+    const schema = JSON.parse(readFileSync(new URL("../../packages/schema/src/canonical-document.schema.json", import.meta.url), "utf8")) as SchemaNode & { $defs?: Record<string, SchemaNode> };
+    expect([...CANONICAL_REFERENCE_SCHEMA_PATHS].sort()).toEqual(stableIdReferencePaths(schema));
+  });
+
   it("queries multiple target buckets once and resolves annotation owners without scanning canonical annotations", () => {
     const base = canonicalFixture();
     const first = base.signals[0]!;
@@ -100,6 +130,7 @@ describe("canonical stable-ID reference registry", () => {
 
     expect(validateCanonicalDocument(document)).toEqual([]);
     expect(canonicalReferences(document).map((reference) => reference.kind)).toEqual([
+      "timeGroup.resumeLabelAnchor",
       "timeline.referenceClock",
       "annotation.anchor",
       "annotation.anchor",
@@ -117,6 +148,7 @@ describe("canonical stable-ID reference registry", () => {
       "signalGroup.row",
     ]);
     expect(referencesToTimeGroup(document, groupId).map((reference) => reference.kind)).toEqual(["labelAnchor.ownerTimeGroup"]);
+    expect(referencesFromOwner(document, groupId).map((reference) => reference.kind)).toEqual(["timeGroup.resumeLabelAnchor"]);
   });
 
   it("gives validation one authoritative missing-reference path", () => {
@@ -177,5 +209,99 @@ describe("canonical stable-ID reference registry", () => {
       expect.objectContaining({ kind: "signalGroup.row", ownerId: groupId, targetId: spacerId, targetType: "spacer", path: "$.signalGroups[0].rows[2]" }),
       expect.objectContaining({ kind: "spacer.ownerGroup", ownerId: spacerId, targetId: groupId, targetType: "group", path: "$.signalGroups[0].spacers[0]" }),
     ]);
+  });
+
+  it("covers remaining stable-ID owners and typed Constraint dependencies through the registry", () => {
+    const base = canonicalFixture();
+    const signalId = base.signals[1]!.id;
+    const annotationId = "ann_member" as AnnotationId;
+    const groupId = "tg_owner" as TimeGroupId;
+    const labelId = "label_owner" as LabelAnchorId;
+    const txnGroupId = "txg_owner" as TransactionGroupId;
+    const annotationGroupId = "ag_owner" as AnnotationGroupId;
+    const annotation = { id: annotationId, type: "text" as const, label: "Note", visible: true, anchor: { signalId, cycle: 2, point: "cycle-start" as const } };
+    const document: CanonicalDocument = {
+      ...base,
+      annotations: [annotation],
+      annotationGroups: [{ id: annotationGroupId, annotationIds: [annotationId] }],
+      timeGroups: [{ id: groupId, name: "Fold", start: 3, end: 5, presentation: { resumeLabelAnchorId: labelId } }],
+      timeline: { ...base.timeline, labelAnchors: [{ id: labelId, source: 5, display: 5, ownerTimeGroupId: groupId }] },
+      transactionGroups: [{ id: txnGroupId, name: "DMA", order: 0 }],
+      transactions: [{ id: "txn_grouped" as TransactionId, name: "Read", start: 1, end: 3, groupId: txnGroupId, linkedSignals: [signalId] }],
+      constraints: [
+        { id: "constraint_handshake" as ConstraintId, type: "handshake", data: { requestSignalId: signalId, acknowledgeSignalId: "missing_ack", stableSignalIds: ["missing_stable"] } },
+        { id: "constraint_latency_range" as ConstraintId, type: "latency-range", data: { requestSignalId: "missing_req", acknowledgeSignalId: signalId } },
+        { id: "constraint_latency" as ConstraintId, type: "latency", data: { triggerSignalId: signalId, responseSignalId: "missing_response" } },
+      ],
+      enumDefinitions: [{ id: "enum_registry", name: "Mode", entries: [{ value: 0, label: "Idle" }] }],
+      signals: base.signals.map((signal) => signal.id === signalId ? { ...signal, enumId: "enum_registry" } : signal),
+    };
+
+    const references = canonicalReferences(document);
+    for (const kind of ["signal.enum", "annotationGroup.member", "timeGroup.resumeLabelAnchor", "transaction.group", "constraint.handshakeRequest", "constraint.handshakeAcknowledge", "constraint.handshakeStableSignal", "constraint.latencyRangeRequest", "constraint.latencyRangeAcknowledge", "constraint.latencyTrigger", "constraint.latencyResponse"] as const) {
+      expect(references.some((reference) => reference.kind === kind), kind).toBe(true);
+    }
+    expect(referencesToSignal(document, signalId).filter((reference) => reference.kind.startsWith("constraint."))).toHaveLength(3);
+    expect(validateCanonicalDocument(document)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "MISSING_CROSS_REFERENCE", path: "$.constraints[0].data.acknowledgeSignalId" }),
+      expect.objectContaining({ code: "MISSING_CROSS_REFERENCE", path: "$.constraints[0].data.stableSignalIds[0]" }),
+      expect.objectContaining({ code: "MISSING_CROSS_REFERENCE", path: "$.constraints[1].data.requestSignalId" }),
+      expect.objectContaining({ code: "MISSING_CROSS_REFERENCE", path: "$.constraints[2].data.responseSignalId" }),
+    ]));
+    const withoutConstraintAndMembership: CanonicalDocument = { ...document, constraints: [], annotationGroups: [] };
+    expect(referencesToSignal(withoutConstraintAndMembership, signalId).some((reference) => reference.kind.startsWith("constraint."))).toBe(false);
+    expect(canonicalReferences(withoutConstraintAndMembership).some((reference) => reference.kind === "annotationGroup.member")).toBe(false);
+  });
+
+  it("validates and indexes one fixture for every registered relationship kind", () => {
+    const base = canonicalFixture();
+    const clock = base.signals[0]!;
+    const signal = base.signals[1]!;
+    const spacerId = "spacer_all_refs" as never;
+    const parentId = "tg_parent_refs" as TimeGroupId;
+    const childId = "tg_child_refs" as TimeGroupId;
+    const labelId = "label_all_refs" as LabelAnchorId;
+    const bookmarkId = "bookmark_all_refs" as BookmarkId;
+    const enumId = "enum_all_refs";
+    const textId = "ann_text_refs" as AnnotationId;
+    const ghostId = "ann_ghost_refs" as AnnotationId;
+    const markerId = "ann_marker_refs" as AnnotationId;
+    const transactionId = "txn_all_refs" as TransactionId;
+    const transactionGroupId = "txg_all_refs" as TransactionGroupId;
+    const annotationGroupId = "ag_all_refs" as AnnotationGroupId;
+    const referencesDocument: CanonicalDocument = {
+      ...base,
+      bookmarks: [{ id: bookmarkId, name: "Origin", start: 1 }],
+      enumDefinitions: [{ id: enumId, name: "Mode", entries: [{ value: 0, label: "Idle" }] }],
+      signals: [
+        { ...clock, type: "clock", edgeCounter: { ...clock.edgeCounter, countFrom: "marker", anchorId: bookmarkId } },
+        { ...signal, enumId },
+      ],
+      signalGroups: base.signalGroups.map((group, index) => index === 0 ? { ...group, rows: [...group.rows, spacerId], spacers: [{ id: spacerId, height: 8 }] } : group),
+      timeGroups: [
+        { id: parentId, name: "Parent", start: 1, end: 8 },
+        { id: childId, parentId, name: "Child", start: 3, end: 5, presentation: { resumeLabelAnchorId: labelId } },
+      ],
+      timeline: { ...base.timeline, labelAnchors: [{ id: labelId, source: 5, display: 5, ownerTimeGroupId: childId }] },
+      annotations: [
+        { id: textId, type: "text", label: "T", visible: true, anchor: { signalId: signal.id, cycle: 2, point: "cycle-start" } },
+        { id: ghostId, type: "ghostTrace", label: "G", visible: true, sourceSignalId: signal.id, start: { signalId: signal.id, cycle: 2, point: "cycle-start" }, end: { signalId: signal.id, cycle: 4, point: "cycle-end" } },
+        { id: markerId, type: "marker", label: "M", visible: true, anchor: { cycle: 3, point: "cycle-start" }, verticalSpan: { mode: "rows", startRowId: signal.id, endRowId: clock.id } },
+      ],
+      annotationGroups: [{ id: annotationGroupId, annotationIds: [textId] }],
+      transactions: [{ id: transactionId, name: "Read", start: 1, end: 4, groupId: transactionGroupId, linkedSignals: [signal.id] }],
+      transactionGroups: [{ id: transactionGroupId, name: "Memory", order: 0 }],
+      constraints: [
+        { id: "constraint_handshake_all" as ConstraintId, type: "handshake", data: { requestSignalId: signal.id, acknowledgeSignalId: signal.id, stableSignalIds: [signal.id] } },
+        { id: "constraint_range_all" as ConstraintId, type: "latency-range", data: { requestSignalId: signal.id, acknowledgeSignalId: signal.id } },
+        { id: "constraint_latency_all" as ConstraintId, type: "latency", data: { triggerSignalId: signal.id, responseSignalId: signal.id } },
+      ],
+    };
+    const references = canonicalReferences(referencesDocument);
+    expect(validateCanonicalDocument(referencesDocument)).toEqual([]);
+    expect([...new Set(references.map((reference) => reference.kind))].sort()).toEqual([...CANONICAL_REFERENCE_KINDS].sort());
+    for (const reference of references) {
+      expect(referencesTo(referencesDocument, reference.targetType, reference.targetId)).toContainEqual(reference);
+    }
   });
 });

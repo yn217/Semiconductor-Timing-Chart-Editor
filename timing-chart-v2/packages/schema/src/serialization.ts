@@ -4,6 +4,7 @@ import { scanJsonSyntax } from "./json-syntax.js";
 import type { CanonicalDocument, DocumentProblem, MigrationWarning, ParseDocumentResult, ParseScenarioDocumentResult, ScenarioDocumentModel } from "./types.js";
 import { validateDocumentInputBytes, validateDocumentInputComplexity, validateDocumentResourceBudget } from "./resource-budget.js";
 import { validateScenarioDocumentModel } from "./scenario-model.js";
+import { opaqueDerivedId } from "./stable-id.js";
 
 const trustedParsedDocuments = new WeakSet<object>();
 
@@ -45,7 +46,44 @@ function migrateDocumentOwned(input: unknown, ownsInput: boolean): { document: C
   const document = (ownsInput ? migrated.value : cloneUnknown(migrated.value)) as CanonicalDocument;
   dropLegacySplitPane(document);
   defaultAdditiveCollections(document);
-  return { document, warnings: migrated.warnings };
+  const phaseIdentityWarnings = addLegacyNestedIds(document);
+  return { document, warnings: [...migrated.warnings, ...phaseIdentityWarnings] };
+}
+
+function addLegacyNestedIds(document: CanonicalDocument): readonly MigrationWarning[] {
+  const usedIds = new Set<string>();
+  const collect = (value: unknown): void => {
+    if (Array.isArray(value)) { for (const item of value) collect(item); return; }
+    if (value === null || typeof value !== "object") return;
+    const record = value as Record<string, unknown>;
+    if (typeof record.id === "string") usedIds.add(record.id);
+    for (const item of Object.values(record)) collect(item);
+  };
+  collect(document);
+  let assigned = 0;
+  for (const transaction of document.transactions) {
+    for (const [index, phase] of (transaction.phases ?? []).entries()) {
+      if (typeof phase.id === "string" && phase.id.length > 0) continue;
+      const id = opaqueDerivedId(`transaction-phase:${transaction.id}:${index}`, usedIds) as typeof phase.id;
+      usedIds.add(id);
+      (phase as unknown as { id: typeof phase.id }).id = id;
+      assigned += 1;
+    }
+  }
+  const warnings: MigrationWarning[] = assigned === 0 ? [] : [{ code: "MIGRATED_TRANSACTION_PHASE_IDS", path: "$.transactions", message: `Stable Phase IDs were assigned to ${assigned} legacy Phase${assigned === 1 ? "" : "s"} while opening this document.` }];
+  let changesAssigned = 0;
+  for (const signal of document.signals) {
+    const changes = signal.type === "clock" ? signal.enable ?? [] : "values" in signal ? signal.values : [];
+    for (const [index, change] of changes.entries()) {
+      if (typeof change.id === "string" && change.id.length > 0) continue;
+      const id = opaqueDerivedId(`signal-change:${signal.id}:${index}`, usedIds);
+      usedIds.add(id);
+      (change as unknown as { id: string }).id = id;
+      changesAssigned += 1;
+    }
+  }
+  if (changesAssigned > 0) warnings.push({ code: "MIGRATED_VALUE_CHANGE_IDS", path: "$.signals", message: `Stable IDs were assigned to ${changesAssigned} legacy Signal changes while opening this document.` });
+  return warnings;
 }
 
 export function migrateDocument(input: unknown): { document: CanonicalDocument; warnings: readonly MigrationWarning[] } | undefined {

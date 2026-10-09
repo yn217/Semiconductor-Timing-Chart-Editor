@@ -358,12 +358,14 @@ test("Legend editor exposes stable-ID label, visibility and ordering controls", 
   await input.getByLabel("Legend label legend_input").fill("Inputs");
   await input.getByLabel("Legend visibility legend_input").uncheck();
   await editor.locator("[data-legend-entry-id='legend_output']").getByRole("button", { name: "Move legend_output up" }).click();
+  await expect.poll(() => editor.locator("[data-legend-entry-id]").evaluateAll((rows) => rows.map((row) => row.getAttribute("data-legend-entry-id")))).toEqual(["legend_output", "legend_input", "legend_internal"]);
   await properties.getByTestId("apply-document-properties").click();
   await expect(properties.getByTestId("legend-status")).toHaveText("Properties applied");
   await page.screenshot({ path: ".tmp_gui_reference/gui-batch-legend-editor-1280x720.png", fullPage: true });
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(page.getByTestId("editor-legend").locator("[data-legend-id='legend_input']")).toHaveCount(0);
   await expect(page.getByTestId("editor-legend").locator("[data-legend-id='legend_output']")).toHaveText(/output/);
+  await expect.poll(() => page.getByTestId("editor-legend").locator("[data-legend-id]").evaluateAll((entries) => entries.map((entry) => entry.getAttribute("data-legend-id")))).toEqual(["legend_output", "legend_internal"]);
 });
 
 test("edits Legend entry labels, visibility and order, then preserves them through Save/Open and export", async ({ page }) => {
@@ -462,6 +464,20 @@ test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registra
   await displayMode.selectOption("full");
   await expect(hierarchy.locator("[data-hierarchy-row-id='sig_cycle_data']")).toContainText("dut.data[7:0]");
   await displayMode.selectOption("split");
+  const instancePathWidth = hierarchy.getByLabel("Instance Path width");
+  const instancePathHeader = hierarchy.locator("th.hierarchy-instance-path");
+  const initialInstancePathWidth = await instancePathHeader.evaluate((element) => element.getBoundingClientRect().width);
+  await instancePathWidth.fill("340");
+  await expect.poll(() => instancePathHeader.evaluate((element) => element.getBoundingClientRect().width)).toBeGreaterThan(initialInstancePathWidth + 80);
+  const instancePathAlignment = hierarchy.getByLabel("Instance Path alignment");
+  for (const alignment of ["left", "center", "right"] as const) {
+    await instancePathAlignment.selectOption(alignment);
+    const alignedCell = hierarchy.locator("td.hierarchy-instance-path").first();
+    await expect(alignedCell).toHaveCSS("text-align", alignment);
+  }
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+  await expect(page.getByTestId("history-status")).toHaveText(beforeHistory!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(beforeDirty!);
   await hierarchy.getByTestId("hierarchy-path-view").click();
   await expect(hierarchy.getByTestId("hierarchy-path-view")).toHaveAttribute("aria-pressed", "true");
   await hierarchy.getByLabel("Hierarchy scope", { exact: true }).selectOption("dut");
@@ -480,7 +496,8 @@ test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registra
   await hierarchy.getByRole("button", { name: "Close hierarchy" }).click();
   await page.getByRole("button", { name: "Add signal or group" }).click();
   await page.getByTestId("bulk-register-open").click();
-  await page.getByLabel("Bulk signal definitions").fill("dut.core.status binary\ndut.core.payload[7:0] bus");
+  const longHierarchyPath = "dut.core.u_dma.u_axi.request_controller.request_ready";
+  await page.getByLabel("Bulk signal definitions").fill(`dut.core.status binary\ndut.core.payload[7:0] bus\n${longHierarchyPath} binary`);
   await page.getByTestId("bulk-register-preview-button").click();
   await expect(page.getByTestId("bulk-register-preview")).toContainText("width 8");
   await page.getByTestId("bulk-register-apply").click();
@@ -488,6 +505,15 @@ test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registra
   await page.getByRole("button", { name: "More tree actions" }).click();
   await page.getByTestId("hierarchy-open").click();
   const nestedHierarchy = page.getByTestId("hierarchy-browser");
+  await nestedHierarchy.getByLabel("Hierarchy display mode").selectOption("full");
+  await nestedHierarchy.getByLabel("Search hierarchy paths").fill(longHierarchyPath);
+  const longPathRow = nestedHierarchy.locator("tr[data-hierarchy-row-id]").first();
+  const displayedLongPath = longPathRow.locator("td[title]").first();
+  await expect(displayedLongPath).toHaveAttribute("title", longHierarchyPath);
+  await expect(displayedLongPath).toContainText("…");
+  await expect(displayedLongPath).toContainText("request_ready");
+  await expect(nestedHierarchy.getByRole("button", { name: `Copy full path ${longHierarchyPath}` })).toBeVisible();
+  await nestedHierarchy.getByLabel("Search hierarchy paths").fill("");
   await nestedHierarchy.getByLabel("Hierarchy display mode").selectOption("relative");
   await nestedHierarchy.getByLabel("Hierarchy scope", { exact: true }).selectOption("dut.core");
   const nestedStatus = nestedHierarchy.locator("tr[data-hierarchy-row-id]").filter({ hasText: "status" });
@@ -550,6 +576,7 @@ test("filters the Signal/Group tree by display name, path, role, or group withou
 test("View controls expose geometry-backed Grid/Snap and a pannable MiniMap viewport", async ({ page }) => {
   await ready(page);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("view-panel-minimap").click();
   const grid = page.getByTestId("geometry-grid");
   await expect(grid).toHaveAttribute("data-grid-enabled", "true");
   await expect(grid.locator("[data-role='geometry-grid-line']")).toHaveCount(25);
@@ -577,13 +604,14 @@ test("View controls expose functional Ruler and MiniMap visibility toggles witho
   };
   await page.getByTestId("ruler-toggle").uncheck();
   const minimapToggle = page.getByTestId("view-panel-minimap");
-  await minimapToggle.click();
   await expect(minimapToggle).toHaveAttribute("aria-pressed", "false");
-  await expect(page.getByTestId("cycle-ruler")).toBeHidden();
   await expect(page.getByTestId("minimap")).toBeHidden();
+  await minimapToggle.click();
+  await expect(minimapToggle).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("cycle-ruler")).toBeHidden();
+  await expect(page.getByTestId("minimap")).toBeVisible();
   await page.screenshot({ path: ".tmp_gui_reference/gui-batch-view-toggles-1280x720.png", animations: "disabled" });
   await page.getByTestId("ruler-toggle").check();
-  await minimapToggle.click();
   await expect(minimapToggle).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("cycle-ruler")).toBeVisible();
   await expect(page.getByTestId("minimap")).toBeVisible();
@@ -597,6 +625,8 @@ test("View controls expose functional Ruler and MiniMap visibility toggles witho
 
 test("MiniMap renders a derived waveform overview for every canonical row without mutation", async ({ page }) => {
   await ready(page);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("view-panel-minimap").click();
   const host = page.getByTestId("cycle-surface");
   const surface = host.locator("[data-role='timing-chart-surface']");
   const before = {
@@ -615,6 +645,8 @@ test("MiniMap renders a derived waveform overview for every canonical row withou
 
 test("MiniMap viewport drag pans the real viewport without canonical or render mutation", async ({ page }) => {
   await ready(page);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("view-panel-minimap").click();
   const host = page.getByTestId("cycle-surface");
   const viewport = page.getByTestId("cycle-viewport");
   const minimap = page.getByTestId("minimap");

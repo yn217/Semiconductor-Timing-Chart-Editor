@@ -16,16 +16,24 @@ import type {
   TimeGroupId,
   TransactionGroupId,
   TransactionId,
+  TransactionPhaseId,
   ValueSignal,
   DocumentProblem,
   SignalValueChange,
 } from "./types.js";
 import { canonicalEntityInventory, type CanonicalEntityKind } from "./canonical-inventory.js";
-import { DOCUMENT_RESOURCE_BUDGET, validateDocumentResourceBudget, validateDocumentInputComplexity } from "./resource-budget.js";
+import { countClockSuppressedPeriods, countNestedArrayItems, countSignalChangePoints, DOCUMENT_RESOURCE_BUDGET, validateDocumentResourceBudget, validateDocumentInputComplexity } from "./resource-budget.js";
 import { isStableId, opaqueDerivedId } from "./stable-id.js";
 import { validateCanonicalDocument } from "./validation.js";
 
 const DEFAULT_SCENARIO_ID = "scenario_default" as ScenarioId;
+
+// Exhaustive: a new stable-ID kind must explicitly declare its ownership.
+const ENTITY_OWNERSHIP = {
+  document: "shared", signal: "shared", signalValueChange: "scenario", signalGroup: "shared", spacer: "shared", enumDefinition: "shared",
+  annotation: "scenario", annotationGroup: "scenario", transaction: "scenario", transactionPhase: "scenario",
+  transactionGroup: "scenario", bookmark: "scenario", timeGroup: "scenario", labelAnchor: "scenario", constraint: "scenario",
+} satisfies Record<CanonicalEntityKind, "shared" | "scenario">;
 
 function rejectUnknownKeys(value: object, allowed: readonly string[], path: string, problems: DocumentProblem[]): void {
   const accepted = new Set(allowed);
@@ -240,11 +248,29 @@ export function duplicateScenario(document: ScenarioDocumentModel, scenarioId: S
   const annotationGroupIds = new Map(source.annotationGroups.map((item) => [item.id, allocate("annotationGroup", item.id) as AnnotationGroupId]));
   const transactionGroupIds = new Map((source.transactionGroups ?? []).map((item) => [item.id, allocate("transactionGroup", item.id) as TransactionGroupId]));
   const transactionIds = new Map(source.transactions.map((item) => [item.id, allocate("transaction", item.id) as TransactionId]));
+  const phaseIds = new Map(source.transactions.flatMap((item) => (item.phases ?? []).map((phase) => [phase.id, allocate("transactionPhase", phase.id) as TransactionPhaseId] as const)));
   const constraintIds = new Map(source.constraints.map((item) => [item.id, allocate("constraint", item.id) as ConstraintId]));
+  const signalValueChangeIds = new Map<string, string>();
+  for (const state of Object.values(source.signalStates)) {
+    if (!state) continue;
+    const changes = state.kind === "clock" ? state.enable ?? [] : state.values;
+    for (const change of changes) {
+      if (change.id !== undefined) signalValueChangeIds.set(change.id, allocate("signalValueChange", change.id));
+    }
+  }
+  const signalStates = Object.fromEntries(Object.entries(source.signalStates).map(([signalId, state]) => {
+    if (!state) return [signalId, state];
+    if (state.kind === "clock") return [signalId, {
+      ...state,
+      ...(state.enable === undefined ? {} : { enable: state.enable.map((change) => ({ ...change, ...(change.id === undefined ? {} : { id: signalValueChangeIds.get(change.id)! }) })) }),
+    }];
+    return [signalId, { ...state, values: state.values.map((change) => ({ ...change, ...(change.id === undefined ? {} : { id: signalValueChangeIds.get(change.id)! }) })) }];
+  }));
   const copied: TimingScenario = {
     ...source,
     id: copiedScenarioId,
     name: name ?? `${source.name} Copy`,
+    signalStates,
     timeline: {
       ...source.timeline,
       labelAnchors: source.timeline.labelAnchors.map((item) => ({
@@ -266,6 +292,7 @@ export function duplicateScenario(document: ScenarioDocumentModel, scenarioId: S
     transactions: source.transactions.map((item) => ({
       ...item,
       id: transactionIds.get(item.id)!,
+      ...(item.phases === undefined ? {} : { phases: item.phases.map((phase) => ({ ...phase, id: phaseIds.get(phase.id)! })) }),
       ...(item.groupId === undefined ? {} : { groupId: transactionGroupIds.get(item.groupId) ?? item.groupId }),
     })),
     constraints: source.constraints.map((item) => ({ ...item, id: constraintIds.get(item.id)! })),
@@ -495,6 +522,11 @@ export function validateScenarioDocumentModel(input: unknown): readonly Document
   if (problems.length > 0) return problems;
 
   const typed = input as ScenarioDocumentModel;
+  if (typed.scenarios.length > DOCUMENT_RESOURCE_BUDGET.scenarioCount) {
+    const current = typed.scenarios.length;
+    const limit = DOCUMENT_RESOURCE_BUDGET.scenarioCount;
+    return [{ code: "RESOURCE_LIMIT_EXCEEDED", path: "$.scenarios", message: `Scenario resource limit exceeded for scenarios: ${current.toLocaleString()} exceeds ${limit.toLocaleString()}.`, expected: String(limit), value: current, detail: `resource-budget;metric=scenario.scenarios;current=${current};limit=${limit}` }];
+  }
   const scenarioIds = new Map<string, number>();
   const definitions = new Map<string, ScenarioSignalDefinition>();
   typed.signalDefinitions.forEach((definition, index) => {
@@ -522,16 +554,17 @@ export function validateScenarioDocumentModel(input: unknown): readonly Document
 
   // Document-wide entities are registered once; scenario-specific entities
   // must remain globally unique across all scenario projections.
-  const sharedKinds = new Set<CanonicalEntityKind>(["document", "signal", "signalGroup", "spacer", "enumDefinition"]);
-  const projectedScenarioKinds = new Set<CanonicalEntityKind>(["annotation", "annotationGroup", "transaction", "transactionGroup", "bookmark", "timeGroup", "labelAnchor", "constraint"]);
   let registeredSharedIds = false;
-  const aggregate = { annotations: 0, annotationGroups: 0, transactions: 0, transactionGroups: 0, bookmarks: 0, timeGroups: 0, constraints: 0, labelAnchors: 0, valueChanges: 0 };
+  const aggregate = { scenarios: 0, annotations: 0, annotationGroups: 0, transactions: 0, transactionGroups: 0, bookmarks: 0, timeGroups: 0, constraints: 0, labelAnchors: 0, valueChanges: 0, transactionLinkedSignals: 0, transactionPhases: 0, clockSuppressedPeriods: 0 };
   const aggregateLimits: ReadonlyArray<readonly [keyof typeof aggregate, number, string]> = [
     ["annotations", DOCUMENT_RESOURCE_BUDGET.annotationCount, "annotations"], ["annotationGroups", DOCUMENT_RESOURCE_BUDGET.annotationGroupCount, "annotationGroups"],
     ["transactions", DOCUMENT_RESOURCE_BUDGET.transactionCount, "transactions"], ["transactionGroups", DOCUMENT_RESOURCE_BUDGET.transactionGroupCount, "transactionGroups"],
     ["bookmarks", DOCUMENT_RESOURCE_BUDGET.bookmarkCount, "bookmarks"], ["timeGroups", DOCUMENT_RESOURCE_BUDGET.timeGroupCount, "timeGroups"],
     ["constraints", DOCUMENT_RESOURCE_BUDGET.constraintCount, "constraints"], ["labelAnchors", DOCUMENT_RESOURCE_BUDGET.labelAnchorCount, "labelAnchors"],
     ["valueChanges", DOCUMENT_RESOURCE_BUDGET.valueChangeCount, "valueChanges"],
+    ["transactionLinkedSignals", DOCUMENT_RESOURCE_BUDGET.transactionLinkedSignalCount, "transactions[*].linkedSignals"],
+    ["transactionPhases", DOCUMENT_RESOURCE_BUDGET.transactionPhaseCount, "transactions[*].phases"],
+    ["clockSuppressedPeriods", DOCUMENT_RESOURCE_BUDGET.clockSuppressedPeriodCount, "signalStates[*].generator.suppressedPeriods"],
   ];
 
   typed.scenarios.forEach((scenario, scenarioIndex) => {
@@ -597,15 +630,15 @@ export function validateScenarioDocumentModel(input: unknown): readonly Document
     }
     const projectionProblems = validateCanonicalDocument(projection);
     problems.push(...projectionProblems);
-    const perScenarioBudget = validateDocumentResourceBudget(projection).filter((item) => !["$.annotations", "$.annotationGroups", "$.transactions", "$.transactionGroups", "$.bookmarks", "$.timeGroups", "$.constraints", "$.timeline.labelAnchors", "$.signals[*].values"].includes(item.path));
+    const perScenarioBudget = validateDocumentResourceBudget(projection).filter((item) => !["$.annotations", "$.annotationGroups", "$.transactions", "$.transactionGroups", "$.bookmarks", "$.timeGroups", "$.constraints", "$.timeline.labelAnchors", "$.signals[*].values|$.signals[*].enable", "$.transactions[*].linkedSignals", "$.transactions[*].phases", "$.signals[*].generator.suppressedPeriods"].includes(item.path));
     problems.push(...perScenarioBudget);
     if (projectionProblems.length === 0) {
       for (const entry of canonicalEntityInventory(projection)) {
-        if (sharedKinds.has(entry.kind)) {
+        if (ENTITY_OWNERSHIP[entry.kind] === "shared") {
           if (!registeredSharedIds) registerOwnedId(entry.id, entry.path);
           continue;
         }
-        if (projectedScenarioKinds.has(entry.kind)) registerOwnedId(entry.id, `$.scenarios[${scenarioIndex}]${entry.path.slice(1)}`);
+        registerOwnedId(entry.id, `$.scenarios[${scenarioIndex}]${entry.path.slice(1)}`);
       }
     }
     registeredSharedIds = true;
@@ -618,9 +651,10 @@ export function validateScenarioDocumentModel(input: unknown): readonly Document
     aggregate.timeGroups += scenario.timeGroups.length;
     aggregate.constraints += scenario.constraints.length;
     aggregate.labelAnchors += scenario.timeline.labelAnchors.length;
-    for (const state of Object.values(scenario.signalStates)) {
-      if (state?.kind === "values") aggregate.valueChanges += state.values.length;
-    }
+    aggregate.valueChanges += countSignalChangePoints(Object.values(scenario.signalStates));
+    aggregate.transactionLinkedSignals += countNestedArrayItems(scenario.transactions, "linkedSignals");
+    aggregate.transactionPhases += countNestedArrayItems(scenario.transactions, "phases");
+    aggregate.clockSuppressedPeriods += countClockSuppressedPeriods(Object.values(scenario.signalStates));
   });
 
   for (const [metric, limit, pathName] of aggregateLimits) {
