@@ -105,6 +105,8 @@ test("Transaction to Combined and back preserves Transaction ownership", async (
 });
 
 test("Combined routes a Signal waveform range drag to the Signal pane only", async ({ page }) => {
+  // Signal rows start one ruler band + 9px below the Transaction pane (same as Cycle), so give the panes enough height to show a row.
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/?transaction-demo");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");

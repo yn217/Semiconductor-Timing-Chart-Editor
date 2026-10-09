@@ -12,7 +12,8 @@ const owners = (page: Page) => page.evaluate(() => {
   const found: Array<{ el: string; visible: boolean; scrollWidth: number; clientWidth: number }> = [];
   for (const el of document.querySelectorAll<HTMLElement>(".cycle-panel, .cycle-panel *")) {
     const style = getComputedStyle(el);
-    if (!/(auto|scroll)/.test(style.overflowX) || el.scrollWidth <= el.clientWidth + 1) continue;
+    // The Timeline-only track is a control that drives the owner, not a second owner.
+    if (el.classList.contains("timeline-hscroll") || !/(auto|scroll)/.test(style.overflowX) || el.scrollWidth <= el.clientWidth + 1) continue;
     const box = el.getBoundingClientRect();
     found.push({ el: `${el.tagName.toLowerCase()}.${(el.className?.toString() ?? "").split(" ")[0]}[${el.getAttribute("data-testid") ?? el.getAttribute("data-role") ?? ""}]`, visible: box.width > 0 && box.height > 0 && style.visibility !== "hidden", scrollWidth: el.scrollWidth, clientWidth: el.clientWidth });
   }
@@ -31,8 +32,9 @@ for (const size of sizes) {
     await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
     await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
     await expect(page.getByTestId("view-mode-status")).toHaveText(/Mode: (Combined|Split)/);
-    await expect(page.getByTestId("cycle-viewport")).toHaveAttribute("data-time-viewport-owner", "combined-viewport");
-    await expect(page.getByTestId("timeline-hscroll")).toHaveCount(0);
+    await expect(page.getByTestId("cycle-viewport")).toHaveAttribute("data-time-viewport-owner", "combined-inner");
+    // The Timeline-only track (like Cycle) replaces the native bar; it drives the one nested scroll owner counted below.
+    await expect(page.getByTestId("timeline-hscroll")).toHaveCount(1);
     await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 30_000 });
     const failures: string[] = [];
     const check = async (label: string) => {
