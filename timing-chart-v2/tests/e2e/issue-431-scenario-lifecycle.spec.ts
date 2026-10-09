@@ -120,6 +120,68 @@ test("Scenario v3 switches as view state and management survives Undo/Redo and S
   await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
 });
 
+test("Scenario Duplicate remaps Transaction Phase IDs and Undo/Redo and Save/Open preserve them", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  const v2 = {
+    ...canonicalFixture(),
+    transactions: [
+      { id: "tx_address" as never, name: "Address", start: 0, end: 4, phases: [
+        { id: "phase_address_setup" as never, name: "Setup", start: 0, end: 2 },
+        { id: "phase_address_hold" as never, name: "Hold", start: 2, end: 4 },
+      ] },
+      { id: "tx_response" as never, name: "Response", start: 4, end: 8, phases: [
+        { id: "phase_response_valid" as never, name: "Valid", start: 4, end: 8 },
+      ] },
+    ],
+  };
+  const model = scenarioModelFromV2(v2);
+  const sourceScenario = model.scenarios[0]!;
+  const sourcePhaseIds = sourceScenario.transactions.flatMap((transaction) => transaction.phases!.map((phase) => phase.id));
+  const input = page.locator("input[type='file'][accept='.json,.tcd']");
+  await input.setInputFiles({ name: "scenario-phase-identity.tcd", mimeType: "application/json", buffer: Buffer.from(serializeScenarioDocumentModel(model)) });
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  const ribbon = page.getByTestId("ribbon");
+  const save = async () => {
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+    const download = page.waitForEvent("download");
+    await ribbon.getByRole("button", { name: "Save", exact: true }).first().click();
+    const path = await (await download).path();
+    expect(path).toBeTruthy();
+    const bytes = await readFile(path!);
+    const parsed = JSON.parse(bytes.toString("utf8")) as { scenarios: Array<{ id: string; transactions: Array<{ phases?: Array<{ id: string; name: string; start: number; end: number }> }> }> };
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+    return { bytes, parsed };
+  };
+  const before = await save();
+  await page.getByTestId("scenario-duplicate").click();
+  const duplicateId = await page.getByTestId("active-scenario").inputValue();
+  expect(duplicateId).not.toBe(sourceScenario.id);
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  const afterDuplicate = await save();
+  const original = afterDuplicate.parsed.scenarios.find((scenario) => scenario.id === sourceScenario.id)!;
+  const duplicate = afterDuplicate.parsed.scenarios.find((scenario) => scenario.id === duplicateId)!;
+  const duplicatePhaseIds = duplicate.transactions.flatMap((transaction) => transaction.phases?.map((phase) => phase.id) ?? []);
+  expect(original.transactions.flatMap((transaction) => transaction.phases?.map((phase) => phase.id) ?? [])).toEqual(sourcePhaseIds);
+  expect(duplicatePhaseIds).toHaveLength(sourcePhaseIds.length);
+  expect(duplicatePhaseIds.some((id) => sourcePhaseIds.includes(id))).toBe(false);
+  expect(new Set([...sourcePhaseIds, ...duplicatePhaseIds]).size).toBe(sourcePhaseIds.length + duplicatePhaseIds.length);
+  expect(duplicate.transactions.map((transaction) => transaction.phases?.map(({ id: _id, ...phase }) => phase)))
+    .toEqual(original.transactions.map((transaction) => transaction.phases?.map(({ id: _id, ...phase }) => phase)));
+
+  await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+  expect((await save()).parsed).toEqual(before.parsed);
+  await ribbon.getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  expect((await save()).parsed).toEqual(afterDuplicate.parsed);
+
+  await input.setInputFiles({ name: "scenario-phase-identity-saved.tcd", mimeType: "application/json", buffer: afterDuplicate.bytes });
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("active-scenario").locator("option")).toHaveCount(2);
+  expect((await save()).parsed).toEqual(afterDuplicate.parsed);
+});
+
 test("duplicated Clock compares equal after fresh enable and marker IDs through Undo/Redo and Save/Open", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");
