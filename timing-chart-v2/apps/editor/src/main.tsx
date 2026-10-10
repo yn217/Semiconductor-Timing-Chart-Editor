@@ -15,15 +15,15 @@ const probe = new URLSearchParams(window.location.search).get("probe");
 // string requests them. That keeps them out of the normal editor's
 // eagerly-loaded startup chunk while still exercising the same real
 // production packages (no duplicate implementation).
-if (probe === "geometry") {
+if (import.meta.env.DEV && probe === "geometry") {
   void import("./probes/geometry-probe.js").then(({ ArchitectureProbe }) => {
     createRoot(root).render(<StrictMode><ArchitectureProbe /></StrictMode>);
   });
-} else if (probe === "geometry-equivalence") {
+} else if (import.meta.env.DEV && probe === "geometry-equivalence") {
   void import("./probes/geometry-equivalence-probe.js").then(({ GeometryEquivalenceProbe }) => {
     createRoot(root).render(<GeometryEquivalenceProbe />);
   });
-} else if (probe === "stable") {
+} else if (import.meta.env.DEV && probe === "stable") {
   void import("./probes/stable-surface-probe.js").then(({ StableSurfaceProbe }) => {
     createRoot(root).render(<StrictMode><StableSurfaceProbe /></StrictMode>);
   });
