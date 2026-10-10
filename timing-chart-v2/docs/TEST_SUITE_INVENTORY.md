@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 440 spec files and 1324 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 441 spec files and 1325 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1266/1324 cases reviewed.
+Semantic review progress: 1267/1325 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 634 |
 | `nightly` | 241 |
 | `performance` | 73 |
-| `pr` | 416 |
+| `pr` | 417 |
 | `visual` | 181 |
 
 ## Top recorded per-case runtimes
@@ -429,6 +429,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `splitter-view-state.contract.spec.ts` | 3 | 3/3 reviewed |
 | `stable-id-collision.spec.ts` | 1 | 1/1 reviewed |
 | `stable-surface.spec.ts` | 1 | 1/1 reviewed |
+| `status-bar-long-selection.spec.ts` | 1 | 1/1 reviewed |
 | `status-bar-narrow-window.spec.ts` | 2 | 2/2 reviewed |
 | `status-context.spec.ts` | 4 | 4/4 reviewed |
 | `time-group-lifecycle.spec.ts` | 1 | 1/1 reviewed |
@@ -675,6 +676,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `splitter-view-state.contract.spec.ts` | getComputedStyle, explicitWait |
 | `stable-id-collision.spec.ts` | querySelector |
 | `stable-surface.spec.ts` | dataset |
+| `status-bar-long-selection.spec.ts` | querySelector, geometryRead |
 | `timeline-editor.spec.ts` | dataset, geometryRead |
 | `timeline-edits-stable-ids.spec.ts` | explicitWait |
 | `timeline-range-100k.spec.ts` | querySelector, dataset, geometryRead |

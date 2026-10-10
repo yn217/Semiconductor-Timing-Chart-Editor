@@ -463,13 +463,13 @@ export function EditorStatusBar({ toolStatus, selectionStatus, signalCount, anno
     <button type="button" className="status-diagnostics-toggle" data-testid="status-diagnostics-toggle" aria-pressed={diagnosticsOpen} title="Show developer diagnostics (Canonical revision, History counters, renderer state)" onClick={() => setDiagnosticsOpen((open) => !open)}>Diagnostics</button>
     {cursorStatus && <span data-testid="cursor-status">{cursorStatus}</span>}
     {activePaneStatus && <span data-testid="active-pane-status">{activePaneStatus}</span>}
-    <span>Selected: <strong data-testid="selection-status">{selectionStatus}</strong></span>
+    <span className="status-selection" title={selectionStatus}>Selected: <strong data-testid="selection-status">{selectionStatus}</strong></span>
     <span data-testid="signal-count-status">Signals: {signalCount}</span><span data-testid="annotation-count-status">Annotations: {annotationCount}</span><span data-testid="range-status">{rangeStatus}</span><span data-testid="cycle-status">{viewMode === "Cycle" ? "Cycle" : "Source cycle"} {selectedCycle}</span><span data-testid="zoom-status-bar">Zoom: {Math.round(zoom * 100)}%</span><span data-testid="snap-status">Snap: {snapEnabled ? "On" : "Off"}</span><span data-testid="view-mode-status">Mode: {viewMode === "Split" ? "Combined" : viewMode}</span>
     <span className="status-context" data-testid="status-context">{statusContext}</span>
     <span className={diagnosticClass} data-testid="revision-status">Canonical revision {revision}</span>
     <span className={diagnosticClass} data-testid="history-status">History {undoDepth} / Redo {redoDepth}</span>
     {openPerformanceDetails !== undefined && <span className="visually-hidden" data-testid="open-performance-diagnostics" role="note">Open performance diagnostics: {openPerformanceDetails}</span>}
-    <span data-testid="time-axis-status">{timeAxisStatus}</span><span data-testid="dirty-status">{dirty ? "Modified" : "Clean"}</span><span data-testid="problems-status">{problemsPending ? "Problems: Checking…" : `Problems: ${problemsCount}`}</span><span className={waveDromHasError ? undefined : diagnosticClass} data-testid="wavedrom-status">WaveDrom: {waveDromHasError ? "Error" : "Ready"}</span>
+    <span data-testid="time-axis-status" title={timeAxisStatus}>{timeAxisStatus}</span><span data-testid="dirty-status">{dirty ? "Modified" : "Clean"}</span><span data-testid="problems-status">{problemsPending ? "Problems: Checking…" : `Problems: ${problemsCount}`}</span><span className={waveDromHasError ? undefined : diagnosticClass} data-testid="wavedrom-status">WaveDrom: {waveDromHasError ? "Error" : "Ready"}</span>
   </footer>;
 }
 

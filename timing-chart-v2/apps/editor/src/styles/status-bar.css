@@ -50,3 +50,7 @@
   .editor-shell .status-bar [data-testid="cursor-status"],
   .editor-shell .status-bar [data-testid="active-pane-status"] { display: none; }
 }
+
+/* A long selected name shrinks with an ellipsis instead of pushing Clean/Modified and Problems out of the status bar. */
+.status-bar .status-selection { flex: 0 1 auto; min-width: 0; max-width: 40vw; overflow: hidden; text-overflow: ellipsis; }
+.status-bar [data-testid="time-axis-status"] { flex: 0 1 auto; min-width: 0; max-width: 25vw; overflow: hidden; text-overflow: ellipsis; }

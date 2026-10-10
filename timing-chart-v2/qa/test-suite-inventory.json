@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T14:03:20.232Z",
+  "generatedAt": "2026-10-10T14:07:08.616Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 440,
-  "caseCount": 1324,
-  "reviewedCaseCount": 1266,
+  "specFileCount": 441,
+  "caseCount": 1325,
+  "reviewedCaseCount": 1267,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 416,
+    "pr": 417,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -28212,6 +28212,33 @@
       "contractId": "stable-waveform-owner-reorder-identity"
     },
     {
+      "file": "status-bar-long-selection.spec.ts",
+      "suitePath": [],
+      "line": 3,
+      "title": "a very long selected Signal name does not push Clean/Modified and Problems out of the status bar",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "status-bar-long-selection",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "A 250-character Signal name (also shown as the Time Axis clock) is ellipsized and the Modified and Problems items stay inside the window.",
+      "duplicateGroup": "status-bar-long-selection",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The overflow only shows with real layout after renaming a selected Signal.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "status-bar-long-selection",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
       "file": "status-bar-narrow-window.spec.ts",
       "suitePath": [],
       "line": 5,
@@ -38418,6 +38445,18 @@
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "dataset"
+      ],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "status-bar-long-selection.spec.ts",
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [
+        "querySelector",
+        "geometryRead"
       ],
       "semanticReviewStatus": "REVIEWED"
     },
