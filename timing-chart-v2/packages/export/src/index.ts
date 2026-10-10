@@ -2,7 +2,7 @@ import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { allocateMeasurementLanes } from "@timing-chart-v2/geometry";
 import { buildDisplayTimeMapping, calculateRowLayout, remapValueChangesToDisplay, resolveSourcePosition, type DisplayTimeMapping } from "@timing-chart-v2/projection";
 import { ANNOTATION_LABEL_LINE_HEIGHT, ANNOTATION_LABEL_MAX_WIDTH, MAX_MEASUREMENT_LANE, anchorTransitionFraction, anchorTransitionKind, effectiveLegendEntries, resolveEdgeCounterMarker, resolveLegendPosition, valueSignalWaveDomain, wrapAnnotationLabel, type Annotation, type CanonicalDocument, type ClockSignal, type JsonObject, type MeasurementProfile, type MeasurementLayout, type Signal, type SignalId, type ValueSignal } from "@timing-chart-v2/schema";
-import { renderWaveJsonMarkup, toWaveJson, toWaveJsonMappedClock, toWaveJsonWindow, WaveDromAdapterError, WAVEDROM_VERSION, type WaveJsonSignal } from "@timing-chart-v2/wavedrom-adapter";
+import { busLogicToken, renderWaveJsonMarkup, toWaveJson, toWaveJsonMappedClock, toWaveJsonWindow, WaveDromAdapterError, WAVEDROM_VERSION, type WaveJsonSignal } from "@timing-chart-v2/wavedrom-adapter";
 
 export interface ExportSettings {
   readonly format: "svg" | "png" | "pdf";
@@ -203,7 +203,8 @@ function boundedWaveJson(signal: Exclude<Signal, { readonly type: "commentRow" }
   const windowLength = range.end - range.start;
   const localSignal = { ...signal, values: valueChangesForWindow(signal, range.start, range.end) };
   const waveJson = toWaveJson({ signal: localSignal, cycleCount: windowLength, enumDefinitions });
-  const semanticValues = valueSignalWaveDomain(signal.type) === "data" ? localSignal.values.map((change) => String(change.value)) : [];
+  // Bus X/Z changes are drawn as WaveDrom logic bricks without a data label, so they must not pair with one.
+  const semanticValues = valueSignalWaveDomain(signal.type) === "data" ? localSignal.values.filter((change) => busLogicToken(signal.type, change.value) === undefined).map((change) => String(change.value)) : [];
   return { waveJson, semanticValues, windowStart: range.start, renderedCycleCount: windowLength };
 }
 
@@ -557,7 +558,7 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
       : undefined;
     const bounded = foldedClockBounded ?? boundedRaw;
     const waveJson = bounded?.waveJson ?? toWaveJson({ signal: displaySignal, cycleCount: mapping.displayCycleCount, enumDefinitions: document.enumDefinitions });
-    const semanticValues = bounded?.semanticValues ?? (signal.type !== "clock" && valueSignalWaveDomain(signal.type) === "data" ? displayValues!.map((change) => String(change.value)) : undefined);
+    const semanticValues = bounded?.semanticValues ?? (signal.type !== "clock" && valueSignalWaveDomain(signal.type) === "data" ? displayValues!.filter((change) => busLogicToken(signal.type, change.value) === undefined).map((change) => String(change.value)) : undefined);
     const svgMarkup = renderWaveJsonMarkup(waveJson, index, semanticValues);
     renderedWaves.push({ signal, waveJson, svgMarkup, windowStart: bounded?.windowStart ?? 0, renderedCycleCount: bounded?.renderedCycleCount ?? mapping.displayCycleCount, ...svgDimensions(svgMarkup) });
     // This checkpoint is free in the synchronous builder and lets the browser
