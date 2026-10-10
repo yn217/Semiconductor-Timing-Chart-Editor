@@ -24,6 +24,8 @@ async function ready(page: Page): Promise<void> {
 }
 
 async function readLayout(page: Page): Promise<LayoutEvidence> {
+  const minimapToggle = page.getByTestId("home-minimap-toggle");
+  if (await minimapToggle.count()) await minimapToggle.check(); // MiniMap is off by default; the evidence needs its rect
   return page.evaluate(() => {
     const rect = (selector: string): { left: number; right: number; width: number } => {
       const element = document.querySelector<HTMLElement>(selector);
