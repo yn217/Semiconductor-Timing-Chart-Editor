@@ -24,9 +24,11 @@ describe("review leftover guards", () => {
 
   it("insertion paths without a target Signal Group report a status instead of returning silently", () => {
     const clipboard = source("apps/editor/src/application/clipboard-actions.ts");
+    const clipboardCreate = source("apps/editor/src/application/clipboard-create-actions.ts");
     expect(clipboard).not.toMatch(/if \(!target(?: \|\| input\.length === 0)?\) return;/);
     expect(clipboard).not.toMatch(/if \(created\.length === 0\) return;/);
-    expect(clipboard.match(/setStatus\(NO_SIGNAL_GROUP_STATUS\)/g)?.length).toBe(3);
+    expect(clipboard.match(/setStatus\(NO_SIGNAL_GROUP_STATUS\)/g)?.length).toBe(2);
+    expect(clipboardCreate.match(/reportStatus\("No Signal Group to insert into"\)/g)?.length).toBe(1);
     const actions = source("apps/editor/src/application/use-editor-actions.ts");
     expect(actions).not.toMatch(/if \(!target\) return;/);
     expect(actions).toContain("reportStatus(NO_SIGNAL_GROUP_STATUS)");

@@ -59,7 +59,7 @@ describe("deterministic AI proposal provider", () => {
     const groupId = document.signalGroups[0]!.id;
     const created = buildTypedSignalProposal(document, 12, "propose_create_signal", { name: " READY ", type: "event", role: "output", groupId, initialValue: "rise" });
     expect(created.ok).toBe(true);
-    if (created.ok) expect(created.proposal.commands).toEqual([expect.objectContaining({ type: "signal.create", targetGroupId: groupId, index: document.signalGroups[0]!.rows.length, signal: expect.objectContaining({ name: "READY", type: "event", role: "output", values: [{ start: 0, value: "rise" }] }) })]);
+    if (created.ok) expect(created.proposal.commands).toEqual([expect.objectContaining({ type: "signal.create", targetGroupId: groupId, index: document.signalGroups[0]!.rows.length, signal: expect.objectContaining({ id: expect.any(String), name: "READY", type: "event", role: "output", source: { instancePath: [], signalName: "READY" }, display: { name: "READY" }, values: [{ id: expect.any(String), start: 0, value: "rise" }] }) })]);
     expect(buildTypedSignalProposal(document, 12, "propose_create_signal", { name: "Bad", type: "event", role: "internal", groupId, initialValue: "unknown" })).toMatchObject({ ok: false, message: expect.stringContaining("not supported for event") });
     expect(buildTypedSignalProposal(document, 12, "propose_create_signal", { name: "Bad", type: "binary", role: "internal", groupId: "missing" })).toEqual({ ok: false, message: "Signal Group 'missing' does not exist in the current document." });
     expect(buildTypedSignalProposal(document, 12, "propose_create_signal", { name: "Bad", type: "binary", role: "internal", groupId, width: 8 })).toEqual({ ok: false, message: "width is supported only for bus signals." });
