@@ -12,3 +12,19 @@ test("Paste before anything was copied says so and raises no Problem", async ({ 
   await expect(page.getByTestId("problems-status")).toHaveText("Problems: 0");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
+
+test("a clipboard rejection from another Scenario clears once something is copied again", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const row = page.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").first();
+  await row.click();
+  await page.keyboard.press("Control+c");
+  await page.getByRole("button", { name: "Enable Scenarios" }).click();
+  await page.getByTestId("scenario-duplicate").click();
+  await page.keyboard.press("Control+v");
+  await expect(page.getByTestId("problems-status")).toHaveText("Problems: 1");
+  await row.click();
+  await page.keyboard.press("Control+c");
+  await page.keyboard.press("Control+v");
+  await expect(page.getByTestId("problems-status")).toHaveText("Problems: 0");
+});

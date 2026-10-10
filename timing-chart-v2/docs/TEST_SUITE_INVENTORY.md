@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 439 spec files and 1322 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 439 spec files and 1323 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1264/1322 cases reviewed.
+Semantic review progress: 1265/1323 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 634 |
 | `nightly` | 241 |
 | `performance` | 73 |
-| `pr` | 414 |
+| `pr` | 415 |
 | `visual` | 181 |
 
 ## Top recorded per-case runtimes
@@ -378,7 +378,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `name-draft-identity.spec.ts` | 1 | 1/1 reviewed |
 | `open-progressive-wave-yield.spec.ts` | 3 | 3/3 reviewed |
 | `open-validation-handoff.spec.ts` | 3 | 3/3 reviewed |
-| `paste-without-copy.spec.ts` | 1 | 1/1 reviewed |
+| `paste-without-copy.spec.ts` | 2 | 2/2 reviewed |
 | `perf-755-far-jump-longtask.spec.ts` | 1 | 1/1 reviewed |
 | `perf-fixed-full-span-open.spec.ts` | 5 | 5/5 reviewed |
 | `performance-closure.spec.ts` | 11 | 11/11 reviewed |

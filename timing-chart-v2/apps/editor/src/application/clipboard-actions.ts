@@ -28,6 +28,8 @@ function withFreshValueChangeIds<T extends Signal>(signal: T): T {
   return { ...signal, values: fresh(signal.values, "") };
 }
 
+const FOREIGN_PASTE_DETAIL = "clipboard-failure:foreign-document";
+
 export function useClipboardActions({ application, selection }: { application: EditorApplicationOwner; selection: SelectionOwner }) {
   const [status, setStatus] = useState("Empty");
   const [available, setAvailable] = useState(false);
@@ -69,6 +71,8 @@ export function useClipboardActions({ application, selection }: { application: E
     cutSignalsRef.current = cutSignals;
     cutSignalLinksRef.current = signalLinks;
     sourceDocumentEpochRef.current = application.runtime.documentEpoch.current();
+    // A fresh copy in this document supersedes an earlier "belongs to another document" rejection.
+    application.setRuntimeDiagnostics((current) => current.some((item) => item.detail === FOREIGN_PASTE_DETAIL) ? current.filter((item) => item.detail !== FOREIGN_PASTE_DETAIL) : current);
     setAvailable(true);
   };
 
@@ -82,7 +86,7 @@ export function useClipboardActions({ application, selection }: { application: E
       operationLabel: "Paste",
       source: "clipboard" as const,
       stage: "commit" as const,
-      detail: "clipboard-failure:foreign-document",
+      detail: FOREIGN_PASTE_DETAIL,
       recommendation: "Copy the entity again in the current document, then retry Paste.",
     };
     setStatus("Paste rejected: clipboard belongs to another document");

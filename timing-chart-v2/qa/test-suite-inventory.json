@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T13:50:59.784Z",
+  "generatedAt": "2026-10-10T13:58:17.839Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -12,13 +12,13 @@
     "retryAndFlakySummary": null
   },
   "specFileCount": 439,
-  "caseCount": 1322,
-  "reviewedCaseCount": 1264,
+  "caseCount": 1323,
+  "reviewedCaseCount": 1265,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 414,
+    "pr": 415,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -24019,6 +24019,33 @@
       "runtimeMeasurementScope": "CASE"
     },
     {
+      "file": "paste-without-copy.spec.ts",
+      "suitePath": [],
+      "line": 16,
+      "title": "a clipboard rejection from another Scenario clears once something is copied again",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "clipboard-foreign-clears",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "The Paste rejection for a payload copied in another Scenario does not stay in Problems after a fresh copy.",
+      "duplicateGroup": "clipboard-foreign-clears",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The stale error only shows through the real copy / switch Scenario / paste sequence.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "clipboard-foreign-clears",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
       "file": "perf-755-far-jump-longtask.spec.ts",
       "suitePath": [],
       "line": 5,
@@ -37862,8 +37889,8 @@
     },
     {
       "file": "paste-without-copy.spec.ts",
-      "caseCount": 1,
-      "reviewedCaseCount": 1,
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],

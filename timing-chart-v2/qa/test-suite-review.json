@@ -17064,6 +17064,24 @@
       "decision": "KEEP",
       "reason": "Only the real panel input shows the preview and the renamed Signal names.",
       "replacementTest": null
+    },
+    {
+      "file": "paste-without-copy.spec.ts",
+      "title": "a clipboard rejection from another Scenario clears once something is copied again",
+      "domain": "clipboard-foreign-clears",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "The Paste rejection for a payload copied in another Scenario does not stay in Problems after a fresh copy.",
+      "duplicateGroup": "clipboard-foreign-clears",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The stale error only shows through the real copy / switch Scenario / paste sequence.",
+      "replacementTest": null
     }
   ]
 }
