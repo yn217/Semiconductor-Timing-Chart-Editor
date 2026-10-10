@@ -21,10 +21,11 @@ export function useBottomPanelSizing(
 
   useEffect(() => {
     const desktopWorkspace = host.current?.closest<HTMLElement>(".desktop-workspace");
-    const header = desktopWorkspace?.querySelector<HTMLElement>(".workspace-header");
-    if (!desktopWorkspace || !header) return;
+    if (!desktopWorkspace) return;
     const updateBottomLimit = () => {
-      const maximum = maxBottomPanelHeight(desktopWorkspace.clientHeight, header.getBoundingClientRect().height);
+      // Cycle has no `.workspace-header` grid row (its header lives inside the panel), so its header height is 0.
+      const headerHeight = desktopWorkspace.querySelector<HTMLElement>(".workspace-header")?.getBoundingClientRect().height ?? 0;
+      const maximum = maxBottomPanelHeight(desktopWorkspace.clientHeight, headerHeight);
       bottomMaxHeightRef.current = maximum;
       setBottomMaxHeight(maximum);
       setRawBottomHeight((current) => clampBottomPanelHeight(current, maximum));

@@ -263,7 +263,7 @@ test("Transaction context menu exposes only transaction-supported capabilities",
   await expect(menu.getByRole("menuitem", { name: "Hide", exact: true })).toBeEnabled();
 });
 
-test("rejects a Transaction resize that would clip a Phase without changing history", async ({ page }) => {
+test("a Transaction start resize past a Phase boundary clamps to the Phase limit and commits once", async ({ page }) => {
   await ready(page);
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path.resolve(process.cwd(), "samples/old/pre-reset-2026-10-02/acceptance-429/sample-transaction-mode-closure.tcd.json"));
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
@@ -281,11 +281,13 @@ test("rejects a Transaction resize that would clip a Phase without changing hist
   await page.mouse.move(phaseBoundary.x, box.y + box.height / 2);
   await page.mouse.up();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  expect(await host.getAttribute("data-canonical-revision")).toBe(beforeRevision);
-  expect(await page.getByTestId("history-status").textContent()).toBe(beforeHistory);
+  // The edge stops at the Phase limit (the preview shows the same clamp) and commits as one History step.
+  await expect(host).not.toHaveAttribute("data-canonical-revision", beforeRevision!);
+  expect(await page.getByTestId("history-status").textContent()).not.toBe(beforeHistory);
+  await expect(page.locator("[data-testid='problem-message'], .operation-feedback-error")).toHaveCount(0);
 });
 
-test("rejects an End resize that would remove the final Phase", async ({ page }) => {
+test("a Transaction End resize past the final Phase start clamps to the Phase limit and commits once", async ({ page }) => {
   await ready(page);
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path.resolve(process.cwd(), "samples/old/pre-reset-2026-10-02/acceptance-429/sample-transaction-mode-closure.tcd.json"));
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
@@ -305,8 +307,10 @@ test("rejects an End resize that would remove the final Phase", async ({ page })
   await page.mouse.move(phaseBoundary.x, box.y + box.height / 2);
   await page.mouse.up();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  expect(await host.getAttribute("data-canonical-revision")).toBe(beforeRevision);
-  expect(await page.getByTestId("history-status").textContent()).toBe(beforeHistory);
+  // The edge stops at the Phase limit (the preview shows the same clamp) and commits as one History step.
+  await expect(host).not.toHaveAttribute("data-canonical-revision", beforeRevision!);
+  expect(await page.getByTestId("history-status").textContent()).not.toBe(beforeHistory);
+  await expect(page.locator("[data-testid='problem-message'], .operation-feedback-error")).toHaveCount(0);
 });
 
 test("persists a valid Transaction resize and its Phases through Save/Open", async ({ page }) => {

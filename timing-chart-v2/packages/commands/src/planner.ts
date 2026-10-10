@@ -23,7 +23,7 @@ import type {
   ValueSignal,
   EnumDefinition,
 } from "@timing-chart-v2/schema";
-import { ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_LABEL_PLACEMENTS, MAX_MEASUREMENT_LANE, annotationPresentationStyleIssues, annotationsForReferences, canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesFromOwner, referencesTo, referencesToAny, referencesToSignal, referencesToTimeGroup, validateEnumDefinition, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
+import { ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_LABEL_PLACEMENTS, MAX_MEASUREMENT_LANE, annotationPresentationStyleIssues, annotationsForReferences, canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesFromOwner, referencesTo, referencesToAny, referencesToSignal, referencesToTimeGroup, validateEnumDefinition, valueSignalValueProblem, valuesCompatibleForType, waveDromLogicToken } from "@timing-chart-v2/schema";
 import type { ChangeSet, SemanticCommand } from "./types.js";
 import type { CommandPolicyCode } from "./policy.js";
 import { mergeChangeSets } from "./changeset.js";
@@ -85,6 +85,66 @@ function transactionPhasesProblem(phases: readonly TransactionPhase[], start: nu
   if (ordered.some((phase) => !phase.name.trim() || !Number.isInteger(phase.start) || !Number.isInteger(phase.end) || phase.start < start || phase.start >= phase.end || phase.end > end)) return "Phases must be named integer-cycle half-open subranges of the Transaction.";
   if (ordered.some((phase, index) => index > 0 && ordered[index - 1]!.end > phase.start)) return "Transaction phases must not overlap.";
   return undefined;
+}
+
+export type TransactionResizeEdge = "start" | "end";
+export type TransactionResizeRange = Readonly<{ min: number; max: number }>;
+export type TransactionEdgeResizeResult =
+  | Readonly<{ ok: true; start: number; end: number; phases: readonly TransactionPhase[] | undefined }>
+  | Readonly<{ ok: false; code: "TIMELINE_OUT_OF_RANGE" | "INVALID_TRANSACTION_PHASE"; message: string }>;
+
+// Phase resize policy (Issue #551), shared by the planner and the live drag
+// preview so the preview can never show a position the planner rejects:
+// only an edge-attached Phase follows its Transaction edge; a gap may absorb
+// the resize; crossing an interior Phase boundary is rejected. Phases are
+// located by their extreme start/end rather than array position, so authored
+// or imported unsorted Phase arrays resize the same way.
+function earliestTransactionPhase(phases: readonly TransactionPhase[]): TransactionPhase {
+  return phases.reduce((best, phase) => (phase.start < best.start || (phase.start === best.start && phase.end < best.end) ? phase : best));
+}
+
+function latestTransactionPhase(phases: readonly TransactionPhase[]): TransactionPhase {
+  return phases.reduce((best, phase) => (phase.end > best.end || (phase.end === best.end && phase.start > best.start) ? phase : best));
+}
+
+/** Inclusive range of values the planner accepts for one edge of a Transaction. */
+export function transactionResizeRange(transaction: Pick<Transaction, "start" | "end" | "phases">, edge: TransactionResizeEdge, cycleCount: number): TransactionResizeRange {
+  const phases = transaction.phases;
+  if (edge === "start") {
+    let max = transaction.end - 1;
+    if (phases && phases.length > 0) {
+      const first = earliestTransactionPhase(phases);
+      max = Math.min(max, first.start === transaction.start ? first.end - 1 : first.start);
+    }
+    return { min: 0, max };
+  }
+  let min = transaction.start + 1;
+  if (phases && phases.length > 0) {
+    const last = latestTransactionPhase(phases);
+    min = Math.max(min, last.end === transaction.end ? last.start + 1 : last.end);
+  }
+  return { min, max: cycleCount };
+}
+
+/** Applies one edge resize with the Phase policy above. Pure: returns the resulting range and Phases or the rejection. */
+export function resizeTransactionEdge(transaction: Transaction, edge: TransactionResizeEdge, value: number, cycleCount: number): TransactionEdgeResizeResult {
+  const start = edge === "start" ? value : transaction.start;
+  const end = edge === "end" ? value : transaction.end;
+  if (!Number.isInteger(value) || start < 0 || start >= end || end > cycleCount) return { ok: false, code: "TIMELINE_OUT_OF_RANGE", message: "Resized Transaction must remain a non-empty half-open range." };
+  const phases = transaction.phases;
+  if (!phases || phases.length === 0) return { ok: true, start, end, phases };
+  if (edge === "start") {
+    const first = earliestTransactionPhase(phases);
+    if (start >= first.end) return { ok: false, code: "INVALID_TRANSACTION_PHASE", message: "Transaction start cannot cross the first Phase boundary." };
+    if (first.start === transaction.start) return { ok: true, start, end, phases: phases.map((phase) => phase === first ? { ...phase, start } : phase) };
+    if (first.start < start) return { ok: false, code: "INVALID_TRANSACTION_PHASE", message: "Transaction resize would clip a Phase; resize the Phase explicitly first." };
+    return { ok: true, start, end, phases };
+  }
+  const last = latestTransactionPhase(phases);
+  if (end <= last.start) return { ok: false, code: "INVALID_TRANSACTION_PHASE", message: "Transaction end cannot cross the last Phase boundary." };
+  if (last.end === transaction.end) return { ok: true, start, end, phases: phases.map((phase) => phase === last ? { ...phase, end } : phase) };
+  if (last.end > end) return { ok: false, code: "INVALID_TRANSACTION_PHASE", message: "Transaction resize would clip a Phase; resize the Phase explicitly first." };
+  return { ok: true, start, end, phases };
 }
 
 function replacementRowsOrEmpty(document: unknown): readonly RowId[] {
@@ -397,6 +457,24 @@ function deleteAnnotation(annotation: Annotation, start: number, end: number, ne
   return mapped as unknown as Annotation;
 }
 
+/**
+ * After a Timeline delete maps Time Group ranges, a child can end up with exactly its parent's range (the deleted span was
+ * the gap between them). Such a child can no longer be told apart or renamed (TIME_GROUP_EQUAL_RANGE), so it is removed the
+ * same way a zero-length group is: its own children move up to its parent, and its owned Label Anchors are released by the
+ * caller's retained-group check.
+ */
+function dropCollapsedNestedTimeGroups(groups: readonly TimeGroup[]): TimeGroup[] {
+  let current: readonly TimeGroup[] = groups;
+  for (;;) {
+    const collapsed = current.find((group) => {
+      const parent = current.find((item) => item.id === group.parentId);
+      return parent !== undefined && parent.start === group.start && parent.end === group.end;
+    });
+    if (!collapsed) return [...current];
+    current = promoteTimeGroupChildren(current, collapsed);
+  }
+}
+
 function deleteTimeline(document: CanonicalDocument, start: number, end: number): CanonicalDocument {
   const nextCycleCount = document.timeline.cycleCount - (end - start);
   const reservedIds = new Set(canonicalEntityIds(document));
@@ -412,7 +490,7 @@ function deleteTimeline(document: CanonicalDocument, start: number, end: number)
   const annotations = document.annotations.map((annotation) => deleteAnnotation(annotation, start, end, nextCycleCount)).filter((annotation): annotation is Annotation => annotation !== undefined);
   const retainedAnnotationIds = new Set(annotations.map((annotation) => annotation.id));
   const annotationGroups = (document.annotationGroups ?? []).map((group) => ({ ...group, annotationIds: group.annotationIds.filter((annotationId) => retainedAnnotationIds.has(annotationId)) }));
-  const timeGroups = document.timeGroups.map((group) => deleteRange(group, start, end)).filter((group): group is TimeGroup => group !== undefined);
+  const timeGroups = dropCollapsedNestedTimeGroups(document.timeGroups.map((group) => deleteRange(group, start, end)).filter((group): group is TimeGroup => group !== undefined));
   const transactions = document.transactions.map((transaction): Transaction | undefined => {
     const mapped = deleteRange(transaction, start, end);
     if (!mapped) return undefined;
@@ -525,6 +603,13 @@ function cloneStableId<T extends string>(sourceId: T, commandId: string, used: S
 
 function sameValue(left: SignalValueChange | undefined, right: SignalValueChange | undefined): boolean {
   return left?.value === right?.value && left?.comment === right?.comment && left?.displayFormat === right?.displayFormat;
+}
+
+/** Logic-token Signals compare by the schema's canonical token (case-insensitive, with the documented aliases), so restating `x` as `X` is a no-op rather than a redundant change point. Other value kinds keep strict equality. */
+function sameValueToken(type: ValueSignal["type"], left: string | number, right: string | number): boolean {
+  if (left === right) return true;
+  const leftToken = waveDromLogicToken(type, left);
+  return leftToken !== undefined && leftToken === waveDromLogicToken(type, right);
 }
 
 /** Sparse equivalent of the old dense per-cycle rebuild (#855): the output is described as source intervals placed at output offsets;
@@ -643,16 +728,20 @@ function duplicateTimelineRange(document: CanonicalDocument, command: Extract<Se
   const ownedResumeAnchorIds = new Set(sourceGroups.map((group) => group.presentation?.resumeLabelAnchorId).filter((id) => id !== undefined));
   const sourceLabels = document.timeline.labelAnchors.filter((anchor) => (anchor.source >= command.start && anchor.source < command.end) || (anchor.source === command.end && ownedResumeAnchorIds.has(anchor.id)));
   const labelIds = new Map(sourceLabels.map((anchor) => [anchor.id, cloneId(anchor.id)]));
-  const clonedGroups = sourceGroups.map((group) => ({
-    ...group,
-    ...(group.parentId !== undefined && groupIds.has(group.parentId) ? { parentId: groupIds.get(group.parentId)! } : {}),
-    id: groupIds.get(group.id)!,
-    start: command.at + group.start - command.start,
-    end: command.at + group.end - command.start,
-    ...(group.presentation?.resumeLabelAnchorId && labelIds.has(group.presentation.resumeLabelAnchorId)
-      ? { presentation: { ...group.presentation, resumeLabelAnchorId: labelIds.get(group.presentation.resumeLabelAnchorId)! } }
-      : {}),
-  }));
+  // A clone keeps its source parent only when that parent is cloned too; otherwise (parent outside the range) it becomes a root instead of carrying a dangling parent that fails containment.
+  const clonedGroups = sourceGroups.map((source) => {
+    const { parentId: sourceParent, ...group } = source;
+    return {
+      ...group,
+      ...(sourceParent !== undefined && groupIds.has(sourceParent) ? { parentId: groupIds.get(sourceParent)! } : {}),
+      id: groupIds.get(group.id)!,
+      start: command.at + group.start - command.start,
+      end: command.at + group.end - command.start,
+      ...(group.presentation?.resumeLabelAnchorId && labelIds.has(group.presentation.resumeLabelAnchorId)
+        ? { presentation: { ...group.presentation, resumeLabelAnchorId: labelIds.get(group.presentation.resumeLabelAnchorId)! } }
+        : {}),
+    };
+  });
   const clonedLabels = sourceLabels.map((anchor) => ({ ...anchor, id: labelIds.get(anchor.id)!, source: command.at + anchor.source - command.start, ...(anchor.ownerTimeGroupId && groupIds.has(anchor.ownerTimeGroupId) ? { ownerTimeGroupId: groupIds.get(anchor.ownerTimeGroupId)! } : { ownerTimeGroupId: undefined }) })).map((anchor) => {
     if (anchor.ownerTimeGroupId !== undefined) return anchor;
     const { ownerTimeGroupId: _owner, ...rest } = anchor;
@@ -951,12 +1040,13 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       const index = document.signals.findIndex((signal) => signal.id === command.signalId);
       const signal = document.signals[index];
       if (!signal || signal.type === "clock" || signal.type === "commentRow") return fail("invalid", "SIGNAL_NOT_EDITABLE", "$.signalId", "Value changes require a non-clock timing signal.");
-      if (!Number.isFinite(command.start) || command.start < 0 || command.start >= document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.start", "Change point is outside the timeline.");
+      if (!Number.isInteger(command.start)) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.start", "Change point must be an integer cycle.");
+      if (command.start < 0 || command.start >= document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.start", "Change point is outside the timeline.");
       const valueProblem = valueSignalValueProblem(signal.type, command.value);
       if (valueProblem) return fail("invalid", "UNSUPPORTED_SIGNAL_VALUE", "$.value", valueProblem);
       if (command.displayFormat !== undefined && signal.type !== "bus") return fail("invalid", "DISPLAY_FORMAT_NOT_SUPPORTED", "$.displayFormat", "A per-value display format applies only to bus signals.");
       const existing = signal.values.find((change) => change.start === command.start);
-      if (existing?.value === command.value && existing.comment === command.comment && existing.displayFormat === command.displayFormat) return fail("no-op", "NO_OP", "$", "Signal value is unchanged.");
+      if (existing !== undefined && sameValueToken(signal.type, existing.value, command.value) && existing.comment === command.comment && existing.displayFormat === command.displayFormat) return fail("no-op", "NO_OP", "$", "Signal value is unchanged.");
       const allocation = existing?.id === undefined ? valueChangeIdAllocator.allocate(signal.id, signal.values, new Set(canonicalEntityIds(document))) : undefined;
       const change = { id: existing?.id ?? allocation!.id, start: command.start, value: command.value, ...(command.displayFormat === undefined ? {} : { displayFormat: command.displayFormat }), ...(command.comment === undefined ? {} : { comment: command.comment }) };
       const values = [...signal.values.filter((item) => item.start !== command.start), change].sort((left, right) => left.start - right.start);
@@ -1024,7 +1114,7 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       const valueProblem = valueSignalValueProblem(signal.type, command.value);
       if (valueProblem) return fail("invalid", "UNSUPPORTED_SIGNAL_VALUE", "$.value", valueProblem);
       if (command.displayFormat !== undefined && signal.type !== "bus") return fail("invalid", "DISPLAY_FORMAT_NOT_SUPPORTED", "$.displayFormat", "A per-value display format applies only to bus signals.");
-      if (source.start === command.start && source.value === command.value && source.comment === command.comment && source.displayFormat === command.displayFormat) return fail("no-op", "NO_OP", "$", "Value change is unchanged.");
+      if (source.start === command.start && sameValueToken(signal.type, source.value, command.value) && source.comment === command.comment && source.displayFormat === command.displayFormat) return fail("no-op", "NO_OP", "$", "Value change is unchanged.");
       const allocation = source.id === undefined ? valueChangeIdAllocator.allocate(signal.id, signal.values, new Set(canonicalEntityIds(document))) : undefined;
       const replacement = { id: source.id ?? allocation!.id, start: command.start, value: command.value, ...(command.displayFormat === undefined ? {} : { displayFormat: command.displayFormat }), ...(command.comment === undefined ? {} : { comment: command.comment }) };
       const values = signal.values.map((change) => change === source ? replacement : change).sort((left, right) => left.start - right.start);
@@ -1579,7 +1669,24 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       if (!name) return fail("invalid", "INVALID_NAME", "$.name", "Transaction name cannot be empty.");
       if (!Number.isInteger(command.start) || !Number.isInteger(command.end) || command.start < 0 || command.start >= command.end || command.end > document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$", "Transaction must use a half-open source-time range.");
       const lane = command.clearLaneId ? undefined : command.laneId === undefined ? transaction.laneId : laneId || undefined;
-      const phases = command.clearPhases ? undefined : command.phases === undefined ? transaction.phases : command.phases;
+      // Start/End edits that carry no explicit Phases follow the same edge
+      // policy as an edge drag (see resizeTransactionEdge), so an edge-attached
+      // Phase moves with its edge instead of being rejected as out of range.
+      // The edge that moves outward goes first so intermediate ranges stay valid.
+      let derivedPhases: readonly TransactionPhase[] | undefined = transaction.phases;
+      if (!command.clearPhases && command.phases === undefined && transaction.phases && transaction.phases.length > 0 &&(command.start !== transaction.start || command.end !== transaction.end)) {
+        let working: Transaction = transaction;
+        const edges: readonly TransactionResizeEdge[] = command.end > transaction.end ? ["end", "start"] : ["start", "end"];
+        for (const edge of edges) {
+          const value = edge === "start" ? command.start : command.end;
+          if (value === (edge === "start" ? working.start : working.end)) continue;
+          const step = resizeTransactionEdge(working, edge, value, document.timeline.cycleCount);
+          if (!step.ok) return fail("invalid", step.code, "$.phases", step.message);
+          working = { ...working, start: step.start, end: step.end, ...(step.phases ? { phases: step.phases } : {}) };
+        }
+        derivedPhases = working.phases;
+      }
+      const phases = command.clearPhases ? undefined : command.phases === undefined ? derivedPhases : command.phases;
       if (phases && transactionPhasesProblem(phases, command.start, command.end)) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.phases", transactionPhasesProblem(phases, command.start, command.end)!);
       if (command.groupId !== undefined && !(document.transactionGroups ?? []).some((group) => group.id === command.groupId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.groupId", "Transaction Group does not exist.");
       const groupId = command.clearGroupId ? undefined : command.groupId === undefined ? transaction.groupId : command.groupId;
@@ -1616,29 +1723,10 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       const index = document.transactions.findIndex((item) => item.id === command.transactionId);
       const transaction = document.transactions[index];
       if (!transaction) return fail("invalid", "TRANSACTION_NOT_FOUND", "$.transactionId", `Transaction '${command.transactionId}' does not exist.`);
-      const start = command.edge === "start" ? command.value : transaction.start;
-      const end = command.edge === "end" ? command.value : transaction.end;
-      if (!Number.isInteger(command.value) || start < 0 || start >= end || end > document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.value", "Resized Transaction must remain a non-empty half-open range.");
+      const resized = resizeTransactionEdge(transaction, command.edge, command.value, document.timeline.cycleCount);
+      if (!resized.ok) return fail("invalid", resized.code, "$.value", resized.message);
+      const { start, end, phases } = resized;
       if (start === transaction.start && end === transaction.end) return fail("no-op", "NO_OP", "$", "Transaction edge is unchanged.");
-      // Phase resize policy (Issue #551): preserve the authored Phase
-      // structure. Only an edge-attached Phase may follow the corresponding
-      // Transaction edge; a gap may absorb the resize, while crossing an
-      // interior Phase boundary is rejected atomically.
-      let phases = transaction.phases;
-      if (phases && phases.length > 0) {
-        const first = phases[0]!;
-        const last = phases[phases.length - 1]!;
-        const phaseCount = phases.length;
-        if (command.edge === "start") {
-          if (start >= first.end) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.value", "Transaction start cannot cross the first Phase boundary.");
-          if (first.start === transaction.start) phases = phases.map((phase, phaseIndex) => phaseIndex === 0 ? { ...phase, start } : phase);
-          else if (first.start < start) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.value", "Transaction resize would clip a Phase; resize the Phase explicitly first.");
-        } else {
-          if (end <= last.start) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.value", "Transaction end cannot cross the last Phase boundary.");
-          if (last.end === transaction.end) phases = phases.map((phase, phaseIndex) => phaseIndex === phaseCount - 1 ? { ...phase, end } : phase);
-          else if (last.end > end) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.value", "Transaction resize would clip a Phase; resize the Phase explicitly first.");
-        }
-      }
       const next = phases === undefined ? { ...transaction, start, end } : { ...transaction, start, end, phases };
       const transactions = [...document.transactions]; transactions[index] = next;
       const changeSet: ChangeSet = { transactionSemantics: [transaction.id], minimapOverview: true };
@@ -1793,7 +1881,7 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
           { ...currentScale, ...command.scale },
         )
         : { ...currentScale, ...command.scale };
-      if (!Number.isFinite(scale.clockCyclesPerTransactionCycle) || scale.clockCyclesPerTransactionCycle <= 0 || !Number.isInteger(scale.majorInterval) || scale.majorInterval < 1 || !Number.isInteger(scale.minorInterval) || scale.minorInterval < 1) return fail("invalid", "INVALID_TRANSACTION_TIME_SCALE", "$.scale", "Transaction time scale must use positive finite ratio and positive integer intervals.");
+      if (!Number.isFinite(scale.clockCyclesPerTransactionCycle) || scale.clockCyclesPerTransactionCycle <= 0 || !Number.isInteger(scale.clockCyclesPerTransactionCycle) || !Number.isInteger(scale.majorInterval) || scale.majorInterval < 1 || !Number.isInteger(scale.minorInterval) || scale.minorInterval < 1) return fail("invalid", "INVALID_TRANSACTION_TIME_SCALE", "$.scale", "Transaction time scale must use positive finite ratio and positive integer intervals.");
       if (semanticEqual(currentScale ?? {}, scale)) return fail("no-op", "NO_OP", "$", "Transaction time scale is unchanged.");
       return { ok: true, document: { ...document, transactionTimeScale: scale }, changeSet: { transactionSemantics: document.transactions.map((item) => item.id), transactionTimeScale: true }, inverseChangeSet: { transactionSemantics: document.transactions.map((item) => item.id), transactionTimeScale: true } };
     }
@@ -2248,8 +2336,19 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       if (!isStableId(group.id)) return fail("invalid", "INVALID_STABLE_ID", "$.timeGroup.id", "Time Group ID must be stable.");
       if (document.timeGroups.some((item) => item.id === group.id)) return fail("invalid", "DUPLICATE_ID", "$.timeGroup.id", `Time Group '${group.id}' already exists.`);
       if (!Number.isInteger(group.start) || !Number.isInteger(group.end) || group.start < 0 || group.start >= group.end || group.end > document.timeline.cycleCount) return fail("invalid", "INVALID_TIME_GROUP_RANGE", "$.timeGroup", "Time Group must be a non-empty half-open range.");
-      const nextDocument = { ...document, timeGroups: [...document.timeGroups, group] };
-      const changeSet: ChangeSet = { timeGroupSemantics: [group.id], geometryScreenX: true, minimapOverview: true, ...(group.presentation?.collapsed ? { waveSemantics: timingSignalIds(nextDocument), geometryLocal: timingSignalIds(nextDocument) } : {}) };
+      // Same hierarchy rules as timeGroup.groupRange (shared resolver): partial overlaps and equal ranges are rejected, the innermost containing group becomes the parent, and enclosed groups are adopted.
+      const resolution = resolveTimeGroupRange(document, { start: group.start, end: group.end });
+      if (!resolution.ok) return fail("invalid", resolution.code, "$.timeGroup", resolution.message);
+      const { parentId: _callerParent, ...withoutParent } = group;
+      const nextGroup: TimeGroup = { ...withoutParent, ...(resolution.parentId === undefined ? {} : { parentId: resolution.parentId }) };
+      const changed = [group.id];
+      const adoptedGroups = document.timeGroups.map((item) => {
+        if (!resolution.enclosedIds.has(item.id) || (item.parentId !== undefined && resolution.enclosedIds.has(item.parentId))) return item;
+        changed.push(item.id);
+        return { ...item, parentId: group.id };
+      });
+      const nextDocument = { ...document, timeGroups: [...adoptedGroups, nextGroup] };
+      const changeSet: ChangeSet = { timeGroupSemantics: changed, geometryScreenX: true, minimapOverview: true, ...(group.presentation?.collapsed ? { waveSemantics: timingSignalIds(nextDocument), geometryLocal: timingSignalIds(nextDocument) } : {}) };
       return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
     }
     case "timeGroup.update": {

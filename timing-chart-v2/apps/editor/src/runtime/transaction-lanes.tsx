@@ -2,6 +2,7 @@ import { UNGROUPED_DISCLOSURE_KEY, type TransactionDisclosure } from "../workspa
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import type { Bookmark, BookmarkId, CanonicalDocument, Transaction, TransactionId, TransactionPhaseId } from "@timing-chart-v2/schema";
 import { transactionLaneIdentityKey } from "@timing-chart-v2/projection";
+import { resizeTransactionEdge, transactionResizeRange } from "@timing-chart-v2/commands";
 import { EditorIcon } from "../editor-icon.js";
 import type { TransactionLaneCommandActions } from "../application/editor-surface-command-controller.js";
 import { InlineNameInput } from "../inline-name-input.js";
@@ -107,27 +108,30 @@ type GroupHeaderBand = { readonly key: string; readonly labelTop: number; readon
 type TransactionDragEdge = "body" | "start" | "end";
 type TransactionPreview = Readonly<{ start: number; end: number }>;
 
+// Edge drags clamp to the same range the planner accepts (shared helper in
+// @timing-chart-v2/commands), so the preview always matches what commits.
 function previewTransaction(transaction: Transaction, edge: TransactionDragEdge, value: number, cycleCount: number): TransactionPreview {
   if (edge === "body") {
     const duration = transaction.end - transaction.start;
     const start = Math.max(0, Math.min(cycleCount - duration, value));
     return { start, end: start + duration };
   }
-  return edge === "start"
-    ? { start: Math.max(0, Math.min(value, transaction.end - 1)), end: transaction.end }
-    : { start: transaction.start, end: Math.min(cycleCount, Math.max(value, transaction.start + 1)) };
+  const range = transactionResizeRange(transaction, edge, cycleCount);
+  const clamped = Math.round(Math.max(range.min, Math.min(range.max, value)));
+  const resized = resizeTransactionEdge(transaction, edge, clamped, cycleCount);
+  if (!resized.ok) return { start: transaction.start, end: transaction.end };
+  return { start: resized.start, end: resized.end };
 }
 
-function previewPhases(transaction: Transaction, preview: TransactionPreview, edge: TransactionDragEdge): readonly NonNullable<Transaction["phases"]>[number][] | undefined {
+function previewPhases(transaction: Transaction, preview: TransactionPreview, edge: TransactionDragEdge, cycleCount: number): readonly NonNullable<Transaction["phases"]>[number][] | undefined {
   if (!transaction.phases) return undefined;
   if (edge === "body") {
     const delta = preview.start - transaction.start;
     return transaction.phases.map((phase) => ({ ...phase, start: phase.start + delta, end: phase.end + delta }));
   }
-  // The semantic resize command rejects any edge change that would clip a
-  // Phase. Keep the live preview non-destructive as well; showing clipped or
-  // disappearing phases before a guaranteed reject is misleading.
-  return transaction.phases;
+  // An edge-attached Phase follows its Transaction edge, exactly as the committed resize does.
+  const resized = resizeTransactionEdge(transaction, edge, edge === "start" ? preview.start : preview.end, cycleCount);
+  return resized.ok ? resized.phases : transaction.phases;
 }
 
 /** #750: under cyclesPerTC compression bars get narrow. Below these widths the inline label would be clipped/unreadable, so it is omitted
@@ -201,7 +205,7 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
   const resolveSegmentBoundary = (cycle: number, direction: -1 | 1) => resolveBoundaryX(cycle) ?? resolveVisibleBoundary(cycle, direction);
   const startX = resolveBoundaryX(current.start) ?? (startHiddenFold ? resolveVisibleBoundary(startHiddenFold[1], 1) : undefined);
   const endX = resolveBoundaryX(current.end) ?? (endHiddenFold ? resolveVisibleBoundary(endHiddenFold[0], -1) : undefined);
-  const phases = preview === undefined ? transaction.phases : previewPhases(transaction, preview, drag?.edge ?? "body");
+  const phases = preview === undefined ? transaction.phases : previewPhases(transaction, preview, drag?.edge ?? "body", cycleCount);
   useEffect(() => {
     return () => {
       if (previewFrame.current !== undefined) cancelAnimationFrame(previewFrame.current);
