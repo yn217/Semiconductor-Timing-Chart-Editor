@@ -48,8 +48,8 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   expect((await viewMode.boundingBox())?.y ?? -1).toBe(0);
   await expect(viewMode).toContainText("View Mode:");
   await expect(viewMode.getByRole("button", { name: "Cycle" })).toHaveClass(/active/);
-  await expect(page.locator(".ribbon-major-group")).toHaveCount(8);
-  for (const name of ["File", "Edit", "Time", "Transaction", "Layout", "Zoom", "Display", "Options"]) {
+  await expect(page.locator(".ribbon-major-group")).toHaveCount(9);
+  for (const name of ["File", "Edit", "Draw", "Time", "Transaction", "Layout", "Zoom", "Display", "Options"]) {
     await expect(page.locator(`[data-major-group='${name}']`)).toBeVisible();
   }
   // #416: "Open Timeline interval editor" (a pure setRibbonTab("Timeline")

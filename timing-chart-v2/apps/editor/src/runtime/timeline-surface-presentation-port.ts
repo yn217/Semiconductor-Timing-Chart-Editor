@@ -3,6 +3,7 @@ import type { AnnotationId, GroupId, SignalGroupStyle, SignalId } from "@timing-
 import type { TimelineViewportRuntime } from "./timeline-viewport-runtime.js";
 import type { SelectedClockEdge } from "./edge-counter-projection.js";
 import type { ScenarioSignalDifference } from "@timing-chart-v2/schema";
+import type { WaveformPencilMode } from "../waveform-pencil-mode.js";
 
 type TimelineRange = Readonly<{ start: number; end: number }>;
 
@@ -30,6 +31,7 @@ export interface TimelineSurfacePresentationPort {
   readonly scenarioDifferencesRef: MutableRefObject<readonly ScenarioSignalDifference[]>;
   readonly gridEnabledRef: MutableRefObject<boolean>;
   readonly snapEnabledRef: MutableRefObject<boolean>;
+  readonly waveformPencil: WaveformPencilMode;
   readonly treeFocusRowIdRef: MutableRefObject<string | undefined>;
   readonly suppressCanvasClickRef: MutableRefObject<boolean>;
   readonly menuOriginRef: MutableRefObject<HTMLElement | null>;

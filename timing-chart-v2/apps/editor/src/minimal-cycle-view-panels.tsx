@@ -1,3 +1,4 @@
+import { BottomWaveformPencilButton } from "./waveform-pencil-mode.js";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { RefObject } from "react";
@@ -392,6 +393,7 @@ export function BottomEditorPanel<Tab extends string>({ tabs, activeTab, onSelec
       {(pinned || !followSelection) && <output className="bottom-target-mode" data-testid="bottom-target-mode" aria-live="polite">
         {pinned ? `Pinned${targetLabel ? `: ${targetLabel}` : " content"}` : `Fixed target${targetLabel ? `: ${targetLabel}` : ""}`}
       </output>}
+      <BottomWaveformPencilButton />
       <span className="bottom-settings-anchor" ref={settingsRef}>
         <button type="button" className="bottom-settings-button" data-testid="bottom-settings" aria-label="Bottom Panel settings" aria-haspopup="true" aria-expanded={settingsOpen} title="Bottom panel behavior: Follow Selection, Pin" onClick={() => setSettingsOpen((open) => !open)}><RibbonIcon name="i-settings" /></button>
         <div className="bottom-settings-popover" data-testid="bottom-settings-popover" role="dialog" aria-label="Bottom Panel Settings" hidden={!settingsOpen} onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); setSettingsOpen(false); settingsRef.current?.querySelector<HTMLElement>(".bottom-settings-button")?.focus(); } }}>
