@@ -80,7 +80,8 @@ test("Transaction crossing a collapsed TimeGroup renders an Axis Break gap", asy
   const gapBox = await gap.boundingBox();
   expect(barBox?.width).toBeGreaterThan(0);
   expect(gapBox?.width).toBeGreaterThan(0);
-  await bar.click();
+  // The lower strip of a bar is its Phase hit target; click the unoccluded upper surface.
+  await bar.click({ position: { x: 24, y: 4 } });
   await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("1"); // 10 cycles at 10 cycles/TC
   await expect(page.getByTestId("inspector").getByLabel("Transaction end")).toHaveValue("6");
 });
@@ -168,7 +169,7 @@ test("Combined View keeps the shared fold visible in the Transaction pane", asyn
   await expect(page.locator(".split-transaction-pane")).toBeVisible();
   await expect(page.locator(".split-transaction-pane .transaction-axis-break-gap").first()).toBeVisible();
   await expect(page.locator(".split-transaction-pane [data-transaction-id='txn_read0']")).toBeVisible();
-  await page.locator(".split-transaction-pane .transaction-bookmark-markers [data-bookmark-id='combined-bookmark']").click();
+  await page.locator(".split-transaction-pane .transaction-bookmark-markers [data-bookmark-id='combined-bookmark']").click({ position: { x: 3, y: 8 } });
   await page.getByRole("tab", { name: "Bookmarks", exact: true }).click();
   await expect(page.getByTestId("bookmark-row-combined-bookmark")).toHaveAttribute("data-selected", "true");
 });
@@ -182,6 +183,8 @@ test("Transaction MiniMap marks collapsed source ranges without changing viewpor
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "minimap-fold.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(value)) });
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  // MiniMap is off by default (v8 reference); turn it on from the Home ribbon.
+  await page.getByTestId("home-minimap-toggle").check();
   const minimap = page.getByTestId("minimap");
   await expect(minimap).toHaveAttribute("data-time-policy", "full-source-overview");
   await expect(minimap.getByTestId("minimap-fold-fold-20-40")).toBeVisible();
@@ -240,6 +243,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     for (const heading of ["Name", "Group", "Lane", "Start (TC)", "End (TC)", "Duration (TC)", "# Phases", "Linked Signals", "Color", "Description"]) {
       await expect(page.locator(".transaction-list-header-cells")).toContainText(heading);
     }
+    await page.getByTestId("home-minimap-toggle").check();
     await expect(page.locator(".inspector > .minimap .minimap-segment-transaction").first()).toBeVisible();
     await page.screenshot({ path: `test-results/transaction-composition-${viewport.width}x${viewport.height}.png`, fullPage: true });
   });
@@ -255,7 +259,8 @@ test("Transaction canvas body and edge drags commit through the semantic command
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await page.getByRole("tab", { name: "Transaction", exact: true }).click();
   const bar = page.locator('[data-transaction-id="txn_read0"]');
-  await bar.click();
+  // The lower strip of a bar is its Phase hit target; click the unoccluded upper surface.
+  await bar.click({ position: { x: 24, y: 4 } });
   const inspector = page.getByTestId("inspector");
   const initialStart = await inspector.getByLabel("Transaction start").inputValue();
   const body = bar.locator(":scope > span").first();
@@ -276,7 +281,7 @@ test("Transaction canvas body and edge drags commit through the semantic command
   const startBox = await startHandle.boundingBox();
   expect(startBox).not.toBeNull();
   const beforeResize = await inspector.getByLabel("Transaction start").inputValue();
-  await page.mouse.move(startBox!.x + startBox!.width / 2, startBox!.y + startBox!.height / 2);
+  await page.mouse.move(startBox!.x + startBox!.width / 2, startBox!.y + 6);
   await page.mouse.down();
   await page.mouse.move(await tickX(24), startBox!.y + startBox!.height / 2, { steps: 6 });
   await page.mouse.up();
@@ -289,7 +294,7 @@ test("Transaction canvas body and edge drags commit through the semantic command
   const endBox = await endHandle.boundingBox();
   expect(endBox).not.toBeNull();
   const beforeEndResize = await inspector.getByLabel("Transaction end").inputValue();
-  await page.mouse.move(endBox!.x + endBox!.width / 2, endBox!.y + endBox!.height / 2);
+  await page.mouse.move(endBox!.x + endBox!.width / 2, endBox!.y + 6);
   await page.mouse.down();
   await page.mouse.move(await tickX(66), endBox!.y + endBox!.height / 2, { steps: 6 });
   await page.mouse.up();
@@ -376,14 +381,15 @@ test("Resizing a folded Transaction preserves the opposite source boundary and u
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   const bar = page.locator('[data-transaction-id="txn_read0"]');
-  await bar.click();
+  // The lower strip of a bar is its Phase hit target; click the unoccluded upper surface.
+  await bar.click({ position: { x: 24, y: 4 } });
   const inspector = page.getByTestId("inspector");
   const startHandle = bar.locator(":scope > i[data-edge='start']");
   const box = await startHandle.boundingBox();
   expect(box).not.toBeNull();
   const barBox = await bar.boundingBox();
   expect(barBox).not.toBeNull();
-  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + 6);
   await page.mouse.down();
   // Move across a real source boundary. A fixed pixel delta can remain in
   // the same cycle at different viewport/zoom configurations and would make
@@ -509,8 +515,8 @@ test("Center additive selection projects to Tree and Bottom", async ({ page }) =
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   const read = page.locator('[data-transaction-id="demo_txn_read"]');
   const write = page.locator('[data-transaction-id="demo_txn_write"]');
-  await read.click();
-  await write.click({ modifiers: ["Control"] });
+  await read.click({ position: { x: 24, y: 4 } });
+  await write.click({ modifiers: ["Control"], position: { x: 24, y: 4 } });
   await expect(read).toHaveAttribute("data-selected", "true");
   await expect(write).toHaveAttribute("data-selected", "true");
   await expect(page.getByTestId("transaction-left-tree-row-demo_txn_read")).toHaveAttribute("data-selected", "true");

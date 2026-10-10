@@ -57,7 +57,8 @@ test("selection highlight still visibly overrides a Transaction's own color", as
   await openSample(page);
   const bar = page.locator('[data-transaction-id="txn_execute0"]');
   const before = await bar.evaluate((el) => getComputedStyle(el).backgroundColor);
-  await bar.click();
+  // The bar centre is covered by its Phase hit targets; click the bar body clear of them.
+  await bar.click({ position: { x: 24, y: 4 } });
   const after = await bar.evaluate((el) => getComputedStyle(el).backgroundColor);
   expect(after).not.toBe(before);
 });
