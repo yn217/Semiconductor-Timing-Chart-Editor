@@ -209,8 +209,10 @@ export function useClipboardActions({ application, selection }: { application: E
     const allocateId = createEntityIdAllocator(current);
     const selectedSignalId = selection.refs.signalId.current;
     const indexes = indexResolver.signals(current);
+    // Paste goes into a selected Group (its header), like Cut-then-Paste does; Duplicate stays next to its source.
+    const selectedGroupId = operation === "paste" ? selection.refs.state.current.groupId : undefined;
     const selectedGroup = placement === "current-selection"
-      ? resolveClipboardSignalGroupTarget({ groups: current.signalGroups, groupsById: indexes.groupsById, ownerBySignalId: indexes.owner, ...(selectedSignalId === undefined ? {} : { selectedSignalId }), fallbackToLast: false })
+      ? resolveClipboardSignalGroupTarget({ groups: current.signalGroups, groupsById: indexes.groupsById, ownerBySignalId: indexes.owner, ...(selectedGroupId === undefined ? {} : { selectedGroupId }), ...(selectedSignalId === undefined ? {} : { selectedSignalId }), fallbackToLast: false })
       : undefined;
     const groupsById = indexes.groupsById;
     const createdByGroup = new Map<GroupId, { target: SignalGroup; signals: Signal[] }>();

@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 450 spec files and 1342 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 450 spec files and 1343 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1284/1342 cases reviewed.
+Semantic review progress: 1285/1343 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 634 |
 | `nightly` | 241 |
 | `performance` | 73 |
-| `pr` | 434 |
+| `pr` | 435 |
 | `visual` | 181 |
 
 ## Top recorded per-case runtimes
@@ -403,7 +403,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `resource-budget-ui-routes.spec.ts` | 8 | 7/8 reviewed |
 | `result-aware-create-effects.spec.ts` | 2 | 2/2 reviewed |
 | `review-checks-refresh.spec.ts` | 2 | 2/2 reviewed |
-| `review-followups.spec.ts` | 2 | 2/2 reviewed |
+| `review-followups.spec.ts` | 3 | 3/3 reviewed |
 | `review-workflow.spec.ts` | 3 | 3/3 reviewed |
 | `ribbon-caption-layout.spec.ts` | 2 | 2/2 reviewed |
 | `ribbon-cursor-ab.spec.ts` | 4 | 4/4 reviewed |
