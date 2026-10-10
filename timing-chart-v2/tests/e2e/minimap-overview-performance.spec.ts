@@ -32,6 +32,7 @@ test("Bookmark-only document commits do not compare the unchanged MiniMap Signal
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   // The static overview is built in an idle callback after ready; read baselines only once it exists.
+  await page.getByTestId("home-minimap-toggle").check(); // MiniMap is off by default
   await expect(page.getByTestId("minimap")).toHaveAttribute("aria-busy", "false");
   const before = await readState(page);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
@@ -58,6 +59,7 @@ test("MiniMap viewport updates do not rebuild the static overview", async ({ pag
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "wide.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(wide)) });
   await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await page.getByTestId("home-minimap-toggle").check(); // MiniMap is off by default
   await expect(page.getByTestId("minimap")).toHaveAttribute("aria-busy", "false");
   const minimap = page.getByTestId("minimap");
   const before = await readState(page);
@@ -107,6 +109,7 @@ for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }])
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   // The static overview is built in an idle callback after ready; read baselines only once it exists.
+  await page.getByTestId("home-minimap-toggle").check(); // MiniMap is off by default
   await expect(page.getByTestId("minimap")).toHaveAttribute("aria-busy", "false");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const minimap = page.getByTestId("minimap");

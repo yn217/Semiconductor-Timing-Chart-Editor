@@ -56,6 +56,7 @@ test("MiniMap viewport indicator follows live scroll, resize, pan and remount st
   await ready(page);
   await page.getByRole("button", { name: "Cycle", exact: true }).click();
   const viewport = page.getByTestId("cycle-viewport");
+  await page.getByTestId("home-minimap-toggle").check(); // MiniMap is off by default
   const minimap = page.getByTestId("minimap");
   const indicator = page.getByTestId("minimap-viewport");
 
@@ -147,6 +148,8 @@ test("MiniMap viewport indicator follows live scroll, resize, pan and remount st
   await expect(minimap).toBeHidden();
   const currentScroll = { top: await viewport.evaluate((element) => element.scrollTop), left: await timelineOwner(page).evaluate((element) => element.scrollLeft) };
   await page.getByTestId("view-panel-minimap").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("home-minimap-toggle").check(); // MiniMap is off by default
   await expect(page.getByTestId("minimap")).toBeVisible();
   await expect.poll(async () => metricError(await readMetrics(page))).toBeLessThan(0.002);
   const remounted = await readMetrics(page);

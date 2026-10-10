@@ -114,6 +114,7 @@ for (const size of sizes) {
     const initial = await firstTick();
 
     // MiniMap pointer navigation to ~70% of the timeline.
+    await page.getByTestId("home-minimap-toggle").check(); // MiniMap is off by default
     const minimap = page.getByTestId("minimap");
     await expect(minimap).toBeVisible();
     const box = (await minimap.boundingBox())!;
