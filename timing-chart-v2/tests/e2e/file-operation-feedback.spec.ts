@@ -114,20 +114,28 @@ test("serializer validation failure reaches visible feedback and Problems withou
   await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
 });
 
-for (const input of [
+for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }]) for (const input of [
   { name: "syntax.tcd", text: "{ broken", code: "JSON_SYNTAX" },
   { name: "invalid.tcd", text: "{}", code: "FORMAT_VERSION" },
-]) test(`failed Open ${input.name} is visible without a selected Signal`, async ({ page }) => {
+]) test(`failed Open ${input.name} is visible without a selected Signal at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+  await page.setViewportSize(viewport);
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   const revision = await page.getByTestId("revision-status").textContent();
+  const title = await page.getByTestId("titlebar-document-title").textContent();
+  const signalCount = await page.getByTestId("signal-count-status").textContent();
+  const existingSignal = host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']");
+  await expect(existingSignal).toHaveCount(1);
   await expect(page.getByTestId("selection-status")).toHaveText("None");
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: input.name, mimeType: "application/json", buffer: Buffer.from(input.text) });
   const feedback = page.getByTestId("operation-feedback");
   await expect(feedback.getByRole("alert")).not.toBeEmpty();
   await feedback.getByRole("button", { name: "Open Problems" }).click();
   await expect(page.getByTestId("problems-panel")).toContainText(input.code);
+  await expect(page.getByTestId("titlebar-document-title")).toHaveText(title!);
+  await expect(page.getByTestId("signal-count-status")).toHaveText(signalCount!);
+  await expect(existingSignal).toHaveCount(1);
   await expect(page.getByTestId("revision-status")).toHaveText(revision!);
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
