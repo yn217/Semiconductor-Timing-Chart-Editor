@@ -507,7 +507,9 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
   }
   const documentLayout = buildDocumentLayout(document);
   const headerHeight = 38 + documentLayout.headerLines.length * 14;
-  const mapping = buildDisplayTimeMapping(document.timeline, settings.foldPolicy === "expand" ? [] : document.timeGroups);
+  const foldedMapping = buildDisplayTimeMapping(document.timeline, settings.foldPolicy === "expand" ? [] : document.timeGroups);
+  // A fold covering the whole timeline leaves no visible cycle; export the timeline unfolded instead of emitting zero-cycle waveforms.
+  const mapping = foldedMapping.displayCycleCount === 0 ? buildDisplayTimeMapping(document.timeline, []) : foldedMapping;
   const range = rangeFor(document, settings, mapping);
   const signalById = new Map<string, Signal>(document.signals.map((signal) => [signal.id, signal]));
   const signals = document.signalGroups.flatMap((group) => group.rows.map((id) => signalById.get(id))).filter((signal): signal is Signal => signal !== undefined && signal.display.visible !== false);
@@ -705,15 +707,22 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
       showHeader,
     });
   });
-  const axisBreaks: ExportAxisBreak[] = settings.foldPolicy === "expand" ? [] : document.timeGroups
+  // Mirrors the live ruler gap anchor (apps/editor/src/runtime/build-ruler.ts): the first visible boundary after the fold, or the
+  // boundary before it when the fold reaches the timeline end. A fold whose anchor is hidden (nested in a merged fold) gets no break.
+  const axisBreaks: ExportAxisBreak[] = mapping.isIdentity ? [] : document.timeGroups
     .filter((group) => group.presentation?.collapsed)
-    .map((group): ExportAxisBreak => ({
-      id: group.id,
-      name: group.presentation?.foldLabel || group.name,
-      sourceStart: group.start,
-      sourceEnd: group.end,
-      x: LABEL_WIDTH + (toDisplayCycle(mapping, group.start, "floor") - range.start) * cycleWidth,
-    }))
+    .flatMap((group): ExportAxisBreak[] => {
+      const anchorCycle = group.end < document.timeline.cycleCount ? group.end : (group.start > 0 ? group.start - 1 : undefined);
+      const anchorDisplay = anchorCycle === undefined ? undefined : mapping.sourceToDisplay(anchorCycle);
+      if (anchorDisplay === undefined) return [];
+      return [{
+        id: group.id,
+        name: group.presentation?.foldLabel || group.name,
+        sourceStart: group.start,
+        sourceEnd: group.end,
+        x: LABEL_WIDTH + (anchorDisplay - range.start) * cycleWidth,
+      }];
+    })
     .filter((item) => item.x >= LABEL_WIDTH && item.x <= LABEL_WIDTH + (range.end - range.start) * cycleWidth);
   const transactions: ExportTransaction[] = [];
   for (const transaction of exportedTransactions) {
