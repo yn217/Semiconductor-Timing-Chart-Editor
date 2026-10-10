@@ -29,7 +29,7 @@ test("'New Group…' in the Move to Group submenu creates the Group and moves th
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   const history = page.getByTestId("history-status");
   await expect(history).toHaveText("History 0 / Redo 0");
-  const newGroup = page.getByLabel("Rename Group Group 4");
+  const newGroup = page.getByLabel("Rename Group Group 1");
   await expect(newGroup).toHaveCount(0);
   await page.getByRole("button", { name: "More actions for Transaction2" }).click();
   await page.getByRole("menuitem", { name: "Move to Group" }).click();
