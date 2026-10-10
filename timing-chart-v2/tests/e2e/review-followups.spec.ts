@@ -67,3 +67,13 @@ test("an unsupported old format version is not called newer than the editor", as
   const dialog = page.getByTestId("compatibility-dialog");
   if (await dialog.count()) await expect(dialog).not.toContainText("newer than this editor");
 });
+
+test("corrupt Recent metadata does not turn Recent into an Open failure", async ({ page }) => {
+  await page.addInitScript(() => { try { localStorage.setItem("timing-chart-v2.recent-meta", "{not json"); } catch { /* storage blocked */ } });
+  await page.setViewportSize({ width: 1500, height: 900 });
+  await page.goto("/?transaction-demo");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.locator(".ribbon").getByRole("button", { name: "Recent", exact: true }).click();
+  await expect(page.getByText(/No recent document is available/).first()).toBeVisible();
+  await expect(page.getByText(/Open recent document failed/)).toHaveCount(0);
+});
