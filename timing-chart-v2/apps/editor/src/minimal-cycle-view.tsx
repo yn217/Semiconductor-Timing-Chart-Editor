@@ -48,6 +48,7 @@ import { refreshRendererOverlays } from "./runtime/render-coordinator.js";
 import { useEditorDomBridgeEffects } from "./runtime/use-editor-dom-bridge-effects.js";
 import { resolveEditorStartupDocument } from "./workspace/editor-startup-document.js";
 import { useEditorInteractionLifecycle } from "./workspace/use-editor-interaction-lifecycle.js";
+import { documentFilename } from "./document-filename.js";
 
 export function MinimalCycleView() {
   const { visualReference, initialDocument, productTemplate, initialViewMode } = resolveEditorStartupDocument(typeof window !== "undefined" ? window.location.search : undefined);
@@ -704,7 +705,7 @@ export function MinimalCycleView() {
       onDelete: () => commandRegistry.current.execute("selection.delete"),
       onNew: requestNewDocument,
       onOpen: () => { pendingFileOriginRef.current = globalThis.document.activeElement instanceof HTMLElement ? globalThis.document.activeElement : null; fileInput.current?.click(); },
-      onSave: () => { documentLifecycle.save(`${snapshot.document.document.title || "timing-chart"}.tcd`); },
+      onSave: () => { documentLifecycle.save(documentFilename(snapshot.document.document.title)); },
       onSaveAs: () => { dialogOriginLabelRef.current = "Save As"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setSaveAsVisible(true); },
       onRecent: documentLifecycle.openRecent,
       onProperties: () => { dialogOriginLabelRef.current = "Properties"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setPropertiesVisible(true); },

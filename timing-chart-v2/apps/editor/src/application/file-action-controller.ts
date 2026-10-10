@@ -1,5 +1,6 @@
 import type { MutableRefObject } from "react";
 import type { DocumentLifecycleOwner } from "./use-document-lifecycle.js";
+import { documentFilename } from "../document-filename.js";
 
 export interface FileActionControllerInput {
   readonly documentLifecycle: DocumentLifecycleOwner;
@@ -29,7 +30,7 @@ export function createFileActionController(input: FileActionControllerInput): Fi
   const cancelPendingFileAction = () => { input.documentLifecycle.cancelPending(); restorePendingFileFocus(); };
   const continuePendingFileAction = () => { input.documentLifecycle.discardPending(); restorePendingFileFocus(); };
   const saveAndContinuePendingFileAction = () => {
-    if (input.documentLifecycle.savePendingAndContinue(`${input.documentTitle || "timing-chart"}.tcd`)) restorePendingFileFocus();
+    if (input.documentLifecycle.savePendingAndContinue(documentFilename(input.documentTitle))) restorePendingFileFocus();
   };
   const requestNewDocument = () => { capturePendingFileOrigin(); input.documentLifecycle.requestNew(); };
   return { restorePendingFileFocus, capturePendingFileOrigin, cancelPendingFileAction, continuePendingFileAction, saveAndContinuePendingFileAction, requestNewDocument };
