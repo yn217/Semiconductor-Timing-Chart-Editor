@@ -18018,6 +18018,24 @@
       "decision": "KEEP",
       "reason": "Code review found Apply Anchor could not clear the Signal.",
       "replacementTest": null
+    },
+    {
+      "file": "handshake-case-selection-review-fixes.spec.ts",
+      "title": "Handshake case selections are cleared when the active Scenario changes",
+      "domain": "scenario-handshake",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Handshake missing-case selections never carry over to another Scenario, so Create never sends stale keys.",
+      "duplicateGroup": "scenario-handshake",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found stale selections made Create selected Scenarios throw.",
+      "replacementTest": null
     }
   ]
 }

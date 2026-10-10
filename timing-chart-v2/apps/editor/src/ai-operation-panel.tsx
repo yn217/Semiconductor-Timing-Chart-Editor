@@ -253,6 +253,8 @@ export function AIOperationPanel({ document, validationDiagnostics, documentEpoc
     setValidatedRevision(undefined);
     setPreviewDocumentEpoch(undefined); setPreviewProjectionGeneration(undefined);
     setValidatedDocumentEpoch(undefined); setValidatedProjectionGeneration(undefined);
+    // Handshake case selections belong to the Scenario they were offered for.
+    setSelectedMissingCases(new Set());
     setStatus("Ready · document or Scenario context changed");
   }, [documentEpoch, projectionGeneration]);
   const logActivity = (kind: ActivityEntry["kind"], summary: string, result: string, actor: ActivityEntry["actor"] = "user") => {
@@ -442,7 +444,11 @@ export function AIOperationPanel({ document, validationDiagnostics, documentEpoc
             </li>)}</ul>
             <button type="button" data-testid="create-selected-handshake-scenarios" disabled={selectedMissingCases.size === 0 || onGenerateHandshakeScenarios === undefined} onClick={() => {
               try {
-                const ids = onGenerateHandshakeScenarios?.(activeScenarioId, [...selectedMissingCases]);
+                // Only keys still offered for this Scenario are sent; stale selections are dropped rather than rejected.
+                const offered = new Set(missingCaseSuggestions.map((suggestion) => suggestion.key));
+                const keys = [...selectedMissingCases].filter((key) => offered.has(key));
+                if (keys.length === 0) { setSelectedMissingCases(new Set()); return; }
+                const ids = onGenerateHandshakeScenarios?.(activeScenarioId, keys);
                 if (!ids?.length) return;
                 setSelectedMissingCases(new Set());
                 setStatus(`${ids.length} selected Handshake Scenario${ids.length === 1 ? "" : "s"} created · one Undo step`);
