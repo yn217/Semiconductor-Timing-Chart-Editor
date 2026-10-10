@@ -50,6 +50,12 @@ export function routeGlobalShortcut(event: KeyboardEvent, context: GlobalShortcu
       context.execute(event.shiftKey ? "history.redo" : "history.undo");
       return true;
     }
+    // Ctrl+Y is the Windows-native Redo; Ctrl+Shift+Z stays the cross-platform one.
+    if (key === "y" && !event.shiftKey && !event.altKey) {
+      event.preventDefault();
+      context.execute("history.redo");
+      return true;
+    }
     const command = CONTROL_SHORTCUTS[key];
     if (command) {
       event.preventDefault();
