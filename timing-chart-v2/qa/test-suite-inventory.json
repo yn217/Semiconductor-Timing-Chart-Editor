@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T17:27:12.222Z",
+  "generatedAt": "2026-10-10T17:29:58.023Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 453,
   "caseCount": 1355,
-  "reviewedCaseCount": 1296,
+  "reviewedCaseCount": 1297,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 446,
+    "pr": 447,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -6771,18 +6771,23 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "export-page-settings",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 4000,
+      "primaryContract": "Export page settings default to None (unpaged) and only show as active when a page size is chosen.",
+      "duplicateGroup": "export-page-settings",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code-review finding: the dialog showed A4/Landscape while exporting unpaged.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "export-page-settings",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "export-fold-mapping.spec.ts",
@@ -36162,11 +36167,11 @@
     {
       "file": "export-dialog-page-settings.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "export-fold-mapping.spec.ts",

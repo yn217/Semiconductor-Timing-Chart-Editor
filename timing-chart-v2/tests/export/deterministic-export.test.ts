@@ -814,7 +814,10 @@ describe("deterministic document export", () => {
     expect(scene.annotations[0]?.measurementLane).toBe(MAX_MEASUREMENT_LANE);
     expect(renderExportSvg(scene)).toContain(`data-measurement-lane="${MAX_MEASUREMENT_LANE}"`);
     const hostile = { ...measurement, measurementLayout: { ...measurement.measurementLayout, lane: MAX_MEASUREMENT_LANE + 1 } };
-    expect(() => buildExportScene({ ...base, annotations: [hostile] }, { format: "svg", scope: "document" })).toThrow(RangeError);
+    // An out-of-range authored lane is ignored (auto-allocated) rather than failing the whole export.
+    const hostileScene = buildExportScene({ ...base, annotations: [hostile] }, { format: "svg", scope: "document" });
+    expect(hostileScene.annotations[0]?.measurementLane).toBe(0);
+    expect(renderExportSvg(hostileScene)).not.toContain(`data-measurement-lane="${MAX_MEASUREMENT_LANE + 1}"`);
   });
 
   it("uses the same non-overlapping automatic Measurement lanes as the live overlay", () => {
