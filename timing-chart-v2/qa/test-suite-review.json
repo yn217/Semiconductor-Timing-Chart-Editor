@@ -13460,7 +13460,7 @@
     },
     {
       "file": "transaction-drag.spec.ts",
-      "title": "rejects a Transaction resize that would clip a Phase without changing history",
+      "title": "a Transaction start resize past a Phase boundary clamps to the Phase limit and commits once",
       "domain": "transaction-phase-edge-protection",
       "originIssue": 429,
       "type": "SEMANTIC_CONTRACT",
@@ -13478,7 +13478,7 @@
     },
     {
       "file": "transaction-drag.spec.ts",
-      "title": "rejects an End resize that would remove the final Phase",
+      "title": "a Transaction End resize past the final Phase start clamps to the Phase limit and commits once",
       "domain": "transaction-phase-last-phase-protection",
       "originIssue": 429,
       "type": "SEMANTIC_CONTRACT",
@@ -17765,6 +17765,240 @@
       ],
       "decision": "KEEP",
       "reason": "Code review found Transaction Tree Delete/Ctrl+A/collapse acting on the wrong rows or stealing focus.",
+      "replacementTest": null
+    },
+    {
+      "file": "advanced-json-apply-notices.spec.ts",
+      "title": "Advanced JSON Apply surfaces the same migration notices that Open shows",
+      "domain": "advanced-json",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Advanced JSON Apply reports migration warnings as notices, matching Open.",
+      "duplicateGroup": "advanced-json",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review follow-up.",
+      "replacementTest": null
+    },
+    {
+      "file": "advanced-json-apply-notices.spec.ts",
+      "title": "Advanced JSON Validate reports deeply nested malformed JSON without throwing",
+      "domain": "advanced-json",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Deeply nested malformed JSON yields a syntax diagnostic, not an exception.",
+      "duplicateGroup": "advanced-json",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review follow-up.",
+      "replacementTest": null
+    },
+    {
+      "file": "advanced-json-apply-notices.spec.ts",
+      "title": "Advanced JSON Apply rejects drafts above the Open byte limit",
+      "domain": "advanced-json",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Advanced JSON Apply enforces the same byte limit as Open so applied documents stay reopenable.",
+      "duplicateGroup": "advanced-json",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review follow-up.",
+      "replacementTest": null
+    },
+    {
+      "file": "transaction-edge-resize-preview-clamp.spec.ts",
+      "title": "start-edge drag past the first Phase boundary previews the clamped edge and commits it",
+      "domain": "transaction-drag",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Edge-resize preview clamps to the same Phase limits the planner enforces and commits that result.",
+      "duplicateGroup": "transaction-drag",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review follow-up.",
+      "replacementTest": null
+    },
+    {
+      "file": "transaction-edge-resize-preview-clamp.spec.ts",
+      "title": "end-edge drag past the last Phase start previews the clamped edge and commits it",
+      "domain": "transaction-drag",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "End-edge resize preview clamps to the last Phase start and commits that result.",
+      "duplicateGroup": "transaction-drag",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review follow-up.",
+      "replacementTest": null
+    },
+    {
+      "file": "event-table-value-review-fixes.spec.ts",
+      "title": "Add on an occupied Start prefills the existing Value and Comment, and submitting unchanged keeps them",
+      "domain": "event-table",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Add on an occupied cycle edits that transition without discarding its value, comment or format.",
+      "duplicateGroup": "event-table",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Event Table Add/Import overwriting or losing data.",
+      "replacementTest": null
+    },
+    {
+      "file": "event-table-value-review-fixes.spec.ts",
+      "title": "Add & Continue keeps Start and Comment when the add is rejected",
+      "domain": "event-table",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Add & Continue only advances after a successful add.",
+      "duplicateGroup": "event-table",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Event Table Add/Import overwriting or losing data.",
+      "replacementTest": null
+    },
+    {
+      "file": "event-table-value-review-fixes.spec.ts",
+      "title": "Add Row and Duplicate are disabled when every cycle already has a transition",
+      "domain": "event-table",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Add Row and Duplicate never overwrite the last transition when no cycle is free.",
+      "duplicateGroup": "event-table",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Event Table Add/Import overwriting or losing data.",
+      "replacementTest": null
+    },
+    {
+      "file": "event-table-value-review-fixes.spec.ts",
+      "title": "Import rejects an entry without a value with a clear message and leaves History unchanged",
+      "domain": "event-table",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Event import rejects entries without a value with a clear message.",
+      "duplicateGroup": "event-table",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Event Table Add/Import overwriting or losing data.",
+      "replacementTest": null
+    },
+    {
+      "file": "workspace-mode-snapshot-review-fixes.spec.ts",
+      "title": "Combined is never saved as the startup mode",
+      "domain": "workspace-layout",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Only standalone modes persist as the startup view mode.",
+      "duplicateGroup": "workspace-layout",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found view-mode snapshot and sizing leaks.",
+      "replacementTest": null
+    },
+    {
+      "file": "workspace-mode-snapshot-review-fixes.spec.ts",
+      "title": "Cycle left-pane width is restored after a Combined round trip, not replaced by Combined's width",
+      "domain": "workspace-layout",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Standalone mode snapshots are not overwritten by Combined layout changes.",
+      "duplicateGroup": "workspace-layout",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found view-mode snapshot and sizing leaks.",
+      "replacementTest": null
+    },
+    {
+      "file": "workspace-mode-snapshot-review-fixes.spec.ts",
+      "title": "Cycle Bottom maximum follows a shorter window instead of staying at 420",
+      "domain": "workspace-layout",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "The Cycle Bottom panel maximum follows the window height like the other modes.",
+      "duplicateGroup": "workspace-layout",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found view-mode snapshot and sizing leaks.",
+      "replacementTest": null
+    },
+    {
+      "file": "workspace-mode-snapshot-review-fixes.spec.ts",
+      "title": "Open clears Bottom pins of standalone modes that were not active",
+      "domain": "workspace-layout",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Opening a document clears every mode's Bottom pin, not only the active mode's.",
+      "duplicateGroup": "workspace-layout",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found view-mode snapshot and sizing leaks.",
       "replacementTest": null
     }
   ]

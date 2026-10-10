@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type SetStateAction } from "r
 import { cursorDelta, type SemanticCursorState } from "@timing-chart-v2/projection";
 import type { BookmarkId } from "@timing-chart-v2/schema";
 import { pinnedSignalIdsForEpoch, signalPinStateForEpoch } from "./signal-pin-state.js";
+import { composeMode } from "./mode-composition.js";
 
 export type DensityMode = "compact" | "comfortable";
 export type WorkspacePreset = "waveform" | "edit" | "review" | "transaction";
@@ -107,7 +108,8 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   // Selection change alone must never call this -- only a real ViewMode
   // change may normalize ActiveContext.
   const setViewMode = (next: ViewMode) => {
-    savePreferredViewMode(next);
+    // Only standalone modes are remembered as the startup default (Combined is a temporary layout; ModeComposition.persistsAsDefault).
+    if (composeMode(next).persistsAsDefault) savePreferredViewMode(next);
     if (viewMode === "Cycle" || viewMode === "Transaction") {
       followSelectionByModeRef.current[viewMode] = followSelectionRef.current;
       bottomPinnedByModeRef.current[viewMode] = bottomPinnedRef.current;
@@ -183,6 +185,11 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
     const next = signalPinStateForEpoch<SignalId>(input.documentEpoch, []);
     signalPinStateRef.current = next;
     setSignalPinState(next);
+    // Bottom pins are per standalone mode; the document is replaced, so every mode's remembered pin/follow state must go,
+    // not only the active mode's (the lifecycle hook can only reach the active mode's live state).
+    pinnedBottomSelectionByModeRef.current = { Cycle: undefined, Transaction: undefined };
+    bottomPinnedByModeRef.current = { Cycle: false, Transaction: false };
+    followSelectionByModeRef.current = { Cycle: true, Transaction: true };
     // Signal Split is workspace chrome, not document content. Preserve the
     // user's active two-pane presentation across Save/Open replacement; the
     // new document is reprojected into the existing pane layout.
@@ -215,7 +222,8 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   });
   const previousVisibilityModeRef = useRef<ViewMode>(viewMode);
   useEffect(() => {
-    if (viewMode === "Split") return;
+    // Combined edits are not a standalone snapshot: advance the ref so returning to Cycle/Transaction restores that mode's own values.
+    if (viewMode === "Split") { previousVisibilityModeRef.current = viewMode; return; }
     if (previousVisibilityModeRef.current !== viewMode) {
       previousVisibilityModeRef.current = viewMode;
       const next = panelVisibilityByModeRef.current[viewMode];
@@ -244,7 +252,8 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   });
   const previousPaneModeRef = useRef<ViewMode>(viewMode);
   useEffect(() => {
-    if (viewMode === "Split") return;
+    // Combined pane edits stay out of the Cycle/Transaction snapshots; see the visibility effect above.
+    if (viewMode === "Split") { previousPaneModeRef.current = viewMode; return; }
     if (previousPaneModeRef.current !== viewMode) {
       previousPaneModeRef.current = viewMode;
       const next = paneDimensionsByModeRef.current[viewMode];
@@ -286,7 +295,8 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   }, [pinnedBottomSelection, viewMode]);
   const previousPinnedModeRef = useRef<ViewMode>(viewMode);
   useEffect(() => {
-    if (viewMode === "Split" || previousPinnedModeRef.current === viewMode) return;
+    if (viewMode === "Split") { previousPinnedModeRef.current = viewMode; return; }
+    if (previousPinnedModeRef.current === viewMode) return;
     previousPinnedModeRef.current = viewMode;
     setPinnedBottomSelectionState(pinnedBottomSelectionByModeRef.current[viewMode]);
   }, [viewMode]);
