@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T14:07:08.616Z",
+  "generatedAt": "2026-10-10T14:28:13.334Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 441,
-  "caseCount": 1325,
-  "reviewedCaseCount": 1267,
+  "specFileCount": 442,
+  "caseCount": 1326,
+  "reviewedCaseCount": 1268,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 417,
+    "pr": 418,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -3853,6 +3853,33 @@
         "visual"
       ],
       "contractId": "signal-role-badge-visual-evidence"
+    },
+    {
+      "file": "blocked-browser-storage.spec.ts",
+      "suitePath": [],
+      "line": 3,
+      "title": "the editor still starts, switches mode and saves when browser storage is blocked",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "blocked-storage",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "With localStorage and sessionStorage throwing SecurityError the editor renders, switches mode and saves.",
+      "duplicateGroup": "blocked-storage",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "A blocked-storage browser (private mode, site data disabled) used to show a blank page.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "blocked-storage",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "bottom-bookmark-navigation.spec.ts",
@@ -34912,6 +34939,15 @@
       "candidateSignals": [
         "geometryRead"
       ],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "blocked-browser-storage.spec.ts",
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [],
       "semanticReviewStatus": "REVIEWED"
     },
     {

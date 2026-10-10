@@ -166,7 +166,8 @@ export function MinimalCycleView() {
   const timelineNavigation = useTimelineNavigationOwner(viewMode, documentEpoch);
   const zoom = timelineNavigation.zoom;
   useEffect(() => {
-    if (typeof window !== "undefined" && modeComposition.persistsAsDefault) window.localStorage.setItem("timing-chart-v2.view-mode", viewMode);
+    // The preferred mode is best-effort: blocked storage (private mode, site data disabled) must not take the editor down.
+    try { if (typeof window !== "undefined" && modeComposition.persistsAsDefault) window.localStorage.setItem("timing-chart-v2.view-mode", viewMode); } catch { /* ignored */ }
   }, [viewMode]);
   const modeComposition = composeMode(viewMode);
   const workspaceActions = useEditorWorkspaceActions({

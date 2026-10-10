@@ -17118,6 +17118,24 @@
       "decision": "KEEP",
       "reason": "The overflow only shows with real layout after renaming a selected Signal.",
       "replacementTest": null
+    },
+    {
+      "file": "blocked-browser-storage.spec.ts",
+      "title": "the editor still starts, switches mode and saves when browser storage is blocked",
+      "domain": "blocked-storage",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "With localStorage and sessionStorage throwing SecurityError the editor renders, switches mode and saves.",
+      "duplicateGroup": "blocked-storage",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "A blocked-storage browser (private mode, site data disabled) used to show a blank page.",
+      "replacementTest": null
     }
   ]
 }
