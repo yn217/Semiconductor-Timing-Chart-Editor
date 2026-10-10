@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T19:04:14.882Z",
+  "generatedAt": "2026-10-10T19:07:04.358Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 468,
   "caseCount": 1404,
-  "reviewedCaseCount": 1344,
+  "reviewedCaseCount": 1346,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 494,
+    "pr": 496,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -28075,46 +28075,58 @@
     {
       "file": "selection-command-review-fixes.spec.ts",
       "suitePath": [],
-      "line": 9,
+      "line": 10,
       "title": "Delete with a Transaction Phase selected removes only that Phase as one undoable step",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "selection-commands",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Delete with a Transaction Phase selected removes only that Phase as one undoable step.",
+      "duplicateGroup": "selection-commands",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review found Delete/Rename acting on the wrong entity for Phase/Spacer selection.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "selection-commands",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "selection-command-review-fixes.spec.ts",
-      "suitePath": [],
-      "line": 31,
+      "suitePath": [
+        "Spacer selection"
+      ],
+      "line": 35,
       "title": "Rename is disabled for a selected Spacer and does not rename its parent Group",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "selection-commands",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Rename is disabled for a selected Spacer and does not rename its parent Group.",
+      "duplicateGroup": "selection-commands",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review found Delete/Rename acting on the wrong entity for Phase/Spacer selection.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "selection-commands",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "signal-duplicate-review-fixes.spec.ts",
@@ -40549,11 +40561,11 @@
     {
       "file": "selection-command-review-fixes.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "signal-duplicate-review-fixes.spec.ts",

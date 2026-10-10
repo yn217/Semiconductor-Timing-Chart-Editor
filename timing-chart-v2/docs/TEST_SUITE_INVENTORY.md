@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 468 spec files and 1404 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1344/1404 cases reviewed.
+Semantic review progress: 1346/1404 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 634 |
 | `nightly` | 241 |
 | `performance` | 73 |
-| `pr` | 494 |
+| `pr` | 496 |
 | `visual` | 181 |
 
 ## Top recorded per-case runtimes
@@ -55,7 +55,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | 3600 | `integration`, `visual` | `issue-746-visible-group-create.spec.ts` |
 | 952 | `performance`, `nightly` | `perf-fixed-full-span-open.spec.ts` |
 
-> This is a complete name/location inventory, not a completed semantic review. 60 cases remain `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
+> This is a complete name/location inventory, not a completed semantic review. 58 cases remain `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
 | Spec file | Cases | Review status |
 | --- | ---: | --- |
@@ -427,7 +427,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `ruler-terminal-boundary.spec.ts` | 1 | 1/1 reviewed |
 | `runtime-owner-acceptance.spec.ts` | 2 | 2/2 reviewed |
 | `scenario-add-signal-after-duplicate.spec.ts` | 3 | 3/3 reviewed |
-| `selection-command-review-fixes.spec.ts` | 2 | 0/2 reviewed |
+| `selection-command-review-fixes.spec.ts` | 2 | 2/2 reviewed |
 | `signal-duplicate-review-fixes.spec.ts` | 5 | 5/5 reviewed |
 | `signal-editor-draft-survives-unrelated-edit.spec.ts` | 1 | 1/1 reviewed |
 | `signal-editor-group-dropdown.spec.ts` | 2 | 2/2 reviewed |

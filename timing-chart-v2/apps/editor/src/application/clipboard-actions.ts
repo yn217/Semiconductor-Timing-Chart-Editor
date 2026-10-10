@@ -424,6 +424,14 @@ export function useClipboardActions({ application, selection }: { application: E
   };
   const deleteSelection = () => {
     const value = selected();
+    const phaseId = value.state.transactionPhaseId;
+    if (phaseId !== undefined && value.transaction !== undefined && value.transactions.length <= 1) {
+      // A selected Transaction Phase deletes only that Phase, as one history step; the Transaction itself stays.
+      const phaseIndex = (value.transaction.phases ?? []).findIndex((phase) => phase.id === phaseId);
+      const phaseResult = phaseIndex < 0 ? undefined : application.execute({ id: nextCommandId("route_delete_transaction_phase"), type: "transaction.phaseDelete", transactionId: value.transaction.id, phaseIndex, phaseId });
+      if (phaseResult?.ok) selection.clear();
+      return;
+    }
     const result = value.transactions.length > 1 ? application.execute({ id: nextCommandId("route_delete_transactions"), type: "transaction.bulkDelete", transactionIds: value.transactions.map((transaction) => transaction.id) })
       : value.transaction ? application.execute({ id: nextCommandId("route_delete_transaction"), type: "transaction.delete", transactionId: value.transaction.id })
       : value.annotations.length > 0 ? cutAnnotations(application, value.annotations)
@@ -435,6 +443,7 @@ export function useClipboardActions({ application, selection }: { application: E
   };
   const rename = (name: string) => {
     const value = selected();
+    if (value.state.spacerId !== undefined) return undefined;
     if (value.transaction) return application.execute({ id: nextCommandId("route_rename_transaction"), type: "transaction.rename", transactionId: value.transaction.id, name });
     if (value.state.signalId) return application.execute({ id: nextCommandId("route_rename"), type: "signal.rename", signalId: value.state.signalId, name });
     if (value.group) return application.execute({ id: nextCommandId("route_rename_group"), type: "group.rename", groupId: value.group.id, name });

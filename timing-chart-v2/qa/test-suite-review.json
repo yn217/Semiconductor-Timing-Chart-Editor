@@ -18504,6 +18504,42 @@
       "decision": "KEEP",
       "reason": "Code review found IME Enter committing half-converted names.",
       "replacementTest": null
+    },
+    {
+      "file": "selection-command-review-fixes.spec.ts",
+      "title": "Delete with a Transaction Phase selected removes only that Phase as one undoable step",
+      "domain": "selection-commands",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Delete with a Transaction Phase selected removes only that Phase as one undoable step.",
+      "duplicateGroup": "selection-commands",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Delete/Rename acting on the wrong entity for Phase/Spacer selection.",
+      "replacementTest": null
+    },
+    {
+      "file": "selection-command-review-fixes.spec.ts",
+      "title": "Rename is disabled for a selected Spacer and does not rename its parent Group",
+      "domain": "selection-commands",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Rename is disabled for a selected Spacer and does not rename its parent Group.",
+      "duplicateGroup": "selection-commands",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Delete/Rename acting on the wrong entity for Phase/Spacer selection.",
+      "replacementTest": null
     }
   ]
 }
