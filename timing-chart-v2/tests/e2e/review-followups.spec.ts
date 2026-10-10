@@ -27,3 +27,19 @@ test("Undo with nothing to undo keeps an earlier failed Open message", async ({ 
   await page.keyboard.press("Control+z");
   await expect(message).toBeVisible();
 });
+
+test("Paste with a Group header selected puts the copied Signal into that Group", async ({ page }) => {
+  await page.setViewportSize({ width: 1500, height: 900 });
+  await page.goto("/?transaction-demo");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await page.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click({ position: { x: 30, y: 10 } });
+  await page.keyboard.press("Control+c");
+  await page.locator("[data-role='left-group-header'][data-group-id='grp_cycle_payload'] [data-role='tree-branch']").first().click();
+  await page.keyboard.press("Control+v");
+  await expect(page.getByTestId("selection-status")).toHaveText("REQUEST_copy");
+  const lastPayloadRow = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll<HTMLElement>("[data-role='frozen-row'][data-group-id='grp_cycle_payload']")];
+    return rows.at(-1)?.textContent ?? "";
+  });
+  expect(lastPayloadRow).toContain("REQUEST_copy");
+});

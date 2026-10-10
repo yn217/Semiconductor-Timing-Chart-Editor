@@ -33,11 +33,13 @@ export function createClipboardSignals(input: readonly SignalClipboardItem[], op
   const allocateId = createEntityIdAllocator(current);
   const selectedSignalId = selection.refs.signalId.current;
   const signalIndexes = deps.indexResolver.signals(current);
+  const selectedGroupId = operation === "paste" ? selection.refs.state.current.groupId : undefined;
   const selectedGroup = placement === "current-selection"
     ? resolveClipboardSignalGroupTarget({
       groups: current.signalGroups,
       groupsById: signalIndexes.groupsById,
       ownerBySignalId: signalIndexes.owner,
+      ...(selectedGroupId === undefined ? {} : { selectedGroupId }),
       ...(selectedSignalId === undefined ? {} : { selectedSignalId }),
       fallbackToLast: false,
     })

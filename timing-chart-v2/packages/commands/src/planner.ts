@@ -966,13 +966,15 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       }
       const reservedIds = new Set([...documentIds, ...requestedIds]);
       const claimedIds = new Set<string>();
+      // Index existing changes once: imported/pasted tables must not rescan them for every row.
+      const existingIdAtStart = new Map(signal.values.flatMap((item) => item.id ? [[item.start, item.id] as const] : []));
       let nextSequence = 0;
       const values = sortedInput.map((change) => {
         if (change.id) {
           claimedIds.add(change.id);
           return change;
         }
-        const previous = signal.values.find((item) => item.start === change.start)?.id;
+        const previous = existingIdAtStart.get(change.start);
         if (previous && !claimedIds.has(previous) && !requestedIds.has(previous)) {
           claimedIds.add(previous);
           return { ...change, id: previous };

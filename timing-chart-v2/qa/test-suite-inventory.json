@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T16:54:46.499Z",
+  "generatedAt": "2026-10-10T17:09:16.481Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -12,13 +12,13 @@
     "retryAndFlakySummary": null
   },
   "specFileCount": 450,
-  "caseCount": 1342,
-  "reviewedCaseCount": 1284,
+  "caseCount": 1343,
+  "reviewedCaseCount": 1285,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 434,
+    "pr": 435,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -26179,6 +26179,33 @@
       "runtimeMeasurementScope": "CASE"
     },
     {
+      "file": "review-followups.spec.ts",
+      "suitePath": [],
+      "line": 31,
+      "title": "Paste with a Group header selected puts the copied Signal into that Group",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "paste-into-selected-group",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Paste lands in the Group whose header is selected instead of the copied Signal's own Group.",
+      "duplicateGroup": "paste-into-selected-group",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code-review finding: Signal Paste ignored a selected Group header.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "paste-into-selected-group",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
       "file": "review-workflow.spec.ts",
       "suitePath": [],
       "line": 6,
@@ -38652,8 +38679,8 @@
     },
     {
       "file": "review-followups.spec.ts",
-      "caseCount": 2,
-      "reviewedCaseCount": 2,
+      "caseCount": 3,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],

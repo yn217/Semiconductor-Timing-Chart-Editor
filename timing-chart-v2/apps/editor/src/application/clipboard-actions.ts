@@ -18,14 +18,6 @@ export const NO_SIGNAL_GROUP_STATUS = "No Signal Group to insert into";
  * left out), Duplicate/Delete act on the Annotations. */
 const mixedNote = (annotations: number) => annotations > 0 ? ` (${annotations} selected annotation${annotations === 1 ? "" : "s"} not included: Signals take precedence)` : "";
 
-/** A copied Signal must not share value-change IDs with its source (IDs are unique across the Document). */
-function withFreshValueChangeIds<T extends Signal>(signal: T): T {
-  const fresh = <C extends { readonly id?: string }>(changes: readonly C[], scope: string): C[] => changes.map((change, index) => change.id === undefined ? change : { ...change, id: `value_${signal.id}${scope}_${index}` });
-  if (signal.type === "commentRow") return signal;
-  if (signal.type === "clock") return signal.enable ? { ...signal, enable: fresh(signal.enable, "_enable") } : signal;
-  return { ...signal, values: fresh(signal.values, "") };
-}
-
 const FOREIGN_PASTE_DETAIL = "clipboard-failure:foreign-document";
 export function useClipboardActions({ application, selection }: { application: EditorApplicationOwner; selection: SelectionOwner }) {
   const [status, setStatus] = useState("Empty");
