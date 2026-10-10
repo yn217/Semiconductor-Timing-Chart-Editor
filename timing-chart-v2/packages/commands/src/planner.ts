@@ -952,11 +952,14 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       const sorted = [...command.values].sort((left, right) => left.start - right.start);
       // Imported / pasted tables carry no IDs: keep the ID of the change previously at the same cycle, otherwise allocate a fresh one.
       const takenIds = new Set(sorted.flatMap((change) => change.id ? [change.id] : []));
+      // Index the existing changes once: a large pasted/imported table must not rescan them per row.
+      const existingIds = new Set(signal.values.flatMap((item) => item.id ? [item.id] : []));
+      const existingIdAtStart = new Map(signal.values.flatMap((item) => item.id ? [[item.start, item.id] as const] : []));
       let nextSequence = 0;
-      const freshId = () => { while (takenIds.has(`value_${signal.id}_${nextSequence}`) || signal.values.some((item) => item.id === `value_${signal.id}_${nextSequence}`)) nextSequence += 1; const id = `value_${signal.id}_${nextSequence}`; takenIds.add(id); return id; };
+      const freshId = () => { while (takenIds.has(`value_${signal.id}_${nextSequence}`) || existingIds.has(`value_${signal.id}_${nextSequence}`)) nextSequence += 1; const id = `value_${signal.id}_${nextSequence}`; takenIds.add(id); return id; };
       const values = sorted.map((change) => {
         if (change.id) return change;
-        const previous = signal.values.find((item) => item.start === change.start)?.id;
+        const previous = existingIdAtStart.get(change.start);
         if (previous && !takenIds.has(previous)) { takenIds.add(previous); return { ...change, id: previous }; }
         return { ...change, id: freshId() };
       });
