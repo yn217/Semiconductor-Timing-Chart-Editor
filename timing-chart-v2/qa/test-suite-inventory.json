@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T17:40:41.744Z",
+  "generatedAt": "2026-10-10T17:43:42.329Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 455,
   "caseCount": 1361,
-  "reviewedCaseCount": 1299,
+  "reviewedCaseCount": 1303,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 449,
+    "pr": 453,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -33450,18 +33450,23 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "transaction-tree",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Delete on a row inside a Ctrl multi-selection deletes all selected Transactions in one History step.",
+      "duplicateGroup": "transaction-tree",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review found Transaction Tree Delete/Ctrl+A/collapse acting on the wrong rows or stealing focus.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "transaction-tree",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "transaction-tree-selection-focus.spec.ts",
@@ -33472,18 +33477,23 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "transaction-tree",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Delete acts on the focused Transaction row when it is outside the current selection.",
+      "duplicateGroup": "transaction-tree",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review found Transaction Tree Delete/Ctrl+A/collapse acting on the wrong rows or stealing focus.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "transaction-tree",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "transaction-tree-selection-focus.spec.ts",
@@ -33494,18 +33504,23 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "transaction-tree",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Ctrl+A in the Transaction Tree respects the filter, filter mode and collapsed Groups.",
+      "duplicateGroup": "transaction-tree",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review found Transaction Tree Delete/Ctrl+A/collapse acting on the wrong rows or stealing focus.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "transaction-tree",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "transaction-tree-selection-focus.spec.ts",
@@ -33516,18 +33531,23 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "transaction-tree",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Collapsing a Transaction Group never moves focus or scroll to a selection elsewhere.",
+      "duplicateGroup": "transaction-tree",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review found Transaction Tree Delete/Ctrl+A/collapse acting on the wrong rows or stealing focus.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "transaction-tree",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "transaction-viewport-hscroll.spec.ts",
@@ -40030,11 +40050,11 @@
     {
       "file": "transaction-tree-selection-focus.spec.ts",
       "caseCount": 4,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 4,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-viewport-hscroll.spec.ts",

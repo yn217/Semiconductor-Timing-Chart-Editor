@@ -17694,6 +17694,78 @@
       "decision": "KEEP",
       "reason": "Code review found a second Bookmark at the same cycle was never visited by Next or Previous.",
       "replacementTest": null
+    },
+    {
+      "file": "transaction-tree-selection-focus.spec.ts",
+      "title": "Delete on a Ctrl-selected Transaction Tree row deletes the whole selection exactly once (single undo step)",
+      "domain": "transaction-tree",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Delete on a row inside a Ctrl multi-selection deletes all selected Transactions in one History step.",
+      "duplicateGroup": "transaction-tree",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Transaction Tree Delete/Ctrl+A/collapse acting on the wrong rows or stealing focus.",
+      "replacementTest": null
+    },
+    {
+      "file": "transaction-tree-selection-focus.spec.ts",
+      "title": "Delete on a focused Transaction Tree row outside the selection deletes that row, not the previous selection",
+      "domain": "transaction-tree",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Delete acts on the focused Transaction row when it is outside the current selection.",
+      "duplicateGroup": "transaction-tree",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Transaction Tree Delete/Ctrl+A/collapse acting on the wrong rows or stealing focus.",
+      "replacementTest": null
+    },
+    {
+      "file": "transaction-tree-selection-focus.spec.ts",
+      "title": "Ctrl+A in the Transaction Tree selects only the rows the tree currently shows",
+      "domain": "transaction-tree",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Ctrl+A in the Transaction Tree respects the filter, filter mode and collapsed Groups.",
+      "duplicateGroup": "transaction-tree",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Transaction Tree Delete/Ctrl+A/collapse acting on the wrong rows or stealing focus.",
+      "replacementTest": null
+    },
+    {
+      "file": "transaction-tree-selection-focus.spec.ts",
+      "title": "Collapsing a Group with the mouse keeps focus where it was; keyboard collapse keeps focus on the header",
+      "domain": "transaction-tree",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Collapsing a Transaction Group never moves focus or scroll to a selection elsewhere.",
+      "duplicateGroup": "transaction-tree",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Transaction Tree Delete/Ctrl+A/collapse acting on the wrong rows or stealing focus.",
+      "replacementTest": null
     }
   ]
 }

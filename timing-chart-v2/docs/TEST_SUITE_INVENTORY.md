@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 455 spec files and 1361 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1299/1361 cases reviewed.
+Semantic review progress: 1303/1361 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 634 |
 | `nightly` | 241 |
 | `performance` | 73 |
-| `pr` | 449 |
+| `pr` | 453 |
 | `visual` | 181 |
 
 ## Top recorded per-case runtimes
@@ -55,7 +55,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | 3600 | `integration`, `visual` | `issue-746-visible-group-create.spec.ts` |
 | 952 | `performance`, `nightly` | `perf-fixed-full-span-open.spec.ts` |
 
-> This is a complete name/location inventory, not a completed semantic review. 62 cases remain `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
+> This is a complete name/location inventory, not a completed semantic review. 58 cases remain `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
 | Spec file | Cases | Review status |
 | --- | ---: | --- |
@@ -491,7 +491,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `transaction-tree-menu-overlay.spec.ts` | 2 | 2/2 reviewed |
 | `transaction-tree-more-menu-visible.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-tree-no-frozen-pane-handle.spec.ts` | 1 | 1/1 reviewed |
-| `transaction-tree-selection-focus.spec.ts` | 4 | 0/4 reviewed |
+| `transaction-tree-selection-focus.spec.ts` | 4 | 4/4 reviewed |
 | `transaction-viewport-hscroll.spec.ts` | 1 | 1/1 reviewed |
 | `tree-drag-drop.spec.ts` | 5 | 5/5 reviewed |
 | `tree-keyboard.spec.ts` | 2 | 2/2 reviewed |
