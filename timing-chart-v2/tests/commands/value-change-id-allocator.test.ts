@@ -3,6 +3,17 @@ import type { SignalValueChange } from "@timing-chart-v2/schema";
 import { ValueChangeIdAllocator } from "../../packages/commands/src/value-change-id-allocator.js";
 
 describe("Signal-scoped value-change ID allocation", () => {
+  it("honors document-wide reserved IDs even when the Signal-local sequence index is warm", () => {
+    const allocator = new ValueChangeIdAllocator();
+    const values = [{ id: "legacy_change", start: 0, value: 0 }] as SignalValueChange[];
+    allocator.remember("sig_warm", values, { usedIds: new Set(["legacy_change"]), nextSequence: 1 });
+
+    const allocation = allocator.allocate("sig_warm", values, new Set(["value_sig_warm_1"]));
+
+    expect(allocation.id).toBe("value_sig_warm_2");
+    expect(allocation.valuesVisited).toBe(0);
+  });
+
   it("indexes a million existing changes once, then allocates from the cached sequence", () => {
     const allocator = new ValueChangeIdAllocator();
     const existingId = "value_sig_dense_0";

@@ -26,7 +26,7 @@ export class ValueChangeIdAllocator {
     this.#indexByValues.set(values, indexes);
   }
 
-  allocate(signalId: string, values: readonly SignalValueChange[]): ValueChangeIdAllocation {
+  allocate(signalId: string, values: readonly SignalValueChange[], reservedIds: ReadonlySet<string> = new Set()): ValueChangeIdAllocation {
     let index = this.getIndex(signalId, values);
     let valuesVisited = 0;
     if (!index) {
@@ -36,13 +36,13 @@ export class ValueChangeIdAllocator {
         if (change.id) usedIds.add(change.id);
       }
       let nextSequence = 0;
-      while (usedIds.has(`value_${signalId}_${nextSequence}`)) nextSequence += 1;
+      while (usedIds.has(`value_${signalId}_${nextSequence}`) || reservedIds.has(`value_${signalId}_${nextSequence}`)) nextSequence += 1;
       index = { usedIds, nextSequence };
       this.remember(signalId, values, index);
     }
 
     let sequence = index.nextSequence;
-    while (index.usedIds.has(`value_${signalId}_${sequence}`)) sequence += 1;
+    while (index.usedIds.has(`value_${signalId}_${sequence}`) || reservedIds.has(`value_${signalId}_${sequence}`)) sequence += 1;
     return {
       id: `value_${signalId}_${sequence}`,
       nextIndex: { usedIds: index.usedIds, nextSequence: sequence + 1 },

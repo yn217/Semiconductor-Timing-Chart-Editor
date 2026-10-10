@@ -577,28 +577,19 @@ describe("pure Semantic Command planning", () => {
     expect(finalValues.find((change) => change.start === 2)?.id).not.toBe(createdId);
   });
 
-  it("allocates a value-change ID without scanning unrelated Signals", () => {
+  it("allocates a value-change ID against document-wide identities and preserves it through history and Open", () => {
     const source = canonicalFixture();
-    const target = source.signals.find((signal) => signal.id === "sig_data");
-    if (!target || target.type === "clock" || target.type === "commentRow") throw new Error("Expected a target value Signal in the fixture.");
-    const unrelated = { ...target, id: "sig_other" as SignalId, display: { ...target.display, name: "Other" } };
-    const values = new Proxy(unrelated.values, {
-      get(target, property, receiver) {
-        if (property === Symbol.iterator) throw new Error("Unrelated Signal values were scanned during ID allocation.");
-        return Reflect.get(target, property, receiver);
-      },
-    });
-    const document = {
-      ...source,
-      signals: [...source.signals, { ...unrelated, values }],
-    } as CanonicalDocument;
+    const reservedId = "value_sig_data_0";
+    const document = { ...source, bookmarks: [...source.bookmarks, { id: reservedId as BookmarkId, name: "Reserved", start: 1 }] };
 
     const planned = planCommand(document, { id: commandId("cmd_value_id_scope"), type: "signal.updateValue", signalId: "sig_data" as SignalId, start: 2, value: "1F" });
 
     expect(planned.ok).toBe(true);
     if (planned.ok) {
       const data = planned.document.signals.find((signal) => signal.id === "sig_data");
-      expect(data && "values" in data ? data.values.find((change) => change.start === 2)?.id : undefined).toMatch(/^value_sig_data_/);
+      const generatedId = data && "values" in data ? data.values.find((change) => change.start === 2)?.id : undefined;
+      expect(generatedId).toMatch(/^value_sig_data_/);
+      expect(generatedId).not.toBe(reservedId);
     }
 
     const session = new CommandHistorySession(canonicalFixture());

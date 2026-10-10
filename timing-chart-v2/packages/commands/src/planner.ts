@@ -923,7 +923,7 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       if (command.displayFormat !== undefined && signal.type !== "bus") return fail("invalid", "DISPLAY_FORMAT_NOT_SUPPORTED", "$.displayFormat", "A per-value display format applies only to bus signals.");
       const existing = signal.values.find((change) => change.start === command.start);
       if (existing?.value === command.value && existing.comment === command.comment && existing.displayFormat === command.displayFormat) return fail("no-op", "NO_OP", "$", "Signal value is unchanged.");
-      const allocation = existing?.id === undefined ? valueChangeIdAllocator.allocate(signal.id, signal.values) : undefined;
+      const allocation = existing?.id === undefined ? valueChangeIdAllocator.allocate(signal.id, signal.values, new Set(canonicalEntityIds(document))) : undefined;
       const change = { id: existing?.id ?? allocation!.id, start: command.start, value: command.value, ...(command.displayFormat === undefined ? {} : { displayFormat: command.displayFormat }), ...(command.comment === undefined ? {} : { comment: command.comment }) };
       const values = [...signal.values.filter((item) => item.start !== command.start), change].sort((left, right) => left.start - right.start);
       const previousIdIndex = valueChangeIdAllocator.getIndex(signal.id, signal.values);
@@ -960,7 +960,7 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       if (valueProblem) return fail("invalid", "UNSUPPORTED_SIGNAL_VALUE", "$.value", valueProblem);
       if (command.displayFormat !== undefined && signal.type !== "bus") return fail("invalid", "DISPLAY_FORMAT_NOT_SUPPORTED", "$.displayFormat", "A per-value display format applies only to bus signals.");
       if (source.start === command.start && source.value === command.value && source.comment === command.comment && source.displayFormat === command.displayFormat) return fail("no-op", "NO_OP", "$", "Value change is unchanged.");
-      const allocation = source.id === undefined ? valueChangeIdAllocator.allocate(signal.id, signal.values) : undefined;
+      const allocation = source.id === undefined ? valueChangeIdAllocator.allocate(signal.id, signal.values, new Set(canonicalEntityIds(document))) : undefined;
       const replacement = { id: source.id ?? allocation!.id, start: command.start, value: command.value, ...(command.displayFormat === undefined ? {} : { displayFormat: command.displayFormat }), ...(command.comment === undefined ? {} : { comment: command.comment }) };
       const values = signal.values.map((change) => change === source ? replacement : change).sort((left, right) => left.start - right.start);
       const previousIdIndex = valueChangeIdAllocator.getIndex(signal.id, signal.values);
