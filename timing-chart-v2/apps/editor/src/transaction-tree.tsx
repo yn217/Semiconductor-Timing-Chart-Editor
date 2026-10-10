@@ -37,6 +37,12 @@ function getWindowRange(itemCount: number, rowsTop: number, viewport: TreeViewpo
   return { start, end };
 }
 
+/** The Transaction id of the tree row containing `target`, if any. */
+function rowIdOf(target: EventTarget | null): TransactionId | undefined {
+  if (!(target instanceof Element)) return undefined;
+  return target.closest<HTMLElement>(".transaction-left-tree-row")?.dataset.transactionTreeId as TransactionId | undefined;
+}
+
 function WindowedTreeRows<T>({ items, render, getId, focusId, rowsTop, viewport, windowed }: { readonly items: readonly T[]; readonly render: (item: T) => ReactNode; readonly getId?: (item: T) => string; readonly focusId?: string | undefined; readonly rowsTop: number; readonly viewport: TreeViewport; readonly windowed: boolean }) {
   const initialRange = () => getWindowRange(items.length, rowsTop, viewport);
   const [range, setRange] = useState(initialRange);
@@ -259,22 +265,7 @@ export function TransactionTree({
       if (group) toggle(group.id);
     };
     const onArrow = (event: KeyboardEvent) => {
-      if (event.key === "Delete") {
-        const current =
-          event.target instanceof Element
-            ? event.target.closest<HTMLElement>(".transaction-left-tree-row")
-            : null;
-        if (current && onDelete) {
-          event.preventDefault();
-          const id = current.dataset.transactionTreeId as
-            TransactionId | undefined;
-          if (id) {
-            onSelect(id);
-            queueMicrotask(onDelete);
-          }
-        }
-        return;
-      }
+      // Delete is handled by the capture listener below plus the global shortcut router (exactly one dispatch).
       if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
         const groupHeader =
           event.target instanceof Element
@@ -360,7 +351,7 @@ export function TransactionTree({
       globalThis.document.removeEventListener("keydown", onArrow);
       globalThis.document.removeEventListener("click", onGroupMultiSelect);
     };
-  }, [collapsed, document, groups, onDelete, onRenameTransaction, onSelect]);
+  }, [collapsed, document, groups, onRenameTransaction, onSelect]);
   const matches = (transaction: Transaction) => {
     if (filterMode === "grouped" && transaction.groupId === undefined)
       return false;
@@ -438,6 +429,8 @@ export function TransactionTree({
     return () => { scroller.removeEventListener("scroll", bump); observer.disconnect(); if (frame !== undefined) cancelAnimationFrame(frame); };
   }, []);
   const [pendingFocusId, setPendingFocusId] = useState<TransactionId>();
+  // The Transaction row that currently holds keyboard focus inside the tree (undefined when focus is on a header/chevron/elsewhere).
+  const focusedRowIdRef = useRef<TransactionId | undefined>(undefined);
   // Post-render: once the pending row is actually mounted (WindowedTreeRows above widened its window to include it), focus and reveal
   // it, then stop. No dependency array: this deliberately re-runs on every render until it finds the node (usually the very next commit).
   useEffect(() => {
@@ -451,10 +444,45 @@ export function TransactionTree({
   // #769 Failure 2 follow-on: a Group elsewhere collapsing/expanding can shrink the freshly recomputed window of an UNRELATED, already
   // visible Group past the currently focused row, unmounting it (and silently dropping keyboard focus to <body>). Whenever collapse
   // state changes, re-request the current selection so its WindowedTreeRows widens to keep covering it.
+  // Only a Transaction row that actually holds keyboard focus is restored (never the selection, which may sit elsewhere). Chevron
+  // presses keep focus where it was (see onMouseDown on the chevrons), and keyboard collapse from a header keeps focus on the header.
   useEffect(() => {
-    if (selectedId !== undefined) setPendingFocusId(selectedId);
+    const focusedId = focusedRowIdRef.current;
+    if (focusedId === undefined) return;
+    if (globalThis.document.activeElement?.getAttribute("data-transaction-tree-id") === focusedId) return;
+    setPendingFocusId(focusedId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [collapsedSignature]);
+  // Delete and Ctrl+A run as document-capture listeners so they settle the selection BEFORE the global shortcut router (bubble) acts on
+  // the same keydown. Delete: a focused row outside the selection becomes the selection; the router then deletes exactly once.
+  // Ctrl+A (inside the tree only): selects the rows the tree currently shows (filter, filter mode and collapsed Groups applied).
+  useEffect(() => {
+    if (!onDelete) return undefined;
+    const onKeyDownCapture = (event: KeyboardEvent) => {
+      if (event.isComposing) return;
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target || target.closest("input, textarea, select, [contenteditable='true']")) return;
+      if (event.key === "Delete") {
+        const id = rowIdOf(target);
+        if (id === undefined || selectedId === id || selectedIds?.has(id) === true) return;
+        onSelect(id);
+        return;
+      }
+      const isSelectAll = (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "a";
+      if (!isSelectAll || !target.closest("[data-transaction-tree-root='true']") || collapsed.has("__all__")) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const shown: TransactionId[] = [];
+      for (const group of groups) if (!collapsed.has(group.id)) for (const transaction of groupTransactions(group.id)) if (transaction.visible !== false) shown.push(transaction.id);
+      if (!collapsed.has("__ungrouped__")) for (const transaction of groupTransactions(undefined)) if (transaction.visible !== false) shown.push(transaction.id);
+      if (shown.length === 0) return;
+      onSelect(shown[0]!);
+      for (const id of shown.slice(1)) onSelect(id, true);
+    };
+    globalThis.document.addEventListener("keydown", onKeyDownCapture, true);
+    return () => globalThis.document.removeEventListener("keydown", onKeyDownCapture, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- groupTransactions is derived from transactionsByGroup, listed below
+  }, [collapsed, groups, onDelete, onSelect, selectedId, selectedIds, transactionsByGroup]);
   // #771: virtualization is decided by the TOTAL visible Transaction count across every Group, not each Group's own count -- 100 Groups
   // of 100 (10,000 total) must window just as much as one Group of 10,000; a distribution across many small/medium Groups must not
   // bypass it.
@@ -658,6 +686,13 @@ export function TransactionTree({
       aria-label="Transaction tree"
       onClick={(event) => { if (onClearSelection && (event.target === event.currentTarget || (event.target instanceof Element && event.target.classList.contains("transaction-left-tree-root")))) onClearSelection(); }}
       onKeyDown={(event) => { if (event.key === "Escape" && onClearSelection && !openMenu && !(event.target instanceof HTMLInputElement)) { event.preventDefault(); onClearSelection(); } }}
+      onFocus={(event) => { focusedRowIdRef.current = rowIdOf(event.target); }}
+      onBlur={(event) => {
+        // Focus moving between rows is re-recorded by onFocus; a row removed from the DOM (windowing) keeps its record for restoring.
+        if (rowIdOf(event.relatedTarget) !== undefined) return;
+        if (event.target instanceof Element && !event.target.isConnected) return;
+        focusedRowIdRef.current = undefined;
+      }}
     >
       <div className="transaction-left-tree-root">
         <button
@@ -692,6 +727,7 @@ export function TransactionTree({
                     type="button"
                     aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${group.name}`}
                     aria-expanded={!isCollapsed}
+                    onMouseDown={(event) => event.preventDefault()}
                     onClick={() => toggle(group.id)}
                   >
                     <EditorIcon name={isCollapsed ? "chevron-right" : "chevron-down"} className="transaction-left-tree-icon" />
@@ -759,6 +795,7 @@ export function TransactionTree({
                     type="button"
                     aria-label={`${isCollapsed ? "Expand" : "Collapse"} Ungrouped`}
                     aria-expanded={!isCollapsed}
+                    onMouseDown={(event) => event.preventDefault()}
                     onClick={() => toggle("__ungrouped__")}
                   >
                     <EditorIcon name={isCollapsed ? "chevron-right" : "chevron-down"} className="transaction-left-tree-icon" />
