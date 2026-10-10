@@ -95,7 +95,6 @@ for (const contract of matrix.independentContracts) {
   if (!statusRow.legacySources.every((source) => typeof source === "string" && source.startsWith("#"))) fail(`${contract.id} has invalid legacy source identity`);
   if (statusRow.implementationStatus === "ACCEPTANCE_ONLY" && !concrete(contract.implementationEvidence)) fail(`${contract.id} ACCEPTANCE_ONLY requires concrete production evidence`);
   if (statusRow.implementationStatus === "BLOCKED_EXTERNAL" && !concrete(statusRow.externalDependency)) fail(`${contract.id} BLOCKED_EXTERNAL requires a named external dependency`);
-  if (statusRow.implementationStatus === "COMPLETE" && completeEvidenceFields.some((field) => !completeEvidence(contract[field]))) fail(`${contract.id} COMPLETE requires resolved ${completeEvidenceFields.join(", ")} evidence`);
   if (contract.id === "GUI-SIGNAL-SPLIT") {
     if (statusRow.implementationStatus === "NOT_IMPLEMENTED" || !contract.v1Source.includes("#98") || contract.v2OwnerIssue !== "#200") fail("GUI-SIGNAL-SPLIT identity/status must reflect the current #98/#200 production contract");
     if (/^No production Upper\/Lower\/Both Signal Split path is present;/.test(contract.implementationEvidence) || /Cycle\/Transaction Split.*(?:therefore satisfies Signal Split|different feature and cannot satisfy this contract)/.test(contract.implementationEvidence)) fail("GUI-SIGNAL-SPLIT evidence must not use Cycle/Transaction Split as implementation evidence");
@@ -111,6 +110,8 @@ for (const contract of matrix.independentContracts) {
   if (!["KEEP", "MERGED", "DEFER", "DROP"].includes(contract.decision)) fail(`${contract.id} has invalid decision`);
   if (contract.decision === "DROP" || contract.decision === "DEFER") fail(`${contract.id} uses forbidden unapproved ${contract.decision}`);
   if (!contract.v2OwnerIssue || !contract.acceptance || !contract.implementationEvidence) fail(`${contract.id} lacks owner/acceptance/implementation evidence`);
+  const statusRow = statusByFeature.get(contract.id);
+  if (statusRow?.implementationStatus === "COMPLETE" && completeEvidenceFields.some((field) => !completeEvidence(contract[field]))) fail(`${contract.id} COMPLETE requires resolved ${completeEvidenceFields.join(", ")} evidence`);
 }
 if (!Array.isArray(matrix.legacyIssueAssignments)) fail("legacyIssueAssignments is missing");
 const assigned = new Map();
