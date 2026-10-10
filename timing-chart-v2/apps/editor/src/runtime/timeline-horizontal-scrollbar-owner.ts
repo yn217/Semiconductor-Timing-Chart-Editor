@@ -34,6 +34,8 @@ export function mountTimelineHorizontalScrollbar(view: HTMLDivElement, bar: HTML
   if (view.firstElementChild) observer.observe(view.firstElementChild);
   const owner = timelineScrollOwner(view);
   if (owner !== view) { observer.observe(owner); for (const child of owner.children) observer.observe(child); }
+  // The Bottom editor resizing (tab content, splitter) moves the bar's resting line without resizing the viewport.
+  for (const element of bar.parentElement?.parentElement?.querySelectorAll(".bottom-resize-track, .bottom-editor") ?? []) observer.observe(element);
   window.addEventListener("resize", layout);
   view.addEventListener("timeline-viewport-resize", layout);
   return () => {
