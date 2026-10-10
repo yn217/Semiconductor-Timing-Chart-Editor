@@ -17046,6 +17046,24 @@
       "decision": "KEEP",
       "reason": "Two Scenarios with one name are indistinguishable in the Active Scenario selector.",
       "replacementTest": null
+    },
+    {
+      "file": "find-replace-literal-replacement.spec.ts",
+      "title": "Find and Replace treats the replacement text literally ($& and $$ are not expanded)",
+      "domain": "find-replace-literal",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 2000,
+      "primaryContract": "The Replace-with text is used exactly as typed; JavaScript replacement patterns are not expanded.",
+      "duplicateGroup": "find-replace-literal",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Only the real panel input shows the preview and the renamed Signal names.",
+      "replacementTest": null
     }
   ]
 }

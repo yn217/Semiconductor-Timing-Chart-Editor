@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T13:48:23.480Z",
+  "generatedAt": "2026-10-10T13:50:59.784Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 438,
-  "caseCount": 1321,
-  "reviewedCaseCount": 1263,
+  "specFileCount": 439,
+  "caseCount": 1322,
+  "reviewedCaseCount": 1264,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 413,
+    "pr": 414,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -7054,6 +7054,33 @@
         "pr"
       ],
       "contractId": "find-replace"
+    },
+    {
+      "file": "find-replace-literal-replacement.spec.ts",
+      "suitePath": [],
+      "line": 3,
+      "title": "Find and Replace treats the replacement text literally ($& and $$ are not expanded)",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "find-replace-literal",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 2000,
+      "primaryContract": "The Replace-with text is used exactly as typed; JavaScript replacement patterns are not expanded.",
+      "duplicateGroup": "find-replace-literal",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Only the real panel input shows the preview and the renamed Signal names.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "find-replace-literal",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "font-style-commit-contract.spec.ts",
@@ -35275,6 +35302,15 @@
       "candidateSignals": [
         "dataset"
       ],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "find-replace-literal-replacement.spec.ts",
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [],
       "semanticReviewStatus": "REVIEWED"
     },
     {
