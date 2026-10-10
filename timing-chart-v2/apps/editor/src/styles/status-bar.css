@@ -32,3 +32,21 @@
 
 .editor-shell .status-bar .status-diagnostics-toggle { height: 18px; padding: 0 6px; border: 1px solid #c3ceda; border-radius: 3px; background: transparent; color: #52647a; font-size: 10px; cursor: pointer; }
 .editor-shell .status-bar .status-diagnostics-toggle[aria-pressed="true"] { background: #e7f1fb; border-color: #8fb4d9; }
+
+/* Narrow windows: the dirty flag and Problems count sit at the right end and used to be the first things clipped. Drop the secondary
+   counters first so they stay visible. */
+@media (max-width: 1100px) {
+  .editor-shell .status-bar [data-testid="signal-count-status"],
+  .editor-shell .status-bar [data-testid="annotation-count-status"],
+  .editor-shell .status-bar [data-testid="range-status"],
+  .editor-shell .status-bar [data-testid="cycle-status"],
+  .editor-shell .status-bar [data-testid="snap-status"],
+  .editor-shell .status-bar [data-testid="revision-status"] { display: none; }
+}
+@media (max-width: 900px) {
+  .editor-shell .status-bar [data-testid="history-status"],
+  .editor-shell .status-bar [data-testid="time-axis-status"],
+  .editor-shell .status-bar [data-testid="status-context"],
+  .editor-shell .status-bar [data-testid="cursor-status"],
+  .editor-shell .status-bar [data-testid="active-pane-status"] { display: none; }
+}

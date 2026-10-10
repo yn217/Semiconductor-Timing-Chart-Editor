@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T11:04:39.165Z",
+  "generatedAt": "2026-10-10T11:07:52.321Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 434,
-  "caseCount": 1315,
-  "reviewedCaseCount": 1257,
+  "specFileCount": 435,
+  "caseCount": 1317,
+  "reviewedCaseCount": 1259,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 407,
+    "pr": 409,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -28050,6 +28050,60 @@
       "contractId": "stable-waveform-owner-reorder-identity"
     },
     {
+      "file": "status-bar-narrow-window.spec.ts",
+      "suitePath": [],
+      "line": 5,
+      "title": "status bar keeps Clean/Modified and Problems visible at 1000px wide",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "status-bar-narrow",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 4000,
+      "primaryContract": "On narrow windows the dirty flag and the Problems count stay visible in the status bar.",
+      "duplicateGroup": "status-bar-narrow",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Clipping of the right-hand status items is only visible in a real layout.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "status-bar-narrow",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "status-bar-narrow-window.spec.ts",
+      "suitePath": [],
+      "line": 5,
+      "title": "status bar keeps Clean/Modified and Problems visible at 800px wide",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "status-bar-narrow",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 4000,
+      "primaryContract": "On narrow windows the dirty flag and the Problems count stay visible in the status bar.",
+      "duplicateGroup": "status-bar-narrow",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Clipping of the right-hand status items is only visible in a real layout.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "status-bar-narrow",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
       "file": "status-context.spec.ts",
       "suitePath": [
         "status context"
@@ -38137,6 +38191,15 @@
       "candidateSignals": [
         "dataset"
       ],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "status-bar-narrow-window.spec.ts",
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [],
       "semanticReviewStatus": "REVIEWED"
     },
     {

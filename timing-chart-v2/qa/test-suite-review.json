@@ -16938,6 +16938,42 @@
       "decision": "KEEP",
       "reason": "The Main area minimum used to push the Bottom editor under the status bar; only real layout shows it.",
       "replacementTest": null
+    },
+    {
+      "file": "status-bar-narrow-window.spec.ts",
+      "title": "status bar keeps Clean/Modified and Problems visible at 1000px wide",
+      "domain": "status-bar-narrow",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 4000,
+      "primaryContract": "On narrow windows the dirty flag and the Problems count stay visible in the status bar.",
+      "duplicateGroup": "status-bar-narrow",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Clipping of the right-hand status items is only visible in a real layout.",
+      "replacementTest": null
+    },
+    {
+      "file": "status-bar-narrow-window.spec.ts",
+      "title": "status bar keeps Clean/Modified and Problems visible at 800px wide",
+      "domain": "status-bar-narrow",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 4000,
+      "primaryContract": "On narrow windows the dirty flag and the Problems count stay visible in the status bar.",
+      "duplicateGroup": "status-bar-narrow",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Clipping of the right-hand status items is only visible in a real layout.",
+      "replacementTest": null
     }
   ]
 }
