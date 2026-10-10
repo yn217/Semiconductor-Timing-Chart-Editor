@@ -643,7 +643,7 @@ function duplicateTimelineRange(document: CanonicalDocument, command: Extract<Se
     const { ownerTimeGroupId: _owner, ...rest } = anchor;
     return rest;
   });
-  const clonedTransactions = document.transactions.filter((transaction) => transaction.start >= command.start && transaction.end <= command.end).map((transaction) => ({ ...transaction, id: cloneId(transaction.id), start: command.at + transaction.start - command.start, end: command.at + transaction.end - command.start, ...(transaction.phases ? { phases: transaction.phases.map((phase) => ({ ...phase, start: command.at + phase.start - command.start, end: command.at + phase.end - command.start })) } : {}) }));
+  const clonedTransactions = document.transactions.filter((transaction) => transaction.start >= command.start && transaction.end <= command.end).map((transaction) => ({ ...transaction, id: cloneId(transaction.id), start: command.at + transaction.start - command.start, end: command.at + transaction.end - command.start, ...(transaction.phases ? { phases: transaction.phases.map((phase) => ({ ...phase, id: cloneId(phase.id), start: command.at + phase.start - command.start, end: command.at + phase.end - command.start })) } : {}) }));
   return {
     ...inserted,
     signals,
