@@ -115,7 +115,7 @@ export function RenameDialog({ dialogRef, draft, onDraftChange, error, onApply, 
   </form></ModalBackdrop>;
 }
 
-export type BulkRegistrationPreviewState = { readonly sourceText: string; readonly definitions: readonly BulkSignalDefinition[]; readonly errors: readonly string[] };
+export type BulkRegistrationPreviewState = { readonly sourceText: string; readonly definitions: readonly BulkSignalDefinition[]; readonly errors: readonly string[]; readonly selectedPaths: ReadonlySet<string> };
 
 export type BulkRegistrationDialogProps = {
   readonly dialogRef: RefObject<HTMLElement | null>;
@@ -127,6 +127,7 @@ export type BulkRegistrationDialogProps = {
   readonly status: string;
   readonly preview: BulkRegistrationPreviewState | undefined;
   readonly onPreview: () => void;
+  readonly onSelectionChange: (paths: ReadonlySet<string>) => void;
   readonly onApply: () => void;
   readonly onClose: () => void;
 };
@@ -472,13 +473,24 @@ export function EditorStatusBar({ toolStatus, selectionStatus, signalCount, anno
   </footer>;
 }
 
-export function BulkRegistrationDialog({ dialogRef, groups, text, onTextChange, groupId, onGroupIdChange, status, preview, onPreview, onApply, onClose }: BulkRegistrationDialogProps) {
+export function BulkRegistrationDialog({ dialogRef, groups, text, onTextChange, groupId, onGroupIdChange, status, preview, onPreview, onSelectionChange, onApply, onClose }: BulkRegistrationDialogProps) {
+  const [pathFilter, setPathFilter] = useState("");
+  useEffect(() => setPathFilter(""), [text]);
+  const visibleDefinitions = preview?.definitions.filter((definition) => `${definition.path} ${definition.kind}`.toLocaleLowerCase().includes(pathFilter.trim().toLocaleLowerCase())) ?? [];
+  const updateVisibleSelection = (selected: boolean) => {
+    if (!preview) return;
+    const next = new Set(preview.selectedPaths);
+    for (const definition of visibleDefinitions) {
+      if (selected) next.add(definition.path); else next.delete(definition.path);
+    }
+    onSelectionChange(next);
+  };
   return <ModalBackdrop onDismiss={onClose}><section ref={dialogRef} role="dialog" aria-modal="true" aria-label="Bulk Signal Registration" className="document-properties bulk-registration">
     <header><h2>Bulk Signal Registration</h2><button type="button" aria-label="Close bulk registration" onClick={onClose}><EditorIcon name="close" /></button></header>
-    <p>One signal per line: <code>instance.path.signal [binary|bus|state|clock]</code></p>
+    <p>Elaborated hierarchy manifest; one signal per line: <code>instance.path.signal [binary|bus|state|logic|event|pulse|clock]</code>. Bus ranges are written as <code>data[31:0] bus</code>; RTL is not parsed in-browser.</p>
     <textarea data-dialog-initial-focus aria-label="Bulk signal definitions" value={text} onChange={(event) => onTextChange(event.target.value)} rows={8} />
     <label>Target Group<select aria-label="Bulk registration target group" value={groupId ?? ""} onChange={(event) => onGroupIdChange(event.target.value as GroupId)}>{groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
-    {preview && <div className={`bulk-preview ${preview.errors.length === 0 ? "valid" : "invalid"}`} data-testid="bulk-register-preview"><strong>{preview.errors.length === 0 ? `Ready to register ${preview.definitions.length} signal${preview.definitions.length === 1 ? "" : "s"}` : "Preview errors"}</strong>{preview.errors.length > 0 ? <ul>{preview.errors.map((error) => <li key={error}>{error}</li>)}</ul> : <ul>{preview.definitions.map((definition) => <li key={definition.path}>{definition.path} · {definition.kind}{definition.width === undefined ? "" : ` · width ${definition.width}`}</li>)}</ul>}</div>}
-    <footer><output>{status}</output><button type="button" data-testid="bulk-register-preview-button" onClick={onPreview}>Preview</button><button type="button" data-testid="bulk-register-apply" onClick={onApply} disabled={!preview || preview.sourceText !== text || preview.errors.length > 0 || preview.definitions.length === 0}>Register Signals</button></footer>
+    {preview && <div className={`bulk-preview ${preview.errors.length === 0 ? "valid" : "invalid"}`} data-testid="bulk-register-preview"><strong>{preview.errors.length === 0 ? `Ready to register ${preview.selectedPaths.size} of ${preview.definitions.length} signal${preview.definitions.length === 1 ? "" : "s"}` : "Preview errors"}</strong>{preview.errors.length > 0 ? <ul>{preview.errors.map((error) => <li key={error}>{error}</li>)}</ul> : <><label>Filter hierarchy paths<input type="search" aria-label="Filter hierarchy paths to register" data-testid="bulk-register-path-filter" value={pathFilter} onChange={(event) => setPathFilter(event.target.value)} /></label><div><button type="button" data-testid="bulk-register-select-all" onClick={() => updateVisibleSelection(true)} disabled={visibleDefinitions.every((definition) => preview.selectedPaths.has(definition.path))}>Select visible</button><button type="button" data-testid="bulk-register-select-none" onClick={() => updateVisibleSelection(false)} disabled={visibleDefinitions.every((definition) => !preview.selectedPaths.has(definition.path))}>Clear visible</button></div><ul>{visibleDefinitions.map((definition) => <li key={definition.path}><label><input type="checkbox" aria-label={`Register ${definition.path}`} checked={preview.selectedPaths.has(definition.path)} onChange={() => { const next = new Set(preview.selectedPaths); if (next.has(definition.path)) next.delete(definition.path); else next.add(definition.path); onSelectionChange(next); }} />{definition.path} · {definition.kind}{definition.width === undefined ? "" : ` · width ${definition.width}`}</label></li>)}</ul>{visibleDefinitions.length === 0 && <p>No hierarchy paths match this filter.</p>}</>}</div>}
+    <footer><output>{status}</output><button type="button" data-testid="bulk-register-preview-button" onClick={onPreview}>Preview</button><button type="button" data-testid="bulk-register-apply" onClick={onApply} disabled={!preview || preview.sourceText !== text || preview.errors.length > 0 || preview.selectedPaths.size === 0}>Register Signals</button></footer>
   </section></ModalBackdrop>;
 }

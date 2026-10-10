@@ -71,9 +71,9 @@ export interface EditorActionsInput {
   readonly selectedTransactionId: TransactionId | undefined;
   readonly bulkRegistrationText: string;
   readonly bulkRegistrationGroupId: GroupId | undefined;
-  readonly bulkRegistrationPreview: ({ readonly sourceText: string } & ReturnType<typeof parseBulkSignalDefinitions>) | undefined;
+  readonly bulkRegistrationPreview: ({ readonly sourceText: string; readonly selectedPaths: ReadonlySet<string> } & ReturnType<typeof parseBulkSignalDefinitions>) | undefined;
   readonly setBulkRegistrationStatus: (value: string) => void;
-  readonly setBulkRegistrationPreview: (value: ({ readonly sourceText: string } & ReturnType<typeof parseBulkSignalDefinitions>) | undefined) => void;
+  readonly setBulkRegistrationPreview: (value: ({ readonly sourceText: string; readonly selectedPaths: ReadonlySet<string> } & ReturnType<typeof parseBulkSignalDefinitions>) | undefined) => void;
   readonly setBulkRegistrationVisible: (value: boolean) => void;
   readonly documentLifecycle: DocumentLifecycleOwner;
   readonly pendingFileOriginRef: MutableRefObject<HTMLElement | null>;
@@ -354,21 +354,22 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
       input.setBulkRegistrationStatus("Preview the definitions before applying.");
       return;
     }
-    if (input.bulkRegistrationPreview.errors.length > 0 || input.bulkRegistrationPreview.definitions.length === 0) {
-      input.setBulkRegistrationStatus("Fix preview errors before applying.");
+    const selectedDefinitions = input.bulkRegistrationPreview.definitions.filter((definition) => input.bulkRegistrationPreview!.selectedPaths.has(definition.path));
+    if (input.bulkRegistrationPreview.errors.length > 0 || selectedDefinitions.length === 0) {
+      input.setBulkRegistrationStatus(input.bulkRegistrationPreview.errors.length > 0 ? "Fix preview errors before applying." : "Select at least one signal before applying.");
       return;
     }
     const signals: Signal[] = [];
     const allocateId = createEntityIdAllocator(input.document);
-    for (const [index, definition] of input.bulkRegistrationPreview.definitions.entries()) {
+    for (const [index, definition] of selectedDefinitions.entries()) {
       const id = signalId(`${allocateId("signal")}_bulk_${index}`);
       if (definition.kind === "clock") {
         signals.push({ id, name: definition.signalName, type: "clock", role: "internal", source: { instancePath: definition.instancePath, signalName: definition.signalName }, display: { name: definition.signalName }, generator: { start: 0, period: 2, duty: 0.5, phase: 0, initial: 0, polarity: "positive" }, edgeCounter: { show: false, mode: "both", startNumber: 1, countFrom: "signal-start", labelEvery: 1, position: "above", offset: { x: 0, y: -6 } } });
       } else {
         const type = definition.kind;
         const initialValue = type === "state" ? "IDLE" : type === "bus" ? "0" : type === "event" ? "NONE" : 0;
-        const signal = valueSignal(id, definition.signalName, "internal", [{ id: allocateId("signalValueChange"), start: 0, value: initialValue }], type === "bus" ? { type, width: definition.width ?? 1, displayFormat: "hex" } : { type });
-        signals.push({ ...signal, source: { ...signal.source, instancePath: definition.instancePath } });
+        const signal = valueSignal(id, definition.displayName, "internal", [{ id: allocateId("signalValueChange"), start: 0, value: initialValue }], type === "bus" ? { type, width: definition.width ?? 1, displayFormat: "hex" } : { type });
+        signals.push({ ...signal, source: { instancePath: definition.instancePath, signalName: definition.signalName, ...(definition.msb === undefined ? {} : { msb: definition.msb, lsb: definition.lsb }) } });
       }
     }
     const result = input.commandRegistry.current.execute<SemanticCommand, ReturnType<CommandHistorySession["execute"]>>("semantic.execute", { id: input.nextCommandId("bulk_register_signals"), type: "signal.bulkCreate", signals, targetGroupId, index: input.document.signalGroups.find((group) => group.id === targetGroupId)?.rows.length ?? 0 });
@@ -392,7 +393,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
   };
   const previewBulkSignals = () => {
     const preview = parseBulkSignalDefinitions(input.bulkRegistrationText, input.document);
-    input.setBulkRegistrationPreview({ sourceText: input.bulkRegistrationText, ...preview });
+    input.setBulkRegistrationPreview({ sourceText: input.bulkRegistrationText, ...preview, selectedPaths: new Set(preview.definitions.map((definition) => definition.path)) });
     input.setBulkRegistrationStatus(preview.errors.length === 0 ? `Preview ready: ${preview.definitions.length} signal${preview.definitions.length === 1 ? "" : "s"}` : preview.errors.join(" "));
   };
   const fileActions = createFileActionController({ documentLifecycle: input.documentLifecycle, pendingFileOriginRef: input.pendingFileOriginRef, documentTitle: input.documentTitle });

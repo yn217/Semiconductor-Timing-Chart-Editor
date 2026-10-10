@@ -8,8 +8,18 @@ describe("parseBulkSignalDefinitions", () => {
     expect(result.errors).toEqual([]);
     expect(result.definitions).toMatchObject([
       { path: "dut.ctrl.enable", signalName: "enable", instancePath: ["dut", "ctrl"] },
-      { path: "dut.data[7:0]", signalName: "data[7:0]", width: 8 },
+      { path: "dut.data[7:0]", signalName: "data", displayName: "data[7:0]", width: 8, msb: 7, lsb: 0 },
     ]);
+  });
+
+  it("compares bus manifest paths against structured canonical ranges", () => {
+    const document = canonicalFixture();
+    const existingBus = document.signals.find((signal) => signal.type === "bus");
+    expect(existingBus).toBeDefined();
+    existingBus!.source = { ...existingBus!.source, instancePath: ["dut"], signalName: "payload", msb: 31, lsb: 0 };
+    const result = parseBulkSignalDefinitions("dut.payload[31:0] bus\ndut.payload[30:0] bus", document);
+    expect(result.definitions.map((definition) => definition.path)).toEqual(["dut.payload[30:0]"]);
+    expect(result.errors).toEqual(["Line 1: duplicate signal path 'dut.payload[31:0]'."]);
   });
 
   it("reports malformed, unsupported, and duplicate definitions", () => {
@@ -23,11 +33,12 @@ describe("parseBulkSignalDefinitions", () => {
   });
 
   it("rejects invalid instance path segments before canonical creation", () => {
-    const result = parseBulkSignalDefinitions("dut.bad-name.signal binary\ndut.2core.signal binary", canonicalFixture());
+    const result = parseBulkSignalDefinitions("dut.bad-name.signal binary\ndut.2core.signal binary\ndut..empty-segment binary", canonicalFixture());
     expect(result.definitions).toEqual([]);
     expect(result.errors).toEqual([
       "Line 1: invalid signal path 'dut.bad-name.signal'.",
       "Line 2: invalid signal path 'dut.2core.signal'.",
+      "Line 3: invalid signal path 'dut..empty-segment'.",
     ]);
   });
 });

@@ -9,6 +9,7 @@ export type BulkRegistrationPreviewState<GroupId> = {
   readonly sourceText: string;
   readonly definitions: readonly BulkSignalDefinition[];
   readonly errors: readonly string[];
+  readonly selectedPaths: ReadonlySet<string>;
 };
 
 /** Owns dialog and popup-menu visibility/draft state: the Context Menu, the

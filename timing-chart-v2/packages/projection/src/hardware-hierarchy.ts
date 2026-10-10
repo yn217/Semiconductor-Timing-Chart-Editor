@@ -101,8 +101,12 @@ export function deriveHardwareHierarchyEntries(document: CanonicalDocument, view
     const instancePath = instancePathSegments.join(".");
     if (scopeSegments !== undefined && (scopeSegments.length > instancePathSegments.length || !scopeSegments.every((segment, index) => instancePathSegments[index] === segment))) continue;
     if (scope === "(root)" && instancePathSegments.length !== 0) continue;
-    const fullPath = [...instancePathSegments, signal.source.signalName].join(".") || signal.source.signalName;
-    const relativePath = [...instancePathSegments.slice(scopeSegments?.length ?? 0), signal.source.signalName].join(".");
+    const hasEmbeddedBusRange = /\[\d+:\d+\]$/.test(signal.source.signalName);
+    const sourceLeafPath = signal.type === "bus" && !hasEmbeddedBusRange && signal.source.msb !== undefined && signal.source.lsb !== undefined
+      ? `${signal.source.signalName}[${signal.source.msb}:${signal.source.lsb}]`
+      : signal.source.signalName;
+    const fullPath = [...instancePathSegments, sourceLeafPath].join(".") || sourceLeafPath;
+    const relativePath = [...instancePathSegments.slice(scopeSegments?.length ?? 0), sourceLeafPath].join(".");
     const width = signal.type === "bus" ? `[${signal.source.msb ?? (signal.width ?? 1) - 1}:${signal.source.lsb ?? 0}]` : "—";
     entries.push({ signalId: signal.id, scope: instancePath || "(root)", instancePath: instancePath || "(root)", relativePath, signalName: signal.source.signalName, displayName: signal.display.name, fullPath, role: signal.role, type: signal.type, width, groupId: location.groupId, groupName: location.groupName, groupOrder: location.groupOrder, rowOrder: location.rowOrder });
   }
