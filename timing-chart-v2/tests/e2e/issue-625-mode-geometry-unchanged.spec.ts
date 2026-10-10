@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 
 // #625 acceptance: the Cycle-only structural split must not move Transaction, Combined or (visually) Cycle. The fixture is the
 // pre-split measurement of the same elements at both locked viewports; every box must stay within 1px.
+// The fixture was re-measured on 2026-10-10 after the intentional header alignment (Transaction 37px header, Cycle/Combined headers) and the Combined
+// scroll-owner separation; it now guards against unintended drift from that layout.
 const baseline = JSON.parse(readFileSync(new URL("./fixtures/issue-625-pre-split-geometry.json", import.meta.url), "utf8")) as Record<string, Record<string, unknown>>;
 
 test("Transaction, Combined and Cycle geometry is unchanged by the Cycle-only split (<=1px)", async ({ page }) => {
