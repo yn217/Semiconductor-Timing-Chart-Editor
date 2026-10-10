@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T14:59:54.474Z",
+  "generatedAt": "2026-10-10T15:02:41.878Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 446,
-  "caseCount": 1333,
-  "reviewedCaseCount": 1275,
+  "specFileCount": 447,
+  "caseCount": 1334,
+  "reviewedCaseCount": 1276,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 425,
+    "pr": 426,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -4551,6 +4551,33 @@
       "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
       "replacementTest": null,
       "reviewStatus": "UNREVIEWED"
+    },
+    {
+      "file": "browser-tab-title.spec.ts",
+      "suitePath": [],
+      "line": 3,
+      "title": "the browser tab names the document and marks unsaved changes",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "browser-tab-title",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "The tab title shows the document name and a leading * while there are unsaved changes.",
+      "duplicateGroup": "browser-tab-title",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The title is set on the real page; unit tests cannot observe the tab.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "browser-tab-title",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "bulk-registration-strict.spec.ts",
@@ -35220,6 +35247,15 @@
       "declaredTimeoutMs": 60,
       "candidateSignals": [],
       "semanticReviewStatus": "UNREVIEWED"
+    },
+    {
+      "file": "browser-tab-title.spec.ts",
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "bulk-registration-strict.spec.ts",

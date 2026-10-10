@@ -817,6 +817,9 @@ export function MinimalCycleView() {
     window.addEventListener("drop", onDrop);
     return () => { window.removeEventListener("dragover", onDragOver); window.removeEventListener("drop", onDrop); };
   }, []);
+  // The browser tab names the document (and marks unsaved changes) so several open editors can be told apart.
+  const tabTitle = `${history.dirty ? "* " : ""}${snapshot.document.document.title.replace(/\s+(?:--|—)\s+(?:Cycle|Transaction|Combined)\s+Mode$/i, "").trim() || snapshot.document.document.title.trim() || "Untitled"} - Timing Chart Editor`;
+  useEffect(() => { globalThis.document.title = tabTitle; }, [tabTitle]);
   // Ctrl/Cmd+S saves, Ctrl/Cmd+Shift+S opens Save As, Ctrl/Cmd+O opens a file -- the browser's own "Save page" / "Open file" must never appear in a document editor.
   const fileShortcutRef = useRef<(key: "s" | "S" | "o") => void>(() => undefined);
   fileShortcutRef.current = (key) => {

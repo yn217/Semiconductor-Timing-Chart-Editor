@@ -17262,6 +17262,24 @@
       "decision": "KEEP",
       "reason": "Text fields are excluded from most global shortcuts; saving must not depend on focus.",
       "replacementTest": null
+    },
+    {
+      "file": "browser-tab-title.spec.ts",
+      "title": "the browser tab names the document and marks unsaved changes",
+      "domain": "browser-tab-title",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "The tab title shows the document name and a leading * while there are unsaved changes.",
+      "duplicateGroup": "browser-tab-title",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The title is set on the real page; unit tests cannot observe the tab.",
+      "replacementTest": null
     }
   ]
 }
