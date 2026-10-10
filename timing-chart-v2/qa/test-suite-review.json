@@ -17658,6 +17658,42 @@
       "decision": "KEEP",
       "reason": "Code-review finding: the dialog showed A4/Landscape while exporting unpaged.",
       "replacementTest": null
+    },
+    {
+      "file": "minimap-zoom-out-scroll-extent.spec.ts",
+      "title": "MiniMap viewport rect and click-pan use the zoom-scaled scroll extent below 100%",
+      "domain": "minimap",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 4000,
+      "primaryContract": "Below 100% zoom the MiniMap viewport rectangle, click-pan and End key use the same zoom-scaled scroll extent as the horizontal scrollbar.",
+      "duplicateGroup": "minimap",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found the MiniMap used the unscaled scrollWidth, halving the viewport rectangle at 50% zoom.",
+      "replacementTest": null
+    },
+    {
+      "file": "bottom-bookmark-navigation.spec.ts",
+      "title": "Bottom Bookmarks Next and Previous visit every Bookmark that shares a cycle",
+      "domain": "bookmark-navigation",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 4000,
+      "primaryContract": "Next/Previous step from the selected Bookmark so Bookmarks sharing a cycle are each reachable.",
+      "duplicateGroup": "bookmark-navigation",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found a second Bookmark at the same cycle was never visited by Next or Previous.",
+      "replacementTest": null
     }
   ]
 }

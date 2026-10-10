@@ -61,9 +61,16 @@ export function TimelineToolbar({ document, range, history, onUndo, onRedo, onRa
     commands.updateLabelAnchor(editingLabelAnchor.id, labelAnchorSource, labelAnchorDisplay);
     setEditingLabelAnchorId(undefined);
   };
+  // Bookmarks sharing a Cycle are indistinguishable by range, so remember the
+  // last one navigated to while the selected range still sits on it.
+  const lastNavigatedBookmarkId = useRef<string | undefined>(undefined);
   const navigateBookmark = (direction: -1 | 1) => {
-    const next = findAdjacentBookmark(document.bookmarks, range, direction);
-    if (next) onNavigateBookmark(next.start, next.id);
+    const last = document.bookmarks.find((bookmark) => bookmark.id === lastNavigatedBookmarkId.current);
+    const activeId = last && last.start >= range.start && last.start < Math.max(range.end, range.start + 1) ? last.id : undefined;
+    const next = findAdjacentBookmark(document.bookmarks, range, direction, activeId);
+    if (!next) return;
+    lastNavigatedBookmarkId.current = next.id;
+    onNavigateBookmark(next.start, next.id);
   };
   const applyTimeGroup = () => {
     if (!editingGroup) return;

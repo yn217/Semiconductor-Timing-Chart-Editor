@@ -118,7 +118,7 @@ export function BookmarkEditor({ bookmark, document, history, range, onSelect, o
   // to the same Timeline range the Ribbon itself uses.
   const navigate = (direction: -1 | 1) => {
     const referenceRange = bookmark ? { start: bookmark.start, end: bookmark.start + 1 } : range;
-    const next = findAdjacentBookmark(document.bookmarks, referenceRange, direction);
+    const next = findAdjacentBookmark(document.bookmarks, referenceRange, direction, bookmark?.id);
     if (next) onNavigateBookmark(next.start, next.id);
   };
   // #422: Draft -> Apply -- typing into Name/Cycle/Comment never touches
