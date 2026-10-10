@@ -56,4 +56,5 @@
   .surface-host [data-role="timing-chart-surface"] { grid-template-columns: var(--gui-left-width) var(--gui-frozen-width, 170px) var(--wave-width, 640px); }
   .surface-host [data-role="frozen-label-rows"] { left: var(--gui-left-width) !important; }
 }
-@media (prefers-color-scheme: dark) { :root { color-scheme: dark; } }
+/* The UI is light-only: opting native controls into the OS dark scheme turned every unstyled control's UA text white-on-white. */
+:root { color-scheme: light; }

@@ -16884,6 +16884,24 @@
       "decision": "KEEP",
       "reason": "The failure (duplicate value-change IDs after a ripple) is only visible through the committed command on the production sample.",
       "replacementTest": null
+    },
+    {
+      "file": "dark-scheme-contrast.spec.ts",
+      "title": "no unreadable text under the OS dark colour scheme (ribbon tabs and every Bottom tab)",
+      "domain": "dark-scheme-readability",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 14000,
+      "primaryContract": "Under the OS dark colour scheme no visible text resolves to the same colour as its surface (white-on-white native controls).",
+      "duplicateGroup": "dark-scheme-readability",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Native control colours only resolve in a real browser under prefers-color-scheme: dark.",
+      "replacementTest": null
     }
   ]
 }

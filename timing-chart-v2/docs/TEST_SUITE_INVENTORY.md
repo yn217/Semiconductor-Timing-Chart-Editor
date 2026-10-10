@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 432 spec files and 1312 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 466 spec files and 1411 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1254/1312 cases reviewed.
+Semantic review progress: 1255/1411 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 634 |
 | `nightly` | 241 |
 | `performance` | 73 |
-| `pr` | 404 |
+| `pr` | 405 |
 | `visual` | 181 |
 
 ## Top recorded per-case runtimes
@@ -26,6 +26,7 @@ These are case-level observations recorded directly on case reviews. Inventory g
 | 28400 | `visual` | `issue-441-ribbon-label-integrity.spec.ts` | Ribbon labels are intact across Cycle, Transaction and Combined at 1672x941 |
 | 25200 | `visual` | `issue-441-ribbon-label-integrity.spec.ts` | Ribbon labels are intact across Cycle, Transaction and Combined at 1280x720 |
 | 25100 | `visual` | `issue-441-ribbon-label-integrity.spec.ts` | Ribbon labels are intact across Cycle, Transaction and Combined at 1024x700 |
+| 14000 | `pr` | `dark-scheme-contrast.spec.ts` | no unreadable text under the OS dark colour scheme (ribbon tabs and every Bottom tab) |
 | 14000 | `pr` | `timeline-edits-stable-ids.spec.ts` | Timeline Delete range and Insert commit on a document with stable value IDs |
 | 13900 | `pr` | `issue-753-bookmark-navigation-stays-in-app.spec.ts` | every Bookmark gesture stays inside the SPA in Combined mode |
 | 13400 | `pr` | `issue-753-bookmark-navigation-stays-in-app.spec.ts` | every Bookmark gesture stays inside the SPA in Cycle mode |
@@ -41,7 +42,6 @@ These are case-level observations recorded directly on case reviews. Inventory g
 | 8600 | `visual` | `issue-767-zoom-keeps-glyph-shape.spec.ts` | zoom does not stretch Transaction text at 1280x720 |
 | 8100 | `pr` | `issue-767-zoom-keeps-glyph-shape.spec.ts` | a narrow Transaction bar keeps a body drag handle and can be moved |
 | 7700 | `visual` | `left-pane-constraint.spec.ts` | left pane starts at the approved minimum without a resize jump (/) |
-| 7600 | `pr` | `issue-744-diagnostics-freshness.spec.ts` | timing diagnostics stay current across a semantic edit, Undo and Redo (no silent clear) |
 
 ## Recorded spec-level runtimes
 
@@ -55,7 +55,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | 3600 | `integration`, `visual` | `issue-746-visible-group-create.spec.ts` |
 | 952 | `performance`, `nightly` | `perf-fixed-full-span-open.spec.ts` |
 
-> This is a complete name/location inventory, not a completed semantic review. 58 cases remain `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
+> This is a complete name/location inventory, not a completed semantic review. 156 cases remain `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
 | Spec file | Cases | Review status |
 | --- | ---: | --- |
@@ -117,6 +117,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `cycle-frozen-columns-scroll.spec.ts` | 2 | 2/2 reviewed |
 | `cycle-ruler-long-document-pitch.spec.ts` | 1 | 1/1 reviewed |
 | `cycle-scroll-pitch-invariant.spec.ts` | 2 | 2/2 reviewed |
+| `dark-scheme-contrast.spec.ts` | 1 | 1/1 reviewed |
 | `design-system-foundation.spec.ts` | 1 | 1/1 reviewed |
 | `diagnostic-aggregator.spec.ts` | 8 | 8/8 reviewed |
 | `dialog-esc-lifecycle.spec.ts` | 2 | 1/2 reviewed |
@@ -491,6 +492,39 @@ These values were measured for a whole spec file and are deliberately not copied
 | `workspace-zoom-isolation.spec.ts` | 2 | 2/2 reviewed |
 | `zoom-cross-surface-alignment.spec.ts` | 1 | 1/1 reviewed |
 | `zoom-text-fidelity.spec.ts` | 5 | 5/5 reviewed |
+| `zz-a11y-tmp.spec.ts` | 1 | 0/1 reviewed |
+| `zz-align-tmp.spec.ts` | 1 | 0/1 reviewed |
+| `zz-annot-tmp.spec.ts` | 1 | 0/1 reviewed |
+| `zz-bm-tmp.spec.ts` | 6 | 0/6 reviewed |
+| `zz-bulk-tmp.spec.ts` | 1 | 0/1 reviewed |
+| `zz-comb-tmp.spec.ts` | 6 | 0/6 reviewed |
+| `zz-contrast-tmp.spec.ts` | 1 | 0/1 reviewed |
+| `zz-dirty-tmp.spec.ts` | 1 | 0/1 reviewed |
+| `zz-dnd-tmp.spec.ts` | 8 | 0/8 reviewed |
+| `zz-events-tmp.spec.ts` | 12 | 0/12 reviewed |
+| `zz-export-tmp.spec.ts` | 1 | 0/1 reviewed |
+| `zz-files-tmp.spec.ts` | 1 | 0/1 reviewed |
+| `zz-fuzz-tmp.spec.ts` | 3 | 0/3 reviewed |
+| `zz-fuzz2-tmp.spec.ts` | 3 | 0/3 reviewed |
+| `zz-fuzz3-tmp.spec.ts` | 3 | 0/3 reviewed |
+| `zz-hidden-tmp.spec.ts` | 1 | 0/1 reviewed |
+| `zz-input-tmp.spec.ts` | 4 | 0/4 reviewed |
+| `zz-insert-tmp.spec.ts` | 1 | 0/1 reviewed |
+| `zz-kbd-tmp.spec.ts` | 1 | 0/1 reviewed |
+| `zz-perf-tmp.spec.ts` | 2 | 0/2 reviewed |
+| `zz-phase-tmp.spec.ts` | 8 | 0/8 reviewed |
+| `zz-race-tmp.spec.ts` | 1 | 0/1 reviewed |
+| `zz-reach-tmp.spec.ts` | 1 | 0/1 reviewed |
+| `zz-ribbon-tmp.spec.ts` | 3 | 0/3 reviewed |
+| `zz-save-tmp.spec.ts` | 1 | 0/1 reviewed |
+| `zz-scenario-tmp.spec.ts` | 6 | 0/6 reviewed |
+| `zz-storage-tmp.spec.ts` | 1 | 0/1 reviewed |
+| `zz-tc-tmp.spec.ts` | 1 | 0/1 reviewed |
+| `zz-timeline-tmp.spec.ts` | 12 | 0/12 reviewed |
+| `zz-toast-tmp.spec.ts` | 1 | 0/1 reviewed |
+| `zz-undo-tmp.spec.ts` | 3 | 0/3 reviewed |
+| `zz-viewport-tmp.spec.ts` | 1 | 0/1 reviewed |
+| `zz-vround-tmp.spec.ts` | 1 | 0/1 reviewed |
 
 ## Static review candidates
 
@@ -515,6 +549,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `cursor-signal-split-late-pane.spec.ts` | querySelector, dataset, geometryRead |
 | `cycle-default-pitch.spec.ts` | querySelector, getComputedStyle, geometryRead, explicitWait |
 | `cycle-frozen-columns-scroll.spec.ts` | getComputedStyle |
+| `dark-scheme-contrast.spec.ts` | getComputedStyle, geometryRead, explicitWait |
 | `design-system-foundation.spec.ts` | querySelector, getComputedStyle, directDomMutation, geometryRead |
 | `edge-counter-compact.spec.ts` | querySelector, geometryRead |
 | `empty-group-tree-projection.spec.ts` | dataset, explicitWait |
@@ -698,6 +733,39 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `visual-grammar-cross-component.spec.ts` | querySelector, geometryRead |
 | `wavedrom-shared-definitions.spec.ts` | querySelector, styleMutation, directDomMutation, explicitWait |
 | `zoom-text-fidelity.spec.ts` | getComputedStyle, dataset, geometryRead, explicitWait |
+| `zz-a11y-tmp.spec.ts` | querySelector, getComputedStyle, geometryRead, explicitWait |
+| `zz-align-tmp.spec.ts` | dataset, geometryRead, explicitWait |
+| `zz-annot-tmp.spec.ts` | querySelector, explicitWait |
+| `zz-bm-tmp.spec.ts` | querySelector, explicitWait |
+| `zz-bulk-tmp.spec.ts` | querySelector, dataset, explicitWait |
+| `zz-comb-tmp.spec.ts` | querySelector, geometryRead, explicitWait |
+| `zz-contrast-tmp.spec.ts` | getComputedStyle, geometryRead, explicitWait |
+| `zz-dirty-tmp.spec.ts` | explicitWait |
+| `zz-dnd-tmp.spec.ts` | querySelector, explicitWait |
+| `zz-events-tmp.spec.ts` | explicitWait |
+| `zz-export-tmp.spec.ts` | explicitWait |
+| `zz-files-tmp.spec.ts` | explicitWait |
+| `zz-fuzz-tmp.spec.ts` | querySelector, explicitWait |
+| `zz-fuzz2-tmp.spec.ts` | querySelector, explicitWait |
+| `zz-fuzz3-tmp.spec.ts` | querySelector, explicitWait |
+| `zz-hidden-tmp.spec.ts` | explicitWait |
+| `zz-input-tmp.spec.ts` | querySelector, explicitWait |
+| `zz-insert-tmp.spec.ts` | querySelector, explicitWait |
+| `zz-kbd-tmp.spec.ts` | querySelector, getComputedStyle, explicitWait |
+| `zz-perf-tmp.spec.ts` | querySelector, explicitWait |
+| `zz-phase-tmp.spec.ts` | querySelector, explicitWait |
+| `zz-race-tmp.spec.ts` | querySelector, explicitWait |
+| `zz-reach-tmp.spec.ts` | querySelector, geometryRead, explicitWait |
+| `zz-ribbon-tmp.spec.ts` | querySelector, explicitWait |
+| `zz-save-tmp.spec.ts` | querySelector, explicitWait |
+| `zz-scenario-tmp.spec.ts` | querySelector, explicitWait |
+| `zz-storage-tmp.spec.ts` | querySelector, explicitWait |
+| `zz-tc-tmp.spec.ts` | querySelector, explicitWait |
+| `zz-timeline-tmp.spec.ts` | querySelector, explicitWait |
+| `zz-toast-tmp.spec.ts` | querySelector, explicitWait |
+| `zz-undo-tmp.spec.ts` | explicitWait |
+| `zz-viewport-tmp.spec.ts` | querySelector, geometryRead, explicitWait |
+| `zz-vround-tmp.spec.ts` | explicitWait |
 
 ## Exact-title duplicate candidates
 
