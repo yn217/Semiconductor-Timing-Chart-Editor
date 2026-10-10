@@ -74,8 +74,61 @@ export function describeAIProposalCommands(document: CanonicalDocument, commands
   const proposedPhases = new Map(document.transactions.flatMap((transaction) => (transaction.phases ?? []).map((phase) => [phase.id, phase] as const)));
   const transactionName = (id: string) => proposedTransactionNames.get(id) ?? document.transactions.find((item) => item.id === id)?.name ?? id;
   const signalName = (id: string) => document.signals.find((item) => item.id === id)?.display.name ?? id;
-  return commands.map((command) => {
+  const annotationLabel = (id: string) => document.annotations.find((item) => item.id === id)?.label ?? id;
+  const bookmarkName = (id: string) => document.bookmarks.find((item) => item.id === id)?.name ?? id;
+  const timeGroupName = (id: string) => document.timeGroups.find((item) => item.id === id)?.name ?? id;
+  const transactionGroupName = (id: string) => (document.transactionGroups ?? []).find((item) => item.id === id)?.name ?? id;
+  const referencedSignals = (command: SemanticCommand) => referencedIds(command, SIGNAL_REFERENCE_KEY);
+  return commands.map((command): Readonly<{ title: string; detail: string }> => {
     switch (command.type) {
+      case "signal.create":
+        return { title: `Create Signal ${command.signal.display.name}`, detail: `Signal ID ${command.signal.id} · Group ID ${command.targetGroupId} · position ${command.index + 1}` };
+      case "signal.updateProperties": {
+        const current = document.signals.find((item) => item.id === command.signalId);
+        const changes = [
+          current !== undefined && current.name !== command.name ? "name" : undefined,
+          current !== undefined && current.role !== command.role ? "role" : undefined,
+          command.signalType === undefined ? undefined : "type",
+          command.width === undefined ? undefined : "width",
+          command.displayFormat === undefined ? undefined : "display format",
+          command.visible === undefined ? undefined : command.visible ? "show" : "hide",
+          command.displayStyle === undefined ? undefined : "display style",
+          command.displayAlign === undefined && command.displayOverflow === undefined ? undefined : "display alignment",
+          command.spacingBefore === undefined && command.spacingAfter === undefined ? undefined : "spacing",
+          command.enumId === undefined && command.clearEnumId === undefined ? undefined : "enum",
+        ].filter((item): item is string => item !== undefined);
+        return { title: `Update Signal ${signalName(command.signalId)}`, detail: `${changes.length > 0 ? changes.join(", ") : "properties"} · Signal ID ${command.signalId}` };
+      }
+      case "annotation.create":
+        return { title: `Create ${command.annotation.type} Annotation ${command.annotation.label}`, detail: `Annotation ID ${command.annotation.id}${referencedSignals(command).length > 0 ? ` · Signal ID ${referencedSignals(command).join(", ")}` : ""}` };
+      case "annotation.updateProperties":
+        return { title: `Update Annotation ${command.label}`, detail: `${command.visible ? "Shown" : "Hidden"} · Annotation ID ${command.annotationId}` };
+      case "annotation.updateAnchor":
+        return { title: `Update Annotation ${annotationLabel(command.annotationId)} anchor`, detail: `${command.anchor.point} at source cycle ${command.anchor.cycle ?? "unchanged"} · Annotation ID ${command.annotationId}` };
+      case "annotation.setAnchor":
+        return { title: `Update Annotation ${annotationLabel(command.annotationId)} ${command.field} anchor`, detail: `${command.anchor.point} at source cycle ${command.anchor.cycle ?? "unchanged"} · Annotation ID ${command.annotationId}` };
+      case "annotation.delete":
+        return { title: `Delete Annotation ${annotationLabel(command.annotationId)}`, detail: `Annotation ID ${command.annotationId}` };
+      case "bookmark.move":
+        return { title: `Move Bookmark ${bookmarkName(command.bookmarkId)} to source cycle ${command.start}`, detail: `Bookmark ID ${command.bookmarkId}` };
+      case "bookmark.update":
+        return { title: `Update Bookmark ${command.name}`, detail: `At source cycle ${command.start} · Bookmark ID ${command.bookmarkId}` };
+      case "bookmark.delete":
+        return { title: `Delete Bookmark ${bookmarkName(command.bookmarkId)}`, detail: `Bookmark ID ${command.bookmarkId}` };
+      case "timeGroup.create":
+        return { title: `Create Time Group ${command.timeGroup.name}`, detail: `${command.timeGroup.start}–${command.timeGroup.end} source cycles · Time Group ID ${command.timeGroup.id}` };
+      case "timeGroup.update":
+        return { title: `Update Time Group ${command.name}`, detail: `${command.start}–${command.end} source cycles · Time Group ID ${command.timeGroupId}` };
+      case "timeGroup.delete":
+        return { title: `Delete Time Group ${timeGroupName(command.timeGroupId)}`, detail: `Time Group ID ${command.timeGroupId}` };
+      case "transactionGroup.create":
+        return { title: `Create Transaction Group ${command.group.name}`, detail: `Transaction Group ID ${command.group.id}` };
+      case "transactionGroup.rename":
+        return { title: `Rename Transaction Group ${transactionGroupName(command.groupId)} to ${command.name}`, detail: `Transaction Group ID ${command.groupId}` };
+      case "transactionGroup.update":
+        return { title: `Update Transaction Group ${command.name}`, detail: `Order ${command.order + 1} · Transaction Group ID ${command.groupId}` };
+      case "transactionGroup.delete":
+        return { title: `Delete Transaction Group ${transactionGroupName(command.groupId)}`, detail: `Transaction Group ID ${command.groupId}` };
       case "transaction.create": {
         proposedTransactionNames.set(command.transaction.id, command.transaction.name);
         return { title: `Create Transaction ${command.transaction.name}`, detail: `${command.transaction.start}–${command.transaction.end} source cycles · ID ${command.transaction.id}` };
@@ -156,6 +209,32 @@ const SELECTION_SCOPED_COMMAND_TARGETS: ReadonlyMap<string, "signalId" | "groupI
   ...["rename", "update", "move", "resize", "moveLane", "moveToGroup", "phaseAdd", "phaseUpdate", "phaseDelete", "linkSignal", "unlinkSignal", "delete"].map((action): [string, "transactionId"] => [`transaction.${action}`, "transactionId"]),
 ]);
 
+// Keys that carry a Signal reference anywhere in a command: direct targets,
+// nested Annotation anchors and Ghost Trace sources, Marker vertical-span rows,
+// bulk lists, Transaction links, clock references and constraint endpoints.
+const SIGNAL_REFERENCE_KEY = /^signalId$|SignalId$|^signalIds$|SignalIds$|^(?:startRowId|endRowId|referenceClock|linkedSignals|rows)$/;
+const ANNOTATION_REFERENCE_KEY = /^annotationId$|AnnotationId$|^annotationIds$|AnnotationIds$/;
+
+/** Every ID stored under a key matching `keyPattern`, found by walking the whole
+ * command so nested references cannot hide from scope checks. */
+function referencedIds(command: SemanticCommand, keyPattern: RegExp): readonly string[] {
+  const ids = new Set<string>();
+  const visit = (value: unknown, key: string | undefined, depth: number): void => {
+    if (depth > 24 || value === null) return;
+    if (typeof value === "string") { if (key !== undefined && keyPattern.test(key)) ids.add(value); return; }
+    if (typeof value !== "object") return;
+    if (Array.isArray(value)) { for (const item of value) visit(item, key, depth + 1); return; }
+    for (const [childKey, child] of Object.entries(value)) visit(child, childKey, depth + 1);
+  };
+  visit(command, undefined, 0);
+  return [...ids];
+}
+
+/** First scope violation across a proposal's commands, using the same rules as Preview. */
+export function scopeViolationForProposal(scope: AIScope, document: CanonicalDocument, commands: readonly SemanticCommand[], selection: Readonly<{ selectedSignalId: SignalId | undefined; selectedGroupId: GroupId | undefined; selectedAnnotationId: string | undefined; selectedTransactionId: string | undefined }>): string | undefined {
+  return commands.map((command) => scopeViolationMessage(scope, document, command, selection.selectedSignalId, selection.selectedGroupId, selection.selectedAnnotationId, selection.selectedTransactionId)).find((message) => message !== undefined);
+}
+
 export function scopeViolationMessage(scope: AIScope, document: CanonicalDocument, command: SemanticCommand, selectedSignalId: SignalId | undefined, selectedGroupId: GroupId | undefined, selectedAnnotationId: string | undefined, selectedTransactionId: string | undefined): string | undefined {
   if (scope === "document") return undefined;
   const record = command as unknown as Record<string, unknown>;
@@ -187,6 +266,14 @@ export function scopeViolationMessage(scope: AIScope, document: CanonicalDocumen
     const id = record[check.field];
     if (typeof id !== "string") continue;
     if (scope === "current-view" && !check.visible(id)) return `${check.label} '${id}' is hidden and outside the Current View scope -- switch Scope to Document to edit a hidden entity.`;
+  }
+  if (scope === "current-view") {
+    for (const signalId of referencedIds(command, SIGNAL_REFERENCE_KEY)) {
+      if (document.signals.find((signal) => signal.id === signalId)?.display.visible === false) return `Signal '${signalId}' is hidden and outside the Current View scope -- switch Scope to Document to edit a hidden entity.`;
+    }
+    for (const annotationId of referencedIds(command, ANNOTATION_REFERENCE_KEY)) {
+      if (document.annotations.find((annotation) => annotation.id === annotationId)?.visible === false) return `Annotation '${annotationId}' is hidden and outside the Current View scope -- switch Scope to Document to edit a hidden entity.`;
+    }
   }
   return undefined;
 }
@@ -265,7 +352,7 @@ export function AIOperationPanel({ document, validationDiagnostics, documentEpoc
     const effectiveQuery = queryOverride ?? query;
     let result = provider.propose({ document, revision, query: effectiveQuery, ...liveSelection, range });
     if (result.ok) {
-      const violation = result.proposal.commands.map((proposedCommand) => scopeViolationMessage(scope, document, proposedCommand, liveSelection.selectedSignalId, liveSelection.selectedGroupId, liveSelection.selectedAnnotationId, liveSelection.selectedTransactionId)).find((message) => message !== undefined);
+      const violation = scopeViolationForProposal(scope, document, result.proposal.commands, liveSelection);
       if (violation) result = { ok: false, message: violation };
     }
     if (!result.ok) { onDiagnostic?.({ code: "AI_PROPOSAL_UNAVAILABLE", path: "$.ai.query", message: result.message, severity: "error", operation: "ai.proposal.preview", operationLabel: "Build AI proposal", source: "ai", stage: "validate", recommendation: "Adjust the request or select the required editor object, then preview again.", detail: "ai-proposal:preview" }); setPreview(undefined); setValidatedRevision(undefined); setStatus(result.message); logActivity("read-only", effectiveQuery, `Preview unavailable · ${result.message}`, actor); return result; }
@@ -303,6 +390,10 @@ export function AIOperationPanel({ document, validationDiagnostics, documentEpoc
   const applyPreview = (current = preview, validated = validatedRevision, proposalEpoch = previewDocumentEpoch, validatedEpoch = validatedDocumentEpoch, proposalGeneration = previewProjectionGeneration, validatedGeneration = validatedProjectionGeneration) => {
     if (!current) { setStatus("Create a preview first."); return; }
     if (!isAIPreviewFresh({ proposalEpoch, currentEpoch: documentEpoch, proposalRevision: current.baseRevision, currentRevision: revision, proposalGeneration, currentGeneration: projectionGeneration })) { onDiagnostic?.({ code: "AI_PREVIEW_STALE", path: "$.ai.preview.baseRevision", message: "Preview is out of date. Regenerate it.", severity: "error", operation: "ai.proposal.apply", operationLabel: "Apply AI proposal", source: "ai", stage: "commit", recommendation: "Regenerate the preview from the current document before applying it.", detail: "ai-proposal:stale" }); setPreview(undefined); setValidatedRevision(undefined); setPreviewDocumentEpoch(undefined); setPreviewProjectionGeneration(undefined); setValidatedDocumentEpoch(undefined); setValidatedProjectionGeneration(undefined); setStatus("Preview is out of date. Regenerate it."); logActivity(current.kind === "view-only" ? "read-only" : "proposal", current.summary, "Preview is out of date. Regenerate it."); return; }
+    // Scope is a property of the Apply moment, not just of Preview: a proposal
+    // built under Document scope must not land after the user narrows Scope.
+    const scopeProblem = current.kind === "semantic-command" ? scopeViolationForProposal(scope, document, current.commands, { selectedSignalId: liveSelection.selectedSignalId, selectedGroupId: liveSelection.selectedGroupId, selectedAnnotationId: liveSelection.selectedAnnotationId, selectedTransactionId: liveSelection.selectedTransactionId }) : undefined;
+    if (scopeProblem) { onDiagnostic?.({ code: "AI_SCOPE_REFUSED", path: "$.ai.scope", message: scopeProblem, severity: "error", operation: "ai.proposal.apply", operationLabel: "Apply AI proposal", source: "ai", stage: "commit", recommendation: "Switch Scope back to the one this preview was built under, or regenerate the preview.", detail: "ai-proposal:scope" }); setStatus(scopeProblem); logActivity("proposal", current.summary, `Apply refused · ${scopeProblem}`); return; }
     if (validated !== revision || validatedEpoch !== documentEpoch || validatedGeneration !== projectionGeneration) { setStatus("Validate the proposal before applying it."); return; }
     const problems = proposalValidationProblems(document, current);
     if (problems.length > 0) { onDiagnostic?.(aiDiagnostics(problems, "ai.proposal.apply", "Apply AI proposal", "validate", "invalid", current.commands[0]?.id)); setValidatedRevision(undefined); setStatus(`Validation failed · ${formatProblems(problems)}`); logActivity(current.kind === "view-only" ? "read-only" : "proposal", current.summary, `Validation failed · ${formatProblems(problems)}`); return; }
@@ -355,7 +446,7 @@ export function AIOperationPanel({ document, validationDiagnostics, documentEpoc
   const onProposeTypedEdit = (tool: string, args: Readonly<Record<string, unknown>>): { readonly error: string } | { readonly summary: string; readonly baseRevision: number; readonly kind: string; readonly requiresApproval: true; readonly message: string } => {
     let result = buildTypedProposal(document, revision, tool, args);
     if (result.ok) {
-      const violation = result.proposal.commands.map((proposedCommand) => scopeViolationMessage(scope, document, proposedCommand, liveSelection.selectedSignalId, liveSelection.selectedGroupId, liveSelection.selectedAnnotationId, liveSelection.selectedTransactionId)).find((message) => message !== undefined);
+      const violation = scopeViolationForProposal(scope, document, result.proposal.commands, liveSelection);
       if (violation) result = { ok: false, message: violation };
     }
     if (!result.ok) return { error: result.message };
@@ -373,7 +464,7 @@ export function AIOperationPanel({ document, validationDiagnostics, documentEpoc
     if (baseRevision !== revision) return { error: `Stale proposal baseRevision ${baseRevision}; current document revision is ${revision}. Regenerate the proposal from the current document.` };
     const result = buildTypedProposalBatch(document, revision, operations);
     if (!result.ok) return { error: result.message };
-    const violation = result.proposal.commands.map((proposedCommand) => scopeViolationMessage(scope, document, proposedCommand, liveSelection.selectedSignalId, liveSelection.selectedGroupId, liveSelection.selectedAnnotationId, liveSelection.selectedTransactionId)).find((message) => message !== undefined);
+    const violation = scopeViolationForProposal(scope, document, result.proposal.commands, liveSelection);
     if (violation) return { error: violation };
     onDiagnostic?.(undefined);
     setPreview(result.proposal);

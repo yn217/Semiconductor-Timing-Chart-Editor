@@ -1,5 +1,5 @@
 import { planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
-import { measurementProfilePair, valueSignalValueProblem, type AnnotationId, type AnnotationType, type CanonicalDocument, type GroupId, type JsonObject, type MeasurementProfile, type SemanticAnchor, type SignalId, type SignalRole, type TimeGroup, type TimeGroupId, type TransactionGroupId, type TransactionId, type TransactionPhase, type TransitionAnchorKind, type ValueSignal } from "@timing-chart-v2/schema";
+import { DOCUMENT_RESOURCE_BUDGET, measurementProfilePair, valueSignalValueProblem, type AnnotationId, type AnnotationType, type CanonicalDocument, type GroupId, type JsonObject, type MeasurementProfile, type SemanticAnchor, type SignalId, type SignalRole, type TimeGroup, type TimeGroupId, type TransactionGroupId, type TransactionId, type TransactionPhase, type TransitionAnchorKind, type ValueSignal } from "@timing-chart-v2/schema";
 import { nextCommandId } from "./command-id.js";
 import { canonicalEntityIds, isStableId } from "@timing-chart-v2/schema";
 import { nextEntityId } from "./entity-id.js";
@@ -157,12 +157,21 @@ export function buildTypedSignalProposal(document: CanonicalDocument, revision: 
   return { ok: true, proposal: proposal(revision, `Rename ${signal.display.name} to ${normalizedName}`, [command({ type: "signal.rename", signalId: signal.id, name: normalizedName }, "typed_rename_signal")]) };
 }
 
+/** Timeline growth beyond the document cycle budget is refused at Preview time
+ * (the planner itself does not enforce this limit). */
+const cycleBudgetMessage = (document: CanonicalDocument, growth: number): string | undefined => {
+  const next = document.timeline.cycleCount + growth;
+  return next > DOCUMENT_RESOURCE_BUDGET.cycleCount ? `This edit would grow the timeline to ${next} cycles, above the ${DOCUMENT_RESOURCE_BUDGET.cycleCount}-cycle document limit.` : undefined;
+};
+
 export function buildTypedTimelineProposal(document: CanonicalDocument, revision: number, tool: string, args: Readonly<Record<string, unknown>>): AIProposalResult {
   const integer = (key: string): number | undefined => Number.isSafeInteger(args[key]) ? args[key] as number : undefined;
   const commandFor = (fields: object, summary: string, scope: string): AIProposalResult => ({ ok: true, proposal: proposal(revision, summary, [command(fields, scope)]) });
   if (tool === "propose_insert_cycles") {
     const at = integer("at"); const count = integer("count");
     if (at === undefined || count === undefined || at < 0 || at > document.timeline.cycleCount || count <= 0) return { ok: false, message: "propose_insert_cycles requires integer at within the timeline and positive integer count." };
+    const budget = cycleBudgetMessage(document, count);
+    if (budget) return { ok: false, message: budget };
     return commandFor({ type: "timeline.insert", at, count }, `Insert ${count} cycles at ${at}`, "typed_insert_cycles");
   }
   if (tool === "propose_delete_cycles") {
@@ -178,6 +187,8 @@ export function buildTypedTimelineProposal(document: CanonicalDocument, revision
   if (tool === "propose_duplicate_range") {
     const start = integer("start"); const end = integer("end"); const at = integer("at");
     if (start === undefined || end === undefined || at === undefined || start < 0 || end <= start || end > document.timeline.cycleCount || at < 0 || at > document.timeline.cycleCount) return { ok: false, message: "propose_duplicate_range requires an integer source range and insertion boundary within the timeline." };
+    const budget = cycleBudgetMessage(document, end - start);
+    if (budget) return { ok: false, message: budget };
     return commandFor({ type: "timeline.duplicateRange", start, end, at }, `Duplicate cycles ${start}–${end} at ${at}`, "typed_duplicate_range");
   }
   return { ok: false, message: `Unsupported typed timeline proposal '${tool}'.` };
@@ -581,20 +592,25 @@ function buildExtendedProposal(request: AIProposalRequest): AIProposalResult {
   const annotation = document.annotations.find((item) => item.id === selectedAnnotationId);
   const transaction = document.transactions.find((item) => item.id === selectedTransactionId);
 
-  const createSignal = /^(?:create|add)(?: a)?\s+(binary|logic|bus|state|event|pulse)?\s*signal(?: named| called)?\s+(.+)$/i.exec(text);
+  // The optional "named"/"called" keyword must not be read as the name itself:
+  // "create signal named" with no name is refused, not created as "named".
+  const createSignal = /^(?:create|add)(?: a)?\s+(binary|logic|bus|state|event|pulse)?\s*signal(?:\s+(?:named|called))?(?:\s+(.*))?$/i.exec(text);
   if (createSignal) {
     if (!group) return { ok: false, message: "A Signal Group is required." };
     const type = (createSignal[1]?.toLowerCase() || "binary") as ValueSignal["type"];
-    const name = createSignal[2]!.trim();
+    const name = (createSignal[2] ?? "").trim();
+    if (!name) return { ok: false, message: "Create signal requires a name, for example 'create signal named REQ'." };
     const id = nextEntityId("signal", document) as SignalId;
     const values = [{ id: nextEntityId("signalValueChange", document), start: 0, value: type === "state" ? "IDLE" : type === "event" ? "NONE" : type === "bus" ? "00" : 0 }] as ValueSignal["values"];
     const signal = { id, name, type, role: "internal" as const, source: { instancePath: [], signalName: name }, display: { name }, values, ...(type === "bus" ? { width: 8, displayFormat: "hex" as const } : {}) } as ValueSignal;
     return { ok: true, proposal: proposal(revision, `Create ${type} signal ${name} in ${group.name}`, [command({ type: "signal.create", signal, targetGroupId: group.id, index: group.rows.length }, "create_signal")]) };
   }
-  const createGroup = /^(?:create|add)(?: a)? group(?: named| called)?\s+(.+)$/i.exec(text);
+  const createGroup = /^(?:create|add)(?: a)? group(?:\s+(?:named|called))?(?:\s+(.*))?$/i.exec(text);
   if (createGroup) {
+    const groupName = (createGroup[1] ?? "").trim();
+    if (!groupName) return { ok: false, message: "Create group requires a name, for example 'create group named Control'." };
     const id = nextEntityId("group", document) as GroupId;
-    const created = { id, name: createGroup[1]!.trim(), rows: [] };
+    const created = { id, name: groupName, rows: [] };
     return { ok: true, proposal: proposal(revision, `Create group ${created.name}`, [command({ type: "group.create", group: created, index: document.signalGroups.length }, "create_group")]) };
   }
   const moveGroup = /^(?:move|reorder) selected group to position (\d+)$/i.exec(text);
@@ -608,11 +624,21 @@ function buildExtendedProposal(request: AIProposalRequest): AIProposalResult {
     return { ok: true, proposal: proposal(revision, `Rename ${group.name} to ${renameGroup[1]!.trim()}`, [command({ type: "group.rename", groupId: group.id, name: renameGroup[1]!.trim() }, "rename_group")]) };
   }
   const insert = /^insert (\d+) cycles? at (\d+)$/i.exec(text);
-  if (insert) return { ok: true, proposal: proposal(revision, `Insert ${insert[1]} cycles at ${insert[2]}`, [command({ type: "timeline.insert", at: Number(insert[2]), count: Number(insert[1]) }, "insert_cycles")]) };
+  if (insert) {
+    const count = Number(insert[1]); const at = Number(insert[2]);
+    if (!Number.isSafeInteger(count) || count <= 0 || !Number.isSafeInteger(at) || at > document.timeline.cycleCount) return { ok: false, message: "Insert requires a positive cycle count and a position within the timeline." };
+    const budget = cycleBudgetMessage(document, count);
+    if (budget) return { ok: false, message: budget };
+    return { ok: true, proposal: proposal(revision, `Insert ${insert[1]} cycles at ${insert[2]}`, [command({ type: "timeline.insert", at, count }, "insert_cycles")]) };
+  }
   const remove = /^(?:delete|remove) cycles? (\d+)\s*(?:-|to|through)\s*(\d+)$/i.exec(text);
   if (remove) return { ok: true, proposal: proposal(revision, `Delete cycles ${remove[1]}–${remove[2]}`, [command({ type: "timeline.delete", start: Number(remove[1]), end: Number(remove[2]) }, "delete_cycles")]) };
   const duplicate = /^(?:duplicate|copy) cycles? (\d+)\s*(?:-|to|through)\s*(\d+) at (\d+)$/i.exec(text);
-  if (duplicate) return { ok: true, proposal: proposal(revision, `Duplicate cycles ${duplicate[1]}–${duplicate[2]} at ${duplicate[3]}`, [command({ type: "timeline.duplicateRange", start: Number(duplicate[1]), end: Number(duplicate[2]), at: Number(duplicate[3]) }, "duplicate_cycles")]) };
+  if (duplicate) {
+    const budget = cycleBudgetMessage(document, Math.max(0, Number(duplicate[2]) - Number(duplicate[1])));
+    if (budget) return { ok: false, message: budget };
+    return { ok: true, proposal: proposal(revision, `Duplicate cycles ${duplicate[1]}–${duplicate[2]} at ${duplicate[3]}`, [command({ type: "timeline.duplicateRange", start: Number(duplicate[1]), end: Number(duplicate[2]), at: Number(duplicate[3]) }, "duplicate_cycles")]) };
+  }
   const move = /^move cycles? (\d+)\s*(?:-|to|through)\s*(\d+) to (\d+)$/i.exec(text);
   if (move) return { ok: true, proposal: proposal(revision, `Move cycles ${move[1]}–${move[2]} to ${move[3]}`, [command({ type: "timeline.moveRange", start: Number(move[1]), end: Number(move[2]), to: Number(move[3]) }, "move_cycles")]) };
   const bookmark = /^(?:add|create) bookmark at (\d+)$/i.exec(text);
