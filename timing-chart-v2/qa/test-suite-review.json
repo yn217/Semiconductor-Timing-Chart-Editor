@@ -16974,6 +16974,24 @@
       "decision": "KEEP",
       "reason": "Clipping of the right-hand status items is only visible in a real layout.",
       "replacementTest": null
+    },
+    {
+      "file": "paste-without-copy.spec.ts",
+      "title": "Paste before anything was copied says so and raises no Problem",
+      "domain": "clipboard-empty-paste",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Pasting with an empty clipboard reports that there is nothing to paste and does not add a Problem.",
+      "duplicateGroup": "clipboard-empty-paste",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The misleading foreign-document rejection only shows through the real paste shortcut.",
+      "replacementTest": null
     }
   ]
 }

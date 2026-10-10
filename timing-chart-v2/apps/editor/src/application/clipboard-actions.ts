@@ -320,6 +320,8 @@ export function useClipboardActions({ application, selection }: { application: E
   };
 
   const paste = () => {
+    // Nothing was ever copied in this session: say so instead of blaming another document (and do not raise a Problem).
+    if (sourceDocumentEpochRef.current === undefined) { setStatus("Nothing to paste: copy something first"); return; }
     if (sourceDocumentEpochRef.current !== application.runtime.documentEpoch.current()) {
       rejectForeignPaste();
       return;

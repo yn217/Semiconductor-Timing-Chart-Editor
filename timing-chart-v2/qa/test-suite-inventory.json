@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T11:07:52.321Z",
+  "generatedAt": "2026-10-10T11:47:39.218Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 435,
-  "caseCount": 1317,
-  "reviewedCaseCount": 1259,
+  "specFileCount": 436,
+  "caseCount": 1318,
+  "reviewedCaseCount": 1260,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 409,
+    "pr": 410,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -23965,6 +23965,33 @@
       "contractId": "open-canonical-resource-budget"
     },
     {
+      "file": "paste-without-copy.spec.ts",
+      "suitePath": [],
+      "line": 6,
+      "title": "Paste before anything was copied says so and raises no Problem",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "clipboard-empty-paste",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Pasting with an empty clipboard reports that there is nothing to paste and does not add a Problem.",
+      "duplicateGroup": "clipboard-empty-paste",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The misleading foreign-document rejection only shows through the real paste shortcut.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "clipboard-empty-paste",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
       "file": "perf-755-far-jump-longtask.spec.ts",
       "suitePath": [],
       "line": 5,
@@ -37711,6 +37738,15 @@
       "file": "open-validation-handoff.spec.ts",
       "caseCount": 3,
       "reviewedCaseCount": 3,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "paste-without-copy.spec.ts",
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
