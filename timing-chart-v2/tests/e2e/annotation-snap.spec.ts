@@ -461,15 +461,15 @@ test("Clock-anchored Measurement keeps cycle mode available and disables transit
 
   const editor = page.getByTestId("annotation-editor");
   await editor.getByLabel("Inspector annotation endpoint").selectOption("start");
-  await editor.getByLabel("Inspector annotation anchor signal").fill("CLK");
-  await editor.getByRole("option", { name: "CLK", exact: true }).click();
+  await editor.getByLabel("Inspector annotation anchor signal").fill("CLOCK");
+  await page.getByRole("option", { name: "CLOCK", exact: true }).click();
   await editor.getByTestId("apply-inspector-annotation-anchor").click();
 
   const historyAfterAnchor = await page.getByTestId("history-status").textContent();
   const profile = editor.getByLabel("Measurement profile");
   await profile.selectOption("30-70");
   await expect(editor.getByTestId("apply-measurement-semantics")).toBeDisabled();
-  await expect(editor.getByRole("status")).toContainText("non-Clock timing signals");
+  await expect(editor.locator("p[role='status']")).toContainText("non-Clock timing signals");
   await expect(page.getByTestId("history-status")).toHaveText(historyAfterAnchor ?? "");
 
   await profile.selectOption("cycle");
