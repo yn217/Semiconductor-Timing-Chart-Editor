@@ -17568,6 +17568,60 @@
       "decision": "KEEP",
       "reason": "Code-review finding: one unchanged match made the whole bulk rename a silent no-op.",
       "replacementTest": null
+    },
+    {
+      "file": "clock-generator-review-fixes.spec.ts",
+      "title": "applying Edge Counter keeps an unapplied Generator draft",
+      "domain": "clock-editor-drafts",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Bottom Clock editor sections keep each other's unapplied drafts and import syncs the Suppressed periods text.",
+      "duplicateGroup": "clock-editor-drafts",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code-review findings fixed in clock-generator-editor.tsx.",
+      "replacementTest": null
+    },
+    {
+      "file": "clock-generator-review-fixes.spec.ts",
+      "title": "applying the Generator keeps an unapplied Edge Counter draft",
+      "domain": "clock-editor-drafts",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Bottom Clock editor sections keep each other's unapplied drafts and import syncs the Suppressed periods text.",
+      "duplicateGroup": "clock-editor-drafts",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code-review findings fixed in clock-generator-editor.tsx.",
+      "replacementTest": null
+    },
+    {
+      "file": "clock-generator-review-fixes.spec.ts",
+      "title": "importing clock settings updates the Suppressed periods field",
+      "domain": "clock-editor-drafts",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Bottom Clock editor sections keep each other's unapplied drafts and import syncs the Suppressed periods text.",
+      "duplicateGroup": "clock-editor-drafts",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code-review findings fixed in clock-generator-editor.tsx.",
+      "replacementTest": null
     }
   ]
 }

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T17:23:43.278Z",
+  "generatedAt": "2026-10-10T17:24:42.086Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 452,
   "caseCount": 1353,
-  "reviewedCaseCount": 1292,
+  "reviewedCaseCount": 1295,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 442,
+    "pr": 445,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -4954,18 +4954,23 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "clock-editor-drafts",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Bottom Clock editor sections keep each other's unapplied drafts and import syncs the Suppressed periods text.",
+      "duplicateGroup": "clock-editor-drafts",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code-review findings fixed in clock-generator-editor.tsx.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "clock-editor-drafts",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "clock-generator-review-fixes.spec.ts",
@@ -4976,18 +4981,23 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "clock-editor-drafts",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Bottom Clock editor sections keep each other's unapplied drafts and import syncs the Suppressed periods text.",
+      "duplicateGroup": "clock-editor-drafts",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code-review findings fixed in clock-generator-editor.tsx.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "clock-editor-drafts",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "clock-generator-review-fixes.spec.ts",
@@ -4998,18 +5008,23 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "clock-editor-drafts",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Bottom Clock editor sections keep each other's unapplied drafts and import syncs the Suppressed periods text.",
+      "duplicateGroup": "clock-editor-drafts",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code-review findings fixed in clock-generator-editor.tsx.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "clock-editor-drafts",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "clock-generator-toolbar-icon-size.spec.ts",
@@ -35808,11 +35823,11 @@
     {
       "file": "clock-generator-review-fixes.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "clock-generator-toolbar-icon-size.spec.ts",

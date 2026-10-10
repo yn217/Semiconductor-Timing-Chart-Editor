@@ -14,14 +14,18 @@ export function ClockGeneratorEditor({ signal, bookmarks, commands, onDuplicate,
   const [presetsOpen, setPresetsOpen] = useState(false);
   const [preview, setPreview] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  // Each section resets only from its OWN committed value, so applying one
+  // section never discards the other section's unapplied draft.
   useEffect(() => {
     setGenerator(signal.generator);
-    setEdgeCounter(signal.edgeCounter);
     setSuppressedPeriods((signal.generator.suppressedPeriods ?? []).join(", "));
     setGeneratorError("");
     // A committed generator (Apply/Undo/Redo/Open) always returns to the real canonical waveform: Preview switches off.
     setPreview(false);
-  }, [signal.id, signal.generator, signal.edgeCounter]);
+  }, [signal.id, signal.generator]);
+  useEffect(() => {
+    setEdgeCounter(signal.edgeCounter);
+  }, [signal.id, signal.edgeCounter]);
   // Preview reflects the CURRENT draft generator on the real, selected Clock
   // row's waveform via a pure DOM-only path (see refreshClockPreview in
   // runtime/presentation-preview.ts) -- Canonical/History/Dirty stay
@@ -47,7 +51,11 @@ export function ClockGeneratorEditor({ signal, bookmarks, commands, onDuplicate,
       return;
     }
     const parsed = result.value as { generator?: ClockGenerator; edgeCounter?: EdgeCounterSettings };
-    if (parsed.generator) setGenerator(parsed.generator);
+    if (parsed.generator) {
+      setGenerator(parsed.generator);
+      // Keep the Suppressed periods text field in step with the imported draft, so Apply does not rebuild from stale text.
+      setSuppressedPeriods((parsed.generator.suppressedPeriods ?? []).join(", "));
+    }
     if (parsed.edgeCounter) setEdgeCounter(parsed.edgeCounter);
   };
   const setCountFrom = (countFrom: EdgeCounterSettings["countFrom"]) => setEdgeCounter((current) => {
