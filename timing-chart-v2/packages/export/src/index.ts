@@ -385,6 +385,8 @@ function anchorPoint(annotation: Annotation, field: "anchor" | "start" | "end" |
   const anchor = annotation[field];
   if (!anchor) return undefined;
   const signalId = anchor.signalId ?? document.timeline.referenceClock;
+  // Like the live overlay: an anchor on a Signal row that is not drawn (hidden) has no position, so the annotation is omitted rather than drawn in the header.
+  if (anchor.signalId !== undefined && !rowY.has(anchor.signalId)) return undefined;
   // #444: the same hidden-source policy as the live projection (resolveAnchorPoint): an ordinary semantic anchor inside a collapsed fold is
   // omitted, a free (continuous) one interpolates, and the terminal boundary maps to the display end. cycle-start/center/end offsets apply only
   // AFTER the canonical source position resolved (no floor-then-offset into a neighbouring visible cycle).
@@ -502,7 +504,9 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
   const signalById = new Map<string, Signal>(document.signals.map((signal) => [signal.id, signal]));
   const signals = document.signalGroups.flatMap((group) => group.rows.map((id) => signalById.get(id))).filter((signal): signal is Signal => signal !== undefined && signal.display.visible !== false);
   const waveSignals = signals.filter((signal): signal is Exclude<Signal, { readonly type: "commentRow" }> => signal.type !== "commentRow");
-  const lanes = [...new Set(document.transactions.map((transaction) => transaction.laneId ?? "lane_0"))].sort();
+  // Hidden Transactions are not drawn on screen; they must not be exported or reserve a lane either.
+  const exportedTransactions = document.transactions.filter((transaction) => transaction.visible !== false);
+  const lanes = [...new Set(exportedTransactions.map((transaction) => transaction.laneId ?? "lane_0"))].sort();
   const laneIndex = new Map(lanes.map((lane, index) => [lane, index] as const));
   const transactionTop = headerHeight + 14;
   const waveTop = transactionTop + lanes.length * TRANSACTION_HEIGHT + 34;
@@ -704,7 +708,7 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
     }))
     .filter((item) => item.x >= LABEL_WIDTH && item.x <= LABEL_WIDTH + (range.end - range.start) * cycleWidth);
   const transactions: ExportTransaction[] = [];
-  for (const transaction of document.transactions) {
+  for (const transaction of exportedTransactions) {
     const laneId = transaction.laneId ?? "lane_0";
     const displayStart = toDisplayCycle(mapping, transaction.start, "floor");
     const displayEnd = Math.max(displayStart + 1, toDisplayCycle(mapping, transaction.end, "ceil"));
@@ -716,7 +720,7 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
   }
   const measurementSpans: Array<{ id: string; firstX: number; secondX: number; explicitLane?: number }> = [];
   for (const annotation of document.annotations) {
-    if (annotation.type !== "measurement" || !annotation.start || !annotation.end) {
+    if (annotation.type !== "measurement" || !annotation.start || !annotation.end || annotation.visible === false) {
       if (checkpoint()) yield;
       continue;
     }
@@ -729,6 +733,8 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
   const annotations: ExportAnnotation[] = [];
   const effectiveTraceTokensBySignalId = new Map<SignalId, readonly string[]>();
   for (const annotation of document.annotations) {
+    // Hidden annotations are not drawn on screen, so they are not exported.
+    if (annotation.visible === false) { if (checkpoint()) yield; continue; }
     const firstAnchor = annotation.anchor ?? annotation.start ?? annotation.from;
     const lastAnchor = annotation.anchor ?? annotation.end ?? annotation.to ?? firstAnchor;
     const first = anchorPoint(annotation, annotation.anchor ? "anchor" : annotation.start ? "start" : "from", document, rowY, mapping, range.start, cycleWidth);
