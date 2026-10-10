@@ -19,11 +19,22 @@ import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 
 const HOST = "127.0.0.1"; // never 0.0.0.0 -- localhost-only by construction.
 const PORT = Number(process.env.AI_BRIDGE_PORT ?? 4610);
+const TOKEN_FROM_ENV = Boolean(process.env.AI_BRIDGE_TOKEN);
+const EDITOR_TOKEN_FROM_ENV = Boolean(process.env.AI_BRIDGE_EDITOR_TOKEN);
 const TOKEN = process.env.AI_BRIDGE_TOKEN ?? randomBytes(24).toString("hex");
 const EDITOR_TOKEN = process.env.AI_BRIDGE_EDITOR_TOKEN ?? randomBytes(24).toString("hex");
 if (TOKEN === EDITOR_TOKEN) throw new Error("AI_BRIDGE_TOKEN and AI_BRIDGE_EDITOR_TOKEN must be different credentials.");
 const POLL_TIMEOUT_MS = 25_000;
 const EDITOR_SESSION_TIMEOUT_MS = 15_000;
+// Request endpoints (MCP calls, poll, close) carry small JSON only. The respond
+// endpoint carries a full tool result, which can legitimately be large on a big
+// document, so it gets its own bound. Keep RESPOND_BODY_LIMIT_BYTES equal to
+// the client-side guard in apps/editor/src/ai-bridge-client.ts.
+const REQUEST_BODY_LIMIT_BYTES = 65_536;
+const RESPOND_BODY_LIMIT_BYTES = 4 * 1024 * 1024;
+// Oversize bodies are drained (up to this ceiling) rather than destroyed, so the
+// caller receives a real HTTP status and a JSON error instead of a reset socket.
+const DRAIN_CEILING_BYTES = 32 * 1024 * 1024;
 
 // #395 item 4 (MCP Tool Surface): the exact whitelist. Nothing outside
 // this list can ever be invoked, regardless of what a client sends --
@@ -229,21 +240,52 @@ function queueToolCall(editorSessionId, tool, args) {
   });
 }
 
-function readJsonBody(req) {
+/** A tool call that the Editor executed but could not report as a result (rejected proposal, oversize result). */
+class ToolExecutionError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "ToolExecutionError";
+  }
+}
+
+/** Oversize request body; `head` keeps the first bytes so a respond can still be matched to its call. */
+class BodyTooLargeError extends Error {
+  constructor(limitBytes, head) {
+    super(`Request body exceeds the ${limitBytes}-byte limit for this endpoint.`);
+    this.name = "BodyTooLargeError";
+    this.head = head;
+  }
+}
+
+function readJsonBody(req, limitBytes = REQUEST_BODY_LIMIT_BYTES) {
   return new Promise((resolve, reject) => {
     const chunks = [];
     let size = 0;
+    let overflowed = false;
+    let head = "";
     req.on("data", (chunk) => {
       size += chunk.length;
-      if (size > 65_536) { reject(new Error("Request body too large.")); req.destroy(); return; }
+      if (size > DRAIN_CEILING_BYTES) { req.destroy(); reject(new BodyTooLargeError(limitBytes, head)); return; }
+      if (overflowed) return;
+      if (size > limitBytes) {
+        overflowed = true;
+        head = Buffer.concat([...chunks, chunk]).subarray(0, 4096).toString("utf-8");
+        chunks.length = 0;
+        return;
+      }
       chunks.push(chunk);
     });
     req.on("end", () => {
+      if (overflowed) { reject(new BodyTooLargeError(limitBytes, head)); return; }
       if (chunks.length === 0) { resolve(undefined); return; }
       try { resolve(JSON.parse(Buffer.concat(chunks).toString("utf-8"))); } catch { reject(new Error("Invalid JSON body.")); }
     });
     req.on("error", reject);
   });
+}
+
+function bodyErrorStatus(error) {
+  return error instanceof BodyTooLargeError ? 413 : 400;
 }
 
 function sendJson(res, status, body) {
@@ -281,6 +323,10 @@ async function handleMcp(res, body) {
       const result = await queueToolCall(editorSessionId, name, toolArgs);
       reply({ content: [{ type: "text", text: JSON.stringify(result) }], isError: false });
     } catch (error) {
+      // A rejection the Editor reported (e.g. a proposal that failed scope or
+      // validation) is a tool-level failure: deliver it as a result with
+      // isError set, so MCP clients surface it instead of treating it as success.
+      if (error instanceof ToolExecutionError) { reply({ content: [{ type: "text", text: error.message }], isError: true }); return; }
       replyError(error instanceof Error && error.message.startsWith("Editor session '") ? -32004 : -32000, error instanceof Error ? error.message : "Tool call failed.");
     }
     return;
@@ -295,6 +341,17 @@ async function handleMcp(res, body) {
 // real request still needs the bearer token below, which a page on an
 // unrelated origin has no way to know; CORS only ever gates the
 // *transport*, not the actual authorization decision.
+/** An oversize respond still settles its pending MCP call with a clear error, so the caller does not wait out the poll timeout. */
+function failOversizeRespond(head) {
+  const requestId = /"requestId"\s*:\s*"([^"\\]{1,128})"/.exec(head)?.[1];
+  const editorSessionId = /"editorSessionId"\s*:\s*"([^"\\]{1,128})"/.exec(head)?.[1];
+  const call = requestId ? inFlightCalls.get(requestId) : undefined;
+  if (!call || call.editorSessionId !== editorSessionId) return;
+  removeEverywhere(requestId);
+  clearTimeout(call.timeout);
+  call.reject(new ToolExecutionError(`The Editor's result exceeded the ${RESPOND_BODY_LIMIT_BYTES}-byte bridge limit. Narrow the request (for example with visibleRange or groupId filters) and retry.`));
+}
+
 function applyCors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -310,14 +367,14 @@ const server = createServer(async (req, res) => {
 
   if (req.method === "POST" && url.pathname === "/mcp") {
     let body;
-    try { body = await readJsonBody(req); } catch (error) { sendJson(res, 400, { error: error instanceof Error ? error.message : "Bad request." }); return; }
+    try { body = await readJsonBody(req); } catch (error) { sendJson(res, bodyErrorStatus(error), { error: error instanceof Error ? error.message : "Bad request." }); return; }
     await handleMcp(res, body);
     return;
   }
 
   if (req.method === "POST" && url.pathname === "/bridge/poll") {
     let body;
-    try { body = await readJsonBody(req); } catch (error) { sendJson(res, 400, { error: error instanceof Error ? error.message : "Bad request." }); return; }
+    try { body = await readJsonBody(req); } catch (error) { sendJson(res, bodyErrorStatus(error), { error: error instanceof Error ? error.message : "Bad request." }); return; }
     let session;
     try { session = registerEditorSession(body); } catch (error) { sendJson(res, 400, { error: error instanceof Error ? error.message : "Invalid Editor session." }); return; }
     const nextIndex = queuedCalls.findIndex((call) => call.editorSessionId === session.editorSessionId);
@@ -333,7 +390,7 @@ const server = createServer(async (req, res) => {
 
   if (req.method === "POST" && url.pathname === "/bridge/close") {
     let body;
-    try { body = await readJsonBody(req); } catch (error) { sendJson(res, 400, { error: error instanceof Error ? error.message : "Bad request." }); return; }
+    try { body = await readJsonBody(req); } catch (error) { sendJson(res, bodyErrorStatus(error), { error: error instanceof Error ? error.message : "Bad request." }); return; }
     const session = typeof body?.editorSessionId === "string" ? editorSessions.get(body.editorSessionId) : undefined;
     if (session && session.tabId !== body.tabId) { sendJson(res, 403, { error: "Editor session does not belong to this tabId." }); return; }
     const closed = session ? removeEditorSession(session.editorSessionId) : false;
@@ -343,7 +400,11 @@ const server = createServer(async (req, res) => {
 
   if (req.method === "POST" && url.pathname === "/bridge/respond") {
     let body;
-    try { body = await readJsonBody(req); } catch (error) { sendJson(res, 400, { error: error instanceof Error ? error.message : "Bad request." }); return; }
+    try { body = await readJsonBody(req, RESPOND_BODY_LIMIT_BYTES); } catch (error) {
+      if (error instanceof BodyTooLargeError) failOversizeRespond(error.head);
+      sendJson(res, bodyErrorStatus(error), { error: error instanceof Error ? error.message : "Bad request." });
+      return;
+    }
     pruneStaleSessions();
     const call = typeof body?.requestId === "string" ? inFlightCalls.get(body.requestId) : undefined;
     if (!call) { sendJson(res, 404, { error: "Unknown or already-resolved requestId." }); return; }
@@ -351,7 +412,7 @@ const server = createServer(async (req, res) => {
     if (!editorSessions.has(call.editorSessionId)) { removeEverywhere(call.requestId); clearTimeout(call.timeout); call.reject(staleSessionError(call.editorSessionId)); sendJson(res, 410, { error: "Target Editor session is stale." }); return; }
     removeEverywhere(body.requestId);
     clearTimeout(call.timeout);
-    if (body.error) call.reject(new Error(String(body.error)));
+    if (body.error) call.reject(new ToolExecutionError(String(body.error)));
     else call.resolve(body.result);
     sendJson(res, 200, { ok: true });
     return;
@@ -368,8 +429,10 @@ server.listen(PORT, HOST, () => {
   const listeningPort = typeof address === "object" && address ? address.port : PORT;
   // eslint-disable-next-line no-console
   console.log(`[ai-bridge] listening on http://${HOST}:${listeningPort} (localhost-only)`);
-  console.log(`[ai-bridge] MCP client token: ${TOKEN}`);
-  console.log(`[ai-bridge] Editor transport token: ${EDITOR_TOKEN}`);
+  // A token supplied through the environment is already known to the person
+  // who set it, so only a freshly generated token is echoed to stdout.
+  console.log(`[ai-bridge] MCP client token: ${TOKEN_FROM_ENV ? "(set by AI_BRIDGE_TOKEN; not echoed)" : TOKEN}`);
+  console.log(`[ai-bridge] Editor transport token: ${EDITOR_TOKEN_FROM_ENV ? "(set by AI_BRIDGE_EDITOR_TOKEN; not echoed)" : EDITOR_TOKEN}`);
   console.log("[ai-bridge] Use the MCP client token only in your MCP client; paste the Editor transport token into AI Settings.");
 });
 

@@ -69,13 +69,17 @@ export class AnnotationInteractionOwner {
     const label = event.target.closest<HTMLElement>("[data-annotation-label='true']") !== null;
     const field = fieldElement?.dataset.annotationField as AnnotationField | undefined;
     const dragIds = field || label ? new Set([primaryId]) : this.context.getDragTargets(primaryId);
+    // The commit set comes from the document, not the DOM: overlays are culled to the viewport, so group/multi-selection
+    // members that are off-screen have no owner element but must still move. Locked members never move with a group
+    // drag (the primary is already known unlocked above). DOM owners are kept only for the CSS-translate preview.
+    const movableIds = [...dragIds].filter((id) => id === primaryId || annotationById(this.context.getDocument().annotations, id)?.locked !== true);
     const owners = new Map<string, HTMLElement>();
-    for (const id of dragIds) {
+    for (const id of movableIds) {
       const element = id === primaryId ? owner : this.context.rendererHost.querySelector<HTMLElement>(`[data-role='annotation-owner'][data-annotation-id="${id}"]`);
       if (element) owners.set(id, element);
     }
     this.#drag = {
-      annotationIds: new Set(owners.keys()),
+      annotationIds: new Set(movableIds),
       ...(field ? { field } : {}),
       label,
       startX: event.clientX,

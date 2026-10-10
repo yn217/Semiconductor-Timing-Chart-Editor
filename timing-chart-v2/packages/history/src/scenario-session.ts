@@ -1,6 +1,6 @@
 import { type ChangeSet, type CommandResult, type SemanticCommand } from "@timing-chart-v2/commands";
 import type { CanonicalSessionMetrics, CanonicalSnapshot } from "@timing-chart-v2/core";
-import { deleteScenario, duplicateScenario, projectScenarioAsV2, renameScenario, updateScenarioModelFromV2Projection, validateScenarioDocumentModel, type CanonicalDocument, type CommandId, type DocumentProblem, type ScenarioDocumentModel, type ScenarioId } from "@timing-chart-v2/schema";
+import { canonicalEntityIds, deleteScenario, duplicateScenario, projectScenarioAsV2, renameScenario, updateScenarioModelFromV2Projection, validateScenarioDocumentModel, type CanonicalDocument, type CommandId, type DocumentProblem, type ScenarioDocumentModel, type ScenarioId } from "@timing-chart-v2/schema";
 import { CommandHistorySession } from "./session.js";
 import { HISTORY_RETENTION_POLICY, type HistoryMetrics, type HistoryState, type RecordedAction } from "./types.js";
 
@@ -133,6 +133,7 @@ export class ScenarioCommandHistorySession {
   #cleanModel: ScenarioDocumentModel;
   #metrics: HistoryMetrics = { ...emptyMetrics };
   #priorSessionMetrics: CanonicalSessionMetrics = { validationRuns: 0, commits: 0 };
+  #entityIds: Readonly<{ model: ScenarioDocumentModel; ids: ReadonlySet<string> }> | undefined;
 
   constructor(model: ScenarioDocumentModel, activeScenarioId = model.scenarios[0]?.id) {
     const ownedModel = cloneModel(model);
@@ -151,6 +152,16 @@ export class ScenarioCommandHistorySession {
   current(): ScenarioCommandHistorySession { return this; }
   scenarioModel(): ScenarioDocumentModel { return this.#model; }
   activeScenarioId(): ScenarioId { return this.#activeScenarioId; }
+
+  /** Every entity ID owned by any Scenario, so a new ID can avoid one that is outside the active projection. Cached per model revision. */
+  allScenarioEntityIds(): ReadonlySet<string> {
+    if (this.#entityIds?.model !== this.#model) {
+      const ids = new Set<string>();
+      for (const scenario of this.#model.scenarios) for (const id of canonicalEntityIds(projectScenarioAsV2(this.#model, scenario.id))) ids.add(id);
+      this.#entityIds = { model: this.#model, ids };
+    }
+    return this.#entityIds.ids;
+  }
 
   /** Scenario selection is workspace state: it changes the projection, not model revision or History. */
   switchScenario(scenarioId: ScenarioId): CanonicalSnapshot {

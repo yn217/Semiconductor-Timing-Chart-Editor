@@ -164,6 +164,7 @@ describe("Agent Bridge security boundaries (#395 item 11)", () => {
   });
 
   it("bounds request body size so the bridge cannot be used to exhaust memory", () => {
-    expect(source).toMatch(/size\s*>\s*65_?536/);
+    expect(source).toMatch(/REQUEST_BODY_LIMIT_BYTES\s*=\s*65_?536/);
+    expect(source).toMatch(/size\s*>\s*limitBytes/);
   });
 });

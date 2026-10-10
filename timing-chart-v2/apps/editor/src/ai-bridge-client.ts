@@ -353,6 +353,34 @@ export async function probeAIBridge(host: string, port: number): Promise<boolean
   }
 }
 
+/** Must match RESPOND_BODY_LIMIT_BYTES in scripts/ai-bridge-server.mjs. */
+export const AI_BRIDGE_RESPOND_BODY_LIMIT_BYTES = 4 * 1024 * 1024;
+
+/**
+ * Proposal builders report a refused request as a bare `{ error }` object. That
+ * is a failed tool call, not a successful result, so it must travel to the MCP
+ * caller as an error. Successful results always carry more than one field.
+ */
+export function toBridgeToolOutcome(result: unknown): { readonly result: unknown; readonly error?: undefined } | { readonly result?: undefined; readonly error: string } {
+  if (typeof result === "object" && result !== null && !Array.isArray(result)) {
+    const keys = Object.keys(result);
+    const error = (result as { error?: unknown }).error;
+    if (keys.length === 1 && keys[0] === "error" && typeof error === "string") return { error };
+  }
+  return { result };
+}
+
+/** Builds the respond body, replacing an oversize result with a clear error so the caller is never left with a dead socket. */
+export function buildBridgeRespondBody(requestId: string, editorSessionId: string, outcome: { readonly result?: unknown; readonly error?: string | undefined }): string {
+  const body = JSON.stringify({ requestId, editorSessionId, result: outcome.result, error: outcome.error });
+  if (new TextEncoder().encode(body).length <= AI_BRIDGE_RESPOND_BODY_LIMIT_BYTES) return body;
+  return JSON.stringify({
+    requestId,
+    editorSessionId,
+    error: `The tool result is larger than the ${AI_BRIDGE_RESPOND_BODY_LIMIT_BYTES}-byte bridge limit. Narrow the request (for example with visibleRange or groupId filters) and retry.`,
+  });
+}
+
 export function classifyAIBridgeFailure(error: unknown): AIBridgeStatus {
   if (error instanceof Error && error.message === "Bridge rejected the configured token.") return "invalid-token";
   if (error instanceof TypeError || (error instanceof Error && /failed to fetch|networkerror/i.test(error.message))) return "unavailable";
@@ -437,14 +465,13 @@ export function useAIBridgeClient(enabled: boolean, host: string, port: number, 
       if (cancelled) return false;
       setStatus(request.externalClientConnected ? "connected-external-client" : "connected");
       if (!request.requestId || !request.tool) return false;
-      let result: unknown;
-      let error: string | undefined;
+      let outcome: { readonly result?: unknown; readonly error?: string | undefined };
       try {
         const currentSession = getSession(contextRef.current);
         if (request.editorSessionId !== session.editorSessionId || currentSession.editorSessionId !== request.editorSessionId) throw new Error("Target Editor session changed before this tool call could execute; choose a live session and retry.");
-        result = executeAIBridgeTool(request.tool, request.arguments ?? {}, contextRef.current);
-      } catch (thrown) { error = thrown instanceof Error ? thrown.message : "Tool execution failed."; }
-      await fetch(`${baseUrl}/bridge/respond`, { method: "POST", headers: { ...authHeaders, "content-type": "application/json" }, body: JSON.stringify({ requestId: request.requestId, editorSessionId: request.editorSessionId, result, error }), signal: controller.signal });
+        outcome = toBridgeToolOutcome(executeAIBridgeTool(request.tool, request.arguments ?? {}, contextRef.current));
+      } catch (thrown) { outcome = { error: thrown instanceof Error ? thrown.message : "Tool execution failed." }; }
+      await fetch(`${baseUrl}/bridge/respond`, { method: "POST", headers: { ...authHeaders, "content-type": "application/json" }, body: buildBridgeRespondBody(request.requestId, request.editorSessionId, outcome), signal: controller.signal });
       return true;
     };
     // The bridge's own /bridge/poll answers immediately (queued call or
