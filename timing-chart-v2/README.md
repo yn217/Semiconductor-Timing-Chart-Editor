@@ -36,7 +36,7 @@ artifact. For production use, build with `npm run build` and serve
 
 Normal development uses focused checks for the affected behavior. Release
 verification must use an independent clean checkout; see
-[`docs/LOCAL_RELEASE.md`](../docs/LOCAL_RELEASE.md). GitHub Actions is not a
+[`docs/LOCAL_RELEASE.md`](docs/LOCAL_RELEASE.md). GitHub Actions is not a
 quality gate and no hosted workflow is configured.
 
 Third-party notices are recorded in [`THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md).
