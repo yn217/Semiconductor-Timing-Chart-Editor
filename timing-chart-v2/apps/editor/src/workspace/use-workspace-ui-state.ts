@@ -13,6 +13,12 @@ export type TransactionTreeFilterMode = "all" | "grouped" | "ungrouped" | "phase
 
 export type SemanticCursor = number | undefined;
 
+/** A cursor can never sit past the last cycle of the current timeline; an edit that shrinks the timeline pulls it back in. */
+export function clampCursorToCycleCount(cursor: SemanticCursor, cycleCount: number | undefined): SemanticCursor {
+  if (cursor === undefined || cycleCount === undefined) return cursor;
+  return Math.min(cursor, Math.max(0, cycleCount - 1));
+}
+
 const VIEW_MODE_PREFERENCE_KEY = "timing-chart-v2.view-mode";
 const TRANSACTION_CYCLES_PER_TC_PREFERENCE_KEY = "timing-chart-v2.transaction-cycles-per-tc";
 export const DEFAULT_TRANSACTION_CYCLES_PER_TC = 10;
@@ -196,10 +202,19 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   }, [input.documentEpoch]);
   const pinnedSignalIds = pinnedSignalIdsForEpoch(signalPinState, input.documentEpoch);
   const cursorState: SemanticCursorState = { ...(cursorA === undefined ? {} : { a: cursorA }), ...(cursorB === undefined ? {} : { b: cursorB }) };
+  // A shrinking edit (Delete, Cut, Save/Open replacement that keeps the epoch) can leave a cursor past the new end; clamp it here
+  // so the readout never reports a cycle the timeline no longer has.
+  const cycleCountForCursors = input.cycleCount;
+  useEffect(() => {
+    setCursorA((current) => clampCursorToCycleCount(current, cycleCountForCursors));
+    setCursorB((current) => clampCursorToCycleCount(current, cycleCountForCursors));
+  }, [cycleCountForCursors]);
   const setCursor = (which: "a" | "b", sourceTime: number | undefined) => {
     if (sourceTime !== undefined && !Number.isFinite(sourceTime)) return;
     const maximum = input.cycleCount === undefined ? Number.POSITIVE_INFINITY : Math.max(0, input.cycleCount - 1);
-    const bounded = sourceTime === undefined ? undefined : Math.max(0, Math.min(maximum, sourceTime));
+    // Cursors name whole cycles: a fractional source time is rounded to the nearest cycle before clamping.
+    const whole = sourceTime === undefined ? undefined : Math.round(sourceTime);
+    const bounded = whole === undefined ? undefined : Math.max(0, Math.min(maximum, whole));
     if (which === "a") setCursorA(bounded); else setCursorB(bounded);
   };
   const clearCursor = (which: "a" | "b") => setCursor(which, undefined);
