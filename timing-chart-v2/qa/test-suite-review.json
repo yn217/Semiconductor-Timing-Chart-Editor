@@ -18486,6 +18486,24 @@
       "decision": "KEEP",
       "reason": "Code review found auto-named Transaction Groups colliding.",
       "replacementTest": null
+    },
+    {
+      "file": "review-followups.spec.ts",
+      "title": "Enter that confirms an IME conversion does not commit an inline rename",
+      "domain": "inline-rename",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 4000,
+      "primaryContract": "Inline name inputs ignore Enter/Escape while an IME composition is active.",
+      "duplicateGroup": "inline-rename",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found IME Enter committing half-converted names.",
+      "replacementTest": null
     }
   ]
 }

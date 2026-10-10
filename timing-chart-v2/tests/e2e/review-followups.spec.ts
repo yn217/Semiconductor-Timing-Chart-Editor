@@ -77,3 +77,19 @@ test("corrupt Recent metadata does not turn Recent into an Open failure", async 
   await expect(page.getByText(/No recent document is available/).first()).toBeVisible();
   await expect(page.getByText(/Open recent document failed/)).toHaveCount(0);
 });
+
+test("Enter that confirms an IME conversion does not commit an inline rename", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const revision = await host.getAttribute("data-canonical-revision");
+  const name = page.getByTestId("inspector").getByLabel("Inspector signal name", { exact: true });
+  await name.fill("へんかん");
+  await name.evaluate((input) => input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true, isComposing: true })));
+  await expect(host).toHaveAttribute("data-canonical-revision", revision!);
+  await name.fill("変換");
+  await name.press("Enter");
+  await expect(host).not.toHaveAttribute("data-canonical-revision", revision!);
+});

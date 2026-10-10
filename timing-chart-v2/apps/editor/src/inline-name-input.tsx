@@ -24,6 +24,8 @@ export function InlineNameInput({ target, value, ariaLabel, onRename, onCommitte
   };
   return <>
     <input aria-label={ariaLabel} value={draft} data-commit-policy="enter-only" onChange={(event) => { setDraft(event.target.value); onDraftChange?.(event.target.value); setError(""); }} onKeyDown={(event) => {
+      // Enter/Escape that confirm or cancel an IME conversion belong to the IME, not to the rename.
+      if (event.nativeEvent.isComposing) return;
       if (event.key === "Enter") { event.preventDefault(); event.stopPropagation(); commit(); }
       if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setDraft(value); onDraftChange?.(value); setError(""); onCanceled?.(); }
     }} />

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T18:58:51.343Z",
+  "generatedAt": "2026-10-10T19:04:14.882Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 467,
-  "caseCount": 1401,
-  "reviewedCaseCount": 1343,
+  "specFileCount": 468,
+  "caseCount": 1404,
+  "reviewedCaseCount": 1344,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 493,
+    "pr": 494,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -27097,6 +27097,33 @@
       "runtimeMeasurementScope": "CASE"
     },
     {
+      "file": "review-followups.spec.ts",
+      "suitePath": [],
+      "line": 81,
+      "title": "Enter that confirms an IME conversion does not commit an inline rename",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "inline-rename",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 4000,
+      "primaryContract": "Inline name inputs ignore Enter/Escape while an IME composition is active.",
+      "duplicateGroup": "inline-rename",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review found IME Enter committing half-converted names.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "inline-rename",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
       "file": "review-workflow.spec.ts",
       "suitePath": [],
       "line": 6,
@@ -28044,6 +28071,50 @@
       ],
       "contractId": "scenario-value-id-collision",
       "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "selection-command-review-fixes.spec.ts",
+      "suitePath": [],
+      "line": 9,
+      "title": "Delete with a Transaction Phase selected removes only that Phase as one undoable step",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": null,
+      "originIssue": null,
+      "type": null,
+      "costClass": null,
+      "measuredRuntimeMs": null,
+      "primaryContract": null,
+      "duplicateGroup": null,
+      "executionTier": null,
+      "decision": "UNREVIEWED",
+      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "replacementTest": null,
+      "reviewStatus": "UNREVIEWED"
+    },
+    {
+      "file": "selection-command-review-fixes.spec.ts",
+      "suitePath": [],
+      "line": 31,
+      "title": "Rename is disabled for a selected Spacer and does not rename its parent Group",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": null,
+      "originIssue": null,
+      "type": null,
+      "costClass": null,
+      "measuredRuntimeMs": null,
+      "primaryContract": null,
+      "duplicateGroup": null,
+      "executionTier": null,
+      "decision": "UNREVIEWED",
+      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "replacementTest": null,
+      "reviewStatus": "UNREVIEWED"
     },
     {
       "file": "signal-duplicate-review-fixes.spec.ts",
@@ -40335,8 +40406,8 @@
     },
     {
       "file": "review-followups.spec.ts",
-      "caseCount": 6,
-      "reviewedCaseCount": 6,
+      "caseCount": 7,
+      "reviewedCaseCount": 7,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -40474,6 +40545,15 @@
       "declaredTimeoutMs": null,
       "candidateSignals": [],
       "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "selection-command-review-fixes.spec.ts",
+      "caseCount": 2,
+      "reviewedCaseCount": 0,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [],
+      "semanticReviewStatus": "UNREVIEWED"
     },
     {
       "file": "signal-duplicate-review-fixes.spec.ts",
