@@ -37,7 +37,7 @@ export interface ExportEdgeCounter { readonly id: string; readonly signalId: Sig
 export interface ExportRulerTick { readonly cycle: number; readonly text: string }
 export interface ExportRuler { readonly start: number; readonly end: number; readonly x: number; readonly cycleWidth: number; readonly ticks: readonly ExportRulerTick[] }
 export interface ExportDocumentLayout { readonly title: string; readonly headerLines: readonly string[]; readonly figureNumber: string; readonly revision: string; readonly footerText: string }
-export interface ExportPageLayout { readonly width: number; readonly height: number; readonly margin: number; readonly fit: "width" | "page"; readonly contentScale: number; readonly contentOffsetX: number; readonly contentOffsetY: number }
+export interface ExportPageLayout { readonly width: number; readonly height: number; readonly margin: number; readonly fit: "width" | "page"; readonly contentScale: number; readonly contentOffsetX: number; readonly contentOffsetY: number; /** Unscaled content height (content units): overlays inside the scaled page group must span this, not the page height. */ readonly contentHeight: number }
 
 export interface ExportScene {
   readonly width: number;
@@ -385,6 +385,8 @@ function anchorPoint(annotation: Annotation, field: "anchor" | "start" | "end" |
   const anchor = annotation[field];
   if (!anchor) return undefined;
   const signalId = anchor.signalId ?? document.timeline.referenceClock;
+  // Like the live overlay: an anchor on a Signal row that is not drawn (hidden) has no position, so the annotation is omitted rather than drawn in the header.
+  if (anchor.signalId !== undefined && !rowY.has(anchor.signalId)) return undefined;
   // #444: the same hidden-source policy as the live projection (resolveAnchorPoint): an ordinary semantic anchor inside a collapsed fold is
   // omitted, a free (continuous) one interpolates, and the terminal boundary maps to the display end. cycle-start/center/end offsets apply only
   // AFTER the canonical source position resolved (no floor-then-offset into a neighbouring visible cycle).
@@ -393,7 +395,8 @@ function anchorPoint(annotation: Annotation, field: "anchor" | "start" | "end" |
   if (displayCycle === undefined) return undefined;
   const fraction = anchorTransitionFraction(anchor);
   // Semantic cycle points resolve to the same boundary the live geometry map reports: start = 0, center = 1/2, end = 1 cycle.
-  const cyclePointOffset = anchor.point === "cycle-center" ? 0.5 : anchor.point === "cycle-end" ? 1 : 0;
+  // value-center and row-center sit at the cycle centre in the live geometry (uniform-cycle-geometry.ts), not at the cycle start.
+  const cyclePointOffset = anchor.point === "cycle-center" || anchor.point === "value-center" || anchor.point === "row-center" ? 0.5 : anchor.point === "cycle-end" ? 1 : 0;
   const thresholdOffset = fraction === undefined ? cyclePointOffset : Math.max(0, Math.min(1, fraction));
   return { x: LABEL_WIDTH + (displayCycle + thresholdOffset) * cycleWidth - start * cycleWidth + (anchor.offset?.x ?? 0), y: ((signalId ? rowY.get(signalId) : undefined) ?? 48) + (anchor.offset?.y ?? 0) };
 }
@@ -475,7 +478,7 @@ function pageLayout(page: NonNullable<ExportSettings["page"]>, contentWidth: num
   const width = page.fit === "page" ? dimensions.width : dimensions.width;
   const height = page.fit === "page" ? dimensions.height : page.margin * 2 + contentHeight * contentScale;
   return Object.freeze({
-    width, height, margin: page.margin, fit: page.fit,
+    width, height, margin: page.margin, fit: page.fit, contentHeight,
     contentScale,
     contentOffsetX: page.margin + (availableWidth - contentWidth * contentScale) / 2,
     contentOffsetY: page.fit === "page" ? page.margin + (availableHeight - contentHeight * contentScale) / 2 : page.margin,
@@ -502,7 +505,9 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
   const signalById = new Map<string, Signal>(document.signals.map((signal) => [signal.id, signal]));
   const signals = document.signalGroups.flatMap((group) => group.rows.map((id) => signalById.get(id))).filter((signal): signal is Signal => signal !== undefined && signal.display.visible !== false);
   const waveSignals = signals.filter((signal): signal is Exclude<Signal, { readonly type: "commentRow" }> => signal.type !== "commentRow");
-  const lanes = [...new Set(document.transactions.map((transaction) => transaction.laneId ?? "lane_0"))].sort();
+  // Hidden Transactions are not drawn on screen; they must not be exported or reserve a lane either.
+  const exportedTransactions = document.transactions.filter((transaction) => transaction.visible !== false);
+  const lanes = [...new Set(exportedTransactions.map((transaction) => transaction.laneId ?? "lane_0"))].sort();
   const laneIndex = new Map(lanes.map((lane, index) => [lane, index] as const));
   const transactionTop = headerHeight + 14;
   const waveTop = transactionTop + lanes.length * TRANSACTION_HEIGHT + 34;
@@ -704,7 +709,7 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
     }))
     .filter((item) => item.x >= LABEL_WIDTH && item.x <= LABEL_WIDTH + (range.end - range.start) * cycleWidth);
   const transactions: ExportTransaction[] = [];
-  for (const transaction of document.transactions) {
+  for (const transaction of exportedTransactions) {
     const laneId = transaction.laneId ?? "lane_0";
     const displayStart = toDisplayCycle(mapping, transaction.start, "floor");
     const displayEnd = Math.max(displayStart + 1, toDisplayCycle(mapping, transaction.end, "ceil"));
@@ -716,7 +721,7 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
   }
   const measurementSpans: Array<{ id: string; firstX: number; secondX: number; explicitLane?: number }> = [];
   for (const annotation of document.annotations) {
-    if (annotation.type !== "measurement" || !annotation.start || !annotation.end) {
+    if (annotation.type !== "measurement" || !annotation.start || !annotation.end || annotation.visible === false) {
       if (checkpoint()) yield;
       continue;
     }
@@ -729,6 +734,8 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
   const annotations: ExportAnnotation[] = [];
   const effectiveTraceTokensBySignalId = new Map<SignalId, readonly string[]>();
   for (const annotation of document.annotations) {
+    // Hidden annotations are not drawn on screen, so they are not exported.
+    if (annotation.visible === false) { if (checkpoint()) yield; continue; }
     const firstAnchor = annotation.anchor ?? annotation.start ?? annotation.from;
     const lastAnchor = annotation.anchor ?? annotation.end ?? annotation.to ?? firstAnchor;
     const first = anchorPoint(annotation, annotation.anchor ? "anchor" : annotation.start ? "start" : "from", document, rowY, mapping, range.start, cycleWidth);
@@ -1105,14 +1112,16 @@ function* renderExportSvgSteps(scene: ExportScene): Generator<void, readonly str
   out.push(`</g>`);
   out.push(`<g data-layer="ruler" font-family="Segoe UI,Arial,sans-serif" font-size="10" fill="#334155" stroke="#d5dde7">`);
   const rulerTop = 24 + 38 + layout.headerLines.length * 14;
-  for (const tick of scene.ruler.ticks) { const x = scene.ruler.x + (tick.cycle - scene.ruler.start) * scene.ruler.cycleWidth; out.push(`<line x1="${x}" y1="${rulerTop}" x2="${x}" y2="${scene.height - 24}"/><text x="${x + 3}" y="${rulerTop - 8}" stroke="none">${xml(tick.text)}</text>`); if (checkpoint()) yield; }
+  // Overlays live inside the scaled page group, so they are sized in content units (the unscaled content height), not the page height.
+  const overlayHeight = scene.page ? scene.page.contentHeight : scene.height;
+  for (const tick of scene.ruler.ticks) { const x = scene.ruler.x + (tick.cycle - scene.ruler.start) * scene.ruler.cycleWidth; out.push(`<line x1="${x}" y1="${rulerTop}" x2="${x}" y2="${overlayHeight - 24}"/><text x="${x + 3}" y="${rulerTop - 8}" stroke="none">${xml(tick.text)}</text>`); if (checkpoint()) yield; }
   out.push(`</g><g data-layer="transactions" font-family="Segoe UI,Arial,sans-serif" font-size="11">`);
   for (const item of scene.transactions) { out.push(`<g data-transaction-id="${xml(item.id)}"><rect x="${item.x}" y="${item.y}" width="${item.width}" height="20" rx="4" fill="#dbeafe" stroke="#2563eb"/><text x="${item.x + 6}" y="${item.y + 14}">${xml(item.name)}</text></g>`); if (checkpoint()) yield; }
   out.push(`</g><g data-layer="group-bands">`);
   for (const band of scene.groupBands) { out.push(`<rect data-group-id="${xml(band.id)}" data-scope="${band.scope}" x="${band.x}" y="${band.y}" width="${band.width}" height="${band.height}" fill="${xml(band.fill)}" fill-opacity="${band.fillOpacity}" stroke="${xml(band.stroke)}"/>`); if (checkpoint()) yield; }
   out.push(`</g><g data-layer="axis-breaks" font-family="Segoe UI,Arial,sans-serif" font-size="10" fill="#52677d" stroke="#52677d">`);
   for (const item of scene.axisBreaks) {
-    out.push(`<g data-axis-break-id="${xml(item.id)}" data-source-start="${item.sourceStart}" data-source-end="${item.sourceEnd}"><path d="M${item.x - 4} 22 l4 8 l4 -8 M${item.x - 4} ${scene.height - 30} l4 8 l4 -8" fill="none" stroke-width="1.5"/><text x="${item.x + 8}" y="38" fill="#52677d" stroke="none">${xml(item.name)}</text></g>`);
+    out.push(`<g data-axis-break-id="${xml(item.id)}" data-source-start="${item.sourceStart}" data-source-end="${item.sourceEnd}"><path d="M${item.x - 4} 22 l4 8 l4 -8 M${item.x - 4} ${overlayHeight - 30} l4 8 l4 -8" fill="none" stroke-width="1.5"/><text x="${item.x + 8}" y="38" fill="#52677d" stroke="none">${xml(item.name)}</text></g>`);
     if (checkpoint()) yield;
   }
   out.push(`</g><g data-layer="labels" font-family="Segoe UI,Arial,sans-serif" font-size="11" fill="#1e293b">`);
@@ -1126,7 +1135,7 @@ function* renderExportSvgSteps(scene: ExportScene): Generator<void, readonly str
   out.push(`</g><g data-layer="annotations" font-family="Segoe UI,Arial,sans-serif" font-size="11" stroke="#dc2626" fill="none">`);
   for (const annotation of scene.annotations) {
     const metadata = `${annotation.sourceSignalId ? ` data-source-signal-id="${xml(annotation.sourceSignalId)}"` : ""}${annotation.traceOffsetCycles === undefined ? "" : ` data-trace-offset-cycles="${annotation.traceOffsetCycles}"`}${annotation.threshold1 === undefined ? "" : ` data-start-threshold="${annotation.threshold1}"`}${annotation.threshold2 === undefined ? "" : ` data-end-threshold="${annotation.threshold2}"`}${annotation.transitionKind1 === undefined ? "" : ` data-start-transition-kind="${annotation.transitionKind1}"`}${annotation.transitionKind2 === undefined ? "" : ` data-end-transition-kind="${annotation.transitionKind2}"`}${annotation.measurementProfile === undefined ? "" : ` data-measurement-profile="${annotation.measurementProfile}"`}`;
-    if (annotation.type === "timingRegion") out.push(`<rect data-annotation-id="${xml(annotation.id)}" data-annotation-type="timingRegion"${metadata} x="${Math.min(annotation.x1, annotation.x2)}" y="0" width="${Math.max(2, Math.abs(annotation.x2 - annotation.x1))}" height="${scene.height}" fill="${xml("#d04a36")}" fill-opacity="${annotation.opacity ?? 0.16}" stroke="none"/>`);
+    if (annotation.type === "timingRegion") out.push(`<rect data-annotation-id="${xml(annotation.id)}" data-annotation-type="timingRegion"${metadata} x="${Math.min(annotation.x1, annotation.x2)}" y="0" width="${Math.max(2, Math.abs(annotation.x2 - annotation.x1))}" height="${overlayHeight}" fill="${xml("#d04a36")}" fill-opacity="${annotation.opacity ?? 0.16}" stroke="none"/>`);
     else if (annotation.type === "ghostTrace") {
       const points = annotation.tracePoints?.map((point) => `${point.x},${point.y}`).join(" ");
       const path = points ? `<polyline data-role="ghost-trace-path" points="${points}"` : `<line x1="${annotation.x1}" y1="${annotation.y1}" x2="${annotation.x2}" y2="${annotation.y2}"`;
@@ -1161,8 +1170,8 @@ function* renderExportSvgSteps(scene: ExportScene): Generator<void, readonly str
       const placed = placedLabelPosition(annotation);
       out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="bracket"${metadata}><line x1="${annotation.x1}" y1="${annotation.y1}" x2="${annotation.x2}" y2="${annotation.y2}" stroke="${xml(annotation.color ?? "#d04a36")}" stroke-width="${strokeWidth}"${strokeOpacity}${strokeDash ? ` stroke-dasharray="${strokeDash}"` : ""}/><path data-role="annotation-bracket-caps" d="M ${annotation.x1 - capX} ${annotation.y1 - capY} L ${annotation.x1 + capX} ${annotation.y1 + capY} M ${annotation.x2 - capX} ${annotation.y2 - capY} L ${annotation.x2 + capX} ${annotation.y2 + capY}" fill="none" stroke="${xml(annotation.color ?? "#d04a36")}" stroke-width="${strokeWidth}"${strokeOpacity}${strokeDash ? ` stroke-dasharray="${strokeDash}"` : ""}/>${multilineText(placed?.x ?? Math.min(annotation.x1, annotation.x2) + 4, placed?.y ?? Math.min(annotation.y1, annotation.y2) - 5, annotation.label, `fill="#991b1b" stroke="none"`, annotation.style)}</g>`);
     }
-    else if (annotation.type === "range" || annotation.type === "highlight" || annotation.type === "rectangle" || annotation.type === "ellipse") out.push(renderAreaAnnotationSvg(annotation, metadata, scene.height));
-    else if (annotation.type === "verticalLine") out.push(renderVerticalLineSvg(annotation, metadata, scene.height));
+    else if (annotation.type === "range" || annotation.type === "highlight" || annotation.type === "rectangle" || annotation.type === "ellipse") out.push(renderAreaAnnotationSvg(annotation, metadata, overlayHeight));
+    else if (annotation.type === "verticalLine") out.push(renderVerticalLineSvg(annotation, metadata, overlayHeight));
     else { const placed = placedLabelPosition(annotation); out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="${xml(annotation.type)}"><line x1="${annotation.x1}" y1="${annotation.y1}" x2="${annotation.x2}" y2="${annotation.y2}"/>${multilineText(placed?.x ?? Math.min(annotation.x1, annotation.x2) + 4, placed?.y ?? Math.min(annotation.y1, annotation.y2) - 5, annotation.label, `fill="#991b1b" stroke="none"`, annotation.style)}</g>`); }
     if (checkpoint()) yield;
   }
@@ -1172,8 +1181,10 @@ function* renderExportSvgSteps(scene: ExportScene): Generator<void, readonly str
   const legendItems: string[] = [];
   for (const [index, role] of scene.legend.entries()) { legendItems.push(`<text x="${scene.legendOrientation === "vertical" ? 12 : 12 + index * 80}" y="${12 + (scene.legendOrientation === "vertical" ? index * 14 : 0)}">${xml(role)}</text>`); if (checkpoint()) yield; }
   out.push(`</g><g data-layer="legend" data-orientation="${scene.legendOrientation}" transform="translate(${scene.legendPosition.x} ${scene.legendPosition.y})" font-family="Segoe UI,Arial,sans-serif" font-size="10">${legendItems.join("")}</g>`);
-  if (footer) out.push(`<text data-layout="footer" x="12" y="${scene.height - 12}" font-family="Segoe UI,Arial,sans-serif" font-size="10" fill="#52677d">${xml(footer)}</text>`);
   if (scene.page) out.push(`</g>`);
+  // The footer is a page-level element: drawn outside the scaled group, in page units, inset by the page margin.
+  const footerInset = scene.page ? scene.page.margin : 0;
+  if (footer) out.push(`<text data-layout="footer" x="${12 + footerInset}" y="${scene.height - footerInset - 12}" font-family="Segoe UI,Arial,sans-serif" font-size="10" fill="#52677d">${xml(footer)}</text>`);
   out.push(`</svg>`);
   const chunks: string[] = [];
   let parts: string[] = [];

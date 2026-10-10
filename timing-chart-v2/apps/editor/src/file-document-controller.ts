@@ -23,7 +23,9 @@ export function parseEditorDocument(text: string): ParsedEditorDocument {
 
 /** Decode bytes at the shared Open boundary, independent of how the bytes were obtained. */
 export function decodeOpenDocumentBytes(bytes: ArrayBuffer | Uint8Array): string {
-  return new TextDecoder("utf-8").decode(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes));
+  // Fatal: a file in another encoding (e.g. Shift_JIS) must fail to open with a message, not open with names silently replaced by U+FFFD
+  // (which a later Save would then write back permanently).
+  return new TextDecoder("utf-8", { fatal: true }).decode(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes));
 }
 
 export function canonicalDocumentOf(input: CanonicalDocument | ParsedCanonicalDocument): CanonicalDocument {

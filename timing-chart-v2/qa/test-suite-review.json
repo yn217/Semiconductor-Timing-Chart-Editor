@@ -17442,6 +17442,42 @@
       "decision": "KEEP",
       "reason": "Code-review finding: Signal Paste ignored a selected Group header.",
       "replacementTest": null
+    },
+    {
+      "file": "review-followups.spec.ts",
+      "title": "opening a file that is not UTF-8 reports a failed Open instead of silently replacing characters",
+      "domain": "open-non-utf8",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "A document saved in another encoding fails to open with a decode message instead of opening with U+FFFD names.",
+      "duplicateGroup": "open-non-utf8",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code-review finding: non-fatal UTF-8 decoding silently corrupted names.",
+      "replacementTest": null
+    },
+    {
+      "file": "review-followups.spec.ts",
+      "title": "an unsupported old format version is not called newer than the editor",
+      "domain": "compat-dialog-old-version",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "The compatibility dialog for an old unsupported version does not claim the file is newer.",
+      "duplicateGroup": "compat-dialog-old-version",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code-review finding: the dialog said newer for every unsupported version.",
+      "replacementTest": null
     }
   ]
 }

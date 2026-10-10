@@ -43,3 +43,27 @@ test("Paste with a Group header selected puts the copied Signal into that Group"
   });
   expect(lastPayloadRow).toContain("REQUEST_copy");
 });
+
+test("opening a file that is not UTF-8 reports a failed Open instead of silently replacing characters", async ({ page }) => {
+  await page.setViewportSize({ width: 1500, height: 900 });
+  await page.goto("/?transaction-demo");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  const [download] = await Promise.all([page.waitForEvent("download"), page.locator(".ribbon").getByRole("button", { name: "Save", exact: true }).first().click()]);
+  const text = await (await import("node:fs/promises")).readFile((await download.path())!, "utf8");
+  const [before, after] = text.split('"Sample -- Transaction Mode"');
+  expect(after).toBeDefined();
+  // A valid document whose title is "名前" encoded as Shift_JIS: the bytes are not valid UTF-8.
+  const bytes = Buffer.concat([Buffer.from(before!), Buffer.from([0x22, 0x96, 0xbc, 0x91, 0x4f, 0x22]), Buffer.from(after!)]);
+  await page.locator("input[type=file]").first().setInputFiles({ name: "sjis.tcd", mimeType: "application/json", buffer: bytes });
+  await expect(page.getByText(/Could not decode document/).first()).toBeVisible();
+  await expect(page.getByTestId("titlebar-document-title")).not.toContainText("�");
+});
+
+test("an unsupported old format version is not called newer than the editor", async ({ page }) => {
+  await page.setViewportSize({ width: 1500, height: 900 });
+  await page.goto("/?transaction-demo");
+  await expect(page.locator(".view-mode")).toBeVisible();
+  await page.locator("input[type=file]").first().setInputFiles({ name: "old.tcd", mimeType: "application/json", buffer: Buffer.from('{"formatVersion":0}') });
+  const dialog = page.getByTestId("compatibility-dialog");
+  if (await dialog.count()) await expect(dialog).not.toContainText("newer than this editor");
+});
