@@ -937,16 +937,35 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       const index = document.signals.findIndex((signal) => signal.id === command.signalId);
       const signal = document.signals[index];
       if (!signal || signal.type === "clock" || signal.type === "commentRow") return fail("invalid", "SIGNAL_NOT_EDITABLE", "$.signalId", "Value changes require a non-clock timing signal.");
-      const sorted = [...command.values].sort((left, right) => left.start - right.start);
-      // Imported / pasted tables carry no IDs: keep the ID of the change previously at the same cycle, otherwise allocate a fresh one.
-      const takenIds = new Set(sorted.flatMap((change) => change.id ? [change.id] : []));
+      const sortedInput = [...command.values].sort((left, right) => left.start - right.start);
+      const documentIds = canonicalEntityIds(document);
+      const currentValueIds = new Set(signal.values.flatMap((change) => change.id ? [change.id] : []));
+      const requestedIds = new Set<string>();
+      for (const [valueIndex, change] of sortedInput.entries()) {
+        if (!change.id) continue;
+        if (requestedIds.has(change.id)) return fail("invalid", "DUPLICATE_ID", `$.values[${valueIndex}].id`, `Value-change ID '${change.id}' occurs more than once in the replacement table.`);
+        if (documentIds.has(change.id) && !currentValueIds.has(change.id)) return fail("invalid", "DUPLICATE_ID", `$.values[${valueIndex}].id`, `Value-change ID '${change.id}' is already owned by another document entity.`);
+        requestedIds.add(change.id);
+      }
+      const reservedIds = new Set([...documentIds, ...requestedIds]);
+      const claimedIds = new Set<string>();
       let nextSequence = 0;
-      const freshId = () => { while (takenIds.has(`value_${signal.id}_${nextSequence}`) || signal.values.some((item) => item.id === `value_${signal.id}_${nextSequence}`)) nextSequence += 1; const id = `value_${signal.id}_${nextSequence}`; takenIds.add(id); return id; };
-      const values = sorted.map((change) => {
-        if (change.id) return change;
+      const values = sortedInput.map((change) => {
+        if (change.id) {
+          claimedIds.add(change.id);
+          return change;
+        }
         const previous = signal.values.find((item) => item.start === change.start)?.id;
-        if (previous && !takenIds.has(previous)) { takenIds.add(previous); return { ...change, id: previous }; }
-        return { ...change, id: freshId() };
+        if (previous && !claimedIds.has(previous) && !requestedIds.has(previous)) {
+          claimedIds.add(previous);
+          return { ...change, id: previous };
+        }
+        let id = `value_${signal.id}_${nextSequence}`;
+        while (reservedIds.has(id)) id = `value_${signal.id}_${++nextSequence}`;
+        nextSequence += 1;
+        reservedIds.add(id);
+        claimedIds.add(id);
+        return { ...change, id };
       });
       if (values.length === 0) return fail("invalid", "EMPTY_VALUES", "$.values", "A value signal must retain at least one change point.");
       if (values.some((change) => !Number.isInteger(change.start) || change.start < 0 || change.start >= document.timeline.cycleCount)) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.values", "Every change point must be inside the timeline.");

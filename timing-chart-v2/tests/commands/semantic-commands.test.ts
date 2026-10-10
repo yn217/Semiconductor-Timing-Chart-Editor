@@ -776,6 +776,30 @@ describe("pure Semantic Command planning", () => {
     expect(session.redo().ok).toBe(true);
     expect(session.getSnapshot().document.signals.find((signal) => signal.id === "sig_data")?.values).toEqual(imported);
   });
+
+  it("imports missing value-change IDs without colliding with other canonical entities", () => {
+    const source = canonicalFixture();
+    const stableValues = source.signals[1]!;
+    if (!("values" in stableValues)) throw new Error("Expected a Value signal fixture.");
+    stableValues.values = stableValues.values.map((change, index) => ({ ...change, id: `value_sig_data_${index}` }));
+    const reserved = "value_sig_data_2";
+    const document = { ...source, bookmarks: [{ id: reserved as BookmarkId, name: "Reserved", start: 1 }] };
+    const session = new CommandHistorySession(document);
+    const result = session.execute({
+      id: commandId("cmd_replace_values_global_ids"),
+      type: "signal.replaceValues",
+      signalId: "sig_data" as SignalId,
+      values: [{ start: 0, value: "00" }, { start: 2, value: "1F" }, { start: 6, value: "0A" }],
+    });
+
+    expect(result.ok).toBe(true);
+    const imported = session.getSnapshot().document.signals.find((signal) => signal.id === "sig_data");
+    if (!imported || !("values" in imported)) throw new Error("Expected the imported Value signal.");
+    expect(imported.values.map((change) => change.id)).toEqual(["value_sig_data_0", "value_sig_data_3", "value_sig_data_4"]);
+    expect(imported.values[0]?.id).toBe(stableValues.values[0]?.id);
+    expect(new Set(imported.values.map((change) => change.id)).size).toBe(imported.values.length);
+    expect(session.getSnapshot().document.bookmarks[0]?.id).toBe(reserved);
+  });
 });
 
 describe("command execution and atomic history", () => {
