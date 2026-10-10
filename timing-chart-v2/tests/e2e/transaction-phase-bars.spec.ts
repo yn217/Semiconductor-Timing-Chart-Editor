@@ -115,6 +115,43 @@ test("Scenario switching never aliases a copied Transaction Phase selection", as
   await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
 });
 
+test("Phase deletion Undo/Redo prunes only the missing Phase selection", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await openTransactionSample(page);
+  const phase = page.getByRole("button", { name: "Read_0, phase Address, cycles 10 to 20", exact: true });
+  await expect(phase).toBeVisible();
+  const phaseId = await phase.getAttribute("data-phase-id");
+  expect(phaseId).toBeTruthy();
+  await phase.click();
+  await expect(phase).toHaveAttribute("aria-pressed", "true");
+
+  const inspector = page.getByTestId("inspector");
+  await inspector.getByLabel("Delete phase 1").click();
+  await inspector.getByTestId("apply-inspector-transaction").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  const phaseById = page.locator(`.transaction-phase-hit-target[data-phase-id='${phaseId}']`);
+  await expect(phaseById).toHaveCount(0);
+  await expect(page.getByTestId("selection-status")).toHaveText("Read_0");
+
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(phaseById).toHaveCount(1);
+  // Undo restores the selected stable Phase ID, so its decoration should return
+  // with the same canonical entity rather than being dropped on history replay.
+  await expect(phaseById).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("selection-status")).toHaveText("Read_0");
+
+  await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(phaseById).toHaveCount(0);
+  await expect(page.getByTestId("selection-status")).toHaveText("Read_0");
+
+  // Redo removes the selected Phase; history repair must clear that now-stale
+  // ID, so a later Undo restores the Phase without resurrecting its selection.
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(phaseById).toHaveCount(1);
+  await expect(phaseById).toHaveAttribute("aria-pressed", "false");
+});
+
 test("Transaction Phase selection restores by stable Phase ID after mode remount", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");

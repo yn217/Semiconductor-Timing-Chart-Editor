@@ -6,9 +6,9 @@ startInCycleSample(test);
 
 test("Undoing Transaction creation clears the non-Signal stable-ID selection", async ({ page }) => {
   await ready(page);
-  const ribbon = page.getByTestId("ribbon");
-  await ribbon.getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Transaction", exact: true }).click();
   await expect(page.getByTestId("selection-status")).toHaveText("None");
+  const ribbon = page.getByTestId("ribbon");
 
   await ribbon.getByRole("button", { name: "Create Transaction", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
@@ -29,6 +29,61 @@ test("Undoing Transaction creation clears the non-Signal stable-ID selection", a
   await expect(restoredRow).toHaveCount(1);
   await expect(restoredRow).toHaveAttribute("data-selected", "false");
   await expect(page.getByTestId("selection-status")).toHaveText("None");
+});
+
+test("Undo/Redo prunes Annotation, Group and Spacer selections against the restored document", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const ribbon = page.getByTestId("ribbon");
+  const selected = page.getByTestId("selection-status");
+
+  const groupsBefore = await host.locator("[data-role='left-group-header'][data-group-id]").evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset.groupId!));
+  await page.getByRole("button", { name: "Add signal or group" }).click();
+  await page.getByTestId("create-group").click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const addedGroupId = (await host.locator("[data-role='left-group-header'][data-group-id]").evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset.groupId!))).find((id) => !groupsBefore.includes(id));
+  expect(addedGroupId).toBeTruthy();
+  await expect(selected).not.toHaveText("None");
+  await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(host.locator(`[data-role='left-group-header'][data-group-id='${addedGroupId}']`)).toHaveCount(0);
+  await expect(selected).toHaveText("None");
+  await ribbon.getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(host.locator(`[data-role='left-group-header'][data-group-id='${addedGroupId}']`)).toHaveCount(1);
+  await expect(selected).toHaveText("None");
+
+  const annotationIdsBefore = await host.locator("[data-role='annotation-owner'][data-annotation-id]").evaluateAll((owners) => owners.map((owner) => (owner as HTMLElement).dataset.annotationId!));
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByLabel("Annotation type").selectOption("text");
+  await page.getByRole("button", { name: "Add annotation", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const annotationId = (await host.locator("[data-role='annotation-owner'][data-annotation-id]").evaluateAll((owners) => owners.map((owner) => (owner as HTMLElement).dataset.annotationId!))).find((id) => !annotationIdsBefore.includes(id));
+  expect(annotationId).toBeTruthy();
+  await expect(selected).not.toHaveText("None");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(host.locator(`[data-role='annotation-owner'][data-annotation-id='${annotationId}']`)).toHaveCount(0);
+  await expect(selected).toHaveText("None");
+  await ribbon.getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(host.locator(`[data-role='annotation-owner'][data-annotation-id='${annotationId}']`)).toHaveCount(1);
+  await expect(host.locator(`[data-role='annotation-owner'][data-annotation-id='${annotationId}'][data-selected='true']`)).toHaveCount(0);
+  await expect(selected).toHaveText("None");
+
+  await host.locator("[data-role='left-group-header'][data-group-id='grp_cycle_control']").click();
+  await page.getByRole("button", { name: "Add signal or group" }).click();
+  await page.getByRole("menuitem", { name: "Spacer", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const spacerEditor = page.getByTestId("inspector-spacers");
+  const spacerId = await spacerEditor.locator("form[data-spacer-id]").last().getAttribute("data-spacer-id");
+  expect(spacerId).toBeTruthy();
+  await expect(selected).toHaveText("Control");
+  await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(host.locator(`[data-role='timing-row'][data-row-id='${spacerId}']`)).toHaveCount(0);
+  await expect(selected).toHaveText("Control");
+  await expect(host.locator("[data-role='left-group-header'][data-group-id='grp_cycle_control'][aria-selected='true']")).toHaveCount(1);
+  await ribbon.getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(host.locator(`[data-role='timing-row'][data-row-id='${spacerId}']`)).toHaveCount(1);
+  await expect(selected).toHaveText("Control");
 });
 
 test("compatible Bottom row selection and dirty draft survive metadata Undo/Redo", async ({ page }) => {
