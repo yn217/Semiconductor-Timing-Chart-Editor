@@ -18558,6 +18558,24 @@
       "decision": "KEEP",
       "reason": "Code review found empty spacing fields committing 0.",
       "replacementTest": null
+    },
+    {
+      "file": "comment-row-draft-consistency.spec.ts",
+      "title": "renaming a Comment Row from the Ribbon updates the text drawn in its row",
+      "domain": "comment-row",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 4000,
+      "primaryContract": "A generic Rename of a Comment Row updates the title drawn in its row.",
+      "duplicateGroup": "comment-row",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Rename left the drawn Comment Row title stale.",
+      "replacementTest": null
     }
   ]
 }

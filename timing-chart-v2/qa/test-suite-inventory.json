@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T19:10:35.652Z",
+  "generatedAt": "2026-10-10T19:16:51.336Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -12,13 +12,13 @@
     "retryAndFlakySummary": null
   },
   "specFileCount": 468,
-  "caseCount": 1405,
-  "reviewedCaseCount": 1347,
+  "caseCount": 1406,
+  "reviewedCaseCount": 1348,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 497,
+    "pr": 498,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -5997,6 +5997,33 @@
       "executionTier": "TIER_2_FOCUSED_BROWSER",
       "decision": "KEEP",
       "reason": "Code review found empty spacing fields committing 0.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "comment-row",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "comment-row-draft-consistency.spec.ts",
+      "suitePath": [],
+      "line": 70,
+      "title": "renaming a Comment Row from the Ribbon updates the text drawn in its row",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "comment-row",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 4000,
+      "primaryContract": "A generic Rename of a Comment Row updates the title drawn in its row.",
+      "duplicateGroup": "comment-row",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review found Rename left the drawn Comment Row title stale.",
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
@@ -37366,8 +37393,8 @@
     },
     {
       "file": "comment-row-draft-consistency.spec.ts",
-      "caseCount": 2,
-      "reviewedCaseCount": 2,
+      "caseCount": 3,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
