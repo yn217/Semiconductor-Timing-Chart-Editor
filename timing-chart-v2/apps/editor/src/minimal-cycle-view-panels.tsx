@@ -77,7 +77,7 @@ export function MinimalCycleViewTitleBar({ title, dirty, viewMode, scenarios, sc
     : [], [scenarioModel, activeScenario, comparisonTargetId]);
   useEffect(() => onScenarioComparisonChange?.(compareOpen ? differences : []), [compareOpen, differences, onScenarioComparisonChange]);
   const scenarioNameTaken = (scenarios ?? []).some((scenario) => scenario.id !== activeScenarioId && scenario.name === scenarioName.trim());
-  return <header className="app-titlebar"><span className="appmark">∿</span><h1 data-testid="titlebar-document-title" aria-label={`${displayTitle}${dirty ? " (unsaved changes)" : ""}`}>{displayTitle}{dirty && <span className="document-dirty-indicator" data-testid="titlebar-unsaved-indicator" aria-label="Unsaved changes">*</span>}</h1>
+  return <header className="app-titlebar"><span className="appmark">∿</span><h1 data-testid="titlebar-document-title" aria-label={`${displayTitle}${dirty ? " (unsaved changes)" : ""}`} title={displayTitle}><span className="document-title-text">{displayTitle}</span>{dirty && <span className="document-dirty-indicator" data-testid="titlebar-unsaved-indicator" aria-label="Unsaved changes">*</span>}</h1>
     {scenarios ? <div className="scenario-controls" data-testid="scenario-controls" aria-label="Scenario controls">
       <label>Scenario<select aria-label="Active Scenario" data-testid="active-scenario" value={activeScenarioId ?? ""} onChange={(event) => onScenarioChange?.(event.target.value as ScenarioId)}>{scenarios.map((scenario) => <option key={scenario.id} value={scenario.id}>{scenario.name}</option>)}</select></label>
       <input aria-label="Scenario name" data-testid="scenario-name" value={scenarioName} onChange={(event) => setScenarioName(event.target.value)} />

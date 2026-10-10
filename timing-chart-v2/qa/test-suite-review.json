@@ -17082,6 +17082,24 @@
       "decision": "KEEP",
       "reason": "The stale error only shows through the real copy / switch Scenario / paste sequence.",
       "replacementTest": null
+    },
+    {
+      "file": "long-document-title.spec.ts",
+      "title": "a very long Document title is truncated and does not push the View Mode buttons away",
+      "domain": "titlebar-long-title",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "A 300-character Document title is ellipsized and the View Mode buttons stay inside the window.",
+      "duplicateGroup": "titlebar-long-title",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The overflow only shows with real layout after applying the title in Properties.",
+      "replacementTest": null
     }
   ]
 }

@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 439 spec files and 1323 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 440 spec files and 1324 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1265/1323 cases reviewed.
+Semantic review progress: 1266/1324 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 634 |
 | `nightly` | 241 |
 | `performance` | 73 |
-| `pr` | 415 |
+| `pr` | 416 |
 | `visual` | 181 |
 
 ## Top recorded per-case runtimes
@@ -365,6 +365,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `legend-canvas-anchor.spec.ts` | 1 | 0/1 reviewed |
 | `listener-lifecycle.spec.ts` | 2 | 2/2 reviewed |
 | `local-geometry-dom-batch.spec.ts` | 1 | 1/1 reviewed |
+| `long-document-title.spec.ts` | 1 | 1/1 reviewed |
 | `measurement-anchor-drag.spec.ts` | 5 | 5/5 reviewed |
 | `measurement-dimension-layout.spec.ts` | 1 | 1/1 reviewed |
 | `measurement-export-matrix.spec.ts` | 1 | 1/1 reviewed |
@@ -648,6 +649,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `left-tree-type-filter.spec.ts` | dataset |
 | `listener-lifecycle.spec.ts` | dataset |
 | `local-geometry-dom-batch.spec.ts` | querySelector, dataset |
+| `long-document-title.spec.ts` | querySelector, geometryRead |
 | `measurement-anchor-drag.spec.ts` | explicitWait |
 | `measurement-export-matrix.spec.ts` | dataset |
 | `measurement-lane-stacking.spec.ts` | dataset |

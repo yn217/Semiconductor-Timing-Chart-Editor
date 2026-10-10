@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T13:58:17.839Z",
+  "generatedAt": "2026-10-10T14:03:20.232Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 439,
-  "caseCount": 1323,
-  "reviewedCaseCount": 1265,
+  "specFileCount": 440,
+  "caseCount": 1324,
+  "reviewedCaseCount": 1266,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 415,
+    "pr": 416,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -23204,6 +23204,33 @@
       "runtimeMeasurementScope": "CASE"
     },
     {
+      "file": "long-document-title.spec.ts",
+      "suitePath": [],
+      "line": 3,
+      "title": "a very long Document title is truncated and does not push the View Mode buttons away",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "titlebar-long-title",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "A 300-character Document title is ellipsized and the View Mode buttons stay inside the window.",
+      "duplicateGroup": "titlebar-long-title",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The overflow only shows with real layout after applying the title in Properties.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "titlebar-long-title",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
       "file": "measurement-anchor-drag.spec.ts",
       "suitePath": [],
       "line": 34,
@@ -37744,6 +37771,18 @@
       "candidateSignals": [
         "querySelector",
         "dataset"
+      ],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "long-document-title.spec.ts",
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [
+        "querySelector",
+        "geometryRead"
       ],
       "semanticReviewStatus": "REVIEWED"
     },
