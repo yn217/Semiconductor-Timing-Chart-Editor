@@ -40,7 +40,9 @@ function publishRecentMetadata(identity: RecentDocumentIdentity, title: string):
   if (previousStorageVersion !== 2) localStorage.removeItem(RECENT_KEY);
 }
 
-export type PendingDocumentAction = Readonly<{ kind: "new" | "open"; requestId: number; text?: string }>;
+export type PendingDocumentAction = Readonly<{ kind: "new" | "open"; requestId: number; text?: string; filename?: string | undefined }>;
+// The file name the user last chose (Save As) or opened for the current document. Tagged with the document epoch so any replacement drops it.
+type RememberedFilename = Readonly<{ filename: string; documentEpoch: number }>;
 export type CompatibilityPreview = Readonly<{ sourceFormatVersion: number; sourceText: string; readOnly: boolean }>;
 
 export type DocumentReplacement = Readonly<{
@@ -133,6 +135,8 @@ export function useDocumentLifecycle({
   const [pendingAction, setPendingAction] = useState<PendingDocumentAction | undefined>();
   const [compatibilityPreview, setCompatibilityPreview] = useState<CompatibilityPreview | undefined>();
   const requestIdRef = useRef(0);
+  const readSeqRef = useRef(0);
+  const rememberedFilenameRef = useRef<RememberedFilename | undefined>(undefined);
   const recentWriteRef = useRef<Promise<void>>(Promise.resolve());
   const fileReadStartedAtRef = useRef<number | undefined>(undefined);
   const effectsRef = useRef<LifecycleEffects | undefined>(undefined);
@@ -201,14 +205,30 @@ export function useDocumentLifecycle({
       : replaceDocument(parsed.document, parsed.document.warnings);
   }, [application, replaceDocument, replaceScenarioDocument]);
 
+  const rememberFilename = useCallback((filename: string | undefined) => {
+    rememberedFilenameRef.current = filename === undefined ? undefined : { filename, documentEpoch: application.runtime.documentEpoch.current() };
+  }, [application.runtime]);
+
+  // Returns the remembered name only while the same document epoch is current; New, Open, Recent and any other replacement drop it.
+  const rememberedFilename = useCallback((): string | undefined => {
+    const remembered = rememberedFilenameRef.current;
+    return remembered !== undefined && remembered.documentEpoch === application.runtime.documentEpoch.current() ? remembered.filename : undefined;
+  }, [application.runtime]);
+
   const performAction = useCallback((action: PendingDocumentAction) => {
     if (action.requestId !== requestIdRef.current) return false;
     if (action.kind === "new") {
       effectsRef.current?.beginOpenMeasurement();
-      return replaceDocument(createNewDocumentFromProductTemplate(productTemplate, `document_${Date.now()}`));
+      const created = replaceDocument(createNewDocumentFromProductTemplate(productTemplate, `document_${Date.now()}`));
+      if (created) rememberFilename(undefined);
+      return created;
     }
-    return action.text === undefined ? false : openText(action.text);
-  }, [openText, productTemplate, replaceDocument]);
+    if (action.text === undefined) return false;
+    const opened = openText(action.text);
+    // Remember the opened file's name after the replacement advanced the epoch, so the name belongs to the document just opened.
+    if (opened) rememberFilename(action.filename);
+    return opened;
+  }, [openText, productTemplate, rememberFilename, replaceDocument]);
 
   const requestAction = useCallback((action: Omit<PendingDocumentAction, "requestId">, requestId = ++requestIdRef.current) => {
     if (requestId !== requestIdRef.current) return;
@@ -222,19 +242,20 @@ export function useDocumentLifecycle({
   }, [application.runtime, performAction]);
 
   const requestNew = useCallback(() => requestAction({ kind: "new" }), [requestAction]);
-  const requestOpenText = useCallback((text: string, requestId?: number) => requestAction({ kind: "open", text }, requestId), [requestAction]);
-  const requestOpenBytes = useCallback((bytes: ArrayBuffer | Uint8Array, sourceName = "selected document", requestId = ++requestIdRef.current) => {
+  const requestOpenText = useCallback((text: string, requestId?: number, filename?: string) => requestAction({ kind: "open", text, filename }, requestId), [requestAction]);
+  // `sourceName` is the picked or dropped file's name; it becomes the remembered Save name once the document opens.
+  const requestOpenBytes = useCallback((bytes: ArrayBuffer | Uint8Array, sourceName?: string, requestId = ++requestIdRef.current) => {
     if (requestId !== requestIdRef.current) return;
     const byteLength = bytes.byteLength;
     if (byteLength > MAX_OPEN_FILE_BYTES) {
       fileReadStartedAtRef.current = undefined;
-      const diagnostic = openFileByteBudgetProblem({ name: sourceName, size: byteLength });
+      const diagnostic = openFileByteBudgetProblem({ name: sourceName ?? "selected document", size: byteLength });
       application.setProblem(diagnostic.message);
       application.setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), diagnostic]);
       return;
     }
     try {
-      requestOpenText(decodeOpenDocumentBytes(bytes), requestId);
+      requestOpenText(decodeOpenDocumentBytes(bytes), requestId, sourceName === undefined ? undefined : documentFilename(sourceName));
     } catch (error) {
       if (requestId !== requestIdRef.current) return;
       fileReadStartedAtRef.current = undefined;
@@ -242,21 +263,24 @@ export function useDocumentLifecycle({
     }
   }, [application, requestOpenText]);
   const readFile = useCallback(async (file: File) => {
-    const requestId = ++requestIdRef.current;
-    fileReadStartedAtRef.current = undefined;
+    // A file rejected by the size budget or failing to read must not supersede a pending New/Open (for example one awaiting the
+    // Unsaved Changes answer), so the request id is claimed only once the bytes are in hand. A newer readFile still supersedes an older one.
     if (file.size > MAX_OPEN_FILE_BYTES) {
       const diagnostic = openFileByteBudgetProblem(file);
       application.setProblem(diagnostic.message);
       application.setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), diagnostic]);
       return;
     }
+    const readSeq = ++readSeqRef.current;
+    const baselineRequestId = requestIdRef.current;
+    const superseded = () => readSeq !== readSeqRef.current || baselineRequestId !== requestIdRef.current;
     fileReadStartedAtRef.current = globalThis.performance.now();
     try {
       const bytes = await file.arrayBuffer();
-      if (requestId !== requestIdRef.current) return;
-      requestOpenBytes(bytes, file.name, requestId);
+      if (superseded()) return;
+      requestOpenBytes(bytes, file.name);
     } catch (error) {
-      if (requestId !== requestIdRef.current) return;
+      if (superseded()) return;
       fileReadStartedAtRef.current = undefined;
       const diagnostic: DocumentProblem = { code: "OPEN_READ_FAILED", path: "$", message: `Could not read ${file.name || "selected file"}: ${errorReason(error, "File access failed.")}`, severity: "error", operation: "document.open", operationLabel: "Open document", source: "open", stage: "storage", recommendation: "Check file access permissions or choose another file, then retry Open.", detail: "open-failure:read" };
       application.setProblem(diagnostic.message);
@@ -332,14 +356,22 @@ export function useDocumentLifecycle({
     return true;
   }, [application, persistText, reportSaveFailure]);
 
-  const saveAs = useCallback((name: string) => save(documentFilename(name)), [save]);
+  // Save As is an explicit choice, so later Saves of this document reuse it (until the document is replaced).
+  const saveAs = useCallback((name: string) => {
+    const filename = documentFilename(name);
+    const saved = save(filename);
+    if (saved) rememberFilename(filename);
+    return saved;
+  }, [rememberFilename, save]);
+  // Plain Save uses the remembered name when there is one, otherwise the fallback derived from the document title.
+  const saveCurrent = useCallback((fallbackFilename: string) => save(rememberedFilename() ?? fallbackFilename), [rememberedFilename, save]);
   const savePendingAndContinue = useCallback((filename: string) => {
-    if (!pendingAction || !save(filename)) return false;
+    if (!pendingAction || !save(rememberedFilename() ?? filename)) return false;
     const action = pendingAction;
     setPendingAction(undefined);
     performAction(action);
     return true;
-  }, [pendingAction, performAction, save]);
+  }, [pendingAction, performAction, rememberedFilename, save]);
   const openRecent = useCallback(async () => {
     // Claim the request BEFORE the async reads (same contract as readFile): a newer Open/New/Recent supersedes this one, and this one
     // must never publish after it.
@@ -444,6 +476,7 @@ export function useDocumentLifecycle({
     discardPending,
     save,
     saveAs,
+    saveCurrent,
     savePendingAndContinue,
     openRecent,
     enterCompatibilityReadOnly: () => setCompatibilityPreview((current) => current ? { ...current, readOnly: true } : current),

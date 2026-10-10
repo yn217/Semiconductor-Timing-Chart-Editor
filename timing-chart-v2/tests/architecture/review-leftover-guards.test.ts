@@ -26,7 +26,7 @@ describe("review leftover guards", () => {
     const clipboard = source("apps/editor/src/application/clipboard-actions.ts");
     expect(clipboard).not.toMatch(/if \(!target(?: \|\| input\.length === 0)?\) return;/);
     expect(clipboard).not.toMatch(/if \(created\.length === 0\) return;/);
-    expect(clipboard.match(/setStatus\(NO_SIGNAL_GROUP_STATUS\)/g)?.length).toBe(3);
+    expect(clipboard.match(/setStatus\(NO_SIGNAL_GROUP_STATUS\)/g)?.length).toBe(4);
     const actions = source("apps/editor/src/application/use-editor-actions.ts");
     expect(actions).not.toMatch(/if \(!target\) return;/);
     expect(actions).toContain("reportStatus(NO_SIGNAL_GROUP_STATUS)");

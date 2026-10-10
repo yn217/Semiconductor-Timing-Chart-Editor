@@ -709,7 +709,7 @@ export function MinimalCycleView() {
       onDelete: () => commandRegistry.current.execute("selection.delete"),
       onNew: requestNewDocument,
       onOpen: () => { pendingFileOriginRef.current = globalThis.document.activeElement instanceof HTMLElement ? globalThis.document.activeElement : null; fileInput.current?.click(); },
-      onSave: () => { documentLifecycle.save(documentFilename(snapshot.document.document.title)); },
+      onSave: () => { documentLifecycle.saveCurrent(documentFilename(snapshot.document.document.title)); },
       onSaveAs: () => { dialogOriginLabelRef.current = "Save As"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setSaveAsVisible(true); },
       onRecent: documentLifecycle.openRecent,
       onProperties: () => { dialogOriginLabelRef.current = "Properties"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setPropertiesVisible(true); },
@@ -806,7 +806,12 @@ export function MinimalCycleView() {
   };
   // Dropping a file anywhere on the window opens it like File > Open. Without this the browser navigates to the dropped file and the unsaved document is lost.
   const openDroppedFileRef = useRef<(file: File) => void>(() => undefined);
-  openDroppedFileRef.current = (file) => { capturePendingFileOrigin(); void documentLifecycle.readFile(file); };
+  // A drop while a modal (the Unsaved Changes prompt, a dialog) is open is ignored, like Ctrl+O: it must not replace the answer the prompt is waiting for.
+  openDroppedFileRef.current = (file) => {
+    if (documentLifecycle.pendingAction !== undefined || document.querySelector("[role='dialog'][aria-modal='true']")) return;
+    capturePendingFileOrigin();
+    void documentLifecycle.readFile(file);
+  };
   useEffect(() => {
     const hasFiles = (event: DragEvent) => Array.from(event.dataTransfer?.types ?? []).includes("Files");
     const onDragOver = (event: DragEvent) => { if (!hasFiles(event)) return; event.preventDefault(); if (event.dataTransfer) event.dataTransfer.dropEffect = "copy"; };
@@ -826,7 +831,7 @@ export function MinimalCycleView() {
   // Ctrl/Cmd+S saves, Ctrl/Cmd+Shift+S opens Save As, Ctrl/Cmd+O opens a file -- the browser's own "Save page" / "Open file" must never appear in a document editor.
   const fileShortcutRef = useRef<(key: "s" | "S" | "o") => void>(() => undefined);
   fileShortcutRef.current = (key) => {
-    if (key === "s") documentLifecycle.save(documentFilename(snapshot.document.document.title));
+    if (key === "s") documentLifecycle.saveCurrent(documentFilename(snapshot.document.document.title));
     else if (key === "S") { dialogOriginLabelRef.current = "Save As"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setSaveAsVisible(true); }
     else { pendingFileOriginRef.current = globalThis.document.activeElement instanceof HTMLElement ? globalThis.document.activeElement : null; fileInput.current?.click(); }
   };

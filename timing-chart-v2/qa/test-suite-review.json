@@ -18126,6 +18126,60 @@
       "decision": "KEEP",
       "reason": "Code review found Signal duplicate/bulk/naming defects.",
       "replacementTest": null
+    },
+    {
+      "file": "file-lifecycle-review-fixes.spec.ts",
+      "title": "Ctrl+S after Save As reuses the chosen name until a new document replaces it",
+      "domain": "file-lifecycle",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Save reuses the last Save As name for the same document.",
+      "duplicateGroup": "file-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Save As names forgotten and a prompt/drop race.",
+      "replacementTest": null
+    },
+    {
+      "file": "file-lifecycle-review-fixes.spec.ts",
+      "title": "Ctrl+S after opening a file saves under the opened file's name, not the document title",
+      "domain": "file-lifecycle",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Save after Open reuses the opened file's name.",
+      "duplicateGroup": "file-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Save As names forgotten and a prompt/drop race.",
+      "replacementTest": null
+    },
+    {
+      "file": "file-lifecycle-review-fixes.spec.ts",
+      "title": "a file dropped while the Unsaved Changes prompt is open does not replace the pending Open",
+      "domain": "file-lifecycle",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "A dropped or rejected file never invalidates the pending Unsaved Changes decision.",
+      "duplicateGroup": "file-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Save As names forgotten and a prompt/drop race.",
+      "replacementTest": null
     }
   ]
 }
