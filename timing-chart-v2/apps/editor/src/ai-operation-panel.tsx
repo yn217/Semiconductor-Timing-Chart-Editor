@@ -145,7 +145,18 @@ export function describeAIProposalCommands(document: CanonicalDocument, commands
 type AIScope = AIContextScope;
 const scopeLabel = (scope: AIScope): string => scope === "selection" ? "Selection" : scope === "current-view" ? "Current View" : "Document";
 
-function scopeViolationMessage(scope: AIScope, document: CanonicalDocument, command: SemanticCommand, selectedSignalId: SignalId | undefined, selectedGroupId: GroupId | undefined, selectedAnnotationId: string | undefined, selectedTransactionId: string | undefined): string | undefined {
+// Selection scope fails closed: a command reaches the document only if its type
+// is listed here AND its target id is the selected entity. Anything else -- timeline,
+// bookmark, time-group, creation, bulk or unlisted commands -- is refused, so a new
+// command type cannot widen Selection scope by accident.
+const SELECTION_SCOPED_COMMAND_TARGETS: ReadonlyMap<string, "signalId" | "groupId" | "annotationId" | "transactionId"> = new Map<string, "signalId" | "groupId" | "annotationId" | "transactionId">([
+  ...["rename", "updateProperties", "setVisibility", "updateValue", "replaceValue", "replaceValues", "moveValue", "removeValue", "convertClock", "updateClockGenerator", "updateEdgeCounter", "updateResetSemantics", "move", "delete"].map((action): [string, "signalId"] => [`signal.${action}`, "signalId"]),
+  ...["rename", "move", "delete", "updateProperties", "updateLayout"].map((action): [string, "groupId"] => [`group.${action}`, "groupId"]),
+  ...["updateAnchor", "delete", "setAnchor", "translateOffsets", "resetOffsets", "updateLabelOffset", "updateProperties", "updateVerticalSpan", "setPositionMode", "updateMeasurement", "bringToFront", "sendToBack", "setRotation", "setAlign", "setLocked", "matchSpan"].map((action): [string, "annotationId"] => [`annotation.${action}`, "annotationId"]),
+  ...["rename", "update", "move", "resize", "moveLane", "moveToGroup", "phaseAdd", "phaseUpdate", "phaseDelete", "linkSignal", "unlinkSignal", "delete"].map((action): [string, "transactionId"] => [`transaction.${action}`, "transactionId"]),
+]);
+
+export function scopeViolationMessage(scope: AIScope, document: CanonicalDocument, command: SemanticCommand, selectedSignalId: SignalId | undefined, selectedGroupId: GroupId | undefined, selectedAnnotationId: string | undefined, selectedTransactionId: string | undefined): string | undefined {
   if (scope === "document") return undefined;
   const record = command as unknown as Record<string, unknown>;
   // A Group is "selected" either directly (selectedGroupId) or by having a
@@ -157,6 +168,15 @@ function scopeViolationMessage(scope: AIScope, document: CanonicalDocument, comm
   // that query already only ever targets the real, definitionally-
   // selected group.
   const inferredGroupId = selectedGroupId ?? document.signalGroups.find((group) => selectedSignalId !== undefined && group.rows.includes(selectedSignalId))?.id;
+  if (scope === "selection") {
+    const targetField = SELECTION_SCOPED_COMMAND_TARGETS.get(command.type);
+    if (targetField === undefined) return `${command.type} is not allowed under the Selection scope -- switch Scope to Document to make this edit.`;
+    const selectedId = targetField === "signalId" ? selectedSignalId : targetField === "groupId" ? inferredGroupId : targetField === "annotationId" ? selectedAnnotationId : selectedTransactionId;
+    const targetId = record[targetField];
+    const targetLabel = targetField === "signalId" ? "Signal" : targetField === "groupId" ? "Group" : targetField === "annotationId" ? "Annotation" : "Transaction";
+    if (typeof targetId !== "string" || targetId !== selectedId) return `${targetLabel} '${String(targetId)}' is outside the Selection scope -- switch Scope to Document to edit an entity other than the current selection.`;
+    return undefined;
+  }
   const checks: readonly { readonly field: string; readonly label: string; readonly selectedId: string | undefined; readonly visible: (id: string) => boolean }[] = [
     { field: "signalId", label: "Signal", selectedId: selectedSignalId, visible: (id) => document.signals.find((signal) => signal.id === id)?.display.visible !== false },
     { field: "groupId", label: "Group", selectedId: inferredGroupId, visible: () => true },
@@ -166,7 +186,6 @@ function scopeViolationMessage(scope: AIScope, document: CanonicalDocument, comm
   for (const check of checks) {
     const id = record[check.field];
     if (typeof id !== "string") continue;
-    if (scope === "selection" && id !== check.selectedId) return `${check.label} '${id}' is outside the Selection scope -- switch Scope to Document to edit an entity other than the current selection.`;
     if (scope === "current-view" && !check.visible(id)) return `${check.label} '${id}' is hidden and outside the Current View scope -- switch Scope to Document to edit a hidden entity.`;
   }
   return undefined;
