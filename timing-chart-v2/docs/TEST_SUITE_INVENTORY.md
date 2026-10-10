@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 451 spec files and 1349 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1287/1349 cases reviewed.
+Semantic review progress: 1291/1349 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 634 |
 | `nightly` | 241 |
 | `performance` | 73 |
-| `pr` | 437 |
+| `pr` | 441 |
 | `visual` | 181 |
 
 ## Top recorded per-case runtimes
@@ -55,7 +55,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | 3600 | `integration`, `visual` | `issue-746-visible-group-create.spec.ts` |
 | 952 | `performance`, `nightly` | `perf-fixed-full-span-open.spec.ts` |
 
-> This is a complete name/location inventory, not a completed semantic review. 62 cases remain `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
+> This is a complete name/location inventory, not a completed semantic review. 58 cases remain `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
 | Spec file | Cases | Review status |
 | --- | ---: | --- |
@@ -465,7 +465,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `transaction-inspector-bottom-draft-sync.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-inspector-duration-tc.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-inspector-lane-suggestions.spec.ts` | 1 | 1/1 reviewed |
-| `transaction-inspector-review-fixes.spec.ts` | 4 | 0/4 reviewed |
+| `transaction-inspector-review-fixes.spec.ts` | 4 | 4/4 reviewed |
 | `transaction-lane-labels-visible.spec.ts` | 2 | 2/2 reviewed |
 | `transaction-lane-scaling.spec.ts` | 13 | 13/13 reviewed |
 | `transaction-minimap-overview.spec.ts` | 2 | 2/2 reviewed |

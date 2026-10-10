@@ -17478,6 +17478,78 @@
       "decision": "KEEP",
       "reason": "Code-review finding: the dialog said newer for every unsupported version.",
       "replacementTest": null
+    },
+    {
+      "file": "transaction-inspector-review-fixes.spec.ts",
+      "title": "Ungrouped in the Inspector really removes the Transaction from its Group",
+      "domain": "transaction-inspector-review",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Transaction Inspector Apply honours Ungroup / group colour, keeps external range changes, and shifts Phases on a pure move.",
+      "duplicateGroup": "transaction-inspector-review",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code-review findings fixed in inspector-panel.tsx.",
+      "replacementTest": null
+    },
+    {
+      "file": "transaction-inspector-review-fixes.spec.ts",
+      "title": "Use group color in the Inspector clears the Transaction's own colour override",
+      "domain": "transaction-inspector-review",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Transaction Inspector Apply honours Ungroup / group colour, keeps external range changes, and shifts Phases on a pure move.",
+      "duplicateGroup": "transaction-inspector-review",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code-review findings fixed in inspector-panel.tsx.",
+      "replacementTest": null
+    },
+    {
+      "file": "transaction-inspector-review-fixes.spec.ts",
+      "title": "an external End change (Undo) is not hidden by a pending Name draft and is not re-sent by Apply",
+      "domain": "transaction-inspector-review",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Transaction Inspector Apply honours Ungroup / group colour, keeps external range changes, and shifts Phases on a pure move.",
+      "duplicateGroup": "transaction-inspector-review",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code-review findings fixed in inspector-panel.tsx.",
+      "replacementTest": null
+    },
+    {
+      "file": "transaction-inspector-review-fixes.spec.ts",
+      "title": "a pure Start/End shift of a phased Transaction moves its Phases instead of being rejected",
+      "domain": "transaction-inspector-review",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Transaction Inspector Apply honours Ungroup / group colour, keeps external range changes, and shifts Phases on a pure move.",
+      "duplicateGroup": "transaction-inspector-review",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code-review findings fixed in inspector-panel.tsx.",
+      "replacementTest": null
     }
   ]
 }
