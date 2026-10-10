@@ -75,15 +75,32 @@ export function renderWaveJsonMarkup(waveJson: WaveJsonSignal, renderIndex = 0, 
  * trust boundary before imperative template parsing. Reject executable markup
  * instead of silently stripping user-visible engineering text.
  */
+/** SMIL animation elements can retarget href/on* attributes at run time, and feImage loads external resources. */
+const UNSAFE_TAG_NAME = /^<\s*(?:script|foreignObject|iframe|object|embed|img|set|animate|animateMotion|animateTransform|animateColor|feImage|discard|handler)(?:\s|\/?>)/i;
+const UNSAFE_ATTRIBUTE_NAME_TARGET = /\battributeName\s*=\s*["']?\s*(?:xlink:)?(?:href|on)/i;
+let pinnedSkinStyleBody: string | undefined;
+
+/** The pinned WaveDrom skin embeds one stylesheet in every render. It is the only <style> allowed. */
+function pinnedSkinStyle(): string {
+  pinnedSkinStyleBody ??= /<style\b[^>]*>([\s\S]*?)<\/style\s*>/i.exec(WaveDrom.onml.stringify(WaveDrom.renderAny(0, { signal: [{ wave: "." }] }, WaveDrom.waveSkin)))?.[1] ?? "";
+  return pinnedSkinStyleBody;
+}
+
 export function assertSafeWaveDromMarkup(markup: string): string {
   // This check runs on WaveDrom's serialized output immediately before it is
   // parsed. Validate the serialized artifact once rather than walking every
   // materialized SVG node again in prepareWave; cached SVG artifacts are
   // derived only from this validated string.
+  const styleOpenings = markup.match(/<\s*style\b/gi)?.length ?? 0;
+  const styleElements = [...markup.matchAll(/<\s*style\b[^>]*>([\s\S]*?)<\/\s*style\s*>/gi)];
+  if (styleOpenings !== styleElements.length || styleElements.some((match) => match[1] !== pinnedSkinStyle())) {
+    throw new WaveDromAdapterError("UNSAFE_WAVEDROM_SVG", "WaveDrom produced an unsafe SVG stylesheet.");
+  }
   const tags = markup.match(/<[^>]*>/g) ?? [];
   for (const tag of tags) {
-    if (/^<\s*(?:script|foreignObject|iframe|object|embed|img)(?:\s|\/?>)/i.test(tag)
-      || /(?:^|\s)on[^\s=/>]*(?=\s|=|\/?>)/i.test(tag)) {
+    if (UNSAFE_TAG_NAME.test(tag)
+      || /(?:^|\s)on[^\s=/>]*(?=\s|=|\/?>)/i.test(tag)
+      || UNSAFE_ATTRIBUTE_NAME_TARGET.test(tag)) {
       throw new WaveDromAdapterError("UNSAFE_WAVEDROM_SVG", "WaveDrom produced executable SVG markup.");
     }
     const links = /(?:^|\s)(?:href|xlink:href)(?=\s|=|\/?>)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/ig;
@@ -102,7 +119,7 @@ export function assertSafeWaveDromMarkup(markup: string): string {
  * the trust boundary at the exact DOM node that is about to enter the editor.
  */
 export function assertSafeWaveDromSvg(svg: Element): void {
-  const unsafeElements = new Set(["script", "foreignObject", "iframe", "object", "embed", "img"]);
+  const unsafeElements = new Set(["script", "foreignobject", "iframe", "object", "embed", "img", "set", "animate", "animatemotion", "animatetransform", "animatecolor", "feimage", "discard", "handler"]);
   const validateElement = (element: Element): void => {
     if (unsafeElements.has(element.localName.toLowerCase())) {
       throw new WaveDromAdapterError("UNSAFE_WAVEDROM_SVG", "WaveDrom produced an executable SVG element.");

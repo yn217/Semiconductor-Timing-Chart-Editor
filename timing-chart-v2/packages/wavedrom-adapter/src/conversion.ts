@@ -390,9 +390,11 @@ function valueChangesInWindow(changes: readonly SignalValueChange[], start: numb
     if (changes[middle]!.start <= start) low = middle + 1;
     else high = middle;
   }
-  const current = changes[low - 1] ?? changes[0];
-  if (!current) throw new WaveDromAdapterError("EMPTY_SIGNAL_VALUES", "Bounded value conversion requires at least one canonical value.");
-  const selected = [current];
+  if (changes.length === 0) throw new WaveDromAdapterError("EMPTY_SIGNAL_VALUES", "Bounded value conversion requires at least one canonical value.");
+  // Only a change at or before the window start is carried in. When the window
+  // precedes the first change, the full-document conversion renders X there, so
+  // the bounded conversion must not invent a value (or repeat changes[0]).
+  const selected: SignalValueChange[] = low > 0 ? [changes[low - 1]!] : [];
   for (let index = low; index < changes.length; index += 1) {
     const change = changes[index]!;
     if (change.start >= end) break;
@@ -422,7 +424,7 @@ export function toWaveJsonWindow(source: CanonicalSignalSource, start: number, e
   const geometryMetadata = geometryWindow.start === semanticWindow.start && geometryWindow.end === semanticWindow.end ? {} : { geometryWindow };
   if (source.signal.type === "clock") return { ...clockToWaveJsonWindow(source, start, end), sourceWindow: semanticWindow, ...geometryMetadata, displayWindow: { start, end } };
   const localChanges = valueChangesInWindow(source.signal.values, start, end)
-    .map((change, index) => ({ start: index === 0 ? 0 : change.start - start, value: change.value, ...(change.displayLabel === undefined ? {} : { displayLabel: change.displayLabel }), ...(change.displayFormat === undefined ? {} : { displayFormat: change.displayFormat }) }));
+    .map((change) => ({ start: change.start <= start ? 0 : change.start - start, value: change.value, ...(change.displayLabel === undefined ? {} : { displayLabel: change.displayLabel }), ...(change.displayFormat === undefined ? {} : { displayFormat: change.displayFormat }) }));
   const localSignal = { ...source.signal, values: localChanges };
   const localGaps = (source.gapCycles ?? []).filter((cycle) => cycle > start && cycle < end).map((cycle) => cycle - start);
   return { ...valueSignalToWaveJson(localSignal, end - start, localGaps, source.enumDefinitions), sourceWindow: semanticWindow, ...geometryMetadata, displayWindow: { start, end } };
