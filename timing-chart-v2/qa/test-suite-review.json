@@ -18270,6 +18270,114 @@
       "decision": "KEEP",
       "reason": "Code review found clipboard paste defects.",
       "replacementTest": null
+    },
+    {
+      "file": "document-properties-review-fixes.spec.ts",
+      "title": "Apply without edits leaves the legend unchanged and reports nothing changed",
+      "domain": "document-properties",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Apply without edits leaves the legend unchanged and reports nothing changed.",
+      "duplicateGroup": "document-properties",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Document Properties Apply rewriting the legend and related input defects.",
+      "replacementTest": null
+    },
+    {
+      "file": "document-properties-review-fixes.spec.ts",
+      "title": "Used Roles Only change keeps the implicit legend items instead of writing signal roles",
+      "domain": "document-properties",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Used Roles Only change keeps the implicit legend items instead of writing signal roles.",
+      "duplicateGroup": "document-properties",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Document Properties Apply rewriting the legend and related input defects.",
+      "replacementTest": null
+    },
+    {
+      "file": "document-properties-review-fixes.spec.ts",
+      "title": "canvas-corner legend offsets are not clamped to the pixel surface on Apply",
+      "domain": "document-properties",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "canvas-corner legend offsets are not clamped to the pixel surface on Apply.",
+      "duplicateGroup": "document-properties",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Document Properties Apply rewriting the legend and related input defects.",
+      "replacementTest": null
+    },
+    {
+      "file": "document-properties-review-fixes.spec.ts",
+      "title": "empty or non-finite Legend position is rejected and nothing is applied",
+      "domain": "document-properties",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "empty or non-finite Legend position is rejected and nothing is applied.",
+      "duplicateGroup": "document-properties",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Document Properties Apply rewriting the legend and related input defects.",
+      "replacementTest": null
+    },
+    {
+      "file": "document-properties-review-fixes.spec.ts",
+      "title": "Export filename replaces characters that no file system accepts",
+      "domain": "document-properties",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Export filename replaces characters that no file system accepts.",
+      "duplicateGroup": "document-properties",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Document Properties Apply rewriting the legend and related input defects.",
+      "replacementTest": null
+    },
+    {
+      "file": "document-properties-review-fixes.spec.ts",
+      "title": "Add State Enum works where crypto.randomUUID is unavailable",
+      "domain": "document-properties",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Add State Enum works where crypto.randomUUID is unavailable.",
+      "duplicateGroup": "document-properties",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Document Properties Apply rewriting the legend and related input defects.",
+      "replacementTest": null
     }
   ]
 }
