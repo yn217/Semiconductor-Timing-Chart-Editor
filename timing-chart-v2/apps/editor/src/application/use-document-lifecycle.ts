@@ -363,7 +363,9 @@ export function useDocumentLifecycle({
       if (stale()) return false;
       const storedText = localStorage.getItem(RECENT_KEY);
       let metadata: (RecentMetadata & RecentDocumentMetadata) | null = null;
-      const parsedMetadata: unknown = JSON.parse(localStorage.getItem(RECENT_META_KEY) ?? "null");
+      // Corrupt metadata must not block the legacy-copy fallback below (publishRecentMetadata guards the same parse).
+      let parsedMetadata: unknown = null;
+      try { parsedMetadata = JSON.parse(localStorage.getItem(RECENT_META_KEY) ?? "null"); } catch { parsedMetadata = null; }
       if (typeof parsedMetadata === "object" && parsedMetadata !== null && !Array.isArray(parsedMetadata)) {
         metadata = parsedMetadata as RecentMetadata;
       }

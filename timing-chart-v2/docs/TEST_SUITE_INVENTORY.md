@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 452 spec files and 1353 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 453 spec files and 1355 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1295/1353 cases reviewed.
+Semantic review progress: 1296/1355 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 634 |
 | `nightly` | 241 |
 | `performance` | 73 |
-| `pr` | 445 |
+| `pr` | 446 |
 | `visual` | 181 |
 
 ## Top recorded per-case runtimes
@@ -55,7 +55,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | 3600 | `integration`, `visual` | `issue-746-visible-group-create.spec.ts` |
 | 952 | `performance`, `nightly` | `perf-fixed-full-span-open.spec.ts` |
 
-> This is a complete name/location inventory, not a completed semantic review. 58 cases remain `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
+> This is a complete name/location inventory, not a completed semantic review. 59 cases remain `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
 | Spec file | Cases | Review status |
 | --- | ---: | --- |
@@ -132,6 +132,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `empty-group-tree-projection.spec.ts` | 3 | 3/3 reviewed |
 | `event-pulse-lifecycle.spec.ts` | 2 | 2/2 reviewed |
 | `export-diagnostics.spec.ts` | 2 | 2/2 reviewed |
+| `export-dialog-page-settings.spec.ts` | 1 | 0/1 reviewed |
 | `export-fold-mapping.spec.ts` | 1 | 1/1 reviewed |
 | `export-user-text-boundary.spec.ts` | 1 | 1/1 reviewed |
 | `feature-showcase-startup.spec.ts` | 3 | 3/3 reviewed |
@@ -404,7 +405,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `resource-budget-ui-routes.spec.ts` | 8 | 7/8 reviewed |
 | `result-aware-create-effects.spec.ts` | 2 | 2/2 reviewed |
 | `review-checks-refresh.spec.ts` | 2 | 2/2 reviewed |
-| `review-followups.spec.ts` | 5 | 5/5 reviewed |
+| `review-followups.spec.ts` | 6 | 6/6 reviewed |
 | `review-workflow.spec.ts` | 3 | 3/3 reviewed |
 | `ribbon-caption-layout.spec.ts` | 2 | 2/2 reviewed |
 | `ribbon-cursor-ab.spec.ts` | 4 | 4/4 reviewed |

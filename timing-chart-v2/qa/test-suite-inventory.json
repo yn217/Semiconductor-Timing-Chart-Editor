@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T17:24:42.086Z",
+  "generatedAt": "2026-10-10T17:27:12.222Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 452,
-  "caseCount": 1353,
-  "reviewedCaseCount": 1295,
+  "specFileCount": 453,
+  "caseCount": 1355,
+  "reviewedCaseCount": 1296,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 445,
+    "pr": 446,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -6761,6 +6761,28 @@
         "integration"
       ],
       "contractId": "export-clipboard-failure-diagnostics"
+    },
+    {
+      "file": "export-dialog-page-settings.spec.ts",
+      "suitePath": [],
+      "line": 7,
+      "title": "Export page settings are shown as active only when a page size is chosen",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": null,
+      "originIssue": null,
+      "type": null,
+      "costClass": null,
+      "measuredRuntimeMs": null,
+      "primaryContract": null,
+      "duplicateGroup": null,
+      "executionTier": null,
+      "decision": "UNREVIEWED",
+      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "replacementTest": null,
+      "reviewStatus": "UNREVIEWED"
     },
     {
       "file": "export-fold-mapping.spec.ts",
@@ -26368,6 +26390,33 @@
       "runtimeMeasurementScope": "CASE"
     },
     {
+      "file": "review-followups.spec.ts",
+      "suitePath": [],
+      "line": 71,
+      "title": "corrupt Recent metadata does not turn Recent into an Open failure",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "recent-corrupt-metadata",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Unparseable Recent metadata falls through to the normal Recent lookup instead of failing.",
+      "duplicateGroup": "recent-corrupt-metadata",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code-review finding: the metadata parse was outside any try.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "recent-corrupt-metadata",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
       "file": "review-workflow.spec.ts",
       "suitePath": [],
       "line": 6,
@@ -36111,6 +36160,15 @@
       "semanticReviewStatus": "REVIEWED"
     },
     {
+      "file": "export-dialog-page-settings.spec.ts",
+      "caseCount": 1,
+      "reviewedCaseCount": 0,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [],
+      "semanticReviewStatus": "UNREVIEWED"
+    },
+    {
       "file": "export-fold-mapping.spec.ts",
       "caseCount": 1,
       "reviewedCaseCount": 1,
@@ -38958,8 +39016,8 @@
     },
     {
       "file": "review-followups.spec.ts",
-      "caseCount": 5,
-      "reviewedCaseCount": 5,
+      "caseCount": 6,
+      "reviewedCaseCount": 6,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],

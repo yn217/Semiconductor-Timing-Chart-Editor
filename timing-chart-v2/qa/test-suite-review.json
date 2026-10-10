@@ -17622,6 +17622,24 @@
       "decision": "KEEP",
       "reason": "Code-review findings fixed in clock-generator-editor.tsx.",
       "replacementTest": null
+    },
+    {
+      "file": "review-followups.spec.ts",
+      "title": "corrupt Recent metadata does not turn Recent into an Open failure",
+      "domain": "recent-corrupt-metadata",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Unparseable Recent metadata falls through to the normal Recent lookup instead of failing.",
+      "duplicateGroup": "recent-corrupt-metadata",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code-review finding: the metadata parse was outside any try.",
+      "replacementTest": null
     }
   ]
 }
