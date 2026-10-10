@@ -13,6 +13,14 @@ type SelectionGroupActionsInput = Readonly<{
   reportStatus: (message: string) => void;
 }>;
 
+/** Default name for a new Signal Group: the lowest `Group N` not already used, so a deletion never makes a later Group reuse a live name. */
+export function nextSignalGroupName(document: Pick<CanonicalDocument, "signalGroups">): string {
+  const used = new Set(document.signalGroups.map((group) => group.name));
+  let ordinal = 1;
+  while (used.has(`Group ${ordinal}`)) ordinal += 1;
+  return `Group ${ordinal}`;
+}
+
 /** Group-level operations over a multi-selection; all canonical changes go through one semantic batch. */
 export function createSelectionGroupActions(input: SelectionGroupActionsInput) {
   const selectedSignalsInTreeOrder = () => {
@@ -28,7 +36,7 @@ export function createSelectionGroupActions(input: SelectionGroupActionsInput) {
     const signalIds = selectedSignalsInTreeOrder();
     if (signalIds.length === 0) return;
     const id = groupId(nextEntityId("group", input.document));
-    const group: SignalGroup = { id, name: `Group ${input.document.signalGroups.length + 1}`, rows: [] };
+    const group: SignalGroup = { id, name: nextSignalGroupName(input.document), rows: [] };
     const commands: SemanticCommand[] = [
       { id: input.nextCommandId("selection_group_create"), type: "group.create", group, index: input.document.signalGroups.length },
       ...signalIds.map((signalId, index): SemanticCommand => ({ id: input.nextCommandId("selection_group_move_signal"), type: "signal.move", signalId, targetGroupId: id, index })),

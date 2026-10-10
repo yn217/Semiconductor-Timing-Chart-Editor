@@ -21,7 +21,7 @@ import { createSelectionActions } from "./selection-actions.js";
 import { createBottomEditorActions } from "./bottom-editor-actions.js";
 import { transactionInsertion } from "../transaction-insertion.js";
 import { createRevealAIEntityAction, createSelectAIEntityAction } from "./ai-entity-reveal.js";
-import { createSelectionGroupActions } from "./selection-group-actions.js";
+import { createSelectionGroupActions, nextSignalGroupName } from "./selection-group-actions.js";
 
 export interface EditorActionsInput {
   readonly document: CanonicalDocument;
@@ -313,14 +313,14 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
   };
   const createSignalGroup = () => {
     const id = groupId(nextEntityId("group", input.document));
-    const result = input.application.execute({ id: input.nextCommandId("group_create_tree"), type: "group.create", group: { id, name: `Group ${input.document.signalGroups.length + 1}`, rows: [] }, index: input.document.signalGroups.length });
+    const result = input.application.execute({ id: input.nextCommandId("group_create_tree"), type: "group.create", group: { id, name: nextSignalGroupName(input.document), rows: [] }, index: input.document.signalGroups.length });
     if (result.ok) input.selection.selectGroup(id);
   };
   const addTreeEntity = (kind: "signal" | "clock" | "bus" | "state" | "logic" | "event" | "pulse" | "group" | "spacer" | "commentRow") => {
     if (kind === "group") {
       const id = groupId(nextEntityId("group", input.document));
       const index = resolveGroupInsertionIndex(input.document, input.selectedSignalId, input.selectedGroupId);
-      const result = input.commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", { id: input.nextCommandId("tree_add_group"), type: "group.create", group: { id, name: `Group ${input.document.signalGroups.length + 1}`, rows: [] }, index });
+      const result = input.commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", { id: input.nextCommandId("tree_add_group"), type: "group.create", group: { id, name: nextSignalGroupName(input.document), rows: [] }, index });
       if (result.ok) input.selection.selectGroup(id);
       return;
     }
@@ -360,8 +360,9 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     }
     const signals: Signal[] = [];
     const allocateId = createEntityIdAllocator(input.document);
-    for (const [index, definition] of input.bulkRegistrationPreview.definitions.entries()) {
-      const id = signalId(`${allocateId("signal")}_bulk_${index}`);
+    for (const definition of input.bulkRegistrationPreview.definitions) {
+      // One allocator call per Signal: the allocator checks the exact ID it returns against the document, so a suffixed ID cannot collide.
+      const id = signalId(allocateId("signal"));
       if (definition.kind === "clock") {
         signals.push({ id, name: definition.signalName, type: "clock", role: "internal", source: { instancePath: definition.instancePath, signalName: definition.signalName }, display: { name: definition.signalName }, generator: { start: 0, period: 2, duty: 0.5, phase: 0, initial: 0, polarity: "positive" }, edgeCounter: { show: false, mode: "both", startNumber: 1, countFrom: "signal-start", labelEvery: 1, position: "above", offset: { x: 0, y: -6 } } });
       } else {

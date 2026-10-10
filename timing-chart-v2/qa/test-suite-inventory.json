@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T17:43:42.329Z",
+  "generatedAt": "2026-10-10T18:17:20.863Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 455,
-  "caseCount": 1361,
-  "reviewedCaseCount": 1303,
+  "specFileCount": 462,
+  "caseCount": 1381,
+  "reviewedCaseCount": 1323,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 453,
+    "pr": 473,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -1401,6 +1401,87 @@
       "contractId": "transaction-reference-and-fold-integration"
     },
     {
+      "file": "advanced-json-apply-notices.spec.ts",
+      "suitePath": [],
+      "line": 17,
+      "title": "Advanced JSON Apply surfaces the same migration notices that Open shows",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "advanced-json",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Advanced JSON Apply reports migration warnings as notices, matching Open.",
+      "duplicateGroup": "advanced-json",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review follow-up.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "advanced-json",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "advanced-json-apply-notices.spec.ts",
+      "suitePath": [],
+      "line": 40,
+      "title": "Advanced JSON Validate reports deeply nested malformed JSON without throwing",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "advanced-json",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Deeply nested malformed JSON yields a syntax diagnostic, not an exception.",
+      "duplicateGroup": "advanced-json",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review follow-up.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "advanced-json",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "advanced-json-apply-notices.spec.ts",
+      "suitePath": [],
+      "line": 54,
+      "title": "Advanced JSON Apply rejects drafts above the Open byte limit",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "advanced-json",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Advanced JSON Apply enforces the same byte limit as Open so applied documents stay reopenable.",
+      "duplicateGroup": "advanced-json",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review follow-up.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "advanced-json",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
       "file": "advanced-json-apply-roundtrip.spec.ts",
       "suitePath": [],
       "line": 13,
@@ -2408,6 +2489,33 @@
         "integration"
       ],
       "contractId": "annotation-inspector-anchor-apply"
+    },
+    {
+      "file": "annotation-inspector-review-fixes.spec.ts",
+      "suitePath": [],
+      "line": 6,
+      "title": "Annotation Inspector Apply Anchor can clear an endpoint Signal to (none)",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "annotation-inspector",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Apply Anchor with Signal (none) produces an axis-owned anchor instead of keeping the previous Signal.",
+      "duplicateGroup": "annotation-inspector",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review found Apply Anchor could not clear the Signal.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "annotation-inspector",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "annotation-line-rendering.spec.ts",
@@ -6738,6 +6846,114 @@
       "contractId": "legacy-pulse-load-edit-persistence-export"
     },
     {
+      "file": "event-table-value-review-fixes.spec.ts",
+      "suitePath": [],
+      "line": 29,
+      "title": "Add on an occupied Start prefills the existing Value and Comment, and submitting unchanged keeps them",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "event-table",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Add on an occupied cycle edits that transition without discarding its value, comment or format.",
+      "duplicateGroup": "event-table",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review found Event Table Add/Import overwriting or losing data.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "event-table",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "event-table-value-review-fixes.spec.ts",
+      "suitePath": [],
+      "line": 47,
+      "title": "Add & Continue keeps Start and Comment when the add is rejected",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "event-table",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Add & Continue only advances after a successful add.",
+      "duplicateGroup": "event-table",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review found Event Table Add/Import overwriting or losing data.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "event-table",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "event-table-value-review-fixes.spec.ts",
+      "suitePath": [],
+      "line": 63,
+      "title": "Add Row and Duplicate are disabled when every cycle already has a transition",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "event-table",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Add Row and Duplicate never overwrite the last transition when no cycle is free.",
+      "duplicateGroup": "event-table",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review found Event Table Add/Import overwriting or losing data.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "event-table",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "event-table-value-review-fixes.spec.ts",
+      "suitePath": [],
+      "line": 77,
+      "title": "Import rejects an entry without a value with a clear message and leaves History unchanged",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "event-table",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Event import rejects entries without a value with a clear message.",
+      "duplicateGroup": "event-table",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review found Event Table Add/Import overwriting or losing data.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "event-table",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
       "file": "export-diagnostics.spec.ts",
       "suitePath": [],
       "line": 3,
@@ -9202,6 +9418,33 @@
         "nightly"
       ],
       "contractId": "locked-v1-v2-visual-golden-acceptance"
+    },
+    {
+      "file": "handshake-case-selection-review-fixes.spec.ts",
+      "suitePath": [],
+      "line": 15,
+      "title": "Handshake case selections are cleared when the active Scenario changes",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "scenario-handshake",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Handshake missing-case selections never carry over to another Scenario, so Create never sends stale keys.",
+      "duplicateGroup": "scenario-handshake",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review found stale selections made Create selected Scenarios throw.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "scenario-handshake",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "history-retention.spec.ts",
@@ -27425,6 +27668,141 @@
       "runtimeMeasurementScope": "CASE"
     },
     {
+      "file": "signal-duplicate-review-fixes.spec.ts",
+      "suitePath": [],
+      "line": 39,
+      "title": "Bulk Registration does not reuse a suffixed ID already in a reopened document",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "signal-duplicate",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Bulk Registration allocates every Signal ID through the document-aware allocator.",
+      "duplicateGroup": "signal-duplicate",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review found Signal duplicate/bulk/naming defects.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "signal-duplicate",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "signal-duplicate-review-fixes.spec.ts",
+      "suitePath": [],
+      "line": 65,
+      "title": "Select All Signals skips hidden signals so Duplicate copies only visible ones",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "signal-duplicate",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Signal Select All never selects hidden Signals.",
+      "duplicateGroup": "signal-duplicate",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review found Signal duplicate/bulk/naming defects.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "signal-duplicate",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "signal-duplicate-review-fixes.spec.ts",
+      "suitePath": [],
+      "line": 79,
+      "title": "Duplicate inserts each copy right after its source inside the source's own Group",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "signal-duplicate",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Duplicate places each copy right after its source in the source's own Group.",
+      "duplicateGroup": "signal-duplicate",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review found Signal duplicate/bulk/naming defects.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "signal-duplicate",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "signal-duplicate-review-fixes.spec.ts",
+      "suitePath": [],
+      "line": 103,
+      "title": "Duplicate gives each copy a unique name",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "signal-duplicate",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Duplicated Signals get unique names.",
+      "duplicateGroup": "signal-duplicate",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review found Signal duplicate/bulk/naming defects.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "signal-duplicate",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "signal-duplicate-review-fixes.spec.ts",
+      "suitePath": [],
+      "line": 120,
+      "title": "Create Group reuses the lowest free Group number after a deletion",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "signal-duplicate",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "New Signal Groups take the lowest unused Group N name.",
+      "duplicateGroup": "signal-duplicate",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review found Signal duplicate/bulk/naming defects.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "signal-duplicate",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
       "file": "signal-editor-draft-survives-unrelated-edit.spec.ts",
       "suitePath": [],
       "line": 13,
@@ -30912,7 +31290,7 @@
       "file": "transaction-drag.spec.ts",
       "suitePath": [],
       "line": 266,
-      "title": "rejects a Transaction resize that would clip a Phase without changing history",
+      "title": "a Transaction start resize past a Phase boundary clamps to the Phase limit and commits once",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
@@ -30937,8 +31315,8 @@
     {
       "file": "transaction-drag.spec.ts",
       "suitePath": [],
-      "line": 288,
-      "title": "rejects an End resize that would remove the final Phase",
+      "line": 290,
+      "title": "a Transaction End resize past the final Phase start clamps to the Phase limit and commits once",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
@@ -30963,7 +31341,7 @@
     {
       "file": "transaction-drag.spec.ts",
       "suitePath": [],
-      "line": 312,
+      "line": 316,
       "title": "persists a valid Transaction resize and its Phases through Save/Open",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -30986,6 +31364,60 @@
         "nightly"
       ],
       "contractId": "transaction-resize-phase-persistence"
+    },
+    {
+      "file": "transaction-edge-resize-preview-clamp.spec.ts",
+      "suitePath": [],
+      "line": 46,
+      "title": "start-edge drag past the first Phase boundary previews the clamped edge and commits it",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "transaction-drag",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Edge-resize preview clamps to the same Phase limits the planner enforces and commits that result.",
+      "duplicateGroup": "transaction-drag",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review follow-up.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "transaction-drag",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "transaction-edge-resize-preview-clamp.spec.ts",
+      "suitePath": [],
+      "line": 56,
+      "title": "end-edge drag past the last Phase start previews the clamped edge and commits it",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "transaction-drag",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "End-edge resize preview clamps to the last Phase start and commits that result.",
+      "duplicateGroup": "transaction-drag",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review follow-up.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "transaction-drag",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "transaction-empty-state-create-lane-fix.spec.ts",
@@ -35288,6 +35720,114 @@
       "contractId": "wavedrom-definitions"
     },
     {
+      "file": "workspace-mode-snapshot-review-fixes.spec.ts",
+      "suitePath": [],
+      "line": 40,
+      "title": "Combined is never saved as the startup mode",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "workspace-layout",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Only standalone modes persist as the startup view mode.",
+      "duplicateGroup": "workspace-layout",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review found view-mode snapshot and sizing leaks.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "workspace-layout",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "workspace-mode-snapshot-review-fixes.spec.ts",
+      "suitePath": [],
+      "line": 48,
+      "title": "Cycle left-pane width is restored after a Combined round trip, not replaced by Combined's width",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "workspace-layout",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Standalone mode snapshots are not overwritten by Combined layout changes.",
+      "duplicateGroup": "workspace-layout",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review found view-mode snapshot and sizing leaks.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "workspace-layout",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "workspace-mode-snapshot-review-fixes.spec.ts",
+      "suitePath": [],
+      "line": 63,
+      "title": "Cycle Bottom maximum follows a shorter window instead of staying at 420",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "workspace-layout",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "The Cycle Bottom panel maximum follows the window height like the other modes.",
+      "duplicateGroup": "workspace-layout",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review found view-mode snapshot and sizing leaks.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "workspace-layout",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "workspace-mode-snapshot-review-fixes.spec.ts",
+      "suitePath": [],
+      "line": 80,
+      "title": "Open clears Bottom pins of standalone modes that were not active",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "workspace-layout",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Opening a document clears every mode's Bottom pin, not only the active mode's.",
+      "duplicateGroup": "workspace-layout",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review found view-mode snapshot and sizing leaks.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "workspace-layout",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
       "file": "workspace-preset-density.spec.ts",
       "suitePath": [],
       "line": 3,
@@ -35659,6 +36199,15 @@
       "semanticReviewStatus": "REVIEWED"
     },
     {
+      "file": "advanced-json-apply-notices.spec.ts",
+      "caseCount": 3,
+      "reviewedCaseCount": 3,
+      "originIssue": null,
+      "declaredTimeoutMs": 120,
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
       "file": "advanced-json-apply-roundtrip.spec.ts",
       "caseCount": 2,
       "reviewedCaseCount": 0,
@@ -35723,6 +36272,15 @@
     },
     {
       "file": "annotation-inspector-anchor.spec.ts",
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "annotation-inspector-review-fixes.spec.ts",
       "caseCount": 1,
       "reviewedCaseCount": 1,
       "originIssue": null,
@@ -36318,6 +36876,15 @@
       "semanticReviewStatus": "REVIEWED"
     },
     {
+      "file": "event-table-value-review-fixes.spec.ts",
+      "caseCount": 4,
+      "reviewedCaseCount": 4,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
       "file": "export-diagnostics.spec.ts",
       "caseCount": 2,
       "reviewedCaseCount": 2,
@@ -36597,6 +37164,15 @@
         "getComputedStyle",
         "geometryRead"
       ],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "handshake-case-selection-review-fixes.spec.ts",
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
+      "originIssue": null,
+      "declaredTimeoutMs": 60,
+      "candidateSignals": [],
       "semanticReviewStatus": "REVIEWED"
     },
     {
@@ -39333,6 +39909,15 @@
       "semanticReviewStatus": "REVIEWED"
     },
     {
+      "file": "signal-duplicate-review-fixes.spec.ts",
+      "caseCount": 5,
+      "reviewedCaseCount": 5,
+      "originIssue": null,
+      "declaredTimeoutMs": 60,
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
       "file": "signal-editor-draft-survives-unrelated-edit.spec.ts",
       "caseCount": 1,
       "reviewedCaseCount": 1,
@@ -39732,6 +40317,15 @@
         "geometryRead",
         "explicitWait"
       ],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "transaction-edge-resize-preview-clamp.spec.ts",
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [],
       "semanticReviewStatus": "REVIEWED"
     },
     {
@@ -40239,6 +40833,15 @@
         "directDomMutation",
         "explicitWait"
       ],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "workspace-mode-snapshot-review-fixes.spec.ts",
+      "caseCount": 4,
+      "reviewedCaseCount": 4,
+      "originIssue": null,
+      "declaredTimeoutMs": 60,
+      "candidateSignals": [],
       "semanticReviewStatus": "REVIEWED"
     },
     {

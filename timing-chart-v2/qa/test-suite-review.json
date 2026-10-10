@@ -18036,6 +18036,96 @@
       "decision": "KEEP",
       "reason": "Code review found stale selections made Create selected Scenarios throw.",
       "replacementTest": null
+    },
+    {
+      "file": "signal-duplicate-review-fixes.spec.ts",
+      "title": "Bulk Registration does not reuse a suffixed ID already in a reopened document",
+      "domain": "signal-duplicate",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Bulk Registration allocates every Signal ID through the document-aware allocator.",
+      "duplicateGroup": "signal-duplicate",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Signal duplicate/bulk/naming defects.",
+      "replacementTest": null
+    },
+    {
+      "file": "signal-duplicate-review-fixes.spec.ts",
+      "title": "Select All Signals skips hidden signals so Duplicate copies only visible ones",
+      "domain": "signal-duplicate",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Signal Select All never selects hidden Signals.",
+      "duplicateGroup": "signal-duplicate",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Signal duplicate/bulk/naming defects.",
+      "replacementTest": null
+    },
+    {
+      "file": "signal-duplicate-review-fixes.spec.ts",
+      "title": "Duplicate inserts each copy right after its source inside the source's own Group",
+      "domain": "signal-duplicate",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Duplicate places each copy right after its source in the source's own Group.",
+      "duplicateGroup": "signal-duplicate",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Signal duplicate/bulk/naming defects.",
+      "replacementTest": null
+    },
+    {
+      "file": "signal-duplicate-review-fixes.spec.ts",
+      "title": "Duplicate gives each copy a unique name",
+      "domain": "signal-duplicate",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Duplicated Signals get unique names.",
+      "duplicateGroup": "signal-duplicate",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Signal duplicate/bulk/naming defects.",
+      "replacementTest": null
+    },
+    {
+      "file": "signal-duplicate-review-fixes.spec.ts",
+      "title": "Create Group reuses the lowest free Group number after a deletion",
+      "domain": "signal-duplicate",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "New Signal Groups take the lowest unused Group N name.",
+      "duplicateGroup": "signal-duplicate",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Signal duplicate/bulk/naming defects.",
+      "replacementTest": null
     }
   ]
 }

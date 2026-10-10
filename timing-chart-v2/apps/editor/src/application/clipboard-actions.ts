@@ -28,6 +28,19 @@ function withFreshValueChangeIds<T extends Signal>(signal: T): T {
   return { ...signal, values: fresh(signal.values, "") };
 }
 
+/** Names already shown in the tree; a copy must not reuse one of them. */
+function signalNamesInUse(document: { readonly signals: readonly Signal[] }): Set<string> {
+  return new Set(document.signals.flatMap((signal) => [signal.name, signal.display.name]));
+}
+
+/** Returns `base`, or the first free `base_N` (N >= 2), and reserves the result in `taken`. */
+function takeUniqueName(taken: Set<string>, base: string): string {
+  let candidate = base;
+  for (let ordinal = 2; taken.has(candidate); ordinal += 1) candidate = `${base}_${ordinal}`;
+  taken.add(candidate);
+  return candidate;
+}
+
 const FOREIGN_PASTE_DETAIL = "clipboard-failure:foreign-document";
 
 export function useClipboardActions({ application, selection }: { application: EditorApplicationOwner; selection: SelectionOwner }) {
@@ -203,14 +216,60 @@ export function useClipboardActions({ application, selection }: { application: E
     if (result.ok) { cutSignalsRef.current = false; cutSignalLinksRef.current = []; selection.selectSignals(new Set(input.map(({ signal }) => signal.id)), input[0]!.signal.id); setStatus(`Moved ${input.length} signal${input.length === 1 ? "" : "s"}`); }
   };
 
-  const createSignals = (input: readonly SignalClipboardItem[], operation: "paste" | "duplicate", placement: "current-selection" | "source-group" = "current-selection") => {
-    if (input.length === 0) { setStatus("No signal clipboard available"); return; }
+  /** Duplicate puts each copy right after its source, inside the source's own Group. Adjacent selected Signals in one Group are copied
+   * as one block placed after the run's last member, so their order is kept; a non-adjacent selection gets one block per run. */
+  const duplicateSignals = (input: readonly SignalClipboardItem[]) => {
     const current = document();
     const allocateId = createEntityIdAllocator(current);
+    const indexes = indexResolver.signals(current);
+    const groupPosition = new Map(current.signalGroups.map((group, position) => [group.id, position] as const));
+    const takenNames = signalNamesInUse(current);
+    const fallbackGroup = current.signalGroups.at(-1);
+    const sources = input
+      .map((item) => ({ item, owner: indexes.owner.get(item.signal.id) }))
+      .sort((left, right) => {
+        if (!left.owner || !right.owner) return left.owner ? -1 : right.owner ? 1 : 0;
+        return groupPosition.get(left.owner.groupId)! - groupPosition.get(right.owner.groupId)! || left.owner.index - right.owner.index;
+      });
+    const blocks: { target: SignalGroup; lastRow: number | undefined; signals: Signal[] }[] = [];
+    const created: Signal[] = [];
+    for (const { item, owner } of sources) {
+      const target = owner === undefined ? (indexes.groupsById.get(item.groupId) ?? fallbackGroup) : indexes.groupsById.get(owner.groupId);
+      if (!target) continue;
+      const id = signalId(allocateId(item.signal.type === "commentRow" ? "commentRow" : "signal"));
+      const name = takeUniqueName(takenNames, `${item.signal.display.name}_duplicate`);
+      const signal: Signal = withFreshValueChangeIds({ ...item.signal, id, name, display: { ...item.signal.display, name } });
+      created.push(signal);
+      const last = blocks.at(-1);
+      if (owner !== undefined && last !== undefined && last.target.id === target.id && last.lastRow !== undefined && owner.index === last.lastRow + 1) {
+        last.signals.push(signal);
+        last.lastRow = owner.index;
+      } else blocks.push({ target, lastRow: owner?.index, signals: [signal] });
+    }
+    if (created.length === 0) { setStatus(NO_SIGNAL_GROUP_STATUS); return; }
+    // Blocks in one Group are inserted from the bottom up, so each recorded index still points at the right row when it runs.
+    const commands = blocks
+      .map((block) => ({ block, index: block.lastRow === undefined ? block.target.rows.length : block.lastRow + 1 }))
+      .sort((left, right) => groupPosition.get(left.block.target.id)! - groupPosition.get(right.block.target.id)! || right.index - left.index)
+      .map(({ block, index }, offset): SemanticCommand => ({ id: nextCommandId(`duplicate_signals_${offset}`), type: "signal.bulkCreate", signals: block.signals, targetGroupId: block.target.id, index }));
+    const result = application.executeBatch(nextCommandId("duplicate_signals_batch"), commands);
+    if (result.ok) {
+      const ids = created.map((signal) => signal.id);
+      selection.selectSignals(new Set(ids), ids[0]);
+      setStatus(`Duplicated ${created.length} signal${created.length === 1 ? "" : "s"}`);
+    } else setStatus(`Duplicate rejected: ${result.problems[0]?.message ?? result.reason}`);
+  };
+
+  const createSignals = (input: readonly SignalClipboardItem[], operation: "paste" | "duplicate", placement: "current-selection" | "source-group" = "current-selection") => {
+    if (input.length === 0) { setStatus("No signal clipboard available"); return; }
+    if (operation === "duplicate") { duplicateSignals(input); return; }
+    const current = document();
+    const allocateId = createEntityIdAllocator(current);
+    const takenNames = signalNamesInUse(current);
     const selectedSignalId = selection.refs.signalId.current;
     const indexes = indexResolver.signals(current);
-    // Paste goes into a selected Group (its header), like Cut-then-Paste does; Duplicate stays next to its source.
-    const selectedGroupId = operation === "paste" ? selection.refs.state.current.groupId : undefined;
+    // Paste goes into a selected Group (its header), like Cut-then-Paste does.
+    const selectedGroupId = selection.refs.state.current.groupId;
     const selectedGroup = placement === "current-selection"
       ? resolveClipboardSignalGroupTarget({ groups: current.signalGroups, groupsById: indexes.groupsById, ownerBySignalId: indexes.owner, ...(selectedGroupId === undefined ? {} : { selectedGroupId }), ...(selectedSignalId === undefined ? {} : { selectedSignalId }), fallbackToLast: false })
       : undefined;
@@ -221,8 +280,7 @@ export function useClipboardActions({ application, selection }: { application: E
       const target = selectedGroup ?? groupsById.get(source.groupId) ?? current.signalGroups.at(-1);
       if (!target) continue;
       const id = signalId(allocateId(source.signal.type === "commentRow" ? "commentRow" : "signal"));
-      const copyOrdinal = created.length + 1;
-      const name = `${source.signal.display.name}_${operation === "duplicate" ? "duplicate" : "copy"}${input.length > 1 ? `_${copyOrdinal}` : ""}`;
+      const name = takeUniqueName(takenNames, `${source.signal.display.name}_copy`);
       const signal: Signal = withFreshValueChangeIds({ ...source.signal, id, name, display: { ...source.signal.display, name } });
       created.push(signal);
       const bucket = createdByGroup.get(target.id) ?? { target, signals: [] };
@@ -245,8 +303,8 @@ export function useClipboardActions({ application, selection }: { application: E
     if (result.ok) {
       const ids = created.map((signal) => signal.id);
       selection.selectSignals(new Set(ids), ids[0]);
-      setStatus(operation === "paste" ? `Pasted ${created.length} signal${created.length === 1 ? "" : "s"}` : `Duplicated ${created.length} signal${created.length === 1 ? "" : "s"}`);
-    } else setStatus(`${operation === "paste" ? "Paste" : "Duplicate"} rejected: ${result.problems[0]?.message ?? result.reason}`);
+      setStatus(`Pasted ${created.length} signal${created.length === 1 ? "" : "s"}`);
+    } else setStatus(`Paste rejected: ${result.problems[0]?.message ?? result.reason}`);
   };
   const createGroup = (input: GroupClipboardItem, operation: "paste" | "duplicate") => {
     const current = document();

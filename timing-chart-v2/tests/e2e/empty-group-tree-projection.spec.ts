@@ -84,7 +84,7 @@ test("keeps an empty group consistent across Left Tree, Bottom Group dropdown, U
   // selection off the just-created Group -- reselect it so the Inspector
   // assertions/edits below target the right entity again.
   await surface.locator(`[data-role='left-group-header'][data-group-id='${groupId}']`).click();
-  await expect(page.getByTestId("inspector").getByLabel("Inspector group name")).toHaveValue("Group 4");
+  await expect(page.getByTestId("inspector").getByLabel("Inspector group name")).toHaveValue("Group 1");
 
   const groupName = page.getByTestId("inspector").getByLabel("Inspector group name");
   await groupName.fill("Empty Review Group");

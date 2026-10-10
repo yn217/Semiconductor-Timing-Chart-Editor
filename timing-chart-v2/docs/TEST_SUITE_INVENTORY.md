@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 455 spec files and 1361 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 462 spec files and 1381 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1303/1361 cases reviewed.
+Semantic review progress: 1323/1381 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 634 |
 | `nightly` | 241 |
 | `performance` | 73 |
-| `pr` | 453 |
+| `pr` | 473 |
 | `visual` | 181 |
 
 ## Top recorded per-case runtimes
@@ -64,6 +64,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `acceptance-397-sample-d.spec.ts` | 4 | 4/4 reviewed |
 | `acceptance-429-transaction-colors.spec.ts` | 4 | 4/4 reviewed |
 | `acceptance-429-transaction-composition.spec.ts` | 32 | 32/32 reviewed |
+| `advanced-json-apply-notices.spec.ts` | 3 | 3/3 reviewed |
 | `advanced-json-apply-roundtrip.spec.ts` | 2 | 0/2 reviewed |
 | `advanced-json-diagnostic.spec.ts` | 7 | 7/7 reviewed |
 | `ai-bridge.spec.ts` | 14 | 14/14 reviewed |
@@ -72,6 +73,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `annotation-bottom-list.spec.ts` | 1 | 1/1 reviewed |
 | `annotation-highlight-position-mode.spec.ts` | 3 | 2/3 reviewed |
 | `annotation-inspector-anchor.spec.ts` | 1 | 1/1 reviewed |
+| `annotation-inspector-review-fixes.spec.ts` | 1 | 1/1 reviewed |
 | `annotation-line-rendering.spec.ts` | 4 | 4/4 reviewed |
 | `annotation-marker-vertical-span.spec.ts` | 1 | 1/1 reviewed |
 | `annotation-multi-select-font.spec.ts` | 1 | 1/1 reviewed |
@@ -131,6 +133,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `edit-commit-contract.spec.ts` | 5 | 5/5 reviewed |
 | `empty-group-tree-projection.spec.ts` | 3 | 3/3 reviewed |
 | `event-pulse-lifecycle.spec.ts` | 2 | 2/2 reviewed |
+| `event-table-value-review-fixes.spec.ts` | 4 | 4/4 reviewed |
 | `export-diagnostics.spec.ts` | 2 | 2/2 reviewed |
 | `export-dialog-page-settings.spec.ts` | 1 | 1/1 reviewed |
 | `export-fold-mapping.spec.ts` | 1 | 1/1 reviewed |
@@ -160,6 +163,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `gui-v1-pane-vocabulary.spec.ts` | 1 | 1/1 reviewed |
 | `gui-v1-ribbon-labels.spec.ts` | 1 | 1/1 reviewed |
 | `gui-visual-acceptance.spec.ts` | 1 | 1/1 reviewed |
+| `handshake-case-selection-review-fixes.spec.ts` | 1 | 1/1 reviewed |
 | `history-retention.spec.ts` | 1 | 1/1 reviewed |
 | `home-command-surface.spec.ts` | 24 | 24/24 reviewed |
 | `home-ribbon-timegroup-cleanup.spec.ts` | 1 | 1/1 reviewed |
@@ -420,6 +424,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `ruler-terminal-boundary.spec.ts` | 1 | 1/1 reviewed |
 | `runtime-owner-acceptance.spec.ts` | 2 | 2/2 reviewed |
 | `scenario-add-signal-after-duplicate.spec.ts` | 3 | 3/3 reviewed |
+| `signal-duplicate-review-fixes.spec.ts` | 5 | 5/5 reviewed |
 | `signal-editor-draft-survives-unrelated-edit.spec.ts` | 1 | 1/1 reviewed |
 | `signal-editor-group-dropdown.spec.ts` | 2 | 2/2 reviewed |
 | `signal-editor.spec.ts` | 18 | 18/18 reviewed |
@@ -460,6 +465,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `transaction-bottom-phase-linked-signals.spec.ts` | 2 | 2/2 reviewed |
 | `transaction-bottom-toolbar-add-ungroup.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-drag.spec.ts` | 11 | 11/11 reviewed |
+| `transaction-edge-resize-preview-clamp.spec.ts` | 2 | 2/2 reviewed |
 | `transaction-empty-state-create-lane-fix.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-export.spec.ts` | 16 | 16/16 reviewed |
 | `transaction-group-management.spec.ts` | 4 | 4/4 reviewed |
@@ -509,6 +515,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `visual-regression-modes.spec.ts` | 6 | 6/6 reviewed |
 | `wavedrom-security.spec.ts` | 1 | 1/1 reviewed |
 | `wavedrom-shared-definitions.spec.ts` | 1 | 1/1 reviewed |
+| `workspace-mode-snapshot-review-fixes.spec.ts` | 4 | 4/4 reviewed |
 | `workspace-preset-density.spec.ts` | 1 | 1/1 reviewed |
 | `workspace-zoom-isolation.spec.ts` | 2 | 2/2 reviewed |
 | `zoom-cross-surface-alignment.spec.ts` | 1 | 1/1 reviewed |
