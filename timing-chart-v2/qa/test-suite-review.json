@@ -17316,6 +17316,60 @@
       "decision": "KEEP",
       "reason": "Guards the symmetrical mode switch.",
       "replacementTest": null
+    },
+    {
+      "file": "review-followups.spec.ts",
+      "title": "dismissing a popover with a right-click does not swallow the next left click",
+      "domain": "outside-dismiss-click",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "A right-click that dismisses a popover leaves no click swallower behind for the next left click.",
+      "duplicateGroup": "outside-dismiss-click",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code-review follow-up for consumeOutsidePointerDown.",
+      "replacementTest": null
+    },
+    {
+      "file": "review-followups.spec.ts",
+      "title": "Undo with nothing to undo keeps an earlier failed Open message",
+      "domain": "noop-keeps-message",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "A no-op Undo leaves the failed-Open operation message visible.",
+      "duplicateGroup": "noop-keeps-message",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code-review follow-up: no-op rejections used to clear unrelated messages.",
+      "replacementTest": null
+    },
+    {
+      "file": "zoom-out-scroll-extent.spec.ts",
+      "title": "zooming out while scrolled to the far right pulls the view back to the zoomed content end",
+      "domain": "zoom-out-scroll-extent",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Zooming below 100% while scrolled to the end clamps the position to the zoomed content end.",
+      "duplicateGroup": "zoom-out-scroll-extent",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code-review follow-up: zoom changes fire no scroll event.",
+      "replacementTest": null
     }
   ]
 }

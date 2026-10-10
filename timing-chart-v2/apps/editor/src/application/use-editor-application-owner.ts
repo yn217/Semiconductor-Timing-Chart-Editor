@@ -75,8 +75,8 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
 
   const dispatchResult = useCallback((result: CommandResult, context: AcceptedContext): CommandResult => {
     if (!result.ok && result.reason === "no-op") {
-      // Nothing to do (empty Undo/Redo history, a value that is already set) is not a Problem: it must not add an error to the Problems list.
-      setProblem(""); setRuntimeDiagnostics(withoutCommandRejectionDiagnostics);
+      // Nothing to do (empty Undo/Redo history, a value that is already set) is not a Problem: it adds nothing and leaves any earlier
+      // message (a failed Open or Save, an earlier rejection) where it is.
       return result;
     }
     if (!result.ok) {
