@@ -32,7 +32,7 @@ export function createSelectionActions(input: SelectionActionsInput): SelectionA
   const clearSelection = () => input.selection.clear();
   const selectAllSignals = () => {
     // Hidden Signals are not on screen, so Select All must not hand Delete/Duplicate/Cut rows the user cannot see.
-    const ids = input.document.signals.filter((signal) => signal.type !== "commentRow" && signal.display.visible !== false).map((signal) => signal.id);
+    const ids = input.document.signals.filter((signal) => signal.type !== "commentRow" && signal.display?.visible !== false).map((signal) => signal.id);
     input.selection.selectSignals(new Set(ids), ids[0]);
   };
   const selectAllTransactions = () => {
