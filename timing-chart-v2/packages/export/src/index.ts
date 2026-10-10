@@ -1,6 +1,6 @@
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { allocateMeasurementLanes } from "@timing-chart-v2/geometry";
-import { buildDisplayTimeMapping, calculateRowLayout, remapValueChangesToDisplay, resolveSourcePosition, transactionLaneIdentityKey, type DisplayTimeMapping } from "@timing-chart-v2/projection";
+import { buildDisplayTimeMapping, calculateRowLayout, remapValueChangesToDisplay, resolveSourcePosition, compareLaneIds, transactionLaneIdentityKey, type DisplayTimeMapping } from "@timing-chart-v2/projection";
 import { ANNOTATION_LABEL_LINE_HEIGHT, ANNOTATION_LABEL_MAX_WIDTH, MAX_MEASUREMENT_LANE, anchorTransitionFraction, anchorTransitionKind, effectiveLegendEntries, resolveEdgeCounterMarker, resolveLegendPosition, valueSignalWaveDomain, wrapAnnotationLabel, type Annotation, type CanonicalDocument, type ClockSignal, type JsonObject, type MeasurementProfile, type MeasurementLayout, type Signal, type SignalId, type Transaction, type ValueSignal } from "@timing-chart-v2/schema";
 import { busLogicToken, renderWaveJsonMarkup, toWaveJson, toWaveJsonMappedClock, toWaveJsonWindow, WaveDromAdapterError, WAVEDROM_VERSION, type WaveJsonSignal } from "@timing-chart-v2/wavedrom-adapter";
 
@@ -518,7 +518,7 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
   // Hidden Transactions are not drawn on screen; they must not be exported or reserve a lane either.
   const exportedTransactions = document.transactions.filter((transaction) => transaction.visible !== false);
   // Lanes are keyed by (Transaction Group, laneId) exactly as the editor keys them: the same laneId in two Groups is two rows.
-  // Row order matches the editor: Groups by `order`, then ungrouped (and Groups missing from the document), each sorted by laneId.
+  // Row order matches the editor: Groups by `order`, then ungrouped (and Groups missing from the document), each sorted by laneId (natural order, like the editor).
   // Without any Group the order is the historical plain laneId sort.
   const groupRank = new Map((document.transactionGroups ?? []).slice().sort((left, right) => left.order - right.order).map((group, index) => [group.id as string, index] as const));
   const ungroupedRank = groupRank.size;
@@ -534,7 +534,7 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
     const right = laneRefs.get(rightKey)!;
     const byRank = rankOf(left.groupId) - rankOf(right.groupId);
     if (byRank !== 0) return byRank;
-    if (left.laneId !== right.laneId) return left.laneId < right.laneId ? -1 : 1;
+    if (left.laneId !== right.laneId) return compareLaneIds(left.laneId, right.laneId);
     return leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0;
   });
   const laneIndex = new Map(laneKeys.map((key, index) => [key, index] as const));

@@ -24,6 +24,16 @@ function documentWithGroups(extra: { cpuColor?: string; memoryColor?: string } =
 }
 
 describe("transaction export keys lanes by Transaction Group", () => {
+  it("orders lanes naturally like the editor (lane_2 before lane_10)", () => {
+    const base = canonicalFixture();
+    const document = { ...base, transactions: [
+      { id: "txn_ten" as TransactionId, name: "Ten", start: 0, end: 2, laneId: "lane_10" },
+      { id: "txn_two" as TransactionId, name: "Two", start: 0, end: 2, laneId: "lane_2" },
+    ] } as CanonicalDocument;
+    const scene = buildExportScene(document, { format: "svg", scope: "document" });
+    const yOf = (id: string) => scene.transactions.find((transaction) => transaction.id === id)!.y;
+    expect(yOf("txn_two")).toBeLessThan(yOf("txn_ten"));
+  });
   it("exports lane_0 of two different Groups as two separate rows, ordered by Group order", () => {
     const scene = buildExportScene(documentWithGroups(), { format: "svg", scope: "document" });
     const yOf = (id: string) => scene.transactions.find((transaction) => transaction.id === id)!.y;
