@@ -1,33 +1,22 @@
 import { useRef, useState } from "react";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
 import { referencesToAny } from "@timing-chart-v2/schema";
-import type { AnnotationId, GroupId, Signal, SignalGroup, SignalId, SpacerId, SpacerRow, Transaction, TransactionId } from "@timing-chart-v2/schema";
+import type { AnnotationId, GroupId, Signal, SignalId, SpacerId, SpacerRow, Transaction, TransactionId } from "@timing-chart-v2/schema";
 import { nextCommandId } from "../command-id.js";
 import { createEntityIdAllocator, nextEntityId } from "../entity-id.js";
-import { groupId, signalId } from "../minimal-cycle-view-fixture-helpers.js";
 import { annotationClipboardStatus, captureAnnotationClipboard, createAnnotationsFromClipboard, cutAnnotations, selectedAnnotations, type AnnotationClipboard } from "./annotation-clipboard.js";
-import { captureGroupTransactionLinks, remapGroupTransactionLinks, type GroupTransactionSignalLink } from "./group-clipboard-links.js";
+import { captureGroupTransactionLinks, type GroupTransactionSignalLink } from "./group-clipboard-links.js";
 import { createClipboardIndexes, resolveClipboardSignalGroupTarget, resolveGroupSignalsInRowOrder } from "./group-clipboard-selection.js";
-import { copySignalWithFreshValueChangeIds } from "./signal-clipboard-identity.js";
+import { createClipboardGroup, createClipboardSignals, type GroupClipboardItem, type SignalClipboardItem } from "./clipboard-create-actions.js";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
 import type { SelectionOwner } from "./use-selection-owner.js";
 
-type SignalClipboardItem = Readonly<{ signal: Signal; groupId: GroupId; index: number }>;
-type GroupClipboardItem = Readonly<{ group: SignalGroup; rows: readonly Signal[]; sourceIndex: number; cutLinks?: readonly GroupTransactionSignalLink[]; move?: boolean }>;
 type SpacerClipboardItem = Readonly<{ spacer: SpacerRow; groupId: GroupId; index: number }>;
 const spacerId = (value: string) => value as SpacerId;
 export const NO_SIGNAL_GROUP_STATUS = "No Signal Group to insert into";
 /** Mixed Signal + Annotation selection keeps the existing precedence: Copy/Cut act on the Signals (the status says the Annotations were
  * left out), Duplicate/Delete act on the Annotations. */
 const mixedNote = (annotations: number) => annotations > 0 ? ` (${annotations} selected annotation${annotations === 1 ? "" : "s"} not included: Signals take precedence)` : "";
-
-/** A copied Signal must not share value-change IDs with its source (IDs are unique across the Document). */
-function withFreshValueChangeIds<T extends Signal>(signal: T): T {
-  const fresh = <C extends { readonly id?: string }>(changes: readonly C[], scope: string): C[] => changes.map((change, index) => change.id === undefined ? change : { ...change, id: `value_${signal.id}${scope}_${index}` });
-  if (signal.type === "commentRow") return signal;
-  if (signal.type === "clock") return signal.enable ? { ...signal, enable: fresh(signal.enable, "_enable") } : signal;
-  return { ...signal, values: fresh(signal.values, "") };
-}
 
 export function useClipboardActions({ application, selection }: { application: EditorApplicationOwner; selection: SelectionOwner }) {
   const [status, setStatus] = useState("Empty");
@@ -201,104 +190,16 @@ export function useClipboardActions({ application, selection }: { application: E
   };
 
   const createSignals = (input: readonly SignalClipboardItem[], operation: "paste" | "duplicate", placement: "current-selection" | "source-group" = "current-selection") => {
-    if (input.length === 0) { setStatus("No signal clipboard available"); return; }
-    const current = document();
-    const allocateId = createEntityIdAllocator(current);
-    const selectedSignalId = selection.refs.signalId.current;
-    const indexes = indexResolver.signals(current);
-    const selectedGroup = placement === "current-selection"
-      ? resolveClipboardSignalGroupTarget({ groups: current.signalGroups, groupsById: indexes.groupsById, ownerBySignalId: indexes.owner, ...(selectedSignalId === undefined ? {} : { selectedSignalId }), fallbackToLast: false })
-      : undefined;
-    const groupsById = indexes.groupsById;
-    const createdByGroup = new Map<GroupId, { target: SignalGroup; signals: Signal[] }>();
-    const created: Signal[] = [];
-    for (const source of input) {
-      const target = selectedGroup ?? groupsById.get(source.groupId) ?? current.signalGroups.at(-1);
-      if (!target) continue;
-      const id = signalId(allocateId(source.signal.type === "commentRow" ? "commentRow" : "signal"));
-      const copyOrdinal = created.length + 1;
-      const name = `${source.signal.display.name}_${operation === "duplicate" ? "duplicate" : "copy"}${input.length > 1 ? `_${copyOrdinal}` : ""}`;
-      const copied = copySignalWithFreshValueChangeIds(source.signal, id, () => allocateId("signalValueChange"));
-      const signal: Signal = { ...copied, name, display: { ...source.signal.display, name } };
-      created.push(signal);
-      const bucket = createdByGroup.get(target.id) ?? { target, signals: [] };
-      bucket.signals.push(signal);
-      createdByGroup.set(target.id, bucket);
-    }
-    if (created.length === 0) { setStatus(NO_SIGNAL_GROUP_STATUS); return; }
-    const placements = [...createdByGroup.values()].map(({ target, signals }) => ({
-      targetGroupId: target.id,
-      index: target.rows.length,
-      signalIds: signals.map((signal) => signal.id),
-    }));
-    const command: SemanticCommand = {
-      id: nextCommandId(`${operation}_signals`),
-      type: "signal.bulkCreateAcrossGroups",
-      signals: created,
-      placements,
-    };
-    const result = application.execute(command);
-    if (result.ok) {
-      const ids = created.map((signal) => signal.id);
-      selection.selectSignals(new Set(ids), ids[0]);
-      setStatus(operation === "paste" ? `Pasted ${created.length} signal${created.length === 1 ? "" : "s"}` : `Duplicated ${created.length} signal${created.length === 1 ? "" : "s"}`);
-    } else setStatus(`${operation === "paste" ? "Paste" : "Duplicate"} rejected: ${result.problems[0]?.message ?? result.reason}`);
+    createClipboardSignals(input, operation, placement, { application, selection, indexResolver, document: document(), reportStatus: setStatus });
   };
   const createGroup = (input: GroupClipboardItem, operation: "paste" | "duplicate") => {
-    const current = document();
-    const allocateId = createEntityIdAllocator(current);
-    const newGroupId = groupId(allocateId("group"));
-    const moving = operation === "paste" && input.move === true;
-    const sourceSignalsById = new Map(input.rows.map((signal) => [signal.id, signal]));
-    const sourceSpacers = new Map<string, SpacerRow>((input.group.spacers ?? []).map((item) => [item.id, item]));
-    const newIdByOldId = new Map<string, string>();
-    const newSignalIdByOldId = new Map<SignalId, SignalId>();
-    const createdSignals: Signal[] = [];
-    const createdSpacers: SpacerRow[] = [];
-    for (const rowId of input.group.rows) {
-      const source = sourceSignalsById.get(rowId as SignalId);
-      if (source) {
-        const id = moving ? source.id : signalId(allocateId(source.type === "commentRow" ? "commentRow" : "signal"));
-        const signal: Signal = moving ? source : copySignalWithFreshValueChangeIds(source, id, () => allocateId("signalValueChange"));
-        createdSignals.push(signal);
-        newIdByOldId.set(rowId, id);
-        newSignalIdByOldId.set(rowId as SignalId, id);
-      } else {
-        const sourceSpacer = sourceSpacers.get(rowId);
-        if (!sourceSpacer) { setStatus(`Cannot ${operation} Group: a source row is missing.`); return; }
-        const id = moving ? sourceSpacer.id : spacerId(allocateId("spacer"));
-        createdSpacers.push(moving ? sourceSpacer : { ...sourceSpacer, id });
-        newIdByOldId.set(rowId, id);
-      }
-    }
-    const group: SignalGroup = {
-      ...input.group,
-      id: newGroupId,
-      rows: input.group.rows.map((rowId) => newIdByOldId.get(rowId) as SignalGroup["rows"][number]),
-      ...(input.group.spacers === undefined ? {} : { spacers: createdSpacers }),
-    };
-    const groupCommand: SemanticCommand = {
-      id: nextCommandId(`${operation}_group`),
-      type: "group.createWithContents",
-      group,
-      signals: createdSignals,
-      index: Math.min(current.signalGroups.length, input.sourceIndex + 1),
-    };
-    const commands: SemanticCommand[] = [groupCommand];
-    if (operation === "paste" && input.cutLinks && input.cutLinks.length > 0) {
-      const mapped = remapGroupTransactionLinks(input.cutLinks, newSignalIdByOldId);
-      if (!mapped.ok) {
-        setStatus(`Cannot paste Group: a linked source row is missing (${mapped.missingSignalIds.join(", ")}).`);
-        return;
-      }
-      commands.push({ id: nextCommandId("paste_group_restore_links"), type: "transaction.bulkLinkSignals", links: mapped.links });
-    }
-    const result = application.executeBatch(nextCommandId(`${operation}_group_batch`), commands);
-    if (result.ok) {
-      if (operation === "paste" && input.move) groupRef.current = { ...input, cutLinks: [], move: false };
-      selection.selectGroup(newGroupId);
-      setStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${input.group.name} group`);
-    } else setStatus(`Cannot ${operation} Group: its linked references could not be preserved.`);
+    createClipboardGroup(input, operation, {
+      application,
+      selection,
+      document: document(),
+      reportStatus: setStatus,
+      onCutGroupPasted: (pasted) => { groupRef.current = { ...pasted, cutLinks: [], move: false }; },
+    });
   };
   const createAnnotation = (clipboard: AnnotationClipboard, operation: "paste" | "duplicate") => setStatus(createAnnotationsFromClipboard(application, selection, clipboard, operation));
   const createTransactions = (sources: readonly Transaction[], operation: "paste" | "duplicate") => {
