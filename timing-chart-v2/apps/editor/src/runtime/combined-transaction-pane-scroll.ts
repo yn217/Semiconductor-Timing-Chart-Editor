@@ -36,14 +36,12 @@ export function mountCombinedTransactionPaneScroll(pane: HTMLElement): () => voi
   viewport.addEventListener("scroll", onOwnerScroll, { passive: true, capture: true });
   pane.addEventListener("scroll", onRegionScroll, { passive: true, capture: true });
   viewport.addEventListener("wheel", onWheel, { passive: false });
-  // The lanes (and so the region) mount after the pane; keep the mirror correct across re-renders and resizes.
-  const observer = new MutationObserver(mirror);
-  observer.observe(pane, { childList: true, subtree: true });
+  // React mounts the pane content in the same commit. Sync once here; subsequent
+  // horizontal changes are mirrored by the owner's scroll event, not DOM observation.
   mirror();
   return () => {
     viewport.removeEventListener("scroll", onOwnerScroll, true);
     pane.removeEventListener("scroll", onRegionScroll, true);
     viewport.removeEventListener("wheel", onWheel);
-    observer.disconnect();
   };
 }
