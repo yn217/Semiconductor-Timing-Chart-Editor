@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 466 spec files and 1411 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 433 spec files and 1313 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1255/1411 cases reviewed.
+Semantic review progress: 1255/1313 cases reviewed.
 
 ## Curated profile membership
 
@@ -55,7 +55,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | 3600 | `integration`, `visual` | `issue-746-visible-group-create.spec.ts` |
 | 952 | `performance`, `nightly` | `perf-fixed-full-span-open.spec.ts` |
 
-> This is a complete name/location inventory, not a completed semantic review. 156 cases remain `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
+> This is a complete name/location inventory, not a completed semantic review. 58 cases remain `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
 | Spec file | Cases | Review status |
 | --- | ---: | --- |
@@ -492,39 +492,6 @@ These values were measured for a whole spec file and are deliberately not copied
 | `workspace-zoom-isolation.spec.ts` | 2 | 2/2 reviewed |
 | `zoom-cross-surface-alignment.spec.ts` | 1 | 1/1 reviewed |
 | `zoom-text-fidelity.spec.ts` | 5 | 5/5 reviewed |
-| `zz-a11y-tmp.spec.ts` | 1 | 0/1 reviewed |
-| `zz-align-tmp.spec.ts` | 1 | 0/1 reviewed |
-| `zz-annot-tmp.spec.ts` | 1 | 0/1 reviewed |
-| `zz-bm-tmp.spec.ts` | 6 | 0/6 reviewed |
-| `zz-bulk-tmp.spec.ts` | 1 | 0/1 reviewed |
-| `zz-comb-tmp.spec.ts` | 6 | 0/6 reviewed |
-| `zz-contrast-tmp.spec.ts` | 1 | 0/1 reviewed |
-| `zz-dirty-tmp.spec.ts` | 1 | 0/1 reviewed |
-| `zz-dnd-tmp.spec.ts` | 8 | 0/8 reviewed |
-| `zz-events-tmp.spec.ts` | 12 | 0/12 reviewed |
-| `zz-export-tmp.spec.ts` | 1 | 0/1 reviewed |
-| `zz-files-tmp.spec.ts` | 1 | 0/1 reviewed |
-| `zz-fuzz-tmp.spec.ts` | 3 | 0/3 reviewed |
-| `zz-fuzz2-tmp.spec.ts` | 3 | 0/3 reviewed |
-| `zz-fuzz3-tmp.spec.ts` | 3 | 0/3 reviewed |
-| `zz-hidden-tmp.spec.ts` | 1 | 0/1 reviewed |
-| `zz-input-tmp.spec.ts` | 4 | 0/4 reviewed |
-| `zz-insert-tmp.spec.ts` | 1 | 0/1 reviewed |
-| `zz-kbd-tmp.spec.ts` | 1 | 0/1 reviewed |
-| `zz-perf-tmp.spec.ts` | 2 | 0/2 reviewed |
-| `zz-phase-tmp.spec.ts` | 8 | 0/8 reviewed |
-| `zz-race-tmp.spec.ts` | 1 | 0/1 reviewed |
-| `zz-reach-tmp.spec.ts` | 1 | 0/1 reviewed |
-| `zz-ribbon-tmp.spec.ts` | 3 | 0/3 reviewed |
-| `zz-save-tmp.spec.ts` | 1 | 0/1 reviewed |
-| `zz-scenario-tmp.spec.ts` | 6 | 0/6 reviewed |
-| `zz-storage-tmp.spec.ts` | 1 | 0/1 reviewed |
-| `zz-tc-tmp.spec.ts` | 1 | 0/1 reviewed |
-| `zz-timeline-tmp.spec.ts` | 12 | 0/12 reviewed |
-| `zz-toast-tmp.spec.ts` | 1 | 0/1 reviewed |
-| `zz-undo-tmp.spec.ts` | 3 | 0/3 reviewed |
-| `zz-viewport-tmp.spec.ts` | 1 | 0/1 reviewed |
-| `zz-vround-tmp.spec.ts` | 1 | 0/1 reviewed |
 
 ## Static review candidates
 
@@ -733,39 +700,6 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `visual-grammar-cross-component.spec.ts` | querySelector, geometryRead |
 | `wavedrom-shared-definitions.spec.ts` | querySelector, styleMutation, directDomMutation, explicitWait |
 | `zoom-text-fidelity.spec.ts` | getComputedStyle, dataset, geometryRead, explicitWait |
-| `zz-a11y-tmp.spec.ts` | querySelector, getComputedStyle, geometryRead, explicitWait |
-| `zz-align-tmp.spec.ts` | dataset, geometryRead, explicitWait |
-| `zz-annot-tmp.spec.ts` | querySelector, explicitWait |
-| `zz-bm-tmp.spec.ts` | querySelector, explicitWait |
-| `zz-bulk-tmp.spec.ts` | querySelector, dataset, explicitWait |
-| `zz-comb-tmp.spec.ts` | querySelector, geometryRead, explicitWait |
-| `zz-contrast-tmp.spec.ts` | getComputedStyle, geometryRead, explicitWait |
-| `zz-dirty-tmp.spec.ts` | explicitWait |
-| `zz-dnd-tmp.spec.ts` | querySelector, explicitWait |
-| `zz-events-tmp.spec.ts` | explicitWait |
-| `zz-export-tmp.spec.ts` | explicitWait |
-| `zz-files-tmp.spec.ts` | explicitWait |
-| `zz-fuzz-tmp.spec.ts` | querySelector, explicitWait |
-| `zz-fuzz2-tmp.spec.ts` | querySelector, explicitWait |
-| `zz-fuzz3-tmp.spec.ts` | querySelector, explicitWait |
-| `zz-hidden-tmp.spec.ts` | explicitWait |
-| `zz-input-tmp.spec.ts` | querySelector, explicitWait |
-| `zz-insert-tmp.spec.ts` | querySelector, explicitWait |
-| `zz-kbd-tmp.spec.ts` | querySelector, getComputedStyle, explicitWait |
-| `zz-perf-tmp.spec.ts` | querySelector, explicitWait |
-| `zz-phase-tmp.spec.ts` | querySelector, explicitWait |
-| `zz-race-tmp.spec.ts` | querySelector, explicitWait |
-| `zz-reach-tmp.spec.ts` | querySelector, geometryRead, explicitWait |
-| `zz-ribbon-tmp.spec.ts` | querySelector, explicitWait |
-| `zz-save-tmp.spec.ts` | querySelector, explicitWait |
-| `zz-scenario-tmp.spec.ts` | querySelector, explicitWait |
-| `zz-storage-tmp.spec.ts` | querySelector, explicitWait |
-| `zz-tc-tmp.spec.ts` | querySelector, explicitWait |
-| `zz-timeline-tmp.spec.ts` | querySelector, explicitWait |
-| `zz-toast-tmp.spec.ts` | querySelector, explicitWait |
-| `zz-undo-tmp.spec.ts` | explicitWait |
-| `zz-viewport-tmp.spec.ts` | querySelector, geometryRead, explicitWait |
-| `zz-vround-tmp.spec.ts` | explicitWait |
 
 ## Exact-title duplicate candidates
 
