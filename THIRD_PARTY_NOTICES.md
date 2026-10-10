@@ -61,13 +61,13 @@ SOFTWARE.
 ## Additional bundled runtime dependencies
 
 The following packages were found in the production Rollup module graph for
-`timing-chart-v2/apps/editor` using the Vite production configuration at local
-`main@30ce1a02ae2df84acd1fbad16ced302784270272` (worktree source may include
-uncommitted application changes). Versions and SPDX identifiers below come
-from each package's installed `package.json`, resolved by the pinned
-`timing-chart-v2/package-lock.json`. Copyright lines were copied from the
-corresponding package `LICENSE` files. The standard MIT grant, conditions and
-disclaimer printed above apply to the listed MIT packages.
+`timing-chart-v2/apps/editor` using the Vite production configuration.
+Package versions are resolved by `timing-chart-v2/package-lock.json`; SPDX
+identifiers and copyright notices were checked against each installed
+package's `package.json` and `LICENSE` file. The standard MIT grant, conditions
+and disclaimer printed above apply to the listed MIT packages. Recheck this
+inventory whenever the production dependency graph or build configuration
+changes.
 
 | Bundled package | Version | License | Required copyright notice |
 | --- | ---: | --- | --- |
@@ -88,7 +88,8 @@ disclaimer printed above apply to the listed MIT packages.
 
 The production module graph also includes `react@19.1.1`,
 `react-dom@19.1.1`, and `wavedrom@3.6.2`; their complete notices are above.
-The graph contained 412 package module IDs across these 17 package names.
+The current production graph contains these 17 package names (multiple module
+IDs may belong to one package).
 
 ### `fast-uri` BSD-3-Clause notice
 
@@ -171,9 +172,8 @@ PERFORMANCE OF THIS SOFTWARE.
 
 ## Scope
 
-These notices do not license the project's own source. Product distribution
-terms require release-owner confirmation. This file is not yet a complete
-inventory for every build configuration or a substitute for inspecting the
-exact release artifact. Build-time tools are intentionally excluded from this
-runtime inventory. This file is served during Vite development and copied into
-the production build as `THIRD_PARTY_NOTICES.md`.
+These notices cover third-party runtime code in the current production build;
+build-time tools are intentionally excluded. The project's own source is
+distributed under the MIT License in `LICENSE`. This file is served during
+Vite development and copied into the production build as
+`THIRD_PARTY_NOTICES.md`.

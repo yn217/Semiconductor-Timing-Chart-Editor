@@ -105,4 +105,4 @@ See Epic #2 and the implementation issues for work breakdown.
 
 ## Third-party notices
 
-利用ライブラリとライセンス通知は[Third-party notices](THIRD_PARTY_NOTICES.md)を参照してください。
+このプロジェクトのソース配布条件は[MIT License](LICENSE)です。利用ライブラリとライセンス通知は[Third-party notices](THIRD_PARTY_NOTICES.md)を参照してください。

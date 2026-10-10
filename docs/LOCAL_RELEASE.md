@@ -45,4 +45,6 @@ workspace package versions of `0.0.0` are not a public release identity. Once
 confirmed, create an annotated `v<version>` tag on the verified source commit;
 record its full SHA, verification evidence, artifact identity, deployment target,
 and rollback target in `docs/releases/<version>.md`. Never move a published tag.
-Distribution terms require owner confirmation under #1088 before distribution.
+The project source is distributed under the MIT License; verify that both
+`LICENSE` and `THIRD_PARTY_NOTICES.md` are present in the built artifact before
+distribution.

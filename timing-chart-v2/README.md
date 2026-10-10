@@ -40,8 +40,8 @@ verification must use an independent clean checkout; see
 quality gate and no hosted workflow is configured.
 
 Third-party notices are recorded in [`THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md).
-Project distribution terms are awaiting release-owner confirmation; public
-repository visibility must not be treated as a license grant.
+The project source is distributed under the [MIT License](../LICENSE). The
+production build exposes both the project license and third-party notices.
 
 ## Package direction
 
