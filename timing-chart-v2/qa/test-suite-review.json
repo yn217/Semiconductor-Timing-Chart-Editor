@@ -3740,7 +3740,7 @@
     },
     {
       "file": "annotation-highlight-position-mode.spec.ts",
-      "title": "Highlight Position Mode is editable in the Bottom Panel and commits through the existing annotation.setPositionMode command",
+      "title": "Inspector Highlight Position Mode commits through annotation.setPositionMode",
       "domain": "highlight-position-mode-contract",
       "originIssue": 419,
       "type": "SEMANTIC_CONTRACT",
@@ -4817,7 +4817,25 @@
     },
     {
       "file": "combined-column-resize-alignment.spec.ts",
-      "title": "Combined keeps Transaction and Cycle source boundaries aligned after column resize",
+      "title": "Combined keeps Transaction and Cycle source boundaries aligned after column resize at 1280x720",
+      "domain": "combined-shared-time-axis-alignment",
+      "originIssue": 573,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Transaction start, semantic phase boundary, and end remain screen-X aligned with matching Cycle boundaries before and after production column resizing.",
+      "duplicateGroup": "combined-shared-axis-geometry",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "visual"
+      ],
+      "decision": "KEEP",
+      "reason": "This is a focused visible cross-pane geometry contract using the real layout editor; DOM geometry assertions are necessary to prove the shared-axis invariant and are not replaced by state/unit tests.",
+      "replacementTest": null
+    },
+    {
+      "file": "combined-column-resize-alignment.spec.ts",
+      "title": "Combined keeps Transaction and Cycle source boundaries aligned after column resize at 1672x941",
       "domain": "combined-shared-time-axis-alignment",
       "originIssue": 573,
       "type": "VISUAL_ACCEPTANCE",
@@ -11254,7 +11272,7 @@
     },
     {
       "file": "signal-editor.spec.ts",
-      "title": "#402: Event row Save stays disabled until the Draft differs, and Cancel discards it back to canonical",
+      "title": "#402: Event rows are always editable; Apply appears only for a differing Draft and Cancel discards it",
       "domain": "signal-event-row-draft-save-cancel",
       "originIssue": 402,
       "type": "USER_JOURNEY",
@@ -13260,7 +13278,25 @@
     },
     {
       "file": "transaction-bottom-phase-linked-signals.spec.ts",
-      "title": "Selecting a Transaction keeps detail in the Inspector while Bottom remains table-first (#703)",
+      "title": "Selecting a Transaction keeps detail in the Inspector while Bottom remains table-first (#703) at 1280x720",
+      "domain": "transaction-inspector-and-clean-bottom-row-state",
+      "originIssue": 703,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Selecting a stable Transaction in the realistic fixture keeps the table-first Bottom toolbar/list visible with no unapplied row draft, while the Inspector follows the same selection and exposes timing and linked-signal detail.",
+      "duplicateGroup": "transaction-detail-ownership",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "The title overstates this case: it does not edit or Apply a draft. It uniquely checks cross-panel selection/detail ownership and the clean Bottom draft state; the actual Bottom Draft->Apply/Undo and rejected-Apply journeys are covered by issue-703-inline-row-apply.spec.ts. Keep this as an ownership contract, not as Apply acceptance.",
+      "replacementTest": null
+    },
+    {
+      "file": "transaction-bottom-phase-linked-signals.spec.ts",
+      "title": "Selecting a Transaction keeps detail in the Inspector while Bottom remains table-first (#703) at 1672x941",
       "domain": "transaction-inspector-and-clean-bottom-row-state",
       "originIssue": 703,
       "type": "ARCHITECTURE_GUARD",
@@ -13532,7 +13568,26 @@
     },
     {
       "file": "transaction-export.spec.ts",
-      "title": "creates, edits, links, saves and reopens one canonical Transaction",
+      "title": "creates, edits, links, saves and reopens one canonical Transaction at 1280x720",
+      "domain": "transaction-authoring-save-open-history",
+      "originIssue": 556,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "A canonical Transaction's Inspector-edited identity/timing/lane/description and linked stable Signal survive Save/Open; Undo/Redo applies to the link operation and reopened document starts with clean History.",
+      "duplicateGroup": "transaction-save-open-lifecycle",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "profiles": [
+        "integration",
+        "nightly"
+      ],
+      "decision": "KEEP",
+      "reason": "This is an end-to-end canonical authoring and persistence lifecycle spanning multiple Apply operations, stable Signal linking, History reversal/replay, and real file Save/Open. Keep outside routine PR execution.",
+      "replacementTest": null
+    },
+    {
+      "file": "transaction-export.spec.ts",
+      "title": "creates, edits, links, saves and reopens one canonical Transaction at 1672x941",
       "domain": "transaction-authoring-save-open-history",
       "originIssue": 556,
       "type": "SAVE_OPEN_EXPORT",
@@ -13605,7 +13660,25 @@
     },
     {
       "file": "transaction-export.spec.ts",
-      "title": "exports deterministic SVG plus PNG and PDF from Canonical ExportScene",
+      "title": "exports deterministic SVG plus PNG and PDF from Canonical ExportScene at 1280x720",
+      "domain": "canonical-export-scene-deterministic-layer-content",
+      "originIssue": null,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Canonical ExportScene output is deterministic across repeated SVG/PDF export, includes Transaction/Signal/wave-engine/edge-counter semantics, excludes editor-only overlays, and emits valid PNG/PDF artifacts.",
+      "duplicateGroup": "canonical-export-scene-contracts",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": [
+        "integration"
+      ],
+      "decision": "KEEP",
+      "reason": "This is the direct canonical-scene artifact contract: stable semantic layer IDs, edge counters, renderer provenance, editor-chrome exclusion, and repeatability. It is distinct from Combined export and page-metadata layout checks.",
+      "replacementTest": null
+    },
+    {
+      "file": "transaction-export.spec.ts",
+      "title": "exports deterministic SVG plus PNG and PDF from Canonical ExportScene at 1672x941",
       "domain": "canonical-export-scene-deterministic-layer-content",
       "originIssue": null,
       "type": "SAVE_OPEN_EXPORT",
@@ -14494,7 +14567,7 @@
     },
     {
       "file": "transaction-signal-picker.spec.ts",
-      "title": "10k Signal Transaction Inspector keeps picker DOM bounded and preserves hierarchy context",
+      "title": "10k Signal Bottom Linked Signals editor keeps picker DOM bounded and preserves hierarchy context",
       "domain": "large-signal-picker-virtualization",
       "originIssue": 463,
       "type": "PERFORMANCE",
@@ -14551,7 +14624,7 @@
     },
     {
       "file": "transaction-signal-picker.spec.ts",
-      "title": "Transaction Inspector uses a bounded searchable linked-signal picker",
+      "title": "Bottom Linked Signals tab owns the bounded picker and Inspector stays a live summary",
       "domain": "transaction-linked-signal-picker-keyboard",
       "originIssue": null,
       "type": "USER_JOURNEY",
@@ -15075,7 +15148,25 @@
     },
     {
       "file": "undo-redo-selection-context.spec.ts",
-      "title": "Rename Undo keeps the same Signal selected (name reverts, selection does not move)",
+      "title": "Rename Undo keeps the same Signal selected (name reverts, selection does not move) at 1280x720",
+      "domain": "undo-rename-preserves-stable-selection",
+      "originIssue": 211,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Undo of Rename restores the original Signal name while selection remains on the same stable Signal ID.",
+      "duplicateGroup": "undo-redo-selection-context",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Distinct selection-context rule: undoing a property mutation must not change which entity remains selected. The delete case exercises object recreation and cannot substitute for this.",
+      "replacementTest": null
+    },
+    {
+      "file": "undo-redo-selection-context.spec.ts",
+      "title": "Rename Undo keeps the same Signal selected (name reverts, selection does not move) at 1672x941",
       "domain": "undo-rename-preserves-stable-selection",
       "originIssue": 211,
       "type": "SEMANTIC_CONTRACT",
@@ -16720,6 +16811,60 @@
       ],
       "decision": "KEEP",
       "reason": "This is the focused production journey for the new v3 document lifecycle: it crosses active projection, view-only switching, History, comparison, and production Save/Open. Pure schema/session tests do not replace the UI and persistence boundary; the two-case run remains short enough for the PR tier.",
+      "replacementTest": null
+    },
+    {
+      "file": "redo-ctrl-y.spec.ts",
+      "title": "Ctrl+Y redoes what Ctrl+Z undid",
+      "domain": "undo-redo-shortcuts",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 9000,
+      "primaryContract": "Ctrl+Y is bound to Redo and re-applies the change Ctrl+Z reverted.",
+      "duplicateGroup": "undo-redo-shortcuts",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The Windows-native Redo shortcut is only observable through a real keyboard gesture against the mounted editor.",
+      "replacementTest": null
+    },
+    {
+      "file": "combined-tree-add-menus.spec.ts",
+      "title": "Combined Signals and Transactions Add menus each open and stay open",
+      "domain": "combined-tree-menus",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 7000,
+      "primaryContract": "In Combined each tree header's Add menu opens and stays open; the two headers do not dismiss each other.",
+      "duplicateGroup": "combined-tree-menus",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The failure came from two mounted headers sharing one menu state, which only a mounted Combined workspace exposes.",
+      "replacementTest": null
+    },
+    {
+      "file": "combined-signal-pane-scroll.spec.ts",
+      "title": "Combined Signal rows scroll into view above the Bottom editor",
+      "domain": "combined-signal-vertical-scroll",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 12000,
+      "primaryContract": "The Combined Signal pane ends at the Bottom editor edge and scrolls so the last Signal row can be brought above the editor.",
+      "duplicateGroup": "combined-signal-vertical-scroll",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Row visibility above the Bottom editor depends on real layout and a wheel gesture.",
       "replacementTest": null
     }
   ]
