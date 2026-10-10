@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import type { CanonicalDocument, ConstraintId, DocumentProblem, GroupId, SignalId } from "@timing-chart-v2/schema";
+import { useMemo, useState, type ReactNode } from "react";
+import { constraintReferences, type CanonicalDocument, type ConstraintId, type DocumentProblem, type GroupId, type SignalId } from "@timing-chart-v2/schema";
 import { TIMING_DIAGNOSTIC_CATEGORIES, type TimingDiagnosticCategory } from "@timing-chart-v2/core";
 import { DsRibbonButton, DsRibbonSelect } from "./design-system.js";
 import { RibbonIcon } from "./ribbon-icon.js";
+import { problemRowKeys } from "./problems-panel.js";
 
 type ReviewSeverity = "all" | "error" | "warning" | "info";
 type ReviewScope = "all" | "selection" | "group";
@@ -12,10 +13,16 @@ const checkCategoryLabels: Record<TimingDiagnosticCategory, string> = {
   stability: "Stable while stalled",
 };
 
-function diagnosticMatchesIds(item: DocumentProblem, ids: ReadonlySet<string>): boolean {
+/**
+ * A finding is in scope when its own object/entity or path names a scoped ID, or when it is
+ * a constraint finding (Handshake / Latency use the constraint ID as objectId) and any signal
+ * the constraint references (request, acknowledge, stable, trigger, response, reset) is scoped.
+ */
+export function diagnosticMatchesIds(item: DocumentProblem, ids: ReadonlySet<string>, constraintSignals: ReadonlyMap<string, ReadonlySet<string>> = new Map()): boolean {
   if (ids.size === 0) return false;
   const directIds = [item.objectId, item.entityId].filter((value): value is string => typeof value === "string");
-  return directIds.some((id) => ids.has(id)) || [...ids].some((id) => item.path.includes(id));
+  if (directIds.some((id) => ids.has(id)) || [...ids].some((id) => item.path.includes(id))) return true;
+  return directIds.some((id) => [...(constraintSignals.get(id) ?? [])].some((signalId) => ids.has(signalId)));
 }
 
 export function ReviewWorkflow({ diagnostics, document, selectedSignalId, selectedGroupId, onNavigate, onShowProblems, onRefreshChecks, onToggleCheckCategory, onCreateLatencyConstraint, onDeleteConstraint, problemsIcon }: {
@@ -33,7 +40,9 @@ export function ReviewWorkflow({ diagnostics, document, selectedSignalId, select
 }) {
   const [severity, setSeverity] = useState<ReviewSeverity>("all");
   const [scope, setScope] = useState<ReviewScope>("all");
-  const [currentIndex, setCurrentIndex] = useState(0);
+  // Previous/Next are anchored to the diagnostic's stable row key rather than a numeric index, so
+  // the position follows the finding when the list is re-derived; the anchor clears on filter changes.
+  const [anchorKey, setAnchorKey] = useState<string | undefined>(undefined);
   const [triggerSignalId, setTriggerSignalId] = useState<SignalId | "">("");
   const [responseSignalId, setResponseSignalId] = useState<SignalId | "">("");
   const [triggerEdge, setTriggerEdge] = useState<"rising" | "falling">("rising");
@@ -44,8 +53,21 @@ export function ReviewWorkflow({ diagnostics, document, selectedSignalId, select
   const edgeSignals = useMemo(() => document.signals.filter((signal) => signal.type === "binary" || signal.type === "logic" || signal.type === "bus" || signal.type === "pulse"), [document.signals]);
   const triggerId = edgeSignals.some((signal) => signal.id === triggerSignalId) ? triggerSignalId : edgeSignals[0]?.id ?? "";
   const responseId = edgeSignals.some((signal) => signal.id === responseSignalId) ? responseSignalId : edgeSignals[1]?.id ?? edgeSignals[0]?.id ?? "";
-  const scopedDiagnostics = useMemo(() => {
-    if (scope === "all") return diagnostics;
+  const keyedDiagnostics = useMemo(() => {
+    const keys = problemRowKeys(diagnostics);
+    return diagnostics.map((item, index) => ({ item, key: keys[index]! }));
+  }, [diagnostics]);
+  const constraintSignals = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const reference of constraintReferences(document.constraints)) {
+      const signals = map.get(reference.ownerId) ?? new Set<string>();
+      signals.add(reference.targetId);
+      map.set(reference.ownerId, signals);
+    }
+    return map;
+  }, [document.constraints]);
+  const scopedKeyed = useMemo(() => {
+    if (scope === "all") return keyedDiagnostics;
     const ids = new Set<string>();
     if (scope === "selection") {
       if (selectedSignalId) ids.add(selectedSignalId);
@@ -55,17 +77,18 @@ export function ReviewWorkflow({ diagnostics, document, selectedSignalId, select
       const group = document.signalGroups.find((candidate) => candidate.id === selectedGroupId);
       for (const rowId of group?.rows ?? []) ids.add(rowId);
     }
-    return diagnostics.filter((item) => diagnosticMatchesIds(item, ids));
-  }, [diagnostics, document.signalGroups, scope, selectedGroupId, selectedSignalId]);
-  const visible = scopedDiagnostics.filter((item) => severity === "all" || (item.severity ?? "error") === severity);
-  useEffect(() => {
-    setCurrentIndex((index) => Math.min(index, Math.max(0, visible.length - 1)));
-  }, [visible.length, severity]);
+    return keyedDiagnostics.filter(({ item }) => diagnosticMatchesIds(item, ids, constraintSignals));
+  }, [constraintSignals, document.signalGroups, keyedDiagnostics, scope, selectedGroupId, selectedSignalId]);
+  const scopedDiagnostics = useMemo(() => scopedKeyed.map(({ item }) => item), [scopedKeyed]);
+  const visibleKeyed = useMemo(() => scopedKeyed.filter(({ item }) => severity === "all" || (item.severity ?? "error") === severity), [scopedKeyed, severity]);
+  const visible = useMemo(() => visibleKeyed.map(({ item }) => item), [visibleKeyed]);
+  const anchorIndex = anchorKey === undefined ? -1 : visibleKeyed.findIndex(({ key }) => key === anchorKey);
+  const currentIndex = anchorIndex >= 0 ? anchorIndex : 0;
   const navigate = (offset: number) => {
-    if (visible.length === 0) return;
-    const nextIndex = (currentIndex + offset + visible.length) % visible.length;
-    setCurrentIndex(nextIndex);
-    onNavigate(visible[nextIndex]!.path, visible[nextIndex]);
+    if (visibleKeyed.length === 0) return;
+    const next = visibleKeyed[(currentIndex + offset + visibleKeyed.length) % visibleKeyed.length]!;
+    setAnchorKey(next.key);
+    onNavigate(next.item.path, next.item);
   };
   const errorCount = scopedDiagnostics.filter((item) => (item.severity ?? "error") === "error").length;
   const warningCount = scopedDiagnostics.filter((item) => item.severity === "warning").length;
@@ -85,8 +108,8 @@ export function ReviewWorkflow({ diagnostics, document, selectedSignalId, select
   // unchanged.
   return <div className="review-workflow" data-testid="review-workflow">
     <div className="review-filter-group" aria-label="Filter">
-      <label>Severity<DsRibbonSelect ariaLabel="Review severity" dataTestId="review-severity-filter" value={severity} onChange={(event) => setSeverity(event.target.value as ReviewSeverity)}><option value="all">All</option><option value="error">Errors</option><option value="warning">Warnings</option><option value="info">Info</option></DsRibbonSelect></label>
-      <label>Scope<DsRibbonSelect ariaLabel="Review scope" dataTestId="review-scope-filter" value={scope} onChange={(event) => { setScope(event.target.value as ReviewScope); setCurrentIndex(0); }}><option value="all">All</option><option value="selection">Selection</option><option value="group">Current Group</option></DsRibbonSelect></label>
+      <label>Severity<DsRibbonSelect ariaLabel="Review severity" dataTestId="review-severity-filter" value={severity} onChange={(event) => { setSeverity(event.target.value as ReviewSeverity); setAnchorKey(undefined); }}><option value="all">All</option><option value="error">Errors</option><option value="warning">Warnings</option><option value="info">Info</option></DsRibbonSelect></label>
+      <label>Scope<DsRibbonSelect ariaLabel="Review scope" dataTestId="review-scope-filter" value={scope} onChange={(event) => { setScope(event.target.value as ReviewScope); setAnchorKey(undefined); }}><option value="all">All</option><option value="selection">Selection</option><option value="group">Current Group</option></DsRibbonSelect></label>
     </div>
     {onToggleCheckCategory && <fieldset className="review-rules-group" aria-label="Timing checks" data-testid="review-check-rules">
       <legend>Checks</legend>
