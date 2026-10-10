@@ -1,4 +1,5 @@
 import { CommandHistorySession, ScenarioCommandHistorySession } from "@timing-chart-v2/history";
+import { setReservedEntityIdSource } from "../entity-id.js";
 import { serializeScenarioDocumentModel, serializeValidatedCanonicalDocument, type CanonicalDocument, type ParsedCanonicalDocument, type ScenarioDocumentModel, type ScenarioId } from "@timing-chart-v2/schema";
 
 export type ActiveEditorSession = CommandHistorySession | ScenarioCommandHistorySession;
@@ -10,6 +11,7 @@ export class EditorSessionController {
 
   constructor(document: CanonicalDocument) {
     this.session = new CommandHistorySession(document);
+    setReservedEntityIdSource(undefined);
   }
 
   current(): ActiveEditorSession {
@@ -39,6 +41,7 @@ export class EditorSessionController {
     return this.trackProjectionContext(() => {
       const session = new CommandHistorySession(document);
       this.session = session;
+      setReservedEntityIdSource(undefined);
       return session;
     });
   }
@@ -47,6 +50,7 @@ export class EditorSessionController {
     return this.trackProjectionContext(() => {
       const session = new ScenarioCommandHistorySession(model, activeScenarioId);
       this.session = session;
+      setReservedEntityIdSource(() => session.allScenarioEntityIds());
       return session;
     });
   }

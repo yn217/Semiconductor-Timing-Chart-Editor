@@ -269,6 +269,7 @@ export function duplicateScenario(document: ScenarioDocumentModel, scenarioId: S
     if (state.kind === "clock") return [signalId, {
       ...state,
       ...(state.enable === undefined ? {} : { enable: state.enable.map((change) => ({ ...change, ...(change.id === undefined ? {} : { id: signalValueChangeIds.get(change.id)! }) })) }),
+      ...(state.edgeCounter.anchorId === undefined ? {} : { edgeCounter: { ...state.edgeCounter, anchorId: bookmarkIds.get(state.edgeCounter.anchorId as BookmarkId) ?? state.edgeCounter.anchorId } }),
     }];
     return [signalId, { ...state, values: state.values.map((change) => ({ ...change, ...(change.id === undefined ? {} : { id: signalValueChangeIds.get(change.id)! }) })) }];
   }));
@@ -494,7 +495,7 @@ export function createScenariosFromHandshakeSuggestions(
     const sourceScenario = next.scenarios.find((scenario) => scenario.id === scenarioId);
     const sourceConstraintIndex = sourceScenario?.constraints.findIndex((constraint) => constraint.id === suggestion.constraintId) ?? -1;
     if (sourceConstraintIndex < 0) throw new Error("Handshake case constraint no longer exists in its Scenario.");
-    const duplicated = duplicateScenario(next, scenarioId, `${document.scenarios.find((item) => item.id === scenarioId)!.name} · ${suggestion.title}`);
+    const duplicated = duplicateScenario(next, scenarioId, document.scenarios.find((item) => item.id === scenarioId)!.name);
     const created = duplicated.scenarios.find((candidate) => !next.scenarios.some((existing) => existing.id === candidate.id));
     if (!created) throw new Error("Selected Handshake case did not create a Scenario.");
     const copiedConstraint = created.constraints[sourceConstraintIndex];
