@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode, type RefObject } from "rea
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import type { DocumentProblem } from "@timing-chart-v2/schema";
 import type { EditorExportController } from "./application/editor-export-controller.js";
+import { documentFilename } from "./document-filename.js";
 
 function useExportDialogFocusLoop(dialogRef: RefObject<HTMLElement | null>, restoreFocusRef: RefObject<HTMLElement | null> | undefined, onDismiss: () => void, dismissible: boolean): void {
   const dismissRef = useRef(onDismiss);
@@ -97,7 +98,7 @@ export function ExportDialog({ snapshot, range, restoreFocusRef, onDiagnostic, o
   };
   const exportNow = async () => runExport(format, (bytes) => {
     try {
-      controller.download(bytes, `${snapshot.document.document.title || "timing-chart"}.${format}`, format === "svg" ? "image/svg+xml" : format === "png" ? "image/png" : "application/pdf");
+      controller.download(bytes, documentFilename(snapshot.document.document.title, `.${format}`), format === "svg" ? "image/svg+xml" : format === "png" ? "image/png" : "application/pdf");
     } catch (error) {
       const reason = error instanceof Error ? error.message : "Browser download preparation failed.";
       onDiagnostic({ code: "EXPORT_FAILED", path: "$.export.download", message: `Export download failed: ${reason}`, severity: "error", operation: "document.export.download", operationLabel: `Download ${format.toUpperCase()} export`, source: "export", stage: "storage", recommendation: "Retry the download or choose another export format.", detail: "export-failure:download" });
