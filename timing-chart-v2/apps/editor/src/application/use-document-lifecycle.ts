@@ -7,10 +7,10 @@ import { commitDocumentReplacement } from "./document-replacement.js";
 import { documentIdFromRecentText, isLegacyRecentDocument, loadRecentDocument, recentRecordMatches, saveRecentDocument, type RecentDocumentIdentity, type RecentDocumentMetadata, type RecentDocumentRecord } from "./recent-document-storage.js";
 import { canonicalDocumentOf, createNewDocumentFromProductTemplate, decodeOpenDocumentBytes, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseEditorDocument } from "../file-document-controller.js";
 import { documentFilename } from "../document-filename.js";
+import { randomId } from "../random-id.js";
 
 const RECENT_KEY = "timing-chart-v2.recent";
 const RECENT_META_KEY = "timing-chart-v2.recent-meta";
-let recentGenerationSequence = 0;
 
 type RecentMetadata = {
   contentKept?: boolean;
@@ -26,7 +26,7 @@ type RecentMetadata = {
 
 function createRecentIdentity(filename: string, documentId: string, size: number): RecentDocumentIdentity {
   const savedAt = Date.now();
-  const generation = globalThis.crypto?.randomUUID?.() ?? `${savedAt}-${++recentGenerationSequence}`;
+  const generation = randomId();
   return { filename, documentId, generation, savedAt, size };
 }
 

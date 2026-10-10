@@ -17136,6 +17136,24 @@
       "decision": "KEEP",
       "reason": "A blocked-storage browser (private mode, site data disabled) used to show a blank page.",
       "replacementTest": null
+    },
+    {
+      "file": "insecure-context-random-id.spec.ts",
+      "title": "the editor starts and saves where crypto.randomUUID does not exist (plain http)",
+      "domain": "insecure-context-random-id",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Without crypto.randomUUID (plain-http deployment) the editor renders and saves.",
+      "duplicateGroup": "insecure-context-random-id",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The missing API used to throw at startup and leave a blank page.",
+      "replacementTest": null
     }
   ]
 }

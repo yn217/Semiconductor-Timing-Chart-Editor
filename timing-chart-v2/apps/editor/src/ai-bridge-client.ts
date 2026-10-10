@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CanonicalDocument, DocumentProblem, GroupId, SignalId, SignalGroup } from "@timing-chart-v2/schema";
 import { AI_TYPED_PROPOSAL_TOOLS, type AIViewIntent } from "./ai-proposal-provider.js";
+import { randomId } from "./random-id.js";
 
 // #395 PR3: the browser-side half of the local Agent Bridge
 // (scripts/ai-bridge-server.mjs). This only ever executes the exact
@@ -363,7 +364,7 @@ export function useAIBridgeClient(enabled: boolean, host: string, port: number, 
   const contextRef = useRef(context);
   contextRef.current = context;
   const tabIdRef = useRef<string | undefined>(undefined);
-  if (!tabIdRef.current) tabIdRef.current = globalThis.crypto.randomUUID();
+  if (!tabIdRef.current) tabIdRef.current = randomId();
   const sessionRef = useRef<{ readonly documentKey: string; readonly editorSessionId: string } | undefined>(undefined);
 
   useEffect(() => {
@@ -400,7 +401,7 @@ export function useAIBridgeClient(enabled: boolean, host: string, port: number, 
           // immediately, not leave it selectable until the stale-session TTL.
           closeSession({ tabId: tabIdRef.current!, editorSessionId: sessionRef.current.editorSessionId });
         }
-        sessionRef.current = { documentKey, editorSessionId: globalThis.crypto.randomUUID() };
+        sessionRef.current = { documentKey, editorSessionId: randomId() };
       }
       return { tabId: tabIdRef.current!, ...sessionRef.current };
     };

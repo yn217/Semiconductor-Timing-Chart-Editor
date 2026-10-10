@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T14:28:13.334Z",
+  "generatedAt": "2026-10-10T14:33:40.513Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 442,
-  "caseCount": 1326,
-  "reviewedCaseCount": 1268,
+  "specFileCount": 443,
+  "caseCount": 1327,
+  "reviewedCaseCount": 1269,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 418,
+    "pr": 419,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -9685,6 +9685,33 @@
         "integration"
       ],
       "contractId": "changeset-owner-invalidation-matrix"
+    },
+    {
+      "file": "insecure-context-random-id.spec.ts",
+      "suitePath": [],
+      "line": 3,
+      "title": "the editor starts and saves where crypto.randomUUID does not exist (plain http)",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "insecure-context-random-id",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Without crypto.randomUUID (plain-http deployment) the editor renders and saves.",
+      "duplicateGroup": "insecure-context-random-id",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The missing API used to throw at startup and leave a blank page.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "insecure-context-random-id",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "insert-icon-semantics.spec.ts",
@@ -35639,6 +35666,15 @@
     },
     {
       "file": "incremental-invalidation-matrix.spec.ts",
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "insecure-context-random-id.spec.ts",
       "caseCount": 1,
       "reviewedCaseCount": 1,
       "originIssue": null,
