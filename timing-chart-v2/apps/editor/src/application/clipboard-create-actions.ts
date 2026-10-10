@@ -20,6 +20,19 @@ export type GroupClipboardItem = Readonly<{
 
 const spacerId = (value: string) => value as SpacerId;
 
+function reservePastedGroupRowName(taken: Set<string>, signal: Signal): Signal {
+  if (!taken.has(signal.name) && !taken.has(signal.display.name)) {
+    taken.add(signal.name);
+    taken.add(signal.display.name);
+    return signal;
+  }
+  const base = `${signal.display.name}_copy`;
+  let name = base;
+  for (let ordinal = 2; taken.has(name); ordinal += 1) name = `${base}_${ordinal}`;
+  taken.add(name);
+  return { ...signal, name, display: { ...signal.display, name } };
+}
+
 /** Creates copied Signals or a whole Group through the shared semantic command path. */
 export function createClipboardSignals(input: readonly SignalClipboardItem[], operation: "paste" | "duplicate", placement: "current-selection" | "source-group", deps: {
   readonly application: EditorApplicationOwner;
@@ -90,6 +103,9 @@ export function createClipboardGroup(input: GroupClipboardItem, operation: "past
   const allocateId = createEntityIdAllocator(current);
   const newGroupId = groupId(allocateId("group"));
   const moving = operation === "paste" && input.move === true;
+  const takenNames = operation === "paste"
+    ? new Set(current.signals.flatMap((signal) => [signal.name, signal.display.name]))
+    : undefined;
   const sourceSignalsById = new Map(input.rows.map((signal) => [signal.id, signal]));
   const sourceSpacers = new Map<string, SpacerRow>((input.group.spacers ?? []).map((item) => [item.id, item]));
   const newIdByOldId = new Map<string, string>();
@@ -100,7 +116,8 @@ export function createClipboardGroup(input: GroupClipboardItem, operation: "past
     const source = sourceSignalsById.get(rowId as SignalId);
     if (source) {
       const id = moving ? source.id : signalId(allocateId(source.type === "commentRow" ? "commentRow" : "signal"));
-      const signal = moving ? source : copySignalWithFreshValueChangeIds(source, id, () => allocateId("signalValueChange"));
+      const namedSource = takenNames === undefined ? source : reservePastedGroupRowName(takenNames, source);
+      const signal = moving ? namedSource : copySignalWithFreshValueChangeIds(namedSource, id, () => allocateId("signalValueChange"));
       createdSignals.push(signal);
       newIdByOldId.set(rowId, id);
       newSignalIdByOldId.set(rowId as SignalId, id);
@@ -123,7 +140,8 @@ export function createClipboardGroup(input: GroupClipboardItem, operation: "past
     type: "group.createWithContents",
     group,
     signals: createdSignals,
-    index: Math.min(current.signalGroups.length, input.sourceIndex + 1),
+    // A cut Group was removed, so its previous slot is free; a copied Group goes after its source.
+    index: Math.min(current.signalGroups.length, moving ? input.sourceIndex : input.sourceIndex + 1),
   };
   const commands: SemanticCommand[] = [groupCommand];
   if (operation === "paste" && input.cutLinks && input.cutLinks.length > 0) {

@@ -332,6 +332,16 @@ export function MinimalCycleView() {
     if (isTargetable(referenceClockSignal)) return referenceClockSignal.id;
     return snapshot.document.signals.find(isTargetable)?.id;
   }, [annotationById, referenceClockSignal, selectedAnnotationTarget, selectedSignal, signalById, snapshot.document]);
+  // The Signal the selection context refers to (AI context, Ribbon): unlike annotationTargetSignalId it keeps a hidden Signal,
+  // so the AI scope checks can see and refuse edits to a hidden selection.
+  const contextSignalId = useMemo(() => {
+    const usable = (signal: Signal | undefined): signal is Signal => signal !== undefined && signal.type !== "commentRow";
+    if (usable(selectedSignal)) return selectedSignal.id;
+    const annotationSignalId = selectedAnnotationTarget?.anchor?.signalId ?? selectedAnnotationTarget?.start?.signalId ?? selectedAnnotationTarget?.from?.signalId;
+    if (annotationSignalId && signalById.get(annotationSignalId)?.type !== "commentRow") return annotationSignalId;
+    if (usable(referenceClockSignal)) return referenceClockSignal.id;
+    return snapshot.document.signals.find(usable)?.id;
+  }, [referenceClockSignal, selectedAnnotationTarget, selectedSignal, signalById, snapshot.document]);
   const selectedGroup = selectedGroupId === undefined ? undefined : groupById.get(selectedGroupId);
   const selectedSpacer = selectedSpacerRef.current === undefined ? undefined : selectedGroup?.spacers?.find((spacer) => spacer.id === selectedSpacerRef.current);
   const selectedAnnotation = selectedAnnotationId === undefined ? undefined : annotationById.get(selectedAnnotationId);
@@ -577,7 +587,7 @@ export function MinimalCycleView() {
     setBottomVisible,
     workspace: { viewMode, setViewMode, activeContext, focusLinkedSignals, setFocusLinkedSignals, bottomTabs: modeComposition.bottomTabs, bottomTab, setBottomTab, selectBottomTab, onBottomTabKeyDown, followSelection, setFollowSelection: setFollowSelectionFromUi, bottomPinned, toggleBottomPin, treeFilter, setTreeFilter, treeTypeFilter, setTreeTypeFilter: (value) => setTreeTypeFilter(value), transactionTreeFilter, setTransactionTreeFilter, transactionTreeFilterMode, setTransactionTreeFilterMode, cyclesPerTc, setCyclesPerTc, setRibbonTab },
     dialog: { treeAddMenuOpen, setTreeAddMenuOpen, treeMoreMenuOpen, setTreeMoreMenuOpen, bulkRegistrationText, setBulkRegistrationText, bulkRegistrationGroupId, setBulkRegistrationGroupId, bulkRegistrationStatus, setBulkRegistrationStatus, setBulkRegistrationVisible, setHierarchyVisible, contextMenu, setContextMenu, closeTreeAddMenu, closeTreeMoreMenu, bottomResetToken, setBottomResetToken, inspectorResetToken, setInspectorResetToken, setInspectorVisible },
-    annotationTargetSignalId,
+    annotationTargetSignalId: contextSignalId,
     referenceClockName: referenceClockSignal?.display.name,
     zoom,
     editActions,

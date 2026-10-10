@@ -67,7 +67,9 @@ describe("AI Phase stable proposal identity", () => {
     if (!built.ok) throw new Error(built.message);
     expect(describeAIProposalCommands(document, built.proposal.commands)[2]).toMatchObject({ title: "Delete Phase New renamed from Transfer", detail: expect.stringContaining("phase_new") });
     const session = new CommandHistorySession(document);
-    expect(session.executeBatch("cmd_new_phase" as CommandId, built.proposal.commands).ok).toBe(true);
+    // Add, rename and delete of the same Phase nets to no change, so the batch is a no-op with no history entry.
+    expect(session.executeBatch("cmd_new_phase" as CommandId, built.proposal.commands)).toMatchObject({ ok: false, reason: "no-op" });
+    expect(session.historyState().undoDepth).toBe(0);
     expect(session.getSnapshot().document.transactions[0]!.phases).toEqual(document.transactions[0]!.phases);
   });
 

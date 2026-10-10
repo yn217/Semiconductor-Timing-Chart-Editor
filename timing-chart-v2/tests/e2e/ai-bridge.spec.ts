@@ -607,8 +607,9 @@ test("an unauthorized propose_edit call (bad token) never reaches the document, 
   expect(unauthorized.status).toBe(401);
 
   const emptyQuery = await callTool("propose_edit", TOKEN, { query: "   " });
-  expect(emptyQuery.body.error?.code).toBe(-32000);
-  expect(emptyQuery.body.error?.message).toContain("non-empty");
+  // Editor-side rejections arrive as an MCP tool result with isError set (not a JSON-RPC error).
+  expect(emptyQuery.body.result?.isError).toBe(true);
+  expect(emptyQuery.body.result?.content?.[0]?.text).toContain("non-empty");
 });
 
 test("rejects a request with an invalid token, and rejects any tool outside the exposed whitelist", async ({ page }) => {

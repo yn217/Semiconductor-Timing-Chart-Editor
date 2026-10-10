@@ -42,7 +42,8 @@ export function useClipboardActions({ application, selection }: { application: E
   const spacerRef = useRef<SpacerClipboardItem | undefined>(undefined);
   const cutSignalsRef = useRef(false);
   const cutSignalLinksRef = useRef<readonly GroupTransactionSignalLink[]>([]);
-  const sourceDocumentEpochRef = useRef<number | undefined>(undefined);
+  // Document identity (not the epoch: same-document replacements such as enum edits or undo of a replace advance the epoch too).
+  const sourceDocumentIdRef = useRef<string | undefined>(undefined);
   const [indexResolver] = useState(createClipboardIndexes);
   const document = () => application.runtime.session.current().getSnapshot().document;
 
@@ -72,7 +73,7 @@ export function useClipboardActions({ application, selection }: { application: E
     spacerRef.current = spacer;
     cutSignalsRef.current = cutSignals;
     cutSignalLinksRef.current = signalLinks;
-    sourceDocumentEpochRef.current = application.runtime.documentEpoch.current();
+    sourceDocumentIdRef.current = document().document.id;
     // A fresh copy in this document supersedes an earlier "belongs to another document" rejection.
     application.setRuntimeDiagnostics((current) => current.some((item) => item.detail === FOREIGN_PASTE_DETAIL) ? current.filter((item) => item.detail !== FOREIGN_PASTE_DETAIL) : current);
     setAvailable(true);
@@ -203,6 +204,7 @@ export function useClipboardActions({ application, selection }: { application: E
     if (cutSignalLinksRef.current.length > 0) commands.push({ id: nextCommandId("cut_paste_restore_links"), type: "transaction.bulkLinkSignals", links: cutSignalLinksRef.current });
     const result = application.executeBatch(nextCommandId("cut_paste_move"), commands);
     if (result.ok) { cutSignalsRef.current = false; cutSignalLinksRef.current = []; selection.selectSignals(new Set(input.map(({ signal }) => signal.id)), input[0]!.signal.id); setStatus(`Moved ${input.length} signal${input.length === 1 ? "" : "s"}`); }
+    else setStatus(`Paste rejected: ${result.problems[0]?.message ?? result.reason}`);
   };
 
   /** Duplicate puts each copy right after its source, inside the source's own Group. Adjacent selected Signals in one Group are copied
@@ -283,12 +285,13 @@ export function useClipboardActions({ application, selection }: { application: E
     const spacer ={ ...input.spacer, id: spacerId(nextEntityId("spacer", current)) };
     const result = application.execute({ id: nextCommandId(`${operation}_spacer`), type: "spacer.create", spacer, targetGroupId: target.id, index: Math.min(input.index, target.rows.length) });
     if (result.ok) { selection.selectSpacer(target.id, spacer.id); setStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} spacer`); }
+    else setStatus(`${operation === "paste" ? "Paste" : "Duplicate"} rejected: ${result.problems[0]?.message ?? result.reason}`);
   };
 
   const paste = () => {
     // Nothing was ever copied in this session: say so instead of blaming another document (and do not raise a Problem).
-    if (sourceDocumentEpochRef.current === undefined) { setStatus("Nothing to paste: copy something first"); return; }
-    if (sourceDocumentEpochRef.current !== application.runtime.documentEpoch.current()) {
+    if (sourceDocumentIdRef.current === undefined) { setStatus("Nothing to paste: copy something first"); return; }
+    if (sourceDocumentIdRef.current !== document().document.id) {
       rejectForeignPaste();
       return;
     }
