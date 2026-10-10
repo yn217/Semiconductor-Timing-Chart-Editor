@@ -180,6 +180,16 @@ test("Scenario Duplicate remaps Transaction Phase IDs and Undo/Redo and Save/Ope
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("active-scenario").locator("option")).toHaveCount(2);
   expect((await save()).parsed).toEqual(afterDuplicate.parsed);
+
+  await page.getByTestId("active-scenario").selectOption(duplicateId);
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  const duplicatedPhase = page.locator(`.transaction-phase-hit-target[data-phase-id="${duplicatePhaseIds[0]}"]`);
+  await duplicatedPhase.click();
+  await expect(duplicatedPhase).toHaveAttribute("aria-pressed", "true");
+  await page.getByTestId("active-scenario").selectOption(sourceScenario.id);
+  await expect(page.locator('.transaction-phase-hit-target[aria-pressed="true"]')).toHaveCount(0);
+  await page.getByTestId("active-scenario").selectOption(duplicateId);
+  await expect(page.locator('.transaction-phase-hit-target[aria-pressed="true"]')).toHaveCount(0);
 });
 
 test("duplicated Clock compares equal after fresh enable and marker IDs through Undo/Redo and Save/Open", async ({ page }) => {
