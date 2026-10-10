@@ -17640,6 +17640,24 @@
       "decision": "KEEP",
       "reason": "Code-review finding: the metadata parse was outside any try.",
       "replacementTest": null
+    },
+    {
+      "file": "export-dialog-page-settings.spec.ts",
+      "title": "Export page settings are shown as active only when a page size is chosen",
+      "domain": "export-page-settings",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 4000,
+      "primaryContract": "Export page settings default to None (unpaged) and only show as active when a page size is chosen.",
+      "duplicateGroup": "export-page-settings",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code-review finding: the dialog showed A4/Landscape while exporting unpaged.",
+      "replacementTest": null
     }
   ]
 }

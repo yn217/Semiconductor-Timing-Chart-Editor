@@ -466,6 +466,10 @@ function traceYForWaveToken(token: string, row: number, height: number): number 
   return row - height / 2 + (high + low) / 2;
 }
 
+function validExportMeasurementLane(lane: unknown): number | undefined {
+  return typeof lane === "number" && Number.isInteger(lane) && lane >= 0 && lane <= MAX_MEASUREMENT_LANE ? lane : undefined;
+}
+
 function pageDimensions(page: NonNullable<ExportSettings["page"]>): { width: number; height: number } {
   const base = page.size === "A4" ? { width: 1123, height: 794 } : page.size === "Letter" ? { width: 1056, height: 816 } : { width: 1600, height: 900 };
   return page.orientation === "portrait" ? { width: base.height, height: base.width } : base;
@@ -498,8 +502,7 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
     return true;
   };
   for (const annotation of document.annotations) {
-    const lane = annotation.type === "measurement" ? annotation.measurementLayout?.lane : undefined;
-    if (lane !== undefined && (!Number.isInteger(lane) || lane < 0 || lane > MAX_MEASUREMENT_LANE)) throw new RangeError(`Measurement '${annotation.id}' lane must be an integer from 0 to ${MAX_MEASUREMENT_LANE}.`);
+    // An out-of-range authored lane (e.g. from an imported document) is ignored and auto-allocated instead of failing the whole export.
     if (checkpoint()) yield;
   }
   const documentLayout = buildDocumentLayout(document);
@@ -731,7 +734,8 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
     }
     const first = anchorPoint(annotation, "start", document, rowY, mapping, range.start, cycleWidth);
     const second = anchorPoint(annotation, "end", document, rowY, mapping, range.start, cycleWidth);
-    if (first && second) measurementSpans.push({ id: annotation.id, firstX: first.x, secondX: second.x, ...(annotation.measurementLayout?.lane === undefined ? {} : { explicitLane: annotation.measurementLayout.lane }) });
+    const explicitLane = validExportMeasurementLane(annotation.measurementLayout?.lane);
+    if (first && second) measurementSpans.push({ id: annotation.id, firstX: first.x, secondX: second.x, ...(explicitLane === undefined ? {} : { explicitLane }) });
     if (checkpoint()) yield;
   }
   const measurementLaneById = allocateMeasurementLanes(measurementSpans);
@@ -804,7 +808,7 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
     const endFraction = anchorTransitionFraction(annotation.end);
     const startKind = anchorTransitionKind(annotation.start);
     const endKind = anchorTransitionKind(annotation.end);
-    annotations.push({ id: annotation.id, type: annotation.type, label: annotation.label, x1: first.x, y1: first.y, x2: second.x, y2: second.y, ...(annotation.opacity === undefined ? {} : { opacity: annotation.opacity }), ...(annotation.sourceSignalId === undefined ? {} : { sourceSignalId: annotation.sourceSignalId }), ...(annotation.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: annotation.traceOffsetCycles }), ...(startFraction === undefined ? {} : { threshold1: startFraction }), ...(endFraction === undefined ? {} : { threshold2: endFraction }), ...(startKind === undefined ? {} : { transitionKind1: startKind }), ...(endKind === undefined ? {} : { transitionKind2: endKind }), ...(annotation.measurement?.profile === undefined ? {} : { measurementProfile: annotation.measurement.profile }), ...(annotation.measurementLayout === undefined ? {} : { measurementLayout: annotation.measurementLayout, measurementLane: measurementLaneById.get(annotation.id) ?? annotation.measurementLayout.lane ?? 0 }), ...(tracePoints === undefined ? {} : { tracePoints }), ...(annotation.lineType === undefined ? {} : { lineType: annotation.lineType }), ...(annotation.arrowhead === undefined ? {} : { arrowhead: annotation.arrowhead }), ...(annotation.labelOffset === undefined ? {} : { labelOffsetX: annotation.labelOffset.x, labelOffsetY: annotation.labelOffset.y }), ...(annotation.labelPlacement === undefined ? {} : { labelPlacement: annotation.labelPlacement }), ...(annotation.color === undefined ? {} : { color: annotation.color }), ...(annotation.style === undefined ? {} : { style: annotation.style }) });
+    annotations.push({ id: annotation.id, type: annotation.type, label: annotation.label, x1: first.x, y1: first.y, x2: second.x, y2: second.y, ...(annotation.opacity === undefined ? {} : { opacity: annotation.opacity }), ...(annotation.sourceSignalId === undefined ? {} : { sourceSignalId: annotation.sourceSignalId }), ...(annotation.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: annotation.traceOffsetCycles }), ...(startFraction === undefined ? {} : { threshold1: startFraction }), ...(endFraction === undefined ? {} : { threshold2: endFraction }), ...(startKind === undefined ? {} : { transitionKind1: startKind }), ...(endKind === undefined ? {} : { transitionKind2: endKind }), ...(annotation.measurement?.profile === undefined ? {} : { measurementProfile: annotation.measurement.profile }), ...(annotation.measurementLayout === undefined ? {} : { measurementLayout: annotation.measurementLayout, measurementLane: measurementLaneById.get(annotation.id) ?? validExportMeasurementLane(annotation.measurementLayout.lane) ?? 0 }), ...(tracePoints === undefined ? {} : { tracePoints }), ...(annotation.lineType === undefined ? {} : { lineType: annotation.lineType }), ...(annotation.arrowhead === undefined ? {} : { arrowhead: annotation.arrowhead }), ...(annotation.labelOffset === undefined ? {} : { labelOffsetX: annotation.labelOffset.x, labelOffsetY: annotation.labelOffset.y }), ...(annotation.labelPlacement === undefined ? {} : { labelPlacement: annotation.labelPlacement }), ...(annotation.color === undefined ? {} : { color: annotation.color }), ...(annotation.style === undefined ? {} : { style: annotation.style }) });
     if (checkpoint()) yield;
   }
   const contentHeight = waveTop + totalRowHeight + 54 + (documentLayout.footerText || documentLayout.figureNumber || documentLayout.revision ? 18 : 0);
