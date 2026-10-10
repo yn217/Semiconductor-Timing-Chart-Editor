@@ -192,6 +192,53 @@ test("Scenario Duplicate remaps Transaction Phase IDs and Undo/Redo and Save/Ope
   await expect(page.locator('.transaction-phase-hit-target[aria-pressed="true"]')).toHaveCount(0);
 });
 
+test("Scenario Compare ignores remapped Clock enable and marker IDs after production duplication", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  const source = canonicalFixture();
+  const sourceClock = source.signals.find((signal) => signal.type === "clock");
+  if (sourceClock?.type !== "clock") throw new Error("Canonical fixture must contain a Clock Signal.");
+  const markerId = "bookmark_compare_clock_origin" as never;
+  const clock = {
+    ...sourceClock,
+    enable: [
+      { id: "compare_enable_on", start: 1, value: 1 },
+      { id: "compare_enable_off", start: 5, value: 0 },
+    ],
+    edgeCounter: { ...sourceClock.edgeCounter, show: true, countFrom: "marker" as const, anchorId: markerId },
+  };
+  const model = scenarioModelFromV2({
+    ...source,
+    bookmarks: [{ id: markerId, name: "Clock origin", start: 3 }],
+    signals: source.signals.map((signal) => signal.id === sourceClock.id ? clock : signal),
+  });
+
+  await page.goto("/");
+  const input = page.locator("input[type='file'][accept='.json,.tcd']");
+  await input.setInputFiles({ name: "scenario-clock-compare.tcd", mimeType: "application/json", buffer: Buffer.from(serializeScenarioDocumentModel(model)) });
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  const sourceScenarioId = await page.getByTestId("active-scenario").inputValue();
+  await page.getByTestId("scenario-duplicate").click();
+  const duplicateScenarioId = await page.getByTestId("active-scenario").inputValue();
+  expect(duplicateScenarioId).not.toBe(sourceScenarioId);
+
+  const download = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).first().click();
+  const savedPath = await (await download).path();
+  if (!savedPath) throw new Error("Scenario duplicate did not save a document.");
+  const saved = JSON.parse(await readFile(savedPath, "utf8")) as { scenarios: Array<{ id: string; signalStates: Record<string, { kind: string; enable?: Array<{ id?: string }>; edgeCounter?: { anchorId?: string } }>; bookmarks: Array<{ id: string }> }> };
+  const original = saved.scenarios.find((scenario) => scenario.id === sourceScenarioId)!;
+  const duplicate = saved.scenarios.find((scenario) => scenario.id === duplicateScenarioId)!;
+  const originalClockState = original.signalStates[sourceClock.id]!;
+  const duplicateClockState = duplicate.signalStates[sourceClock.id]!;
+  expect(duplicateClockState.enable?.map(({ id }) => id)).not.toEqual(originalClockState.enable?.map(({ id }) => id));
+  expect(duplicateClockState.edgeCounter?.anchorId).not.toBe(originalClockState.edgeCounter?.anchorId);
+  expect(duplicate.bookmarks.find(({ id }) => id === duplicateClockState.edgeCounter?.anchorId)).toBeTruthy();
+
+  await page.getByTestId("scenario-compare-toggle").click();
+  await expect(page.getByTestId("scenario-no-differences")).toBeVisible();
+  await expect(page.locator("[data-scenario-difference-signal-id]")).toHaveCount(0);
+});
+
 test("duplicated Clock compares equal after fresh enable and marker IDs through Undo/Redo and Save/Open", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");
