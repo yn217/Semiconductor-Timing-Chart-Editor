@@ -21,6 +21,8 @@ import { useEditorApplicationOwner } from "./application/use-editor-application-
 import { useDocumentEntityIndexes } from "./application/use-document-entity-indexes.js";
 import { useEditorCommandRouter } from "./application/use-editor-command-router.js";
 import { useEditorActions } from "./application/use-editor-actions.js";
+import { useEditorDocumentFileEvents } from "./application/editor-document-file-events.js";
+import { useEditorTabTitle } from "./application/use-editor-tab-title.js";
 import { useEditorPresentationState } from "./application/use-editor-presentation-state.js";
 import { useEditorResizeActions } from "./application/use-editor-resize-actions.js";
 import { useEditorWorkspaceActions } from "./application/use-editor-workspace-actions.js";
@@ -48,6 +50,7 @@ import { refreshRendererOverlays } from "./runtime/render-coordinator.js";
 import { useEditorDomBridgeEffects } from "./runtime/use-editor-dom-bridge-effects.js";
 import { resolveEditorStartupDocument } from "./workspace/editor-startup-document.js";
 import { useEditorInteractionLifecycle } from "./workspace/use-editor-interaction-lifecycle.js";
+import { readOpenPerformanceData } from "./runtime/open-performance-data.js";
 import { documentFilename } from "./document-filename.js";
 
 export function MinimalCycleView() {
@@ -786,78 +789,20 @@ export function MinimalCycleView() {
     problemsPending: validationPending,
     waveDromHasError,
     cursorStatus: cursorStatusReadout(cursorA, cursorB, cursorDelta, snapshot.document.timeline.physicalTimebase),
-    // #407: textual counterpart to the CSS border indicator -- only
-    // meaningful in Split (Cycle/Transaction each have exactly one pane).
+    // #407: the active-pane readout only applies to Split view.
     activePaneStatus: viewMode === "Split" ? `Active Pane: ${activePane === "transaction" ? "Transaction" : "Signal"}` : undefined,
-    // Surface Open metrics are already published by the runtime. Read them
-    // on demand so the in-app browser can expose measurements without adding
-    // another collector or any work to the Open hot path.
-    openPerformanceData: () => {
-      const surface = host.current;
-      if (!surface) return "Cycle surface is not mounted.";
-      const fields = ["openReadiness", "openPhaseMarks", "openPhaseDurations", "openWaveBatchMetrics", "sessionCounters"] as const;
-      const phaseMarks = JSON.parse(surface.dataset.openPhaseMarks ?? "{}") as Record<string, number>;
-      const durations = JSON.parse(surface.dataset.openPhaseDurations ?? "{}") as Record<string, number>;
-      const waveMetrics = JSON.parse(surface.dataset.openWaveBatchMetrics ?? "{}") as Record<string, number>;
-      const sessionCounters = JSON.parse(surface.dataset.sessionCounters ?? "{}") as { viewMetrics?: { viewportWidth?: number }; mountedWaveOwners?: number };
-      const openStart = phaseMarks["open-command-start"] ?? phaseMarks["open-start"] ?? 0;
-      const openEnd = performance.now();
-      const longTasks = performance.getEntriesByType("longtask").filter((entry) => entry.startTime >= openStart && entry.startTime < openEnd);
-      return JSON.stringify({
-        ...Object.fromEntries(fields.map((field) => [field, surface.dataset[field] ?? null])),
-        openTotalWallMs: durations.idle,
-        openOutsideWaveBatchMs: typeof durations.idle === "number" && typeof waveMetrics.batchWallMs === "number" ? Math.max(0, durations.idle - waveMetrics.batchWallMs) : null,
-        viewportWidth: sessionCounters.viewMetrics?.viewportWidth ?? null,
-        mountedWaveOwners: sessionCounters.mountedWaveOwners ?? null,
-        nativeSchedulerYieldAvailable: typeof (globalThis as typeof globalThis & { scheduler?: { yield?: unknown } }).scheduler?.yield === "function",
-        longTasks: { count: longTasks.length, maxDurationMs: Math.max(0, ...longTasks.map((entry) => entry.duration)) },
-      });
-    },
+    openPerformanceData: () => readOpenPerformanceData(host.current),
   };
-  // Dropping a file anywhere on the window opens it like File > Open. Without this the browser navigates to the dropped file and the unsaved document is lost.
-  const openDroppedFileRef = useRef<(file: File) => void>(() => undefined);
-  // A drop while a modal (the Unsaved Changes prompt, a dialog) is open is ignored, like Ctrl+O: it must not replace the answer the prompt is waiting for.
-  openDroppedFileRef.current = (file) => {
-    if (documentLifecycle.pendingAction !== undefined || document.querySelector("[role='dialog'][aria-modal='true']")) return;
-    capturePendingFileOrigin();
-    void documentLifecycle.readFile(file);
-  };
-  useEffect(() => {
-    const hasFiles = (event: DragEvent) => Array.from(event.dataTransfer?.types ?? []).includes("Files");
-    const onDragOver = (event: DragEvent) => { if (!hasFiles(event)) return; event.preventDefault(); if (event.dataTransfer) event.dataTransfer.dropEffect = "copy"; };
-    const onDrop = (event: DragEvent) => {
-      if (!hasFiles(event)) return;
-      event.preventDefault();
-      const file = event.dataTransfer?.files?.[0];
-      if (file) openDroppedFileRef.current(file);
-    };
-    window.addEventListener("dragover", onDragOver);
-    window.addEventListener("drop", onDrop);
-    return () => { window.removeEventListener("dragover", onDragOver); window.removeEventListener("drop", onDrop); };
-  }, []);
-  // The browser tab names the document (and marks unsaved changes) so several open editors can be told apart.
-  const tabTitle = `${history.dirty ? "* " : ""}${snapshot.document.document.title.replace(/\s+(?:--|—)\s+(?:Cycle|Transaction|Combined)\s+Mode$/i, "").trim() || snapshot.document.document.title.trim() || "Untitled"} - Timing Chart Editor`;
-  useEffect(() => { globalThis.document.title = tabTitle; }, [tabTitle]);
-  // Ctrl/Cmd+S saves, Ctrl/Cmd+Shift+S opens Save As, Ctrl/Cmd+O opens a file -- the browser's own "Save page" / "Open file" must never appear in a document editor.
-  const fileShortcutRef = useRef<(key: "s" | "S" | "o") => void>(() => undefined);
-  fileShortcutRef.current = (key) => {
-    if (key === "s") documentLifecycle.saveCurrent(documentFilename(snapshot.document.document.title));
-    else if (key === "S") { dialogOriginLabelRef.current = "Save As"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setSaveAsVisible(true); }
-    else { pendingFileOriginRef.current = globalThis.document.activeElement instanceof HTMLElement ? globalThis.document.activeElement : null; fileInput.current?.click(); }
-  };
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.isComposing) return;
-      const key = event.key.toLowerCase();
-      if (key !== "s" && key !== "o") return;
-      if (key === "o" && event.shiftKey) return;
-      event.preventDefault();
-      if (document.querySelector("[role='dialog'][aria-modal='true']")) return;
-      fileShortcutRef.current(key === "o" ? "o" : event.shiftKey ? "S" : "s");
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  useEditorDocumentFileEvents({
+    pendingAction: documentLifecycle.pendingAction,
+    fileName: documentFilename(snapshot.document.document.title),
+    readFile: documentLifecycle.readFile,
+    captureOrigin: capturePendingFileOrigin,
+    save: documentLifecycle.saveCurrent,
+    saveAs: () => { dialogOriginLabelRef.current = "Save As"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setSaveAsVisible(true); },
+    openFile: () => { pendingFileOriginRef.current = globalThis.document.activeElement instanceof HTMLElement ? globalThis.document.activeElement : null; fileInput.current?.click(); },
+  });
+  useEditorTabTitle(snapshot.document.document.title, history.dirty);
   return <EditorShellView
     viewModel={{
       style: { "--gui-left-width": `${modeComposition.fixedLeftWidth ?? leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px`, "--gui-role-width": `${snapshot.document.layout.roleColumnWidth}px`, "--gui-signal-width": `${snapshot.document.layout.signalNameWidth}px`, "--gui-signal-align": snapshot.document.layout.signalNameAlign, "--gui-signal-split-upper-ratio": String(signalSplitRatio), "--transaction-tree-row-height": viewMode === "Transaction" ? "29px" : undefined } as React.CSSProperties,

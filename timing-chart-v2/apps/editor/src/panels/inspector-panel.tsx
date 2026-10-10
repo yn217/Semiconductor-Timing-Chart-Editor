@@ -11,7 +11,7 @@ import { CommandHistorySession, type HistoryState } from "@timing-chart-v2/histo
 import { buildHardwareHierarchyEntries, hardwareHierarchyScopes, type DisplayTimeMapping, type HardwareHierarchyView, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { type AnnotationOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { parseBusValue, scanJsonSyntax, serializeCanonicalDocument, validateCanonicalDocument, validateDocumentResourceBudget } from "@timing-chart-v2/schema";
-import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type Bookmark, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type ParsedCanonicalDocument, type ResetSemantics, type SemanticAnchor, type Signal, type SignalGroup, type SignalGroupStyle, type SignalId, type SignalRole, type SpacerId, type SpacerRow, type TimeGroupId, type Transaction, type TransactionGroup, type ValueSignal } from "@timing-chart-v2/schema";
+import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type Bookmark, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type ParsedCanonicalDocument, type SemanticAnchor, type Signal, type SignalGroup, type SignalGroupStyle, type SignalId, type SignalRole, type SpacerId, type SpacerRow, type TimeGroupId, type Transaction, type TransactionGroup, type ValueSignal } from "@timing-chart-v2/schema";
 import { mayRouteGlobalShortcut, resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import { ViewMetricsOwner } from "../runtime/view-metrics.js";
 import { buildViewportWindow } from "../runtime/viewport-window.js";
@@ -43,6 +43,7 @@ import { renderGeometryGrid } from "../render-geometry-grid.js";
 import { useInspectorAccordion } from "../inspector-accordion.js";
 import { InspectorSection, InspectorFooter, PropertyToggle } from "../inspector-section.js";
 import { InspectorHeaderBar, InspectorSelectionHeader } from "../inspector-selection-header.js";
+import { InspectorResetSemantics } from "./inspector-reset-semantics.js";
 import { InspectorMultiSelection } from "../inspector-multi-selection.js";
 import { InspectorBookmarkEditor } from "../inspector-bookmark-editor.js";
 import { InspectorLegendEditor } from "../inspector-legend-editor.js";
@@ -334,25 +335,12 @@ export function InspectorValueSignalEditor({ signal, selectedCycle, document, ch
   const [waveformColor, setWaveformColor] = useState(styleString(styleObject, "waveformColor", "#111111"));
   const [waveformBackground, setWaveformBackground] = useState(styleString(styleObject, "waveformBackground", "#ffffff"));
   const [problem, setProblem] = useState("");
-  // #495 (Reset semantics GUI): `signal.updateResetSemantics` and the
-  // Canonical `resetSemantics` field already existed with zero Inspector
-  // entry point -- this is the same "command exists, GUI missing" pattern
-  // as Edge Numbers above. Kept as its own section with its own Apply
-  // (mirrors Edge Numbers' precedent) rather than folding into the big
-  // Signal Properties Apply, since it is a distinct, low-frequency,
-  // independently-committed semantic field, not a display/style property.
-  const [resetEnabled, setResetEnabled] = useState(signal.resetSemantics !== undefined);
-  const [resetPolarity, setResetPolarity] = useState<ResetSemantics["polarity"]>(signal.resetSemantics?.polarity ?? "active-low");
-  const [resetSync, setResetSync] = useState<ResetSemantics["synchronization"]>(signal.resetSemantics?.synchronization ?? "asynchronous");
-  const [resetAssertCycle, setResetAssertCycle] = useState(signal.resetSemantics?.assertCycle !== undefined ? String(signal.resetSemantics.assertCycle) : "");
-  const [resetDeassertCycle, setResetDeassertCycle] = useState(signal.resetSemantics?.deassertCycle !== undefined ? String(signal.resetSemantics.deassertCycle) : "");
-  const [resetStatus, setResetStatus] = useState("");
   const { state: sections, toggle } = useInspectorAccordion("value-signal", { "signal-properties": true, hierarchy: true, "label-style": false, waveform: true, "reset-semantics": false });
   // #776 (Part A): this used to unconditionally reload EVERY local field whenever the Signal object changed for ANY reason, so Applying
   // one independent sub-editor (e.g. Reset Semantics) silently discarded an unrelated unapplied Properties/Style draft. Same per-field
   // clean/dirty merge as #775: a field only resyncs to the new canonical value when THAT field's canonical value actually changed AND
   // the local draft is still clean (equal to what it was last synced from); a dirty field is preserved, its baseline still advances.
-  const valueSignalBaseRef = useRef<{ id: SignalId; name: string; role: SignalRole; signalType: ValueSignal["type"]; width: string; enumId: string; format: NonNullable<ValueSignal["displayFormat"]>; visible: boolean; spacingBefore: number; spacingAfter: number; align: NonNullable<Signal["display"]["align"]>; overflow: NonNullable<Signal["display"]["overflow"]>; style: string; textColor: string; rowBackground: string; fontFamily: string; fontSize: number; bold: boolean; italic: boolean; underline: boolean; strikethrough: boolean; waveformColor: string; waveformBackground: string; resetEnabled: boolean; resetPolarity: ResetSemantics["polarity"]; resetSync: ResetSemantics["synchronization"]; resetAssertCycle: string; resetDeassertCycle: string } | undefined>(undefined);
+  const valueSignalBaseRef = useRef<{ id: SignalId; name: string; role: SignalRole; signalType: ValueSignal["type"]; width: string; enumId: string; format: NonNullable<ValueSignal["displayFormat"]>; visible: boolean; spacingBefore: number; spacingAfter: number; align: NonNullable<Signal["display"]["align"]>; overflow: NonNullable<Signal["display"]["overflow"]>; style: string; textColor: string; rowBackground: string; fontFamily: string; fontSize: number; bold: boolean; italic: boolean; underline: boolean; strikethrough: boolean; waveformColor: string; waveformBackground: string } | undefined>(undefined);
   useEffect(() => {
     const nextStyle = signal.display.style ?? {};
     const next = {
@@ -363,8 +351,6 @@ export function InspectorValueSignalEditor({ signal, selectedCycle, document, ch
       fontFamily: styleString(nextStyle, "fontFamily", "Segoe UI"), fontSize: styleNumber(nextStyle, "fontSize", 12), bold: nextStyle.fontWeight === "bold", italic: nextStyle.fontStyle === "italic",
       underline: styleString(nextStyle, "textDecoration", "").includes("underline"), strikethrough: styleString(nextStyle, "textDecoration", "").includes("line-through"),
       waveformColor: styleString(nextStyle, "waveformColor", "#111111"), waveformBackground: styleString(nextStyle, "waveformBackground", "#ffffff"),
-      resetEnabled: signal.resetSemantics !== undefined, resetPolarity: signal.resetSemantics?.polarity ?? "active-low", resetSync: signal.resetSemantics?.synchronization ?? "asynchronous",
-      resetAssertCycle: signal.resetSemantics?.assertCycle !== undefined ? String(signal.resetSemantics.assertCycle) : "", resetDeassertCycle: signal.resetSemantics?.deassertCycle !== undefined ? String(signal.resetSemantics.deassertCycle) : "",
     };
     const prev = valueSignalBaseRef.current;
     const sameEntity = prev !== undefined && prev.id === signal.id;
@@ -394,13 +380,8 @@ export function InspectorValueSignalEditor({ signal, selectedCycle, document, ch
     merge("strikethrough", strikethrough, setStrikethrough);
     merge("waveformColor", waveformColor, setWaveformColor);
     merge("waveformBackground", waveformBackground, setWaveformBackground);
-    merge("resetEnabled", resetEnabled, setResetEnabled);
-    merge("resetPolarity", resetPolarity, setResetPolarity);
-    merge("resetSync", resetSync, setResetSync);
-    merge("resetAssertCycle", resetAssertCycle, setResetAssertCycle);
-    merge("resetDeassertCycle", resetDeassertCycle, setResetDeassertCycle);
     valueSignalBaseRef.current = next;
-    if (!sameEntity) { setProblem(""); setResetStatus(""); }
+    if (!sameEntity) setProblem("");
   }, [signal, document.layout.signalNameAlign, document.layout.overflow]);
   // #402/#426 (Bottom Panel Visual Reference pass): Inspector is now the
   // sole owner of these lightweight Signal properties (Bottom's own
@@ -495,16 +476,6 @@ export function InspectorValueSignalEditor({ signal, selectedCycle, document, ch
   // Apply (same "disabled when unchanged" contract as every other Inspector
   // Apply here) -- assert/deassert are kept as text so an empty field reads
   // as "unset" rather than coercing to 0.
-  const resetDraft: ResetSemantics | undefined = resetEnabled ? { polarity: resetPolarity, synchronization: resetSync, ...(resetAssertCycle.trim() === "" ? {} : { assertCycle: Number(resetAssertCycle) }), ...(resetDeassertCycle.trim() === "" ? {} : { deassertCycle: Number(resetDeassertCycle) }) } : undefined;
-  const resetHasChanges = JSON.stringify(resetDraft) !== JSON.stringify(signal.resetSemantics);
-  const applyReset = () => {
-    const result = commands.updateResetSemantics(signal.id, resetDraft);
-    // Same "don't fail silently" fix as #454's Transaction Apply: a
-    // rejected command (bad polarity/sync, non-integer or negative cycle)
-    // must not leave the draft looking applied with no feedback.
-    if (!result.ok && result.reason !== "no-op") setResetStatus(result.problems[0]?.message ?? "Could not apply Reset semantics.");
-    else setResetStatus("");
-  };
   const fullPath = [...signal.source.instancePath, signal.source.signalName].join(".") || signal.source.signalName;
   const signalTypeLabel = sharedSignalTypeLabel(signal.type);
   return <aside className="inspector" data-testid="inspector" data-inspector-context="signal" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}>
@@ -534,19 +505,7 @@ export function InspectorValueSignalEditor({ signal, selectedCycle, document, ch
           so it never triggers this form's Signal Properties submit) keeps
           Reset semantics as one distinct commit, matching Edge Numbers'
           precedent rather than folding a rare field into the frequent one. */}
-      <InspectorSection sectionId="reset-semantics" title="Reset Semantics" open={sections["reset-semantics"] ?? false} onToggle={() => toggle("reset-semantics")}>
-        <PropertyToggle label="Enabled" ariaLabel="Reset semantics enabled" checked={resetEnabled} onChange={(value) => { setResetEnabled(value); setResetStatus(""); }} />
-        {resetEnabled && <>
-          <label>Polarity<select aria-label="Reset polarity" value={resetPolarity} onChange={(event) => { setResetPolarity(event.target.value as ResetSemantics["polarity"]); setResetStatus(""); }}><option value="active-low">Active Low</option><option value="active-high">Active High</option></select></label>
-          <label>Synchronization<select aria-label="Reset synchronization" value={resetSync} onChange={(event) => { setResetSync(event.target.value as ResetSemantics["synchronization"]); setResetStatus(""); }}><option value="asynchronous">Async</option><option value="synchronous">Sync</option></select></label>
-          <div className="inspector-property-pair">
-            <label>Assert Cycle<input aria-label="Reset assert cycle" type="number" min="0" step="1" value={resetAssertCycle} onChange={(event) => { setResetAssertCycle(event.target.value); setResetStatus(""); }} /></label>
-            <label>Deassert Cycle<input aria-label="Reset deassert cycle" type="number" min="0" step="1" value={resetDeassertCycle} onChange={(event) => { setResetDeassertCycle(event.target.value); setResetStatus(""); }} /></label>
-          </div>
-        </>}
-        {resetStatus && <div className="editor-problem" role="alert">{resetStatus}</div>}
-        <button type="button" data-testid="apply-reset-semantics" disabled={!resetHasChanges} onClick={applyReset}>Apply Reset Semantics</button>
-      </InspectorSection>
+      <InspectorResetSemantics key={signal.id} signal={signal} commands={commands} open={sections["reset-semantics"] ?? false} onToggle={() => toggle("reset-semantics")} />
       {/* #470: "Source / Hierarchy" (Instance Path / Signal Name / Full Path /
           Bus Range / Reveal in Hierarchy) is hidden from the normal Inspector
           -- there is no RTL/hierarchy import workflow yet, so the section

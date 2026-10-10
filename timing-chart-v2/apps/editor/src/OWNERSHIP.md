@@ -35,6 +35,11 @@ controllers are extracted incrementally.
 | Inspector signal routing | `inspector-signal-router.tsx` | `EditorSurfaceCommandController` | Phase 1 extracted leaf; second-pass typed command boundary |
 | Inspector style readers | `inspector-style.ts` | view-only style projection | Phase 1 extracted utility |
 | Inspector clock editor | `inspector-clock-editor.tsx` | `EditorSurfaceCommandController` | Phase 1 extracted leaf; second-pass typed command boundary |
+| Inspector reset semantics editor | `panels/inspector-reset-semantics.tsx` | `EditorSurfaceCommandController.updateResetSemantics` | focused semantic draft/Apply owner |
+| Editor-wide file shortcuts and drop | `application/editor-file-event-bindings.ts` | document lifecycle callbacks | stable event lifecycle owner; current actions are read through a ref |
+| Document-level file actions | `application/editor-document-file-events.ts` | `useDocumentLifecycle` callbacks | routes drop and save/open shortcuts without owning document state |
+| Browser tab title | `application/use-editor-tab-title.ts` | view-only history/document projection | isolated title lifecycle |
+| Open performance diagnostic projection | `runtime/open-performance-data.ts` | read-only published surface metrics | extracted from editor composition; no Open-path instrumentation |
 | Timeline / viewport runtime boundary | `runtime/timeline-viewport-runtime.ts` | parent application runtime callback; view-only geometry/navigation | Step 1 owner transfer |
 | Ribbon composition | `minimal-cycle-view-ribbon.tsx` | `EditorSurfaceCommandController` for mutation commands; parent callbacks for frozen Home controls | Physical Group 3 extraction; second-pass typed command boundary |
 | Panels / editor composition | `editor-secondary-surfaces.tsx`, `editor-shell-view.tsx` | typed action/router/runtime callbacks | Group 4 extraction complete; second-pass owner boundaries enforced |
