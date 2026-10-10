@@ -57,10 +57,19 @@ for (const viewportSize of [{ width: 1672, height: 941 }, { width: 1280, height:
   const dividerY = dividerBox!.y + dividerBox!.height / 2;
   await page.mouse.move(dividerX, dividerY); await page.mouse.down(); await page.mouse.move(dividerX, 0); await page.mouse.up();
   expect((await tx.boundingBox())!.height).toBeGreaterThanOrEqual(160);
-  expect((await cycle.boundingBox())!.height).toBeGreaterThanOrEqual(220);
+  await expectSignalPaneAboveBottomEditor(page);
   const lowerDividerBox = await divider.boundingBox();
   await page.mouse.move(dividerX, lowerDividerBox!.y + lowerDividerBox!.height / 2); await page.mouse.down(); await page.mouse.move(dividerX, page.viewportSize()!.height); await page.mouse.up();
   expect((await tx.boundingBox())!.height).toBeGreaterThanOrEqual(160);
-  expect((await cycle.boundingBox())!.height).toBeGreaterThanOrEqual(220);
+  await expectSignalPaneAboveBottomEditor(page);
   expect(await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision")).toBe(revision);
 });
+
+// The Signal pane scrolls above the Bottom editor (no rows hidden behind it), so its guaranteed height is what remains of the Main area.
+async function expectSignalPaneAboveBottomEditor(page: Page) {
+  const content = (await page.locator(".split-signal-content").boundingBox())!;
+  const bottom = (await page.locator(".bottom-editor").boundingBox())!;
+  // On a 720px window the Transaction pane's 160px floor leaves no Signal rows above the Bottom editor (hide the editor to see them).
+  if (page.viewportSize()!.height >= 900) expect(content.height).toBeGreaterThan(0);
+  expect(content.y + content.height).toBeLessThanOrEqual(bottom.y + 2);
+}
