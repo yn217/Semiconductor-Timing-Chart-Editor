@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T15:02:41.878Z",
+  "generatedAt": "2026-10-10T15:19:07.670Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 447,
-  "caseCount": 1334,
-  "reviewedCaseCount": 1276,
+  "specFileCount": 448,
+  "caseCount": 1336,
+  "reviewedCaseCount": 1278,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 426,
+    "pr": 428,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -4141,6 +4141,60 @@
         "visual"
       ],
       "contractId": "bottom-selected-row-contrast-and-focus"
+    },
+    {
+      "file": "bottom-expanded-after-mode-switch.spec.ts",
+      "suitePath": [],
+      "line": 4,
+      "title": "Combined: Bottom Expanded fits a short window after switching mode",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "bottom-expanded-mode-switch",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "After switching to another mode, Bottom Expanded stays above the status bar in a 600px-high window.",
+      "duplicateGroup": "bottom-expanded-mode-switch",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The stale limit only shows after a real startup mode and mode switch.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "bottom-expanded-mode-switch",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "bottom-expanded-after-mode-switch.spec.ts",
+      "suitePath": [],
+      "line": 4,
+      "title": "Cycle: Bottom Expanded fits a short window after switching mode",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "bottom-expanded-mode-switch",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Same contract for Cycle.",
+      "duplicateGroup": "bottom-expanded-mode-switch",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Guards the symmetrical mode switch.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "bottom-expanded-mode-switch",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "bottom-panel-cancel-apply-height.spec.ts",
@@ -35192,6 +35246,18 @@
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "getComputedStyle"
+      ],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "bottom-expanded-after-mode-switch.spec.ts",
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [
+        "querySelector",
+        "geometryRead"
       ],
       "semanticReviewStatus": "REVIEWED"
     },

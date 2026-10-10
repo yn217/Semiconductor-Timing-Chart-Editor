@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 447 spec files and 1334 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 448 spec files and 1336 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1276/1334 cases reviewed.
+Semantic review progress: 1278/1336 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 634 |
 | `nightly` | 241 |
 | `performance` | 73 |
-| `pr` | 426 |
+| `pr` | 428 |
 | `visual` | 181 |
 
 ## Top recorded per-case runtimes
@@ -92,6 +92,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `bottom-bookmark-navigation.spec.ts` | 2 | 2/2 reviewed |
 | `bottom-context.spec.ts` | 5 | 5/5 reviewed |
 | `bottom-editor-row-contrast.spec.ts` | 3 | 3/3 reviewed |
+| `bottom-expanded-after-mode-switch.spec.ts` | 2 | 2/2 reviewed |
 | `bottom-panel-cancel-apply-height.spec.ts` | 1 | 1/1 reviewed |
 | `bottom-panel-full-width.spec.ts` | 2 | 2/2 reviewed |
 | `bottom-splitter-interaction-closure.spec.ts` | 4 | 4/4 reviewed |
@@ -522,6 +523,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `badge-parity.spec.ts` | querySelector, getComputedStyle, geometryRead |
 | `badge-visual-evidence.spec.ts` | geometryRead |
 | `bottom-editor-row-contrast.spec.ts` | getComputedStyle |
+| `bottom-expanded-after-mode-switch.spec.ts` | querySelector, geometryRead |
 | `bottom-panel-cancel-apply-height.spec.ts` | geometryRead |
 | `bottom-panel-full-width.spec.ts` | geometryRead |
 | `bottom-tab-header-visibility.spec.ts` | getComputedStyle, dataset, geometryRead |

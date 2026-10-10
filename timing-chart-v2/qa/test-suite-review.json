@@ -17280,6 +17280,42 @@
       "decision": "KEEP",
       "reason": "The title is set on the real page; unit tests cannot observe the tab.",
       "replacementTest": null
+    },
+    {
+      "file": "bottom-expanded-after-mode-switch.spec.ts",
+      "title": "Combined: Bottom Expanded fits a short window after switching mode",
+      "domain": "bottom-expanded-mode-switch",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "After switching to another mode, Bottom Expanded stays above the status bar in a 600px-high window.",
+      "duplicateGroup": "bottom-expanded-mode-switch",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The stale limit only shows after a real startup mode and mode switch.",
+      "replacementTest": null
+    },
+    {
+      "file": "bottom-expanded-after-mode-switch.spec.ts",
+      "title": "Cycle: Bottom Expanded fits a short window after switching mode",
+      "domain": "bottom-expanded-mode-switch",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Same contract for Cycle.",
+      "duplicateGroup": "bottom-expanded-mode-switch",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Guards the symmetrical mode switch.",
+      "replacementTest": null
     }
   ]
 }
