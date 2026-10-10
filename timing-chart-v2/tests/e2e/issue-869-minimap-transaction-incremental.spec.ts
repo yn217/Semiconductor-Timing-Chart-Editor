@@ -18,6 +18,7 @@ test("a single Transaction edit updates the MiniMap Transaction overview increme
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "b869t.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
   await expect(page.locator(".editor-shell")).toHaveAttribute("data-signal-count", "8000", { timeout: 180_000 });
   await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 180_000 });
+  await page.getByTestId("home-minimap-toggle").check(); // MiniMap is off by default
   const minimap = page.getByTestId("minimap");
   await expect(minimap).toBeVisible({ timeout: 60_000 });
   const counters = () => minimap.evaluate((element) => {
@@ -72,6 +73,7 @@ for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] 
   };
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "issue-869-transaction-minimap-dense.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
   await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", "10000", { timeout: 180_000 });
+  await page.getByTestId("home-minimap-toggle").check(); // MiniMap is off by default
   const minimap = page.getByTestId("minimap");
   await expect(minimap).toBeVisible({ timeout: 60_000 });
   await expect(minimap).toHaveAttribute("aria-busy", "false", { timeout: 60_000 });
