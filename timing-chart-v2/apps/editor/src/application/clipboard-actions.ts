@@ -12,7 +12,7 @@ import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
 import type { SelectionOwner } from "./use-selection-owner.js";
 
 type SignalClipboardItem = Readonly<{ signal: Signal; groupId: GroupId; index: number }>;
-type GroupClipboardItem = Readonly<{ group: SignalGroup; rows: readonly Signal[]; sourceIndex: number; cutLinks?: readonly GroupTransactionSignalLink[] }>;
+type GroupClipboardItem = Readonly<{ group: SignalGroup; rows: readonly Signal[]; sourceIndex: number; cut?: boolean; cutLinks?: readonly GroupTransactionSignalLink[] }>;
 type SpacerClipboardItem = Readonly<{ spacer: SpacerRow; groupId: GroupId; index: number }>;
 const spacerId = (value: string) => value as SpacerId;
 export const NO_SIGNAL_GROUP_STATUS = "No Signal Group to insert into";
@@ -41,6 +41,17 @@ function takeUniqueName(taken: Set<string>, base: string): string {
   return candidate;
 }
 
+/** A pasted Group row keeps its names unless they clash; a clashing row becomes `<name>_copy` (uniquified like Signal paste). */
+function reserveGroupRowName(taken: Set<string>, signal: Signal): Signal {
+  if (!taken.has(signal.name) && !taken.has(signal.display.name)) {
+    taken.add(signal.name);
+    taken.add(signal.display.name);
+    return signal;
+  }
+  const name = takeUniqueName(taken, `${signal.display.name}_copy`);
+  return { ...signal, name, display: { ...signal.display, name } };
+}
+
 const FOREIGN_PASTE_DETAIL = "clipboard-failure:foreign-document";
 
 export function useClipboardActions({ application, selection }: { application: EditorApplicationOwner; selection: SelectionOwner }) {
@@ -53,7 +64,8 @@ export function useClipboardActions({ application, selection }: { application: E
   const spacerRef = useRef<SpacerClipboardItem | undefined>(undefined);
   const cutSignalsRef = useRef(false);
   const cutSignalLinksRef = useRef<readonly GroupTransactionSignalLink[]>([]);
-  const sourceDocumentEpochRef = useRef<number | undefined>(undefined);
+  // Document identity (not the epoch: same-document replacements such as enum edits or undo of a replace advance the epoch too).
+  const sourceDocumentIdRef = useRef<string | undefined>(undefined);
   const [indexResolver] = useState(createClipboardIndexes);
   const document = () => application.runtime.session.current().getSnapshot().document;
 
@@ -83,7 +95,7 @@ export function useClipboardActions({ application, selection }: { application: E
     spacerRef.current = spacer;
     cutSignalsRef.current = cutSignals;
     cutSignalLinksRef.current = signalLinks;
-    sourceDocumentEpochRef.current = application.runtime.documentEpoch.current();
+    sourceDocumentIdRef.current = document().document.id;
     // A fresh copy in this document supersedes an earlier "belongs to another document" rejection.
     application.setRuntimeDiagnostics((current) => current.some((item) => item.detail === FOREIGN_PASTE_DETAIL) ? current.filter((item) => item.detail !== FOREIGN_PASTE_DETAIL) : current);
     setAvailable(true);
@@ -160,7 +172,7 @@ export function useClipboardActions({ application, selection }: { application: E
       commands.push({ id: nextCommandId("cut_group_delete"), type: "group.delete", groupId: value.group.id });
       const result = application.executeBatch(nextCommandId("cut_group"), commands);
       if (result.ok) {
-        setClipboard({ group: { group: value.group, rows, sourceIndex: value.document.signalGroups.indexOf(value.group), cutLinks } });
+        setClipboard({ group: { group: value.group, rows, sourceIndex: value.document.signalGroups.indexOf(value.group), cut: true, cutLinks } });
         selection.clear();
         setStatus(`Cut ${value.group.name} group`);
       } else setStatus("Cannot cut Group: one or more rows have dependent Annotations or protected references.");
@@ -214,6 +226,7 @@ export function useClipboardActions({ application, selection }: { application: E
     if (cutSignalLinksRef.current.length > 0) commands.push({ id: nextCommandId("cut_paste_restore_links"), type: "transaction.bulkLinkSignals", links: cutSignalLinksRef.current });
     const result = application.executeBatch(nextCommandId("cut_paste_move"), commands);
     if (result.ok) { cutSignalsRef.current = false; cutSignalLinksRef.current = []; selection.selectSignals(new Set(input.map(({ signal }) => signal.id)), input[0]!.signal.id); setStatus(`Moved ${input.length} signal${input.length === 1 ? "" : "s"}`); }
+    else setStatus(`Paste rejected: ${result.problems[0]?.message ?? result.reason}`);
   };
 
   /** Duplicate puts each copy right after its source, inside the source's own Group. Adjacent selected Signals in one Group are copied
@@ -312,6 +325,8 @@ export function useClipboardActions({ application, selection }: { application: E
     const newGroupId = groupId(allocateId("group"));
     const sourceSignalsById = new Map(input.rows.map((signal) => [signal.id, signal]));
     const sourceSpacers = new Map<string, SpacerRow>((input.group.spacers ?? []).map((item) => [item.id, item]));
+    // Paste uniquifies clashing row names like Signal paste does; Duplicate keeps the names (its e2e pins identical copies).
+    const takenNames = operation === "paste" ? signalNamesInUse(current) : undefined;
     const newIdByOldId = new Map<string, string>();
     const newSignalIdByOldId = new Map<SignalId, SignalId>();
     const createdSignals: Signal[] = [];
@@ -320,7 +335,7 @@ export function useClipboardActions({ application, selection }: { application: E
       const source = sourceSignalsById.get(rowId as SignalId);
       if (source) {
         const id = signalId(allocateId(source.type === "commentRow" ? "commentRow" : "signal"));
-        const signal: Signal = withFreshValueChangeIds({ ...source, id });
+        const signal: Signal = withFreshValueChangeIds({ ...(takenNames ? reserveGroupRowName(takenNames, source) : source), id });
         createdSignals.push(signal);
         newIdByOldId.set(rowId, id);
         newSignalIdByOldId.set(rowId as SignalId, id);
@@ -343,7 +358,8 @@ export function useClipboardActions({ application, selection }: { application: E
       type: "group.createWithContents",
       group,
       signals: createdSignals,
-      index: Math.min(current.signalGroups.length, input.sourceIndex + 1),
+      // A cut Group is already removed, so its old slot is free again; a copy goes right after its source.
+      index: Math.min(current.signalGroups.length, input.cut ? input.sourceIndex : input.sourceIndex + 1),
     };
     const commands: SemanticCommand[] = [groupCommand];
     if (operation === "paste" && input.cutLinks && input.cutLinks.length > 0) {
@@ -356,7 +372,7 @@ export function useClipboardActions({ application, selection }: { application: E
     }
     const result = application.executeBatch(nextCommandId(`${operation}_group_batch`), commands);
     if (result.ok) {
-      if (operation === "paste" && input.cutLinks?.length) groupRef.current = { ...input, cutLinks: [] };
+      if (operation === "paste" && input.cut) groupRef.current = { ...input, cut: false, cutLinks: [] };
       selection.selectGroup(newGroupId);
       setStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${input.group.name} group`);
     } else setStatus(`Cannot ${operation} Group: its linked references could not be preserved.`);
@@ -381,12 +397,13 @@ export function useClipboardActions({ application, selection }: { application: E
     const spacer ={ ...input.spacer, id: spacerId(nextEntityId("spacer", current)) };
     const result = application.execute({ id: nextCommandId(`${operation}_spacer`), type: "spacer.create", spacer, targetGroupId: target.id, index: Math.min(input.index, target.rows.length) });
     if (result.ok) { selection.selectSpacer(target.id, spacer.id); setStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} spacer`); }
+    else setStatus(`${operation === "paste" ? "Paste" : "Duplicate"} rejected: ${result.problems[0]?.message ?? result.reason}`);
   };
 
   const paste = () => {
     // Nothing was ever copied in this session: say so instead of blaming another document (and do not raise a Problem).
-    if (sourceDocumentEpochRef.current === undefined) { setStatus("Nothing to paste: copy something first"); return; }
-    if (sourceDocumentEpochRef.current !== application.runtime.documentEpoch.current()) {
+    if (sourceDocumentIdRef.current === undefined) { setStatus("Nothing to paste: copy something first"); return; }
+    if (sourceDocumentIdRef.current !== document().document.id) {
       rejectForeignPaste();
       return;
     }
