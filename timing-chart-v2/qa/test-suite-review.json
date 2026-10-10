@@ -18000,6 +18000,24 @@
       "decision": "KEEP",
       "reason": "Code review found view-mode snapshot and sizing leaks.",
       "replacementTest": null
+    },
+    {
+      "file": "annotation-inspector-review-fixes.spec.ts",
+      "title": "Annotation Inspector Apply Anchor can clear an endpoint Signal to (none)",
+      "domain": "annotation-inspector",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Apply Anchor with Signal (none) produces an axis-owned anchor instead of keeping the previous Signal.",
+      "duplicateGroup": "annotation-inspector",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Apply Anchor could not clear the Signal.",
+      "replacementTest": null
     }
   ]
 }

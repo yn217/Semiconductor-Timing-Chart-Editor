@@ -3,7 +3,7 @@ import { startTransition, useCallback, useEffect, useMemo, useRef } from "react"
 import type { RefObject } from "react";
 import type { CommandResult } from "@timing-chart-v2/commands";
 import { type Point } from "@timing-chart-v2/geometry";
-import { quickValueLiteral, quickValueOptions, scenarioModelFromV2, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type GroupId, type ScenarioId, type ScenarioSignalDifference, type SignalId, type TransactionGroup, type TransactionId } from "@timing-chart-v2/schema";
+import { quickValueLiteral, quickValueOptions, scenarioModelFromV2, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type GroupId, type ScenarioId, type ScenarioSignalDifference, type Signal,type SignalId, type TransactionGroup, type TransactionId } from "@timing-chart-v2/schema";
 import { ViewMetricsOwner } from "./runtime/view-metrics.js";
 import { ExportDialog } from "./export-dialog.js";
 import { downloadText } from "./download-text.js";
@@ -315,7 +315,6 @@ export function MinimalCycleView() {
   // linearly rescan every signal during each zoom render.
   const { signalById, groupById, annotationById, transactionById, bookmarkById } = useDocumentEntityIndexes(snapshot.document);
   const selectedBookmarkIdRef = useRef<BookmarkId | undefined>(undefined);
-  const firstNonCommentSignal = useMemo(() => snapshot.document.signals.find((signal) => signal.type !== "commentRow"), [snapshot.document]);
   const referenceClockSignal = useMemo(() => {
     const referenceClockId = snapshot.document.timeline.referenceClock;
     return referenceClockId === undefined ? undefined : signalById.get(referenceClockId);
@@ -323,12 +322,16 @@ export function MinimalCycleView() {
   const selectedSignal = selectedId === undefined ? undefined : signalById.get(selectedId);
   const selectedAnnotationTarget = selectedAnnotationId === undefined ? undefined : annotationById.get(selectedAnnotationId);
   const annotationTargetSignalId = useMemo(() => {
-    if (selectedSignal && selectedSignal.type !== "commentRow") return selectedSignal.id;
+    // A new Annotation is saved on this Signal, and only visible rows are drawn, so a hidden Signal (display.visible === false)
+    // is never a target: fall through exactly as if nothing were selected.
+    const isTargetable = (signal: Signal | undefined): signal is Signal => signal !== undefined && signal.type !== "commentRow" && signal.display.visible !== false;
+    if (selectedSignal && isTargetable(selectedSignal)) return selectedSignal.id;
     const annotationSignalId = selectedAnnotationTarget?.anchor?.signalId ?? selectedAnnotationTarget?.start?.signalId ?? selectedAnnotationTarget?.from?.signalId;
-    if (annotationSignalId && signalById.get(annotationSignalId)?.type !== "commentRow") return annotationSignalId;
-    if (referenceClockSignal && referenceClockSignal.type !== "commentRow") return referenceClockSignal.id;
-    return firstNonCommentSignal?.id;
-  }, [annotationById, firstNonCommentSignal, referenceClockSignal, selectedAnnotationTarget, selectedSignal, signalById]);
+    const annotationSignal = annotationSignalId === undefined ? undefined : signalById.get(annotationSignalId);
+    if (isTargetable(annotationSignal)) return annotationSignal.id;
+    if (isTargetable(referenceClockSignal)) return referenceClockSignal.id;
+    return snapshot.document.signals.find(isTargetable)?.id;
+  }, [annotationById, referenceClockSignal, selectedAnnotationTarget, selectedSignal, signalById, snapshot.document]);
   const selectedGroup = selectedGroupId === undefined ? undefined : groupById.get(selectedGroupId);
   const selectedSpacer = selectedSpacerRef.current === undefined ? undefined : selectedGroup?.spacers?.find((spacer) => spacer.id === selectedSpacerRef.current);
   const selectedAnnotation = selectedAnnotationId === undefined ? undefined : annotationById.get(selectedAnnotationId);

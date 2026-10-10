@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { MEASUREMENT_PROFILES, measurementProfilePair, type Annotation, type AnnotationType, type CanonicalDocument, type MeasurementProfile, type SignalId, type TransitionAnchorKind } from "@timing-chart-v2/schema";
-import { createAnnotation, type MeasurementThresholdSpec } from "./create-annotation.js";
+import { anchorPointFitsSignalType, createAnnotation, type MeasurementThresholdSpec } from "./create-annotation.js";
 import { DsRibbonButton, DsRibbonSelect } from "./design-system.js";
 import { RibbonIcon } from "./ribbon-icon.js";
 
@@ -22,13 +22,18 @@ export function AnnotationToolbar({ document, range, signalId, onCreate, arrowPi
   const customPair = { start: Number(customStart) / 100, end: Number(customEnd) / 100 };
   const thresholdSpec: MeasurementThresholdSpec | undefined = type !== "measurement" || measurementProfile === "cycle" ? undefined : { profile: measurementProfile as Exclude<MeasurementProfile, "cycle">, anchorKind: measurementKind, ...(measurementProfile === "custom" ? customPair : standardPair!) };
   const customValid = measurementProfile !== "custom" || ([customPair.start, customPair.end].every((value) => Number.isFinite(value) && value >= 0 && value <= 1) && customPair.start <= customPair.end);
+  // A threshold Measurement stores transition points, which the anchor validator rejects on clock Signals (and on no-Signal
+  // targets). Refuse the Add here instead of creating an Annotation the commit path will reject.
+  const targetSignalType = signalId === undefined ? undefined : document.signals.find((signal) => signal.id === signalId)?.type;
+  const thresholdPointFits = !thresholdSpec || anchorPointFitsSignalType("transition-center", targetSignalType);
+  const addDisabledReason = !signalId ? "No timing Signal is available in this document to anchor an Annotation." : !thresholdPointFits ? "Transition threshold Measurements need a value or bus Signal; a clock has no transition points." : undefined;
   return <div className="annotation-toolbar" aria-label="Annotation tools" data-testid="annotation-toolbar">
     <strong>Annotation</strong>
     <DsRibbonSelect ariaLabel="Annotation type" value={type} onChange={(event) => setType(event.target.value as AnnotationType)}>
       {(["text", "callout", "verticalLine", "range", "bracket", "highlight", "marker", "measurement", "arrow", "dependency", "timingRegion", "ghostTrace"] as const).map((item) => <option key={item} value={item}>{item}</option>)}
     </DsRibbonSelect>
     {type === "measurement" && <><label>Profile<DsRibbonSelect ariaLabel="Measurement threshold" dataTestId="measurement-profile" value={measurementProfile} onChange={(event) => setMeasurementProfile(event.target.value as MeasurementProfile)}>{MEASUREMENT_PROFILES.map((profile) => <option key={profile} value={profile}>{profile === "cycle" ? "Cycle anchors" : profile === "50%" ? "50%" : profile === "custom" ? "Custom" : `${profile}%`}</option>)}</DsRibbonSelect></label>{measurementProfile !== "cycle" && <label>Meaning<DsRibbonSelect ariaLabel="Measurement anchor kind" value={measurementKind} onChange={(event) => setMeasurementKind(event.target.value as TransitionAnchorKind)}><option value="threshold">Transition threshold</option><option value="ratio">Transition ratio</option></DsRibbonSelect></label>}{measurementProfile === "custom" && <><label>Start %<input aria-label="Custom measurement start" type="number" min="0" max="100" step="1" value={customStart} onChange={(event) => setCustomStart(event.target.value)} /></label><label>End %<input aria-label="Custom measurement end" type="number" min="0" max="100" step="1" value={customEnd} onChange={(event) => setCustomEnd(event.target.value)} /></label></>}</>}
-    <DsRibbonButton ariaLabel="Add annotation" icon={<RibbonIcon name="i-textbox" />} disabled={!signalId || !customValid} title={signalId ? undefined : "No timing Signal is available in this document to anchor an Annotation."} onClick={() => signalId && onCreate(createAnnotation(type, signalId, range, document, thresholdSpec))}>Add annotation</DsRibbonButton>
+    <DsRibbonButton ariaLabel="Add annotation" icon={<RibbonIcon name="i-textbox" />} disabled={!signalId || !customValid || !thresholdPointFits} title={addDisabledReason} onClick={() => signalId && thresholdPointFits && onCreate(createAnnotation(type, signalId, range, document, thresholdSpec))}>Add annotation</DsRibbonButton>
     {/* Picked transition anchors are shared by Arrow, Dependency and
         edge-to-edge Measurement. The latter stores the same resolved
         semantic anchors in its start/end fields instead of from/to. */}
