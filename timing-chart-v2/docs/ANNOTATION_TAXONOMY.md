@@ -17,6 +17,24 @@ Status: proposed design disposition for #1092, based on the current schema and c
 | Protocol violation | A failed protocol rule, not a new annotation. | The violated Constraint and stable signal IDs/source cycle identify the finding. | Yes; this is a Problem derived from protocol checks. | Problems provides navigation/reveal; an optional TimingRegion may highlight the affected interval without duplicating the result. | MERGE into Constraint + Problems. |
 | Requirement | External traceability identity/metadata, not a timing interval by itself. | No timeline anchor unless a separate, explicit mapping links the requirement to a signal, interval, or constraint. | Requirements may link to checks but do not define checker behavior by their name alone. | Existing Text/Callout may provide explanatory prose; it must not be treated as structured traceability. | DROP from the annotation taxonomy. If release needs traceability, define a separate requirement-link model and owner first. |
 
+## Visual notation disposition
+
+The notation below deliberately reuses existing rendering owners. It is a
+design direction, not a claim that future checker visuals are implemented.
+
+| Candidate | Proposed visual notation | Existing owner / rule |
+|---|---|---|
+| Delay / observed latency | Existing Measurement endpoint extensions, dimension line, and numeric delta label; an allowed latency is not drawn as an observed measurement. | Measurement presentation; a failed latency Constraint is reported through Problems. |
+| Setup window | A lightly shaded interval immediately before the selected capture edge, with the capture edge and required duration identifiable; violations use the Problem severity marker. | Future Setup Constraint projection, optionally using TimingRegion styling; never a second persisted annotation. |
+| Hold window | A lightly shaded interval immediately after the selected capture edge, visually distinct by its post-edge placement; violations use the Problem severity marker. | Future Hold Constraint projection, optionally using TimingRegion styling. |
+| Valid window | Existing translucent TimingRegion band for an authored interval. A protocol-derived valid interval is a checker result and is not automatically authored. | TimingRegion or derived Problem, according to origin. |
+| Don't care | Existing waveform X/Z/unknown value glyph at the source cycle; no overlay badge. | Signal value renderer and the relevant check policy. |
+| Expected | Existing Scenario comparison/ghost-trace waveform, visually differentiated from the authored trace (for example dashed, muted stroke). | Scenario comparison projection; not a new annotation shape. |
+| Error / warning | Problems severity icon and source-linked reveal/highlight; severity is not encoded by an independently editable annotation. | Problem diagnostics and navigation. |
+| Cause / effect | Existing labeled Dependency arrow between stable anchors, explicitly understood as a visual relation only. | Dependency annotation renderer; it does not assert causality. |
+| Protocol violation | Problems severity and source-linked interval/signal reveal; an optional TimingRegion may shade the interval only when the user explicitly requests presentation. | Constraint checker + Problem; optional TimingRegion remains a separate authored view annotation. |
+| Requirement | No timeline glyph by default. A future approved traceability feature should show an external requirement key in its own linked-requirement surface, not as a generic timing shape. | Separate traceability owner required; Text/Callout remains explanatory prose. |
+
 ## Ownership and lifecycle rules
 
 - Keep canonical time in source cycles. Convert to seconds/submultiples only through `PhysicalTimebase`; never persist screen X as annotation meaning.
