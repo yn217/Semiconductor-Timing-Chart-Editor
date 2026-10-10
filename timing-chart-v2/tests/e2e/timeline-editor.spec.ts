@@ -759,11 +759,11 @@ test("creates a Bookmark from the Ruler context menu through shared semantic geo
   await cycle4.click({ button: "right" });
   const menu = page.getByRole("menu", { name: "Ruler context menu" });
   await expect(menu).toBeVisible();
-  await expect(menu.getByRole("menuitem", { name: "ブックマークを追加", exact: true })).toBeVisible();
+  await expect(menu.getByRole("menuitem", { name: "Add bookmark", exact: true })).toBeVisible();
   expect(await host.getAttribute("data-canonical-revision")).toBe(beforeRevision);
   await expect(page.getByTestId("history-status")).toHaveText(beforeHistory!);
 
-  await menu.getByRole("menuitem", { name: "ブックマークを追加", exact: true }).click();
+  await menu.getByRole("menuitem", { name: "Add bookmark", exact: true }).click();
   const marker = ruler.locator("[data-bookmark-id]");
   await expect(marker).toHaveCount(1);
   await expect(marker).toContainText("Bookmark 4");
