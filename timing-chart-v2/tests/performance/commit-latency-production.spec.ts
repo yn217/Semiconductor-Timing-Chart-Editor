@@ -1,8 +1,9 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, test, type CDPSession } from "@playwright/test";
+import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 
-type FrameInteractionSample = { firstRafMs: number; followingRafMs: number; overlappingLongTasks: number };
+type FrameInteractionSample = { firstRafMs: number; followingRafMs: number; overlappingLongTasks: number; longTaskDurationsMs: number[] };
 
 async function installFrameInteractionProbe(page: import("@playwright/test").Page) {
   await page.evaluate(() => {
@@ -33,7 +34,9 @@ async function installFrameInteractionProbe(page: import("@playwright/test").Pag
             firstRafMs: firstRafAt - startedAt,
             followingRafMs: followingRafAt - startedAt,
             overlappingLongTasks: current.longTasks.filter((task) => task.startTime < followingRafAt && task.startTime + task.duration > startedAt).length,
+            longTaskDurationsMs: current.longTasks.filter((task) => task.startTime < followingRafAt && task.startTime + task.duration > startedAt).map((task) => task.duration),
           };
+          window.dispatchEvent(new CustomEvent("frame-interaction-sample", { detail: { id: armed.id, sample: current.samples[String(armed.id)] } }));
         });
       });
     };
@@ -53,8 +56,25 @@ async function armFrameInteraction(page: import("@playwright/test").Page, eventT
   }, { eventType, selector });
 }
 
-async function readFrameInteraction(page: import("@playwright/test").Page, id: number) {
-  return page.evaluate((sampleId) => (window as typeof window & { __frameInteractionProbe?: { samples: Record<string, FrameInteractionSample> } }).__frameInteractionProbe?.samples[String(sampleId)], id);
+async function waitForFrameInteraction(page: import("@playwright/test").Page, id: number) {
+  return page.evaluate((sampleId) => new Promise<FrameInteractionSample>((resolve) => {
+    const listener = (event: Event) => {
+      const detail = (event as CustomEvent<{ id: number; sample: FrameInteractionSample }>).detail;
+      if (detail?.id !== sampleId) return;
+      window.removeEventListener("frame-interaction-sample", listener);
+      resolve(detail.sample);
+    };
+    window.addEventListener("frame-interaction-sample", listener);
+  }), id);
+}
+
+async function waitForMountedWaveOwners(page: import("@playwright/test").Page) {
+  await expect.poll(() => page.getByTestId("cycle-surface").evaluate((host) => {
+    const owners = [...host.querySelectorAll<HTMLElement>("[data-role='wave-owner']")];
+    const surface = host.querySelector<HTMLElement>("[data-role='timing-chart-surface']");
+    const counters = JSON.parse(surface?.getAttribute("data-performance-counters") ?? "{}") as { waveBatchPending?: number };
+    return owners.length > 0 && counters.waveBatchPending === 0 && owners.every((owner) => owner.dataset.waveState === "ready");
+  }), { timeout: 90_000, message: "mounted Cycle waveform owners should finish rendering before the scroll sample" }).toBe(true);
 }
 
 function percentile(values: number[], fraction: number) {
@@ -64,6 +84,76 @@ function percentile(values: number[], fraction: number) {
 async function cdpMetrics(cdp: CDPSession): Promise<Record<string, number>> {
   const result = await cdp.send("Performance.getMetrics") as { metrics: { name: string; value: number }[] };
   return Object.fromEntries(result.metrics.map((metric) => [metric.name, metric.value]));
+}
+
+async function captureScrollTrace(page: import("@playwright/test").Page, viewport: import("@playwright/test").Locator) {
+  const waitForScrollFrames = async (previousScrollTop: number) => page.evaluate(async ({ previousScrollTop }) => {
+    const target = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']");
+    if (!target) throw new Error("Cycle viewport is missing");
+    await new Promise<void>((resolve) => {
+      let finished = false;
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        target.removeEventListener("scroll", onScroll);
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      };
+      const onScroll = () => { if (target.scrollTop > previousScrollTop) finish(); };
+      target.addEventListener("scroll", onScroll, { passive: true });
+      if (target.scrollTop > previousScrollTop) finish();
+    });
+  }, { previousScrollTop });
+  const cdp = await page.context().newCDPSession(page);
+  const events: Array<{ name?: string; cat?: string; ph?: string; dur?: number; args?: { data?: Record<string, unknown> } }> = [];
+  cdp.on("Tracing.dataCollected", ({ value }: { value: typeof events }) => events.push(...value));
+  const completed = new Promise<void>((resolve) => cdp.once("Tracing.tracingComplete", () => resolve()));
+  await cdp.send("Tracing.start", { categories: "devtools.timeline,v8,blink.user_timing,disabled-by-default-devtools.timeline,disabled-by-default-devtools.timeline.invalidationTracking", transferMode: "ReportEvents" });
+  const scrollTop = await viewport.evaluate((element) => element.scrollTop);
+  const tracedScroll = waitForScrollFrames(scrollTop);
+  await page.mouse.wheel(0, 80);
+  await tracedScroll;
+  await cdp.send("Tracing.end");
+  await completed;
+  const longEvents = events.filter((event) => event.ph === "X" && (event.dur ?? 0) >= 10_000)
+    .map((event) => ({ name: event.name, category: event.cat, durationMs: (event.dur ?? 0) / 1_000, functionName: event.args?.data?.functionName, url: event.args?.data?.url }));
+  const invalidations = events.filter((event) => /invalidation|recalc|layout/i.test(event.name ?? "") && event.args?.data !== undefined)
+    .slice(0, 60)
+    .map((event) => {
+      const data = event.args?.data ?? {};
+      const stackTrace = Array.isArray(data.stackTrace) ? data.stackTrace as Array<{ functionName?: string }> : [];
+      return { name: event.name, phase: event.ph, reason: data.reason, nodeName: data.nodeName, stack: stackTrace.slice(0, 5).map((frame) => frame.functionName) };
+    });
+  const layoutEvents = events.filter((event) => /^(Layout|UpdateLayoutTree|RecalculateStyles)$/.test(event.name ?? ""))
+    .map((event) => {
+      const data = event.args?.data ?? {};
+      const stackTrace = Array.isArray(data.stackTrace) ? data.stackTrace as Array<{ functionName?: string }> : [];
+      return { name: event.name, phase: event.ph, durationMs: (event.dur ?? 0) / 1_000, stack: stackTrace.slice(0, 6).map((frame) => frame.functionName) };
+    });
+  await cdp.send("Profiler.enable");
+  await cdp.send("Profiler.setSamplingInterval", { interval: 1_000 });
+  await cdp.send("Profiler.start");
+  const profileScrollTop = await viewport.evaluate((element) => element.scrollTop);
+  const profiledScroll = waitForScrollFrames(profileScrollTop);
+  await page.mouse.wheel(0, 80);
+  await profiledScroll;
+  const { profile } = await cdp.send("Profiler.stop") as { profile: { nodes: Array<{ id: number; hitCount?: number; callFrame: { functionName: string; url: string; lineNumber: number; columnNumber: number } }>; samples?: number[]; timeDeltas?: number[] } };
+  await cdp.detach();
+  const nodeById = new Map(profile.nodes.map((node) => [node.id, node]));
+  const cpuByFrame = new Map<string, { functionName: string; url: string; line: number; column: number; sampleMs: number }>();
+  (profile.samples ?? []).forEach((nodeId, index) => {
+    const frame = nodeById.get(nodeId)?.callFrame;
+    if (!frame) return;
+    const key = `${frame.url}:${frame.lineNumber}:${frame.columnNumber}:${frame.functionName}`;
+    const current = cpuByFrame.get(key) ?? { functionName: frame.functionName, url: frame.url, line: frame.lineNumber + 1, column: frame.columnNumber + 1, sampleMs: 0 };
+    current.sampleMs += (profile.timeDeltas?.[index] ?? 0) / 1_000;
+    cpuByFrame.set(key, current);
+  });
+  return {
+    trace: longEvents.sort((left, right) => right.durationMs - left.durationMs).slice(0, 40),
+    invalidations,
+    layoutEvents,
+    jsCpuTop: [...cpuByFrame.values()].sort((left, right) => right.sampleMs - left.sampleMs).slice(0, 25),
+  };
 }
 
 /**
@@ -338,4 +428,107 @@ test("production 100x500 Signal selection and Annotation pointermove stay within
   expect(await host.getAttribute("data-canonical-revision")).toBe(initialRevision);
   await expect(page.getByTestId("history-status")).toHaveText(initialHistory!);
   await expect(page.getByTestId("dirty-status")).toHaveText(initialDirty!);
+});
+
+test("production vertical scroll latency stays bounded from 1k through 10k Signals", async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1_672, height: 941 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await installFrameInteractionProbe(page);
+  const scaleEvidence: Array<Record<string, unknown>> = [];
+
+  for (const signalCount of [1_000, 5_000, 10_000] as const) {
+    const document = generatePerformanceDocument({ signalCount, cycleCount: 32, profile: "standard" });
+    await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({
+      name: `${document.document.id}.tcd`,
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(document)),
+    });
+    await expect(page.locator(".app-titlebar h1")).toHaveText(document.document.title, { timeout: 90_000 });
+    await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 90_000 });
+    await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+    await expect(host).toHaveAttribute("data-editor-idle", "true");
+    await waitForMountedWaveOwners(page);
+
+    const viewport = page.getByTestId("cycle-viewport");
+    const viewportBox = await viewport.boundingBox();
+    expect(viewportBox).not.toBeNull();
+    await page.mouse.move(viewportBox!.x + viewportBox!.width / 2, viewportBox!.y + viewportBox!.height / 2);
+    const before = await host.evaluate((element) => ({
+      revision: element.getAttribute("data-canonical-revision"),
+      counters: JSON.parse(element.getAttribute("data-session-counters") ?? "{}") as Record<string, number>,
+      history: document.querySelector("[data-testid='history-status']")?.textContent,
+      dirty: document.querySelector("[data-testid='dirty-status']")?.textContent,
+      render: JSON.parse(document.querySelector<HTMLElement>("[data-role='timing-chart-surface']")?.getAttribute("data-render-counters") ?? "{}") as Record<string, number>,
+      mountedRows: document.querySelectorAll("[data-role='timing-row'][data-row-id]").length,
+      mountedTreeItems: document.querySelectorAll("[data-role='left-tree-rows'] [role='treeitem']").length,
+      scrollTop: document.querySelector<HTMLElement>("[data-testid='cycle-viewport']")?.scrollTop ?? 0,
+    }));
+    const samples: FrameInteractionSample[] = [];
+    const perWheelProjection: Array<Record<string, number>> = [];
+    for (let run = 0; run < 10; run += 1) {
+      const scrollTop = await viewport.evaluate((element) => element.scrollTop);
+      const beforeWheel = await host.evaluate((element) => JSON.parse(element.getAttribute("data-session-counters") ?? "{}") as Record<string, number>);
+      const id = await armFrameInteraction(page, "wheel", "[data-testid='cycle-viewport']");
+      const samplePromise = waitForFrameInteraction(page, id);
+      await page.mouse.wheel(0, 80);
+      const sample = await samplePromise;
+      samples.push(sample);
+      await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(scrollTop);
+      const afterWheel = await host.evaluate((element) => JSON.parse(element.getAttribute("data-session-counters") ?? "{}") as Record<string, number>);
+      perWheelProjection.push({
+        run,
+        projectionCalls: (afterWheel.projectionCalls ?? 0) - (beforeWheel.projectionCalls ?? 0),
+        projectionDurationMs: (afterWheel.projectionDurationMs ?? 0) - (beforeWheel.projectionDurationMs ?? 0),
+        viewportOnlyCalls: (afterWheel.viewportOnlyCalls ?? 0) - (beforeWheel.viewportOnlyCalls ?? 0),
+        changeCalls: (afterWheel.changeCalls ?? 0) - (beforeWheel.changeCalls ?? 0),
+        fullVisibleRowScans: (afterWheel.fullVisibleRowScans ?? 0) - (beforeWheel.fullVisibleRowScans ?? 0),
+        viewportRowsVisited: (afterWheel.viewportRowsVisited ?? 0) - (beforeWheel.viewportRowsVisited ?? 0),
+        viewportBinarySearchSteps: (afterWheel.viewportBinarySearchSteps ?? 0) - (beforeWheel.viewportBinarySearchSteps ?? 0),
+        rowLayoutBuilds: (afterWheel.rowLayoutBuilds ?? 0) - (beforeWheel.rowLayoutBuilds ?? 0),
+      });
+    }
+    await waitForMountedWaveOwners(page);
+    const after = await host.evaluate((element) => ({
+      revision: element.getAttribute("data-canonical-revision"),
+      counters: JSON.parse(element.getAttribute("data-session-counters") ?? "{}") as Record<string, number>,
+      history: document.querySelector("[data-testid='history-status']")?.textContent,
+      dirty: document.querySelector("[data-testid='dirty-status']")?.textContent,
+      render: JSON.parse(document.querySelector<HTMLElement>("[data-role='timing-chart-surface']")?.getAttribute("data-render-counters") ?? "{}") as Record<string, number>,
+      mountedRows: document.querySelectorAll("[data-role='timing-row'][data-row-id]").length,
+      mountedTreeItems: document.querySelectorAll("[data-role='left-tree-rows'] [role='treeitem']").length,
+      scrollTop: document.querySelector<HTMLElement>("[data-testid='cycle-viewport']")?.scrollTop ?? 0,
+    }));
+    const firstFrame = samples.map((sample) => sample.firstRafMs);
+    const followingFrame = samples.map((sample) => sample.followingRafMs);
+    const p95 = (values: number[]) => [...values].sort((left, right) => left - right)[Math.ceil(values.length * 0.95) - 1]!;
+    const firstFrameP95 = p95(firstFrame);
+    const followingFrameP95 = p95(followingFrame);
+    const longTaskCount = samples.reduce((total, sample) => total + sample.overlappingLongTasks, 0);
+    console.log(`[interaction-scroll-scaling-sample] ${JSON.stringify({ signalCount, firstFrame, followingFrame, longTaskCount, longTaskDurationsMs: samples.flatMap((sample) => sample.longTaskDurationsMs), perWheelProjection, mountedRows: after.mountedRows, mountedTreeItems: after.mountedTreeItems, waveDromRendersDelta: after.render.waveDromRenders - before.render.waveDromRenders, localGeometryBuildsDelta: after.render.localGeometryBuilds - before.render.localGeometryBuilds, viewportRowsVisited: after.counters.viewportRowsVisited - before.counters.viewportRowsVisited, viewportBinarySearchSteps: after.counters.viewportBinarySearchSteps - before.counters.viewportBinarySearchSteps, fullVisibleRowScans: after.counters.fullVisibleRowScans - before.counters.fullVisibleRowScans, rowLayoutBuilds: after.counters.rowLayoutBuilds - before.counters.rowLayoutBuilds })}`);
+    if (signalCount === 10_000) {
+      const trace = await captureScrollTrace(page, viewport);
+      const forcedLayoutAfterWindowRead = trace.invalidations.filter((event) => event.name === "LayoutInvalidationTracking" && event.reason === "Added to layout" && event.stack[0] === "getSourceWindow");
+      console.log(`[interaction-scroll-trace] ${JSON.stringify({ ...trace, dom: await host.evaluate((element) => ({ totalElements: element.querySelectorAll("*").length, svgCount: element.querySelectorAll("svg").length, waveOwners: element.querySelectorAll("[data-role='wave-owner']").length, rows: element.querySelectorAll("[data-role='timing-row']").length, treeItems: element.querySelectorAll("[role='treeitem']").length })) })}`);
+      expect(forcedLayoutAfterWindowRead, "getSourceWindow must not force layout after viewport row DOM writes").toHaveLength(0);
+    }
+    expect(after.scrollTop).toBeGreaterThan(before.scrollTop);
+    expect(after.revision).toBe(before.revision);
+    expect(after.history).toBe(before.history);
+    expect(after.dirty).toBe(before.dirty);
+    expect(after.counters.rowLayoutBuilds).toBe(before.counters.rowLayoutBuilds);
+    expect(after.counters.validationRuns).toBe(before.counters.validationRuns);
+    expect(after.counters.validatorInvocations).toBe(before.counters.validatorInvocations);
+    expect(after.mountedRows).toBeLessThan(200);
+    scaleEvidence.push({ signalCount, samples: samples.length, firstFrameMs: firstFrame, followingFrameMs: followingFrame, firstFrameP95Ms: firstFrameP95, followingFrameP95Ms: followingFrameP95, mountedRows: after.mountedRows, mountedTreeItems: after.mountedTreeItems, waveDromRendersDelta: after.render.waveDromRenders - before.render.waveDromRenders, localGeometryBuildsDelta: after.render.localGeometryBuilds - before.render.localGeometryBuilds, viewportRowsVisited: after.counters.viewportRowsVisited - before.counters.viewportRowsVisited, viewportBinarySearchSteps: after.counters.viewportBinarySearchSteps - before.counters.viewportBinarySearchSteps, fullVisibleRowScans: after.counters.fullVisibleRowScans - before.counters.fullVisibleRowScans, rowLayoutBuildsDelta: after.counters.rowLayoutBuilds - before.counters.rowLayoutBuilds, longTaskCount, longTaskDurationsMs: samples.flatMap((sample) => sample.longTaskDurationsMs) });
+  }
+  expect(scaleEvidence, "all three row-count workloads should be collected").toHaveLength(3);
+  for (const item of scaleEvidence) {
+    expect(item.firstFrameP95Ms, `${item.signalCount} Signals first-frame p95`).toBeLessThan(50);
+    expect(item.followingFrameP95Ms, `${item.signalCount} Signals following-frame p95`).toBeLessThan(50);
+    expect(item.longTaskCount, `${item.signalCount} Signals scroll Long Tasks`).toBe(0);
+  }
+  console.log(`[interaction-scroll-scaling] ${JSON.stringify(scaleEvidence)}`);
 });

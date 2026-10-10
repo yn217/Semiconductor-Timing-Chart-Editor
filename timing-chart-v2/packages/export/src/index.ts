@@ -1,7 +1,7 @@
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { allocateMeasurementLanes } from "@timing-chart-v2/geometry";
 import { buildDisplayTimeMapping, calculateRowLayout, remapValueChangesToDisplay, resolveSourcePosition, type DisplayTimeMapping } from "@timing-chart-v2/projection";
-import { ANNOTATION_LABEL_LINE_HEIGHT, ANNOTATION_LABEL_MAX_WIDTH, MAX_MEASUREMENT_LANE, anchorTransitionFraction, anchorTransitionKind, effectiveLegendEntries, resolveEdgeCounterMarker, resolveLegendPosition, valueSignalWaveDomain, wrapAnnotationLabel, type Annotation, type CanonicalDocument, type ClockSignal, type JsonObject, type MeasurementProfile, type MeasurementLayout, type Signal, type SignalId, type ValueSignal } from "@timing-chart-v2/schema";
+import { ANNOTATION_LABEL_LINE_HEIGHT, ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_PRESENTATION_NUMERIC_RANGES, MAX_MEASUREMENT_LANE, anchorTransitionFraction, anchorTransitionKind, effectiveLegendEntries, resolveEdgeCounterMarker, resolveLegendPosition, valueSignalWaveDomain, wrapAnnotationLabel, type Annotation, type CanonicalDocument, type ClockSignal, type JsonObject, type MeasurementProfile, type MeasurementLayout, type Signal, type SignalId, type ValueSignal } from "@timing-chart-v2/schema";
 import { renderWaveJsonMarkup, toWaveJson, toWaveJsonMappedClock, toWaveJsonWindow, WaveDromAdapterError, WAVEDROM_VERSION, type WaveJsonSignal } from "@timing-chart-v2/wavedrom-adapter";
 
 export interface ExportSettings {
@@ -899,14 +899,18 @@ function placedLabelPosition(annotation: ExportAnnotation, first = { x: annotati
  * duplicated rather than shared, matching this package's existing
  * ExportScene/ExportAnnotation architecture (packages/export has no
  * dependency on packages/renderer). */
-function parsePresentationStyle(style: JsonObject | undefined): { readonly strokeWidth?: number; readonly strokeDash?: string; readonly fillColor?: string; readonly fillOpacity?: number } {
+function parsePresentationStyle(style: JsonObject | undefined): { readonly strokeWidth?: number; readonly strokeStyle?: "solid" | "dashed" | "dotted"; readonly strokeDash?: string; readonly strokeOpacity?: number; readonly fillColor?: string; readonly fillOpacity?: number } {
   const source = style ?? {};
-  const strokeWidth = typeof source.strokeWidth === "number" && source.strokeWidth >= 1 && source.strokeWidth <= 8 ? source.strokeWidth : undefined;
+  const strokeWidthRange = ANNOTATION_PRESENTATION_NUMERIC_RANGES.strokeWidth;
+  const strokeWidth = typeof source.strokeWidth === "number" && source.strokeWidth >= strokeWidthRange.min && source.strokeWidth <= strokeWidthRange.max ? source.strokeWidth : undefined;
   const strokeStyle = source.strokeStyle === "solid" || source.strokeStyle === "dashed" || source.strokeStyle === "dotted" ? source.strokeStyle : undefined;
   const strokeDash = strokeStyle === "dashed" ? "7 4" : strokeStyle === "dotted" ? "2 3" : undefined;
+  const strokeOpacityRange = ANNOTATION_PRESENTATION_NUMERIC_RANGES.strokeOpacity;
+  const strokeOpacity = typeof source.strokeOpacity === "number" && source.strokeOpacity >= strokeOpacityRange.min && source.strokeOpacity <= strokeOpacityRange.max ? source.strokeOpacity : undefined;
   const fillColor = typeof source.fillColor === "string" && (source.fillColor === "none" || /^#[0-9a-f]{3,8}$/i.test(source.fillColor)) ? source.fillColor : undefined;
-  const fillOpacity = typeof source.fillOpacity === "number" && source.fillOpacity >= 0 && source.fillOpacity <= 1 ? source.fillOpacity : undefined;
-  return { ...(strokeWidth === undefined ? {} : { strokeWidth }), ...(strokeDash === undefined ? {} : { strokeDash }), ...(fillColor === undefined ? {} : { fillColor }), ...(fillOpacity === undefined ? {} : { fillOpacity }) };
+  const fillOpacityRange = ANNOTATION_PRESENTATION_NUMERIC_RANGES.fillOpacity;
+  const fillOpacity = typeof source.fillOpacity === "number" && source.fillOpacity >= fillOpacityRange.min && source.fillOpacity <= fillOpacityRange.max ? source.fillOpacity : undefined;
+  return { ...(strokeWidth === undefined ? {} : { strokeWidth }), ...(strokeStyle === undefined ? {} : { strokeStyle }), ...(strokeDash === undefined ? {} : { strokeDash }), ...(strokeOpacity === undefined ? {} : { strokeOpacity }), ...(fillColor === undefined ? {} : { fillColor }), ...(fillOpacity === undefined ? {} : { fillOpacity }) };
 }
 
 /** #378: Range/Highlight/Rectangle/Ellipse are all the renderer's "range"
@@ -929,7 +933,9 @@ function renderAreaAnnotationSvg(annotation: ExportAnnotation, metadata: string,
   // Matches each type's current CSS default exactly when no Stroke override
   // is authored: highlight is dashed, ellipse a rounded pill (border-radius:
   // 50%), range/rectangle a plain solid-bordered box.
-  const strokeDasharray = presentation.strokeDash ?? (annotation.type === "highlight" ? "4 3" : undefined);
+  const strokeDasharray = presentation.strokeStyle !== undefined
+    ? presentation.strokeDash
+    : annotation.type === "highlight" ? "4 3" : undefined;
   const rx = annotation.type === "ellipse" ? Math.min(width, surfaceHeight) / 2 : 2;
   // Label position matches the live-DOM renderer's own placement (the
   // resolved anchor row's Y, offset by authored labelOffset -- default
@@ -937,7 +943,49 @@ function renderAreaAnnotationSvg(annotation: ExportAnnotation, metadata: string,
   const placed = placedLabelPosition(annotation);
   const labelX = placed?.x ?? x + (annotation.labelOffsetX ?? 4);
   const labelY = placed?.y ?? (annotation.y1 + annotation.y2) / 2 + (annotation.labelOffsetY ?? -14);
-  return `<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="${xml(annotation.type)}"${metadata}><rect x="${x}" y="0" width="${width}" height="${surfaceHeight}" rx="${rx}" fill="${xml(fill)}" fill-opacity="${fillOpacity}" stroke="${xml(color)}" stroke-width="${strokeWidth}"${strokeDasharray ? ` stroke-dasharray="${strokeDasharray}"` : ""}/>${multilineText(labelX, labelY, annotation.label, `fill="#991b1b" stroke="none"`, annotation.style)}</g>`;
+  return `<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="${xml(annotation.type)}"${metadata}><rect x="${x}" y="0" width="${width}" height="${surfaceHeight}" rx="${rx}" fill="${xml(fill)}" fill-opacity="${fillOpacity}" stroke="${xml(color)}" stroke-width="${strokeWidth}"${presentation.strokeOpacity === undefined ? "" : ` stroke-opacity="${presentation.strokeOpacity}"`}${strokeDasharray ? ` stroke-dasharray="${strokeDasharray}"` : ""}/>${multilineText(labelX, labelY, annotation.label, `fill="#991b1b" stroke="none"`, annotation.style)}</g>`;
+}
+
+/** #378: a Callout's fill belongs to its label box and pointer tail, rather
+ * than the zero-area semantic anchor body. Keep the export box dimensions
+ * derived from the same deterministic wrapping policy used by multilineText
+ * and the live overlay. */
+function renderCalloutSvg(annotation: ExportAnnotation, metadata: string): string {
+  const presentation = parsePresentationStyle(annotation.style);
+  const style = annotation.style ?? {};
+  const fontSize = typeof style.fontSize === "number" && style.fontSize >= 6 && style.fontSize <= 48 ? style.fontSize : 10;
+  const labelWidth = typeof style.labelMaxWidth === "number" && style.labelMaxWidth >= ANNOTATION_LABEL_MAX_WIDTH.min && style.labelMaxWidth <= ANNOTATION_LABEL_MAX_WIDTH.max ? style.labelMaxWidth : ANNOTATION_LABEL_MAX_WIDTH.default;
+  const lines = (style.labelWrap === false ? annotation.label : wrapAnnotationLabel(annotation.label, labelWidth, fontSize)).split("\n");
+  const fontFamily = typeof style.fontFamily === "string" && style.fontFamily.length <= 120 ? style.fontFamily : '"Segoe UI", "Yu Gothic UI", Meiryo, sans-serif';
+  const fontWeight = typeof style.fontWeight === "string" && /^(normal|bold|[1-9]00)$/.test(style.fontWeight) ? style.fontWeight : "normal";
+  const fontStyle = style.fontStyle === "italic" ? "italic" : "normal";
+  const measure = (text: string) => [...text].reduce((sum, character) => sum + (/[\u2e80-\u9fff\uf900-\ufaff]/u.test(character) ? 1 : character === " " ? 0.33 : /[ilI.,'`:;!|]/u.test(character) ? 0.3 : /[MW@#%&]/u.test(character) ? 0.85 : 0.55) * fontSize, 0);
+  const canvas = typeof document === "undefined" ? undefined : document.createElement("canvas");
+  const context = canvas?.getContext("2d");
+  if (context) context.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`;
+  const textWidth = Math.max(fontSize, ...lines.map((line) => context && typeof context.measureText === "function" ? context.measureText(line).width : measure(line)));
+  const authoredLineHeight = typeof style.lineHeight === "number" && style.lineHeight >= ANNOTATION_LABEL_LINE_HEIGHT.min && style.lineHeight <= ANNOTATION_LABEL_LINE_HEIGHT.max ? fontSize * style.lineHeight : undefined;
+  const lineHeight = authoredLineHeight ?? 13;
+  // The live DOM Callout box contains one complete CSS line box per line.
+  // Using glyph size + inter-line gaps clipped the first/last leading for
+  // authored line-height (e.g. three 18px lines exported as a 52px box rather
+  // than the live 60px box, including vertical padding).
+  const textHeight = authoredLineHeight === undefined ? Math.max(fontSize, fontSize + Math.max(0, lines.length - 1) * lineHeight) : lines.length * lineHeight;
+  const placed = placedLabelPosition(annotation);
+  const labelX = placed?.x ?? annotation.x1 + 4 + (annotation.labelOffsetX ?? 0);
+  const baselineY = placed?.y ?? annotation.y1 - 5 + (annotation.labelOffsetY ?? 0);
+  const boxX = labelX - 7;
+  const boxY = baselineY - fontSize - 3;
+  const boxWidth = textWidth + 14;
+  const boxHeight = textHeight + 6;
+  const fill = presentation.fillColor ?? (presentation.fillOpacity === undefined ? "#ffffff" : annotation.color ?? "#d04a36");
+  const fillOpacity = presentation.fillColor === "none" ? 0 : presentation.fillOpacity ?? 0.95;
+  const textColor = typeof style.color === "string" && /^#[0-9a-f]{3,8}$/i.test(style.color) ? style.color : "#25334a";
+  const hasAuthoredStroke = presentation.strokeWidth !== undefined || presentation.strokeStyle !== undefined || presentation.strokeOpacity !== undefined;
+  const stroke = hasAuthoredStroke
+    ? ` stroke="${xml(annotation.color ?? "#d04a36")}" stroke-width="${presentation.strokeWidth ?? 1}"${presentation.strokeDash ? ` stroke-dasharray="${presentation.strokeDash}"` : ""}${presentation.strokeOpacity === undefined ? "" : ` stroke-opacity="${presentation.strokeOpacity}"`}`
+    : ` stroke="none"`;
+  return `<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="callout"${metadata}><rect data-role="callout-box" x="${boxX}" y="${boxY}" width="${boxWidth}" height="${boxHeight}" rx="8" fill="${xml(fill)}" fill-opacity="${fillOpacity}"${stroke}/><path data-role="callout-tail" d="M ${boxX + 9} ${boxY + boxHeight - 1} L ${boxX + 13} ${boxY + boxHeight + 4} L ${boxX + 17} ${boxY + boxHeight - 1} Z" fill="${xml(fill)}" fill-opacity="${fillOpacity}"${stroke}/>${multilineText(labelX, baselineY, annotation.label, `fill="${xml(textColor)}" stroke="none" font-size="${fontSize}" font-family="${xml(fontFamily)}" font-weight="${fontWeight}" font-style="${fontStyle}"`, annotation.style)}</g>`;
 }
 
 /** #378: Vertical Line's live-DOM glyph is a full-height dashed vertical
@@ -954,25 +1002,30 @@ function renderVerticalLineSvg(annotation: ExportAnnotation, metadata: string, s
   const placed = placedLabelPosition(annotation, { x: annotation.x1, y: annotation.y1 }, { x: annotation.x1, y: annotation.y1 });
   const labelX = placed?.x ?? annotation.x1 + (annotation.labelOffsetX ?? 6);
   const labelY = placed?.y ?? annotation.y1 + (annotation.labelOffsetY ?? -14);
-  return `<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="verticalLine"${metadata}><line x1="${annotation.x1}" y1="0" x2="${annotation.x1}" y2="${surfaceHeight}" stroke="${xml(color)}" stroke-width="${strokeWidth}" stroke-dasharray="${strokeDasharray}"/>${multilineText(labelX, labelY, annotation.label, `fill="#991b1b" stroke="none"`, annotation.style)}</g>`;
+  return `<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="verticalLine"${metadata}><line x1="${annotation.x1}" y1="0" x2="${annotation.x1}" y2="${surfaceHeight}" stroke="${xml(color)}" stroke-width="${strokeWidth}"${presentation.strokeOpacity === undefined ? "" : ` stroke-opacity="${presentation.strokeOpacity}"`} stroke-dasharray="${strokeDasharray}"/>${multilineText(labelX, labelY, annotation.label, `fill="#991b1b" stroke="none"`, annotation.style)}</g>`;
 }
 
 function renderMeasurementSvg(annotation: ExportAnnotation, metadata: string): string {
+  const presentation = parsePresentationStyle(annotation.style);
+  const strokeWidth = presentation.strokeWidth ?? 2;
+  const strokeDash = presentation.strokeStyle === "solid" ? undefined : presentation.strokeDash;
+  const strokeOpacity = presentation.strokeOpacity === undefined ? "" : ` stroke-opacity="${presentation.strokeOpacity}"`;
+  const strokeAttributes = ` stroke-width="${strokeWidth}"${strokeDash ? ` stroke-dasharray="${strokeDash}"` : ""}${strokeOpacity}`;
   const layout = annotation.measurementLayout;
-  if (!layout || annotation.measurementLane === undefined) { const placed = placedLabelPosition(annotation); return `<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="measurement"${metadata}><line x1="${annotation.x1}" y1="${annotation.y1}" x2="${annotation.x2}" y2="${annotation.y2}"/>${multilineText(placed?.x ?? Math.min(annotation.x1, annotation.x2) + 4, placed?.y ?? Math.min(annotation.y1, annotation.y2) - 5, annotation.label, `fill="#991b1b" stroke="none"`, annotation.style)}</g>`; }
+  if (!layout || annotation.measurementLane === undefined) { const placed = placedLabelPosition(annotation); return `<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="measurement"${metadata}><line x1="${annotation.x1}" y1="${annotation.y1}" x2="${annotation.x2}" y2="${annotation.y2}"${strokeAttributes}/>${multilineText(placed?.x ?? Math.min(annotation.x1, annotation.x2) + 4, placed?.y ?? Math.min(annotation.y1, annotation.y2) - 5, annotation.label, `fill="#991b1b" stroke="none"`, annotation.style)}</g>`; }
   const y = Math.min(annotation.y1, annotation.y2) - 18 * (annotation.measurementLane + 1);
   const extension = (side: "start" | "end", x: number, anchorY: number) => layout.extensionLines === "both" || layout.extensionLines === side ? `<line data-role="measurement-extension" data-extension-side="${side}" x1="${x}" y1="${anchorY}" x2="${x}" y2="${y}" stroke-dasharray="3 2"/>` : "";
   const marker = (side: "start" | "end", x: number, kind: "none" | "bar" | "arrow") => {
     if (kind === "none") return "";
-    if (kind === "bar") return `<line data-role="measurement-marker" data-marker-side="${side}" data-marker-kind="bar" x1="${x}" y1="${y - 6}" x2="${x}" y2="${y + 6}" stroke-width="2"/>`;
+    if (kind === "bar") return `<line data-role="measurement-marker" data-marker-side="${side}" data-marker-kind="bar" x1="${x}" y1="${y - 6}" x2="${x}" y2="${y + 6}"${strokeAttributes}/>`;
     const inward = layout.arrowLayout === "inward";
     const points = side === "start"
       ? (inward ? `${x - 7},${y - 4} ${x},${y} ${x - 7},${y + 4}` : `${x + 7},${y - 4} ${x},${y} ${x + 7},${y + 4}`)
       : (inward ? `${x + 7},${y - 4} ${x},${y} ${x + 7},${y + 4}` : `${x - 7},${y - 4} ${x},${y} ${x - 7},${y + 4}`);
-    return `<polyline data-role="measurement-marker" data-marker-side="${side}" data-marker-kind="arrow" points="${points}" fill="none" stroke-width="1.5"/>`;
+    return `<polyline data-role="measurement-marker" data-marker-side="${side}" data-marker-kind="arrow" points="${points}" fill="none"${strokeAttributes}/>`;
   };
   const placed = placedLabelPosition(annotation, { x: annotation.x1, y }, { x: annotation.x2, y });
-  return `<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="measurement" data-measurement-lane="${annotation.measurementLane}" data-arrow-layout="${layout.arrowLayout}"${metadata}>${extension("start", annotation.x1, annotation.y1)}${extension("end", annotation.x2, annotation.y2)}${marker("start", annotation.x1, layout.startMarker)}${marker("end", annotation.x2, layout.endMarker)}<line data-role="measurement-dimension-line" x1="${annotation.x1}" y1="${y}" x2="${annotation.x2}" y2="${y}"/>${multilineText(placed?.x ?? (annotation.x1 + annotation.x2) / 2 + 4, placed?.y ?? y - 5, annotation.label, `fill="#991b1b" stroke="none"`, annotation.style)}</g>`;
+  return `<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="measurement" data-measurement-lane="${annotation.measurementLane}" data-arrow-layout="${layout.arrowLayout}"${metadata}>${extension("start", annotation.x1, annotation.y1)}${extension("end", annotation.x2, annotation.y2)}${marker("start", annotation.x1, layout.startMarker)}${marker("end", annotation.x2, layout.endMarker)}<line data-role="measurement-dimension-line" x1="${annotation.x1}" y1="${y}" x2="${annotation.x2}" y2="${y}"${strokeAttributes}/>${multilineText(placed?.x ?? (annotation.x1 + annotation.x2) / 2 + 4, placed?.y ?? y - 5, annotation.label, `fill="#991b1b" stroke="none"`, annotation.style)}</g>`;
 }
 
 /** #375: Arrow/Dependency's real route shape (straight/orthogonal/curve/
@@ -1017,9 +1070,12 @@ function renderLineAnnotationSvg(annotation: ExportAnnotation, metadata: string)
   const lineType = annotation.lineType ?? "straight";
   const arrowhead = annotation.arrowhead ?? "none";
   const color = annotation.color ?? "#d04a36";
+  const presentation = parsePresentationStyle(annotation.style);
   const path = linePathForExport(lineType, annotation.x1, annotation.y1, annotation.x2, annotation.y2);
+  const strokeWidth = presentation.strokeWidth ?? 2;
+  const strokeDash = presentation.strokeStyle === "solid" ? undefined : presentation.strokeDash ?? path.dash;
   const markerId = `export-arrow-${xml(annotation.id)}`;
-  const markerDef = (suffix: "start" | "end", reverse: boolean) => `<marker id="${markerId}-${suffix}" markerWidth="8" markerHeight="8" refX="${reverse ? 1 : 7}" refY="4" orient="auto-start-reverse" markerUnits="strokeWidth"><path d="${reverse ? "M 8 0 L 0 4 L 8 8 Z" : "M 0 0 L 8 4 L 0 8 Z"}" fill="${xml(color)}"/></marker>`;
+  const markerDef = (suffix: "start" | "end", reverse: boolean) => `<marker id="${markerId}-${suffix}" markerWidth="8" markerHeight="8" refX="${reverse ? 1 : 7}" refY="4" orient="auto-start-reverse" markerUnits="strokeWidth"><path d="${reverse ? "M 8 0 L 0 4 L 8 8 Z" : "M 0 0 L 8 4 L 0 8 Z"}" fill="${xml(color)}"${presentation.strokeOpacity === undefined ? "" : ` fill-opacity="${presentation.strokeOpacity}"`}/></marker>`;
   const defs = [
     ...(arrowhead === "start" || arrowhead === "bidirectional" ? [markerDef("start", true)] : []),
     ...(arrowhead === "end" || arrowhead === "bidirectional" ? [markerDef("end", false)] : []),
@@ -1028,7 +1084,7 @@ function renderLineAnnotationSvg(annotation: ExportAnnotation, metadata: string)
   const placed = placedLabelPosition(annotation);
   const labelX = placed?.x ?? Math.min(annotation.x1, annotation.x2) + 4 + (annotation.labelOffsetX ?? 0);
   const labelY = placed?.y ?? Math.min(annotation.y1, annotation.y2) - 5 + (annotation.labelOffsetY ?? 0);
-  return `<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="${xml(annotation.type)}" data-line-type="${lineType}" data-arrowhead="${arrowhead}"${metadata}>${defs.length ? `<defs>${defs.join("")}</defs>` : ""}<path data-role="annotation-path" d="${path.d}" fill="none" stroke="${xml(color)}" stroke-width="2"${path.dash ? ` stroke-dasharray="${path.dash}"` : ""}${markerAttrs}/>${multilineText(labelX, labelY, annotation.label, `fill="#991b1b" stroke="none"`, annotation.style)}</g>`;
+  return `<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="${xml(annotation.type)}" data-line-type="${lineType}" data-arrowhead="${arrowhead}"${metadata}>${defs.length ? `<defs>${defs.join("")}</defs>` : ""}<path data-role="annotation-path" d="${path.d}" fill="none" stroke="${xml(color)}" stroke-width="${strokeWidth}"${presentation.strokeOpacity === undefined ? "" : ` stroke-opacity="${presentation.strokeOpacity}"`}${strokeDash ? ` stroke-dasharray="${strokeDash}"` : ""}${markerAttrs}/>${multilineText(labelX, labelY, annotation.label, `fill="#991b1b" stroke="none"`, annotation.style)}</g>`;
 }
 
 function* renderExportSvgSteps(scene: ExportScene): Generator<void, readonly string[], void> {
@@ -1077,6 +1133,7 @@ function* renderExportSvgSteps(scene: ExportScene): Generator<void, readonly str
       const placed = placedLabelPosition(annotation);
       out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="ghostTrace"${metadata}>${path} fill="none" stroke="#64748b" stroke-width="2" stroke-dasharray="6 4" opacity="${annotation.opacity ?? 0.55}"/>${multilineText(placed?.x ?? Math.min(annotation.x1, annotation.x2) + 4, placed?.y ?? Math.min(annotation.y1, annotation.y2) - 5, annotation.label, `fill="#475569" stroke="none"`, annotation.style)}</g>`);
     }
+    else if (annotation.type === "callout") out.push(renderCalloutSvg(annotation, metadata));
     else if (annotation.type === "measurement") out.push(renderMeasurementSvg(annotation, metadata));
     else if (annotation.type === "arrow" || annotation.type === "dependency" || annotation.type === "connector") out.push(renderLineAnnotationSvg(annotation, metadata));
     else if (annotation.type === "marker") {
@@ -1085,7 +1142,8 @@ function* renderExportSvgSteps(scene: ExportScene): Generator<void, readonly str
       // [data-role="annotation-body"]`, a 28px-tall border-left) -- distinct
       // from the Bookmark navigation object and from a zero-length line.
       const placed = placedLabelPosition(annotation, { x: annotation.x1, y: annotation.y1 }, { x: annotation.x1, y: annotation.y1 });
-      out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="marker"${metadata}><line data-role="marker-tick" x1="${annotation.x1}" y1="${annotation.y1 - 14}" x2="${annotation.x1}" y2="${annotation.y1 + 14}" stroke="#d04a36" stroke-width="3"/>${multilineText(placed?.x ?? annotation.x1 + 6, placed?.y ?? annotation.y1 + 4, annotation.label, `fill="#991b1b" stroke="none"`, annotation.style)}</g>`);
+      const presentation = parsePresentationStyle(annotation.style);
+      out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="marker"${metadata}><line data-role="marker-tick" x1="${annotation.x1}" y1="${annotation.y1 - 14}" x2="${annotation.x1}" y2="${annotation.y1 + 14}" stroke="${xml(annotation.color ?? "#d04a36")}" stroke-width="${presentation.strokeWidth ?? 3}"${presentation.strokeOpacity === undefined ? "" : ` stroke-opacity="${presentation.strokeOpacity}"`}${presentation.strokeDash ? ` stroke-dasharray="${presentation.strokeDash}"` : ""}/>${multilineText(placed?.x ?? annotation.x1 + 6, placed?.y ?? annotation.y1 + 4, annotation.label, `fill="#991b1b" stroke="none"`, annotation.style)}</g>`);
     }
     else if (annotation.type === "bracket") {
       // #377: Bracket must read as a bracket, not a plain Range line --
@@ -1096,8 +1154,12 @@ function* renderExportSvgSteps(scene: ExportScene): Generator<void, readonly str
       const length = Math.max(1, Math.hypot(dx, dy));
       const capX = (-dy / length) * 6;
       const capY = (dx / length) * 6;
+      const presentation = parsePresentationStyle(annotation.style);
+      const strokeWidth = presentation.strokeWidth ?? 2;
+      const strokeDash = presentation.strokeDash;
+      const strokeOpacity = presentation.strokeOpacity === undefined ? "" : ` stroke-opacity="${presentation.strokeOpacity}"`;
       const placed = placedLabelPosition(annotation);
-      out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="bracket"${metadata}><line x1="${annotation.x1}" y1="${annotation.y1}" x2="${annotation.x2}" y2="${annotation.y2}"/><path data-role="annotation-bracket-caps" d="M ${annotation.x1 - capX} ${annotation.y1 - capY} L ${annotation.x1 + capX} ${annotation.y1 + capY} M ${annotation.x2 - capX} ${annotation.y2 - capY} L ${annotation.x2 + capX} ${annotation.y2 + capY}" fill="none" stroke="#d04a36" stroke-width="2"/>${multilineText(placed?.x ?? Math.min(annotation.x1, annotation.x2) + 4, placed?.y ?? Math.min(annotation.y1, annotation.y2) - 5, annotation.label, `fill="#991b1b" stroke="none"`, annotation.style)}</g>`);
+      out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="bracket"${metadata}><line x1="${annotation.x1}" y1="${annotation.y1}" x2="${annotation.x2}" y2="${annotation.y2}" stroke="${xml(annotation.color ?? "#d04a36")}" stroke-width="${strokeWidth}"${strokeOpacity}${strokeDash ? ` stroke-dasharray="${strokeDash}"` : ""}/><path data-role="annotation-bracket-caps" d="M ${annotation.x1 - capX} ${annotation.y1 - capY} L ${annotation.x1 + capX} ${annotation.y1 + capY} M ${annotation.x2 - capX} ${annotation.y2 - capY} L ${annotation.x2 + capX} ${annotation.y2 + capY}" fill="none" stroke="${xml(annotation.color ?? "#d04a36")}" stroke-width="${strokeWidth}"${strokeOpacity}${strokeDash ? ` stroke-dasharray="${strokeDash}"` : ""}/>${multilineText(placed?.x ?? Math.min(annotation.x1, annotation.x2) + 4, placed?.y ?? Math.min(annotation.y1, annotation.y2) - 5, annotation.label, `fill="#991b1b" stroke="none"`, annotation.style)}</g>`);
     }
     else if (annotation.type === "range" || annotation.type === "highlight" || annotation.type === "rectangle" || annotation.type === "ellipse") out.push(renderAreaAnnotationSvg(annotation, metadata, scene.height));
     else if (annotation.type === "verticalLine") out.push(renderVerticalLineSvg(annotation, metadata, scene.height));

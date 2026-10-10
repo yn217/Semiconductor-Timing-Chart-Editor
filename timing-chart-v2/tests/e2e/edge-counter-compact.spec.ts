@@ -47,6 +47,43 @@ test.describe("Edge Counter compact layout", () => {
     await expect(editor.getByTestId("apply-clock-edge-counter")).toBeVisible();
   });
 
+  test("applies position and X/Y offsets to the same stable Clock edge labels", async ({ page }) => {
+    await page.goto("/");
+    const host = page.getByTestId("cycle-surface");
+    await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+    await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
+    const editor = page.getByTestId("signal-editor");
+    const labels = host.locator("[data-role='clock-edge-number'][data-signal-id='sig_cycle_clock']");
+
+    await editor.getByLabel("Clock edge counter show").check();
+    await editor.getByTestId("apply-clock-edge-counter").click();
+    await expect(host).toHaveAttribute("data-editor-idle", "true");
+    await expect(labels.first()).toBeVisible();
+    const edgeId = await labels.first().getAttribute("data-edge-counter-id");
+    expect(edgeId).toBeTruthy();
+    const sameEdge = host.locator(`[data-role='clock-edge-number'][data-edge-counter-id="${edgeId}"]`);
+    const before = await sameEdge.getAttribute("style");
+    const beforePosition = before?.match(/translate\(([-\d.]+)px, ([-\d.]+)px\)/);
+    expect(beforePosition).not.toBeNull();
+
+    await editor.getByLabel("Clock edge counter position").selectOption("below");
+    await editor.getByLabel("Clock edge counter X offset").fill("7");
+    await editor.getByLabel("Clock edge counter Y offset").fill("11");
+    await editor.getByTestId("apply-clock-edge-counter").click();
+    await expect(host).toHaveAttribute("data-editor-idle", "true");
+    await expect(sameEdge).toBeVisible();
+    const after = await sameEdge.getAttribute("style");
+    const afterPosition = after?.match(/translate\(([-\d.]+)px, ([-\d.]+)px\)/);
+    expect(afterPosition).not.toBeNull();
+    expect(Number(afterPosition![1]) - Number(beforePosition![1])).toBe(7);
+    // The fixture starts at above(-6) with authored Y offset -6; the edited
+    // state is below(+10) with Y offset 11, so the Geometry overlay moves 33px.
+    expect(Number(afterPosition![2]) - Number(beforePosition![2])).toBe(33);
+    await expect(editor.getByLabel("Clock edge counter position")).toHaveValue("below");
+    await expect(editor.getByLabel("Clock edge counter X offset")).toHaveValue("7");
+    await expect(editor.getByLabel("Clock edge counter Y offset")).toHaveValue("11");
+  });
+
   test("uses the selected Bookmark identity for marker count-from", async ({ page }) => {
     await page.goto("/");
     const host = page.getByTestId("cycle-surface");

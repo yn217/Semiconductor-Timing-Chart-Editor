@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
 import { startInCycleSample } from "./cycle-startup.js";
 import { waveTransitionXs, waveUseHrefs } from "./wave-probe.js";
 
@@ -91,6 +92,102 @@ test("commits one event edit once, rerenders only its waveform, and supports Und
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
   await expect(editor.getByTestId("event-row-start-3")).toHaveValue("3");
   await expect(editor.getByLabel("Value 3")).toHaveValue("1");
+});
+
+test("transition identity survives Start edits and reusing the vacated cycle allocates a distinct ID", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const editor = page.getByTestId("signal-editor");
+  const rows = editor.locator("form.event-row");
+  const originalAt3 = editor.locator("form.event-row[data-event-start='3']");
+  const originalId = await originalAt3.getAttribute("data-event-id");
+  expect(originalId).toBeTruthy();
+
+  await originalAt3.getByLabel("Start 3").fill("5");
+  await originalAt3.getByTestId("event-row-apply-3").click();
+  const movedTo5 = editor.locator("form.event-row[data-event-start='5']");
+  await expect(movedTo5).toHaveAttribute("data-event-id", originalId!);
+
+  await movedTo5.getByLabel("Start 5").fill("10");
+  await movedTo5.getByTestId("event-row-apply-5").click();
+  const movedTo10 = editor.locator("form.event-row[data-event-start='10']");
+  await expect(movedTo10).toHaveAttribute("data-event-id", originalId!);
+
+  // Recreate the now-vacant Start=5 through the production Add form. Its
+  // identity must not be reconstructed from the mutable cycle coordinate.
+  await editor.getByLabel("New event start").fill("5");
+  await editor.getByTestId("add-signal-event").click();
+  const recreatedAt5 = editor.locator("form.event-row[data-event-start='5']");
+  await expect(recreatedAt5).toHaveCount(1);
+  const recreatedId = await recreatedAt5.getAttribute("data-event-id");
+  expect(recreatedId).toBeTruthy();
+  expect(recreatedId).not.toBe(originalId);
+
+  const allIds = await rows.evaluateAll((items) => items.map((item) => item.getAttribute("data-event-id")));
+  expect(new Set(allIds).size).toBe(allIds.length);
+  expect(allIds).toContain(originalId);
+
+  // Both semantic rows remain independently editable/deletable after their
+  // starts cross and the old coordinate is reused.
+  await movedTo10.getByLabel("Value 10").selectOption("X");
+  await movedTo10.getByTestId("event-row-apply-10").click();
+  const valueAt5 = recreatedAt5.getByLabel("Value 5");
+  const existingAt5 = await valueAt5.inputValue();
+  const alternateAt5 = await valueAt5.locator("option").evaluateAll((options, current) => options.map((option) => (option as HTMLOptionElement).value).find((value) => value !== current), existingAt5);
+  expect(alternateAt5).toBeTruthy();
+  await valueAt5.selectOption(alternateAt5!);
+  await recreatedAt5.getByTestId("event-row-apply-5").click();
+  await expect(editor.locator(`form.event-row[data-event-id="${originalId}"]`).getByLabel(/^Value /)).toHaveValue("X");
+  await expect(editor.locator(`form.event-row[data-event-id="${recreatedId}"]`).getByLabel(/^Value /)).toHaveValue(alternateAt5!);
+
+  const beforeDuplicate = await rows.evaluateAll((items) => items.map((item) => item.getAttribute("data-event-id")));
+  await editor.locator("form.event-row[data-event-start='10']").getByRole("button", { name: "Duplicate transition at cycle 10" }).click();
+  await expect(rows).toHaveCount(5);
+  const afterDuplicate10 = await rows.evaluateAll((items) => items.map((item) => item.getAttribute("data-event-id")));
+  const duplicate10Id = afterDuplicate10.find((id) => !beforeDuplicate.includes(id));
+  expect(duplicate10Id).toBeTruthy();
+  expect(duplicate10Id).not.toBe(originalId);
+  expect(new Set(afterDuplicate10).size).toBe(afterDuplicate10.length);
+
+  await editor.locator("form.event-row[data-event-start='5']").getByRole("button", { name: "Duplicate transition at cycle 5" }).click();
+  await expect(rows).toHaveCount(6);
+  const afterDuplicate5 = await rows.evaluateAll((items) => items.map((item) => item.getAttribute("data-event-id")));
+  const duplicate5Id = afterDuplicate5.find((id) => !afterDuplicate10.includes(id));
+  expect(duplicate5Id).toBeTruthy();
+  expect(duplicate5Id).not.toBe(recreatedId);
+  expect(new Set(afterDuplicate5).size).toBe(afterDuplicate5.length);
+
+  for (const duplicateId of [duplicate10Id!, duplicate5Id!]) {
+    const duplicateRow = editor.locator(`form.event-row[data-event-id="${duplicateId}"]`);
+    await duplicateRow.getByRole("button", { name: /Delete transition at cycle/ }).click();
+    await expect(editor.locator(`form.event-row[data-event-id="${duplicateId}"]`)).toHaveCount(0);
+  }
+  await expect(editor.locator(`form.event-row[data-event-id="${originalId}"]`)).toHaveCount(1);
+  await expect(editor.locator(`form.event-row[data-event-id="${recreatedId}"]`)).toHaveCount(1);
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await downloadPromise).path();
+  expect(savedPath).toBeTruthy();
+  const saved = JSON.parse(readFileSync(savedPath!, "utf8")) as { signals: Array<{ id: string; values?: Array<{ id?: string; start: number }> }> };
+  const savedValues = saved.signals.find((signal) => signal.id === "sig_cycle_request")!.values!;
+  expect(savedValues.find((change) => change.start === 10)?.id).toBe(originalId);
+  expect(savedValues.find((change) => change.start === 5)?.id).toBe(recreatedId);
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const reopenedRows = page.getByTestId("signal-editor").locator("form.event-row");
+  await expect(reopenedRows).toHaveCount(4);
+  await expect(page.getByTestId("signal-editor").locator(`form.event-row[data-event-id="${originalId}"]`)).toHaveAttribute("data-event-start", "10");
+  await expect(page.getByTestId("signal-editor").locator(`form.event-row[data-event-id="${recreatedId}"]`)).toHaveAttribute("data-event-start", "5");
+
+  await editor.locator("form.event-row[data-event-start='5']").getByRole("button", { name: "Delete transition at cycle 5" }).click();
+  await expect(editor.locator("form.event-row[data-event-start='5']")).toHaveCount(0);
+  await editor.locator("form.event-row[data-event-start='10']").getByRole("button", { name: "Delete transition at cycle 10" }).click();
+  await expect(editor.locator("form.event-row[data-event-start='10']")).toHaveCount(0);
 });
 
 // Bottom Panel Visual Reference pass (#402/#426): Name and Role are now

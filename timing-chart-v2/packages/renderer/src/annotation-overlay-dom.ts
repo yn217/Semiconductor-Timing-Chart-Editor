@@ -136,12 +136,47 @@ export function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPr
   // body"] rules) -- an absent value here leaves that CSS default in place,
   // so a document with no Stroke/Fill authored looks exactly as before.
   const presentation = parsePresentationStyle(primitive.style);
-  if (presentation.strokeWidth !== undefined) body.style.borderWidth = `${presentation.strokeWidth}px`; else body.style.removeProperty("border-width");
-  if (presentation.strokeStyle !== undefined) body.style.borderStyle = presentation.strokeStyle; else body.style.removeProperty("border-style");
-  if (presentation.fillColor !== undefined || presentation.fillOpacity !== undefined) {
-    const base = presentation.fillColor === "none" ? undefined : presentation.fillColor ?? primitive.color ?? "#d04a36";
-    body.style.backgroundColor = base === undefined ? "transparent" : `color-mix(in srgb, ${base} ${Math.round((presentation.fillOpacity ?? 0.12) * 100)}%, transparent)`;
-  } else body.style.removeProperty("background-color");
+  const strokeOpacityColor = presentation.strokeOpacity === undefined
+    ? undefined
+    : `color-mix(in srgb, ${primitive.color ?? "#d04a36"} ${Math.round(presentation.strokeOpacity * 100)}%, transparent)`;
+  if (primitive.shape === "vertical" || primitive.type === "marker") {
+    // These primitives are authored as a single left-edge tick. Setting the
+    // shorthand border properties would also draw top/right/bottom edges,
+    // turning the narrow marker into a box. Keep the shared controls on the
+    // actual semantic stroke only.
+    body.style.removeProperty("border-width");
+    body.style.removeProperty("border-style");
+    body.style.removeProperty("border-color");
+    if (presentation.strokeWidth !== undefined) body.style.borderLeftWidth = `${presentation.strokeWidth}px`; else body.style.removeProperty("border-left-width");
+    if (presentation.strokeStyle !== undefined) body.style.borderLeftStyle = presentation.strokeStyle; else body.style.removeProperty("border-left-style");
+    if (strokeOpacityColor !== undefined) body.style.borderLeftColor = strokeOpacityColor; else body.style.removeProperty("border-left-color");
+  } else if (primitive.shape === "range") {
+    if (presentation.strokeWidth !== undefined) body.style.borderWidth = `${presentation.strokeWidth}px`; else body.style.removeProperty("border-width");
+    if (presentation.strokeStyle !== undefined) body.style.borderStyle = presentation.strokeStyle; else body.style.removeProperty("border-style");
+    if (strokeOpacityColor !== undefined) body.style.borderColor = strokeOpacityColor; else body.style.removeProperty("border-color");
+  } else {
+    // Routed lines carry their stroke on the nested SVG path. A CSS border on
+    // the wrapper is not part of that geometry and could introduce a second,
+    // unrelated outline.
+    body.style.removeProperty("border-width");
+    body.style.removeProperty("border-style");
+    body.style.removeProperty("border-color");
+  }
+  if (primitive.type === "callout") {
+    const hasAuthoredStroke = presentation.strokeWidth !== undefined || presentation.strokeStyle !== undefined || presentation.strokeOpacity !== undefined;
+    if (hasAuthoredStroke) {
+      label.style.borderWidth = `${presentation.strokeWidth ?? 1}px`;
+      label.style.borderStyle = presentation.strokeStyle ?? "solid";
+      label.style.borderColor = strokeOpacityColor ?? `color-mix(in srgb, ${primitive.color ?? "#d04a36"} 55%, white)`;
+      label.style.setProperty("--annotation-callout-tail-stroke", `${presentation.strokeWidth ?? 1}px ${presentation.strokeStyle ?? "solid"} ${strokeOpacityColor ?? `color-mix(in srgb, ${primitive.color ?? "#d04a36"} 55%, white)`}`);
+    } else {
+      label.style.removeProperty("border-width");
+      label.style.removeProperty("border-style");
+      label.style.removeProperty("border-color");
+      label.style.removeProperty("--annotation-callout-tail-stroke");
+    }
+  }
+  const fillTarget = primitive.type === "callout" ? label : body;
   label.dataset.annotationLabel = "true";
   const labelPresentation = parsePresentationStyle(primitive.style);
   const textStyle = parseTextStyle(primitive.style);
@@ -157,6 +192,11 @@ export function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPr
   label.style.whiteSpace = "pre";
   label.style.maxWidth = "none";
   applyTextStyle(label, textStyle);
+  if (presentation.fillColor !== undefined || presentation.fillOpacity !== undefined) {
+    const base = presentation.fillColor === "none" ? undefined : presentation.fillColor ?? primitive.color ?? "#d04a36";
+    const defaultOpacity = primitive.type === "callout" ? 0.95 : 0.12;
+    fillTarget.style.backgroundColor = base === undefined ? "transparent" : `color-mix(in srgb, ${base} ${Math.round((presentation.fillOpacity ?? defaultOpacity) * 100)}%, transparent)`;
+  } else if (fillTarget !== label) fillTarget.style.removeProperty("background-color");
   if (primitive.align) label.style.textAlign = primitive.align; else label.style.removeProperty("text-align");
   const labelMidpoint = { x: (lineFirst.x + lineSecond.x) / 2, y: (lineFirst.y + lineSecond.y) / 2 };
   const labelAnchor = primitive.labelPlacement === "start" ? first
@@ -298,6 +338,7 @@ function renderLineBody(body: HTMLElement, primitive: AnnotationOverlayPrimitive
   const localFirst = toLocal(first);
   const localSecond = toLocal(second);
   const localPoints = path.points.map(toLocal);
+  const presentation = parsePresentationStyle(primitive.style);
   const localPath = lineType === "orthogonal"
     ? `M ${localPoints[0]!.x} ${localPoints[0]!.y} L ${localPoints[1]!.x} ${localPoints[1]!.y} L ${localPoints[2]!.x} ${localPoints[2]!.y} L ${localPoints[3]!.x} ${localPoints[3]!.y}`
     : lineType === "curve"
@@ -324,6 +365,7 @@ function renderLineBody(body: HTMLElement, primitive: AnnotationOverlayPrimitive
     const head = svgDocument.createElementNS("http://www.w3.org/2000/svg", "path");
     head.setAttribute("d", reverse ? "M 8 0 L 0 4 L 8 8 Z" : "M 0 0 L 8 4 L 0 8 Z");
     head.setAttribute("fill", primitive.color ?? "#d04a36");
+    if (presentation.strokeOpacity !== undefined) head.setAttribute("fill-opacity", String(presentation.strokeOpacity));
     result.append(head);
     return result;
   };
@@ -341,10 +383,12 @@ function renderLineBody(body: HTMLElement, primitive: AnnotationOverlayPrimitive
   pathElement.setAttribute("d", localPath);
   pathElement.setAttribute("fill", "none");
   pathElement.setAttribute("stroke", primitive.color ?? "#d04a36");
-  pathElement.setAttribute("stroke-width", "2");
+  pathElement.setAttribute("stroke-width", String(presentation.strokeWidth ?? 2));
+  if (presentation.strokeOpacity !== undefined) pathElement.setAttribute("stroke-opacity", String(presentation.strokeOpacity));
   pathElement.setAttribute("stroke-linecap", "round");
   pathElement.setAttribute("stroke-linejoin", "round");
-  if (path.dash) pathElement.setAttribute("stroke-dasharray", path.dash);
+  const strokeDash = presentation.strokeStyle === "dashed" ? "7 4" : presentation.strokeStyle === "dotted" ? "2 3" : presentation.strokeStyle === "solid" ? undefined : path.dash;
+  if (strokeDash) pathElement.setAttribute("stroke-dasharray", strokeDash);
   if (arrowhead === "start" || arrowhead === "bidirectional") pathElement.setAttribute("marker-start", `url(#${markerId}-start)`);
   if (arrowhead === "end" || arrowhead === "bidirectional") pathElement.setAttribute("marker-end", `url(#${markerId}-end)`);
   if (rotationDeg !== 0) pathElement.setAttribute("transform", `rotate(${rotationDeg} ${(localFirst.x + localSecond.x) / 2} ${(localFirst.y + localSecond.y) / 2})`);
@@ -360,8 +404,10 @@ function renderLineBody(body: HTMLElement, primitive: AnnotationOverlayPrimitive
     caps.setAttribute("d", `M ${localFirst.x - capX} ${localFirst.y - capY} L ${localFirst.x + capX} ${localFirst.y + capY} M ${localSecond.x - capX} ${localSecond.y - capY} L ${localSecond.x + capX} ${localSecond.y + capY}`);
     caps.setAttribute("fill", "none");
     caps.setAttribute("stroke", primitive.color ?? "#d04a36");
-    caps.setAttribute("stroke-width", "2");
+    caps.setAttribute("stroke-width", String(presentation.strokeWidth ?? 2));
+    if (presentation.strokeOpacity !== undefined) caps.setAttribute("stroke-opacity", String(presentation.strokeOpacity));
     caps.setAttribute("stroke-linecap", "round");
+    if (strokeDash) caps.setAttribute("stroke-dasharray", strokeDash);
     if (rotationDeg !== 0) caps.setAttribute("transform", `rotate(${rotationDeg} ${(localFirst.x + localSecond.x) / 2} ${(localFirst.y + localSecond.y) / 2})`);
     svg.append(caps);
   }
@@ -381,11 +427,12 @@ function renderLineBody(body: HTMLElement, primitive: AnnotationOverlayPrimitive
  * free-form-JsonObject convention as parseTextStyle below -- an absent or
  * malformed value here means "use the shape's existing CSS default",
  * never a thrown error or a garbage inline style. */
-function parsePresentationStyle(style: Record<string, unknown> | undefined): { readonly strokeWidth?: number | undefined; readonly strokeStyle?: "solid" | "dashed" | "dotted" | undefined; readonly fillColor?: string | undefined; readonly fillOpacity?: number | undefined; readonly labelWrap?: boolean | undefined; readonly labelMaxWidth?: number | undefined } {
+function parsePresentationStyle(style: Record<string, unknown> | undefined): { readonly strokeWidth?: number | undefined; readonly strokeStyle?: "solid" | "dashed" | "dotted" | undefined; readonly strokeOpacity?: number | undefined; readonly fillColor?: string | undefined; readonly fillOpacity?: number | undefined; readonly labelWrap?: boolean | undefined; readonly labelMaxWidth?: number | undefined } {
   const source = style ?? {};
   return {
     strokeWidth: typeof source.strokeWidth === "number" && source.strokeWidth >= 1 && source.strokeWidth <= 8 ? source.strokeWidth : undefined,
     strokeStyle: source.strokeStyle === "solid" || source.strokeStyle === "dashed" || source.strokeStyle === "dotted" ? source.strokeStyle : undefined,
+    strokeOpacity: typeof source.strokeOpacity === "number" && source.strokeOpacity >= 0 && source.strokeOpacity <= 1 ? source.strokeOpacity : undefined,
     fillColor: typeof source.fillColor === "string" && (source.fillColor === "none" || /^#[0-9a-f]{3,8}$/i.test(source.fillColor)) ? source.fillColor : undefined,
     fillOpacity: typeof source.fillOpacity === "number" && source.fillOpacity >= 0 && source.fillOpacity <= 1 ? source.fillOpacity : undefined,
     labelWrap: typeof source.labelWrap === "boolean" ? source.labelWrap : undefined,

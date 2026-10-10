@@ -39,12 +39,16 @@ test("captures the stacked Combined composition with both contexts and zero view
   expect(transactionBox!.x).toBeCloseTo(signalBox!.x, 0);
   // The Transaction pane's fixed label columns end where the shared time axis begins: its clipped Track region must be exactly as wide as
   // the Signal pane's nested Timeline viewport (the single horizontal scroll owner).
+  const trackContentBox = await page.locator(".transaction-track").first().boundingBox();
   const trackBox = await page.locator("[data-role='transaction-track-viewport']").first().boundingBox();
   const ownerBox = await page.locator(".split-signal-pane [data-role='timeline-viewport']").first().boundingBox();
   expect(trackBox).not.toBeNull();
   expect(ownerBox).not.toBeNull();
   expect(trackBox!.width).toBeCloseTo(ownerBox!.width, 0);
   expect(trackBox!.x).toBeCloseTo(ownerBox!.x, 0);
+  expect(trackContentBox).not.toBeNull();
+  const cycleScrollWidth = await page.locator(".surface-host [data-role='timeline-viewport']").evaluate((element) => element.scrollWidth);
+  expect(trackContentBox!.width).toBeCloseTo(cycleScrollWidth, 0);
   const divider = page.getByTestId("combined-split-divider");
   await expect(divider).toBeVisible();
   const beforeResizeHeight = transactionBox!.height;
@@ -54,12 +58,12 @@ test("captures the stacked Combined composition with both contexts and zero view
   await page.mouse.move(dividerBox.x + dividerBox.width / 2, dividerBox.y + dividerBox.height / 2 + 48);
   await page.mouse.up();
   await expect.poll(async () => (await page.locator(".split-transaction-pane").boundingBox())!.height).not.toBe(beforeResizeHeight);
-  await transactionPane.click({ position: { x: 600, y: 40 } });
+  await page.locator("[data-role='transaction-track-viewport']").click({ position: { x: 40, y: 40 } });
   await expect(page.getByTestId("active-pane-status")).toHaveText("Active Pane: Transaction");
-  await signalPane.click({ position: { x: 40, y: 100 } });
+  await page.locator(".surface-host [data-role='timeline-viewport']").click({ position: { x: 40, y: 100 } });
   await expect(page.getByTestId("active-pane-status")).toHaveText("Active Pane: Signal");
   await expect(page.locator("[data-major-group='Layout']")).toHaveCount(1);
-  await transactionPane.click({ position: { x: 600, y: 40 } });
+  await page.locator("[data-role='transaction-track-viewport']").click({ position: { x: 40, y: 40 } });
   await expect(page.getByTestId("active-pane-status")).toHaveText("Active Pane: Transaction");
   await expect(page.locator("[data-major-group='Layout']")).toHaveCount(0);
   await expect(page.locator("[data-major-group='Group']")).toHaveCount(1);

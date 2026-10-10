@@ -23,7 +23,7 @@ import type {
   ValueSignal,
   EnumDefinition,
 } from "@timing-chart-v2/schema";
-import { ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_LABEL_PLACEMENTS, MAX_MEASUREMENT_LANE, annotationsForReferences, canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesFromOwner, referencesTo, referencesToAny, referencesToSignal, referencesToTimeGroup, validateEnumDefinition, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
+import { ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_LABEL_PLACEMENTS, MAX_MEASUREMENT_LANE, annotationPresentationStyleIssues, annotationsForReferences, canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesFromOwner, referencesTo, referencesToAny, referencesToSignal, referencesToTimeGroup, validateEnumDefinition, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
 import type { ChangeSet, SemanticCommand } from "./types.js";
 import type { CommandPolicyCode } from "./policy.js";
 import { mergeChangeSets } from "./changeset.js";
@@ -1790,6 +1790,8 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
     case "annotation.create": {
       if (!isStableId(command.annotation.id)) return fail("invalid", "INVALID_STABLE_ID", "$.annotation.id", "Annotation ID must be stable.");
       if (document.annotations.some((annotation) => annotation.id === command.annotation.id)) return fail("invalid", "DUPLICATE_ID", "$.annotation.id", `Annotation '${command.annotation.id}' already exists.`);
+      const styleIssue = annotationPresentationStyleIssues(command.annotation.style)[0];
+      if (styleIssue) return fail("invalid", "INVALID_ANNOTATION_STYLE", `$.annotation.style.${styleIssue.field}`, styleIssue.message);
       const changeSet: ChangeSet = { annotationPosition: [command.annotation.id], annotationStyle: [command.annotation.id], minimapOverview: true };
       return { ok: true, document: { ...document, annotations: [...document.annotations, command.annotation] }, changeSet, inverseChangeSet: changeSet };
     }
@@ -1800,6 +1802,8 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       for (const [index, annotation] of command.annotations.entries()) {
         if (!isStableId(annotation.id)) return fail("invalid", "INVALID_STABLE_ID", `$.annotations[${index}].id`, "Annotation ID must be stable.");
         if (importedIds.has(annotation.id)) return fail("invalid", "DUPLICATE_ID", `$.annotations[${index}].id`, `Annotation '${annotation.id}' occurs more than once in the replacement collection.`);
+        const styleIssue = annotationPresentationStyleIssues(annotation.style)[0];
+        if (styleIssue) return fail("invalid", "INVALID_ANNOTATION_STYLE", `$.annotations[${index}].style.${styleIssue.field}`, styleIssue.message);
         importedIds.add(annotation.id);
       }
       if (semanticEqual(document.annotations, command.annotations)) return fail("no-op", "NO_OP", "$.annotations", "Annotation collection is unchanged.");
@@ -1907,6 +1911,8 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       if (!label) return fail("invalid", "INVALID_LABEL", "$.label", "Annotation label cannot be empty.");
       if (command.labelPlacement !== undefined && !ANNOTATION_LABEL_PLACEMENTS.includes(command.labelPlacement)) return fail("invalid", "INVALID_ANNOTATION_STYLE", "$.labelPlacement", "Annotation label placement is invalid.");
       if (command.style?.labelWrap !== undefined && typeof command.style.labelWrap !== "boolean") return fail("invalid", "INVALID_ANNOTATION_STYLE", "$.style.labelWrap", "Annotation labelWrap must be a boolean.");
+      const styleIssue = annotationPresentationStyleIssues(command.style)[0];
+      if (styleIssue) return fail("invalid", "INVALID_ANNOTATION_STYLE", `$.style.${styleIssue.field}`, styleIssue.message);
       if (command.style?.labelMaxWidth !== undefined && (typeof command.style.labelMaxWidth !== "number" || !Number.isFinite(command.style.labelMaxWidth) || command.style.labelMaxWidth < ANNOTATION_LABEL_MAX_WIDTH.min || command.style.labelMaxWidth > ANNOTATION_LABEL_MAX_WIDTH.max)) return fail("invalid", "INVALID_ANNOTATION_STYLE", "$.style.labelMaxWidth", `Annotation label maximum width must be between ${ANNOTATION_LABEL_MAX_WIDTH.min} and ${ANNOTATION_LABEL_MAX_WIDTH.max} px.`);
       // Optional style fields are patch semantics.  Do not turn an omitted
       // field into an implicit clear (for example, changing an annotation's

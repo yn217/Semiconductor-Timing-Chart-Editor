@@ -1,5 +1,5 @@
 import type { Annotation, AnnotationGroup, AnnotationGroupId, AnnotationId, CanonicalDocument } from "@timing-chart-v2/schema";
-import { isStableId } from "@timing-chart-v2/schema";
+import { annotationPresentationStyleIssues, isStableId } from "@timing-chart-v2/schema";
 import type { CommandPlanResult } from "./planner.js";
 import type { CommandPolicyCode } from "./policy.js";
 import type { ChangeSet } from "./types.js";
@@ -18,6 +18,8 @@ export function planAnnotationBulkCreate(document: CanonicalDocument, annotation
   for (const [index, annotation] of annotations.entries()) {
     if (!isStableId(annotation.id)) return fail("invalid", "INVALID_STABLE_ID", `$.annotations[${index}].id`, "Annotation ID must be stable.");
     if (ids.has(annotation.id)) return fail("invalid", "DUPLICATE_ID", `$.annotations[${index}].id`, `Annotation '${annotation.id}' already exists or is duplicated in this batch.`);
+    const styleIssue = annotationPresentationStyleIssues(annotation.style)[0];
+    if (styleIssue) return fail("invalid", "INVALID_ANNOTATION_STYLE", `$.annotations[${index}].style.${styleIssue.field}`, styleIssue.message);
     ids.add(annotation.id);
   }
   const existingGroups = document.annotationGroups ?? [];

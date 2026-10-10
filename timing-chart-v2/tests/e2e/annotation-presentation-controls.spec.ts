@@ -59,14 +59,20 @@ test("Range Stroke/Fill controls have real canonical + rendered + exported effec
   await openStyleSection(editor);
   const strokeWidth = editor.getByTestId("inspector-stroke-fill-stroke-width");
   const strokeStyle = editor.getByTestId("inspector-stroke-fill-stroke-style");
+  const strokeOpacity = editor.getByTestId("inspector-stroke-fill-stroke-opacity");
   const fillColor = editor.getByTestId("inspector-stroke-fill-fill-color");
   const fillOpacity = editor.getByTestId("inspector-stroke-fill-fill-opacity");
   await expect(strokeWidth).toBeEnabled();
   await expect(fillColor).toBeEnabled();
+  await expect(strokeWidth).toHaveValue("1");
+  await expect(fillOpacity).toHaveValue("0.12");
 
+  const previousBorderColor = await range.locator("[data-role='annotation-body']").evaluate((element) => getComputedStyle(element).borderColor);
   await strokeWidth.fill("6");
   await strokeWidth.blur();
   await strokeStyle.selectOption("dashed");
+  await strokeOpacity.fill("0.3");
+  await strokeOpacity.blur();
   await fillColor.fill("#00aa00");
   await fillOpacity.fill("0.5");
   await fillOpacity.blur();
@@ -75,6 +81,7 @@ test("Range Stroke/Fill controls have real canonical + rendered + exported effec
   const body = range.locator("[data-role='annotation-body']");
   await expect(body).toHaveCSS("border-width", "6px");
   await expect(body).toHaveCSS("border-style", "dashed");
+  await expect.poll(() => body.evaluate((element) => getComputedStyle(element).borderColor)).not.toBe(previousBorderColor);
   const backgroundColor = await body.evaluate((element) => getComputedStyle(element).backgroundColor);
   // color-mix output is browser-computed; just confirm it isn't the
   // hardcoded 12% default mix any more (a real property-driven change).
@@ -87,8 +94,416 @@ test("Range Stroke/Fill controls have real canonical + rendered + exported effec
   const rectMatch = groupMatch![0].match(/<rect[^>]*\/>/);
   expect(rectMatch).not.toBeNull();
   expect(rectMatch![0]).toContain(`stroke-width="6"`);
+  expect(rectMatch![0]).toContain('stroke-opacity="0.3"');
   expect(rectMatch![0]).toContain(`stroke-dasharray="7 4"`);
   expect(rectMatch![0]).toMatch(/fill-opacity="0\.5"/);
+});
+
+test("invalid Stroke/Fill numeric drafts remain editable without mutating Canonical or History", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await selectRequestSignal(page, host);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+
+  await addAnnotation(page, "range");
+  const editor = page.getByTestId("annotation-editor");
+  await openStyleSection(editor);
+  const strokeWidth = editor.getByTestId("inspector-stroke-fill-stroke-width");
+  const strokeOpacity = editor.getByTestId("inspector-stroke-fill-stroke-opacity");
+  const fillOpacity = editor.getByTestId("inspector-stroke-fill-fill-opacity");
+  const before = {
+    revision: await host.getAttribute("data-canonical-revision"),
+    history: await page.getByTestId("history-status").textContent(),
+    dirty: await page.getByTestId("dirty-status").textContent(),
+  };
+
+  await strokeWidth.fill("99");
+  await strokeWidth.blur();
+  await expect(strokeWidth).toHaveValue("99");
+  await expect(strokeWidth).toHaveAttribute("aria-invalid", "true");
+  await expect(editor.getByRole("alert")).toContainText("between 1 and 8 px");
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(before.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+
+  for (const [input, invalidValue, expectedMessage] of [
+    [strokeOpacity, "1.2", "Stroke opacity must be between 0 and 1"],
+    [fillOpacity, "-0.1", "Fill opacity must be between 0 and 1"],
+  ] as const) {
+    await input.fill(invalidValue);
+    await input.blur();
+    await expect(input).toHaveValue(invalidValue);
+    await expect(input).toHaveAttribute("aria-invalid", "true");
+    await expect(editor.getByRole("alert").filter({ hasText: expectedMessage })).toHaveCount(1);
+    await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+    await expect(page.getByTestId("history-status")).toHaveText(before.history!);
+    await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+  }
+
+  await strokeWidth.fill("5");
+  await strokeWidth.blur();
+  await strokeOpacity.fill("0.6");
+  await strokeOpacity.blur();
+  await fillOpacity.fill("0.35");
+  await fillOpacity.blur();
+  await expect(strokeWidth).toHaveAttribute("aria-invalid", "false");
+  await expect(strokeOpacity).toHaveAttribute("aria-invalid", "false");
+  await expect(fillOpacity).toHaveAttribute("aria-invalid", "false");
+  await expect(editor.getByRole("alert")).toHaveCount(0);
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await editor.getByTestId("apply-annotation-properties").click();
+  await expect(host).toHaveAttribute("data-canonical-revision", String(Number(before.revision) + 1));
+  await expect(page.getByTestId("history-status")).not.toHaveText(before.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+  await expect.poll(() => host.locator("[data-role='annotation-body']").getAttribute("style")).toContain("border-width: 5px");
+  await expect.poll(() => host.locator("[data-role='annotation-body']").getAttribute("style")).toContain("border-color: color-mix(in srgb, rgb(208, 74, 54) 60%, transparent)");
+  await expect.poll(() => host.locator("[data-role='annotation-body']").getAttribute("style")).toContain("background-color: color-mix(in srgb, rgb(208, 74, 54) 35%, transparent)");
+});
+
+test("Dependency Stroke controls update the route without changing its semantic identity", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await selectRequestSignal(page, host);
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const waveBox = await surface.locator("[data-role='stable-waveform-surface']").boundingBox();
+  const requestBox = await surface.locator("[data-role='timing-row'][data-row-id='sig_cycle_request']").boundingBox();
+  const readyBox = await surface.locator("[data-role='timing-row'][data-row-id='sig_cycle_ready']").boundingBox();
+  const cycle3 = Number.parseFloat(await page.getByTestId("cycle-ruler").locator("[data-cycle='3']").evaluate((element) => (element as HTMLElement).style.left));
+  const cycle5 = Number.parseFloat(await page.getByTestId("cycle-ruler").locator("[data-cycle='5']").evaluate((element) => (element as HTMLElement).style.left));
+  expect(waveBox && requestBox && readyBox).toBeTruthy();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByLabel("Annotation type").selectOption("dependency");
+  const priorIds = await snapshotAnnotationIds(host);
+  await page.getByRole("button", { name: "Pick arrow endpoints" }).click();
+  await page.mouse.click(waveBox!.x + cycle3, requestBox!.y + requestBox!.height / 2);
+  await page.mouse.click(waveBox!.x + cycle5, readyBox!.y + readyBox!.height / 2);
+  const dependency = annotationOwnerById(host, await waitForCreatedAnnotationId(host, priorIds, "dependency"));
+  const editor = page.getByTestId("annotation-editor");
+  await openStyleSection(editor);
+  const strokeWidth = editor.getByTestId("inspector-stroke-fill-stroke-width");
+  const strokeStyle = editor.getByTestId("inspector-stroke-fill-stroke-style");
+  const strokeOpacity = editor.getByTestId("inspector-stroke-fill-stroke-opacity");
+  await expect(strokeWidth).toBeEnabled();
+  await expect(strokeWidth).toHaveValue("2");
+  await strokeWidth.fill("5");
+  await strokeWidth.blur();
+  await strokeStyle.selectOption("dotted");
+  await strokeOpacity.fill("0.4");
+  await strokeOpacity.blur();
+  await editor.getByTestId("apply-annotation-properties").click();
+
+  const annotationId = await dependency.getAttribute("data-annotation-id");
+  const path = dependency.locator("[data-role='annotation-path']");
+  await expect(path).toHaveAttribute("stroke-width", "5");
+  await expect(path).toHaveAttribute("stroke-dasharray", "2 3");
+  await expect(path).toHaveAttribute("stroke-opacity", "0.4");
+  await expect(dependency.locator("marker path")).toHaveAttribute("fill-opacity", "0.4");
+  await expect(dependency).toHaveAttribute("data-annotation-type", "dependency");
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  const save = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savePath = await (await save).path();
+  expect(savePath).toBeTruthy();
+  const fs = await import("node:fs");
+  const document = JSON.parse(fs.readFileSync(savePath!, "utf8")) as { annotations: Array<Record<string, unknown>> };
+  expect(document.annotations.find((annotation) => annotation.id === annotationId)).toMatchObject({
+    type: "dependency",
+    style: { strokeWidth: 5, strokeStyle: "dotted", strokeOpacity: 0.4 },
+  });
+
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savePath!);
+  const reopened = annotationOwnerById(host, annotationId!);
+  await expect(reopened).toHaveAttribute("data-annotation-type", "dependency");
+  await expect(reopened.locator("[data-role='annotation-path']")).toHaveAttribute("stroke-width", "5");
+  await expect(reopened.locator("[data-role='annotation-path']")).toHaveAttribute("stroke-dasharray", "2 3");
+  await expect(reopened.locator("[data-role='annotation-path']")).toHaveAttribute("stroke-opacity", "0.4");
+  await expect(reopened.locator("marker path")).toHaveAttribute("fill-opacity", "0.4");
+
+  const svgText = await exportSvgText(page);
+  const exported = svgText.match(new RegExp(`<g data-annotation-id="${annotationId}"[\\s\\S]*?</g>`));
+  expect(exported?.[0]).toContain('stroke-width="5"');
+  expect(exported?.[0]).toContain('stroke-dasharray="2 3"');
+  expect(exported?.[0]).toContain('stroke-opacity="0.4"');
+  expect(exported?.[0]).toContain('fill-opacity="0.4"');
+});
+
+test("Measurement Stroke styles its dimension line and export while preserving #205 lane geometry", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await selectRequestSignal(page, host);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  const measurement = await addAnnotation(page, "measurement");
+  const editor = page.getByTestId("annotation-editor");
+  await openStyleSection(editor);
+  const strokeWidth = editor.getByTestId("inspector-stroke-fill-stroke-width");
+  const strokeStyle = editor.getByTestId("inspector-stroke-fill-stroke-style");
+  const strokeOpacity = editor.getByTestId("inspector-stroke-fill-stroke-opacity");
+  await expect(strokeWidth).toBeEnabled();
+  await expect(strokeWidth).toHaveValue("2");
+  await strokeWidth.fill("5");
+  await strokeWidth.blur();
+  await strokeStyle.selectOption("dotted");
+  await strokeOpacity.fill("0.4");
+  await strokeOpacity.blur();
+  await editor.getByTestId("apply-annotation-properties").click();
+
+  const path = measurement.locator("[data-role='annotation-path']");
+  await expect(path).toHaveAttribute("stroke-width", "5");
+  await expect(path).toHaveAttribute("stroke-dasharray", "2 3");
+  await expect(path).toHaveAttribute("stroke-opacity", "0.4");
+  await expect(measurement.locator("[data-role='measurement-marker']")).toHaveCount(2);
+  await expect(measurement.locator("[data-role='measurement-extension']")).toHaveCount(2);
+  const measurementId = await measurement.getAttribute("data-annotation-id");
+  const lane = await measurement.getAttribute("data-measurement-lane");
+  const side = await measurement.getAttribute("data-measurement-side");
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  const save = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savePath = await (await save).path();
+  expect(savePath).toBeTruthy();
+  const fs = await import("node:fs");
+  const saved = JSON.parse(fs.readFileSync(savePath!, "utf8")) as { annotations: Array<Record<string, unknown>> };
+  expect(saved.annotations.find((annotation) => annotation.id === measurementId)).toMatchObject({
+    type: "measurement",
+    style: { strokeWidth: 5, strokeStyle: "dotted", strokeOpacity: 0.4 },
+  });
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savePath!);
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const reopened = annotationOwnerById(host, measurementId!);
+  await expect(reopened).toHaveAttribute("data-measurement-lane", lane!);
+  await expect(reopened).toHaveAttribute("data-measurement-side", side!);
+  await expect(reopened.locator("[data-role='annotation-path']")).toHaveAttribute("stroke-width", "5");
+  await expect(reopened.locator("[data-role='annotation-path']")).toHaveAttribute("stroke-dasharray", "2 3");
+  await expect(reopened.locator("[data-role='annotation-path']")).toHaveAttribute("stroke-opacity", "0.4");
+  await expect(reopened.locator("[data-role='measurement-marker']")).toHaveCount(2);
+  await expect(reopened.locator("[data-role='measurement-extension']")).toHaveCount(2);
+
+  const svgText = await exportSvgText(page);
+  const exported = svgText.match(new RegExp(`<g data-annotation-id="${measurementId}"[\\s\\S]*?</g>`))?.[0] ?? "";
+  expect(exported).toContain('data-role="measurement-dimension-line"');
+  expect(exported).toContain('stroke-width="5" stroke-dasharray="2 3" stroke-opacity="0.4"');
+  expect(exported).toContain('data-role="measurement-marker" data-marker-side="start"');
+  expect(exported).toContain('data-role="measurement-extension" data-extension-side="start"');
+});
+
+test("Marker Stroke controls style the live tick and its exported counterpart", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await selectRequestSignal(page, host);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  const marker = await addAnnotation(page, "marker");
+  const editor = page.getByTestId("annotation-editor");
+  await openStyleSection(editor);
+  const strokeWidth = editor.getByTestId("inspector-stroke-fill-stroke-width");
+  const strokeStyle = editor.getByTestId("inspector-stroke-fill-stroke-style");
+  const strokeOpacity = editor.getByTestId("inspector-stroke-fill-stroke-opacity");
+  await expect(strokeWidth).toBeEnabled();
+  const initialStrokeColor = await marker.locator("[data-role='annotation-body']").evaluate((element) => getComputedStyle(element).borderLeftColor);
+  await strokeWidth.fill("5");
+  await strokeWidth.blur();
+  await strokeStyle.selectOption("dotted");
+  await strokeOpacity.fill("0.4");
+  await strokeOpacity.blur();
+  await editor.getByTestId("apply-annotation-properties").click();
+
+  const body = marker.locator("[data-role='annotation-body']");
+  await expect(body).toHaveCSS("border-left-width", "5px");
+  await expect(body).toHaveCSS("border-left-style", "dotted");
+  await expect(body).toHaveCSS("border-top-width", "0px");
+  await expect(body).toHaveCSS("border-right-width", "0px");
+  await expect(body).toHaveCSS("border-bottom-width", "0px");
+  await expect.poll(() => body.evaluate((element) => getComputedStyle(element).borderLeftColor)).not.toBe(initialStrokeColor);
+  const markerId = await marker.getAttribute("data-annotation-id");
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  const save = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await save).path();
+  expect(savedPath).toBeTruthy();
+  const fs = await import("node:fs");
+  const savedDocument = JSON.parse(fs.readFileSync(savedPath!, "utf8")) as { annotations: Array<Record<string, unknown>> };
+  expect(savedDocument.annotations.find((annotation) => annotation.id === markerId)).toMatchObject({
+    type: "marker",
+    style: { strokeWidth: 5, strokeStyle: "dotted", strokeOpacity: 0.4 },
+  });
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  const reopenedMarker = annotationOwnerById(host, markerId!);
+  const reopenedBody = reopenedMarker.locator("[data-role='annotation-body']");
+  await expect(reopenedBody).toHaveCSS("border-left-width", "5px");
+  await expect(reopenedBody).toHaveCSS("border-left-style", "dotted");
+  await expect(reopenedBody).toHaveCSS("border-top-width", "0px");
+
+  const svgText = await exportSvgText(page);
+  const exported = svgText.match(new RegExp(`<g data-annotation-id="${markerId}"[\\s\\S]*?</g>`));
+  expect(exported?.[0]).toContain('data-role="marker-tick"');
+  expect(exported?.[0]).toContain('stroke-width="5"');
+  expect(exported?.[0]).toContain('stroke-dasharray="2 3"');
+  expect(exported?.[0]).toContain('stroke-opacity="0.4"');
+});
+
+test("Bracket Stroke controls style the live line and caps through Undo/Redo and Save/Open", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await selectRequestSignal(page, host);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  const bracket = await addAnnotation(page, "bracket");
+  const editor = page.getByTestId("annotation-editor");
+  await openStyleSection(editor);
+
+  const strokeWidth = editor.getByTestId("inspector-stroke-fill-stroke-width");
+  const strokeStyle = editor.getByTestId("inspector-stroke-fill-stroke-style");
+  const strokeOpacity = editor.getByTestId("inspector-stroke-fill-stroke-opacity");
+  await expect(strokeWidth).toBeEnabled();
+  await expect(strokeWidth).toHaveValue("2");
+  await strokeWidth.fill("4");
+  await strokeWidth.blur();
+  await strokeStyle.selectOption("dashed");
+  await strokeOpacity.fill("0.6");
+  await strokeOpacity.blur();
+  await editor.getByTestId("apply-annotation-properties").click();
+
+  const annotationId = await bracket.getAttribute("data-annotation-id");
+  const mainPath = bracket.locator("[data-role='annotation-path']");
+  const caps = bracket.locator("[data-role='annotation-bracket-caps']");
+  await expect(mainPath).toHaveAttribute("stroke-width", "4");
+  await expect(mainPath).toHaveAttribute("stroke-dasharray", "7 4");
+  await expect(mainPath).toHaveAttribute("stroke-opacity", "0.6");
+  await expect(caps).toHaveAttribute("stroke-width", "4");
+  await expect(caps).toHaveAttribute("stroke-dasharray", "7 4");
+  await expect(caps).toHaveAttribute("stroke-opacity", "0.6");
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(mainPath).toHaveAttribute("stroke-width", "2");
+  await expect(mainPath).not.toHaveAttribute("stroke-opacity");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(mainPath).toHaveAttribute("stroke-width", "4");
+  await expect(caps).toHaveAttribute("stroke-opacity", "0.6");
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  const save = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await save).path();
+  expect(savedPath).toBeTruthy();
+  const fs = await import("node:fs");
+  const savedDocument = JSON.parse(fs.readFileSync(savedPath!, "utf8")) as { annotations: Array<Record<string, unknown>> };
+  expect(savedDocument.annotations.find((annotation) => annotation.id === annotationId)).toMatchObject({
+    type: "bracket",
+    style: { strokeWidth: 4, strokeStyle: "dashed", strokeOpacity: 0.6 },
+  });
+
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  const reopened = annotationOwnerById(host, annotationId!);
+  await expect(reopened.locator("[data-role='annotation-path']")).toHaveAttribute("stroke-width", "4");
+  await expect(reopened.locator("[data-role='annotation-bracket-caps']")).toHaveAttribute("stroke-opacity", "0.6");
+
+  const svgText = await exportSvgText(page);
+  const exported = svgText.match(new RegExp(`<g data-annotation-id="${annotationId}[\\s\\S]*?</g>`));
+  expect(exported?.[0]).toContain('stroke-width="4"');
+  expect(exported?.[0]).toContain('stroke-dasharray="7 4"');
+  expect(exported?.[0]).toContain('stroke-opacity="0.6"');
+  expect(exported?.[0]).toContain('data-role="annotation-bracket-caps"');
+});
+
+test("Callout Fill controls color both the live label box and exported box/tail", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await selectRequestSignal(page, host);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  const callout = await addAnnotation(page, "callout");
+  const editor = page.getByTestId("annotation-editor");
+  await openStyleSection(editor);
+  const fillColor = editor.getByTestId("inspector-stroke-fill-fill-color");
+  const fillOpacity = editor.getByTestId("inspector-stroke-fill-fill-opacity");
+  await expect(fillColor).toBeEnabled();
+  await expect(fillOpacity).toHaveValue("0.95");
+  const label = callout.locator("[data-role='annotation-label']");
+  const previousBackground = await label.evaluate((element) => getComputedStyle(element).backgroundColor);
+  await fillColor.fill("#00aa00");
+  await fillOpacity.fill("0.4");
+  await fillOpacity.blur();
+  await expect(editor.getByTestId("apply-annotation-properties")).toBeEnabled();
+  await editor.getByTestId("apply-annotation-properties").click();
+  const calloutId = await callout.getAttribute("data-annotation-id");
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  await expect.poll(() => label.evaluate((element) => getComputedStyle(element).backgroundColor)).not.toBe(previousBackground);
+  const appliedBackground = await label.evaluate((element) => getComputedStyle(element).backgroundColor);
+  expect(await label.evaluate((element) => getComputedStyle(element, "::after").backgroundColor)).toBe(appliedBackground);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  const save = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await save).path();
+  const fs = await import("node:fs");
+  const savedDocument = JSON.parse(fs.readFileSync(savedPath!, "utf8")) as { annotations: Array<Record<string, unknown>> };
+  const savedStyle = savedDocument.annotations.find((annotation) => annotation.id === calloutId)?.style;
+  expect(savedStyle).toMatchObject({ fillColor: "#00aa00", fillOpacity: 0.4 });
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const reopenedCallout = host.locator(`[data-role='annotation-owner'][data-annotation-id="${calloutId}"]`);
+  const reopenedLabel = reopenedCallout.locator("[data-role='annotation-label']");
+  await expect.poll(() => reopenedLabel.evaluate((element) => getComputedStyle(element).backgroundColor)).not.toBe(previousBackground);
+  const calloutBackground = await reopenedLabel.evaluate((element) => getComputedStyle(element).backgroundColor);
+  expect(await reopenedLabel.evaluate((element) => getComputedStyle(element, "::after").backgroundColor)).toBe(calloutBackground);
+
+  const svgText = await exportSvgText(page);
+  const exported = svgText.match(new RegExp(`<g data-annotation-id="${calloutId}"[\\s\\S]*?</g>`));
+  expect(exported?.[0]).toContain('data-role="callout-box"');
+  expect(exported?.[0]).toContain('data-role="callout-tail"');
+  expect(exported?.[0]).toContain('fill="#00aa00"');
+  expect(exported?.[0]).toContain('fill-opacity="0.4"');
+});
+
+test("Callout Stroke controls style the live box and exported box/tail", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await selectRequestSignal(page, host);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  const callout = await addAnnotation(page, "callout");
+  const editor = page.getByTestId("annotation-editor");
+  await openStyleSection(editor);
+  const strokeWidth = editor.getByTestId("inspector-stroke-fill-stroke-width");
+  const strokeStyle = editor.getByTestId("inspector-stroke-fill-stroke-style");
+  const strokeOpacity = editor.getByTestId("inspector-stroke-fill-stroke-opacity");
+  await expect(strokeWidth).toBeEnabled();
+  await strokeWidth.fill("4");
+  await strokeWidth.blur();
+  await strokeStyle.selectOption("dotted");
+  await strokeOpacity.fill("0.6");
+  await strokeOpacity.blur();
+  await editor.getByTestId("apply-annotation-properties").click();
+
+  const annotationId = await callout.getAttribute("data-annotation-id");
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  await page.getByTestId("bottom-tabs").getByRole("tab", { name: "JSON", exact: true }).click();
+  const canonicalText = await page.locator(".json-panel pre").textContent();
+  const canonical = JSON.parse(canonicalText ?? "{}") as { annotations?: Array<{ id: string; style?: Record<string, unknown> }> };
+  expect(canonical.annotations?.find((annotation) => annotation.id === annotationId)?.style).toMatchObject({ strokeWidth: 4, strokeStyle: "dotted", strokeOpacity: 0.6 });
+
+  const svgText = await exportSvgText(page);
+  const exported = svgText.match(new RegExp(`<g data-annotation-id="${annotationId}[\\s\\S]*?</g>`));
+  expect(exported?.[0]).toContain('stroke-width="4"');
+  expect(exported?.[0]).toContain('stroke-dasharray="2 3"');
+  expect(exported?.[0]).toContain('stroke-opacity="0.6"');
+
+  const label = callout.locator("[data-role='annotation-label']");
+  await expect(label).toHaveCSS("border-width", "4px");
+  await expect(label).toHaveCSS("border-style", "dotted");
+  const tailBorder = await label.evaluate((element) => getComputedStyle(element, "::after").borderRightWidth);
+  expect(tailBorder).toBe("4px");
+  expect(exported?.[0]).toContain('data-role="callout-box"');
+  expect(exported?.[0]).toContain('data-role="callout-tail"');
 });
 
 test("Vertical Line exports a full-height dashed line, not an invisible zero-length one", async ({ page }) => {

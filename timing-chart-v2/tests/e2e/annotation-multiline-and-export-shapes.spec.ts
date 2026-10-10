@@ -96,6 +96,11 @@ test("authored label wrap width is shared by live overlay and SVG export", async
   expect(groupMatch).not.toBeNull();
   expect((groupMatch![0].match(/<tspan/g) ?? []).length).toBe(liveText!.split("\n").length);
   expect(groupMatch![0]).toContain('dy="18"');
+  const liveBox = await label.evaluate((element) => ({ width: (element as HTMLElement).offsetWidth, height: (element as HTMLElement).offsetHeight }));
+  const exportedBox = groupMatch![0].match(/<rect data-role="callout-box"[^>]*width="([\d.]+)" height="([\d.]+)"/);
+  expect(exportedBox).not.toBeNull();
+  expect(Math.abs(Number(exportedBox![1]) - liveBox.width)).toBeLessThanOrEqual(2);
+  expect(Math.abs(Number(exportedBox![2]) - liveBox.height)).toBeLessThanOrEqual(2);
   const livePosition = await label.evaluate((element) => (element as HTMLElement).style.transform.match(/translate\(([-\d.]+)px, ([-\d.]+)px\)/)?.slice(1));
   expect(livePosition).not.toBeNull();
   const exported = groupMatch![0].match(/<text x="([-\d.]+)" y="([-\d.]+)"/);

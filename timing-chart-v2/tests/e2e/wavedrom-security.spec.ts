@@ -16,6 +16,9 @@ async function openJson(page: Page, document: unknown): Promise<void> {
 test("Open renders adversarial user strings as inert production SVG content", async ({ page }) => {
   await page.goto("/");
   const payload = "< > & \\\" ' </text><script>window.__waveAttack = true</script> <foreignObject onclick=alert(1)>x</foreignObject> javascript:";
+  const annotationPayload = `<script>window.__annotationAttack = true</script> <image href=\"javascript:alert(1)\"> <span onclick=\"alert(1)\">note</span>`;
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
   const signal = {
     id: "sig_adversarial",
     name: payload,
@@ -30,19 +33,24 @@ test("Open renders adversarial user strings as inert production SVG content", as
     document: { id: "security", title: payload, header: { subtitle: payload, description: payload, notes: payload, preconditions: [], constraints: [], exceptions: [] }, footer: { figureNumber: "", revision: "V2", text: payload } },
     timeline: { start: 0, end: 4, cycleCount: 4, timeBase: "cycle", edge: "rising", labelAnchors: [] },
     signalGroups: [{ id: "grp_security", name: payload, rows: [signal.id] }],
-    signals: [signal], bookmarks: [], timeGroups: [], annotations: [], transactions: [], constraints: [],
+    signals: [signal], bookmarks: [], timeGroups: [], annotations: [{ id: "ann_adversarial_text", type: "text", label: annotationPayload, visible: true, anchor: { signalId: signal.id, cycle: 1, point: "cycle-start" } }], transactions: [], constraints: [],
     legend: { show: false, orientation: "horizontal", usedRolesOnly: true, position: { x: 0, y: 0 } },
     layout: { roleColumnWidth: 62, signalNameWidth: 178, signalNameAlign: "left", rowHeight: 30, signalSpacing: 4, overflow: "ellipsis" },
     checkSettings: {},
   });
 
-  await expect(page).toHaveTitle(/Timing Chart Editor V2/);
+  await expect(page).toHaveTitle(`${payload} - Timing Chart Editor`);
   const waveSvg = page.locator("[data-role='wave-owner'] svg");
   await expect(waveSvg).toHaveCount(1);
   await expect(waveSvg.locator("script, foreignObject, iframe, object, embed, img")).toHaveCount(0);
   await expect(waveSvg.locator("[*|href^='javascript:'], [href^='javascript:']")).toHaveCount(0);
   expect(await page.evaluate(() => (globalThis as { __waveAttack?: boolean }).__waveAttack)).toBeUndefined();
   await expect(waveSvg).toBeAttached();
+  const annotation = page.locator("[data-role='annotation-owner'][data-annotation-id='ann_adversarial_text']");
+  await expect(annotation.locator("[data-role='annotation-label']")).toHaveText(annotationPayload);
+  await expect(annotation.locator("script, image, [onclick]")).toHaveCount(0);
+  expect(await page.evaluate(() => (globalThis as { __annotationAttack?: boolean }).__annotationAttack)).toBeUndefined();
+  expect(pageErrors).toEqual([]);
 
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Export", exact: true }).click();
@@ -52,6 +60,11 @@ test("Open renders adversarial user strings as inert production SVG content", as
   const exportPath = await (await download).path();
   expect(exportPath).toBeTruthy();
   const exported = await readFile(exportPath!, "utf8");
+  expect(exported).toContain("&lt;script&gt;");
+  // SVG layout wraps long label text into adjacent tspans, so the source text
+  // may cross markup boundaries while remaining escaped inert text.
+  expect(exported).toContain("window.__annotationAttack");
+  expect(exported).toContain("= true&lt;/script&gt;");
   expect(exported).not.toMatch(/<\/?(?:script|foreignObject|iframe|object|embed|img)\b/i);
   expect(exported).not.toMatch(/<[^>]*\bon[a-z][\w:-]*\s*=/i);
   expect(exported).not.toMatch(/<[^>]*(?:href|xlink:href)\s*=\s*["']\s*(?:javascript|data):/i);

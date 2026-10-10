@@ -19,6 +19,7 @@ export * from "./legend.js";
 export * from "./legend-position.js";
 export * from "./annotation-semantics.js";
 export * from "./annotation-label-layout.js";
+export * from "./annotation-presentation-style.js";
 export * from "./canonical-inventory.js";
 export * from "./signal-type-registry.js";
 export * from "./scenario-model.js";

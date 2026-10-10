@@ -78,6 +78,18 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   await expect(page.getByTestId("playhead")).toHaveAttribute("data-playhead-cycle", "0");
   expect((await page.locator("[data-role='tree-signal-role'][data-presentation='input']").first().boundingBox())?.width).toBe(28);
   expect((await page.locator("[data-role='signal-role'][data-presentation='input']").first().boundingBox())?.width).toBe(28);
+  // The v8 route deliberately opens with the canonical CLOCK signal selected.
+  // Keep its stable-ID selection decoration synchronized across mounted row
+  // projections; matching an older unselected screenshot is not the contract.
+  const clockRows = page.locator("[data-row-id='sig_cycle_clock'][data-role='left-row'], [data-row-id='sig_cycle_clock'][data-role='frozen-row']");
+  await expect(clockRows).toHaveCount(2);
+  for (const row of await clockRows.all()) {
+    await expect(row).toHaveAttribute("data-selected", "true");
+    await expect(row).toHaveAttribute("aria-selected", "true");
+  }
+  const clockTimingRows = page.locator("[data-row-id='sig_cycle_clock'][data-role='timing-row']");
+  await expect(clockTimingRows).not.toHaveCount(0);
+  for (const row of await clockTimingRows.all()) await expect(row).toHaveAttribute("data-selected", "true");
   const firstWave = await page.locator("[data-role='wave-owner']").first().boundingBox();
   // The wave owner is the SVG at its natural scale (10 cycles x 40 + margins), aligned with the ruler ticks -- not stretched to the viewport.
   expect(firstWave?.width ?? 0).toBeGreaterThan(400);

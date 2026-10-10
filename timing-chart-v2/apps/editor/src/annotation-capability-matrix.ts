@@ -1,4 +1,4 @@
-import type { AnnotationType } from "@timing-chart-v2/schema";
+import { ANNOTATION_PRESENTATION_NUMERIC_RANGES, type AnnotationType } from "@timing-chart-v2/schema";
 
 /** #378: one shared, mechanical Annotation Capability Matrix -- every GUI
  * surface (Ribbon / Inspector / Bottom Editor) must consult THIS instead of
@@ -18,18 +18,26 @@ import type { AnnotationType } from "@timing-chart-v2/schema";
  *   `visible` all operate on every AnnotationType with no type gate in
  *   packages/commands/src/planner.ts).
  *
- * Stroke (independent width/style, packages/renderer/src/stable-surface.ts's
- * `parsePresentationStyle`) and Fill (independent color/opacity) are wired
- * for the CSS-border/background-driven shapes below. Arrow/Dependency/
- * Connector/Measurement/Bracket/Marker/GhostTrace/TimingRegion keep their
- * existing fixed-width presentation (2-3px solid, or their own dedicated
- * field such as TimingRegion's `opacity`) -- an explicit, honest scope
- * boundary, not a silent omission: extending independent Stroke/Fill to
- * those types is real future work, not claimed here. */
-const STROKE_CAPABLE = new Set<AnnotationType>(["verticalLine", "range", "highlight", "rectangle", "ellipse"]);
-const FILL_CAPABLE = new Set<AnnotationType>(["range", "highlight", "rectangle", "ellipse"]);
+ * Stroke (independent width/style) is supported by border-driven shapes,
+ * routed SVG lines, Bracket, and Marker tick. Measurement/GhostTrace/
+ * TimingRegion retain their own type-specific line or opacity semantics;
+ * Fill is limited to the background-driven area shapes below. */
+const STROKE_CAPABLE = new Set<AnnotationType>(["callout", "verticalLine", "range", "highlight", "rectangle", "ellipse", "arrow", "dependency", "connector", "bracket", "marker", "measurement"]);
+const FILL_CAPABLE = new Set<AnnotationType>(["callout", "range", "highlight", "rectangle", "ellipse"]);
 
 export type AnnotationCapability = "stroke" | "fill" | "text" | "labelOffset" | "labelPlacement" | "zOrder" | "lock" | "visible";
+
+/** Defaults shown by the shared Inspector must describe the renderer's actual
+ * appearance when a canonical style field is absent. Keep these per-type
+ * values beside the capability policy so the UI does not invent different
+ * values for the same presentation contract. */
+export function annotationPresentationDefaults(type: AnnotationType): { readonly strokeWidth: number; readonly strokeOpacity: number; readonly fillOpacity: number } {
+  const strokeWidth = type === "marker" ? 3
+    : type === "range" || type === "highlight" || type === "rectangle" || type === "ellipse" ? 1
+    : ANNOTATION_PRESENTATION_NUMERIC_RANGES.strokeWidth.default;
+  const fillOpacity = type === "callout" ? 0.95 : type === "highlight" ? 0.32 : ANNOTATION_PRESENTATION_NUMERIC_RANGES.fillOpacity.default;
+  return { strokeWidth, strokeOpacity: ANNOTATION_PRESENTATION_NUMERIC_RANGES.strokeOpacity.default, fillOpacity };
+}
 
 export function hasAnnotationCapability(type: AnnotationType, capability: AnnotationCapability): boolean {
   switch (capability) {

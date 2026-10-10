@@ -183,6 +183,19 @@ describe("RowLayout and projection invariants", () => {
     expect(scoped.map((entry) => entry.signalId)).toEqual(["sig_data"]);
   });
 
+  it("includes a structured packed bus range in the importable hierarchy path", () => {
+    const source = canonicalFixture();
+    const document: CanonicalDocument = {
+      ...source,
+      signals: source.signals.map((signal) => signal.id === "sig_data"
+        ? { ...signal, source: { ...signal.source, instancePath: ["dut", "core"], signalName: "payload", msb: 31, lsb: 0 } }
+        : signal),
+    };
+    const entry = buildHardwareHierarchyEntries(document, "hierarchy").find((item) => item.signalId === "sig_data");
+    expect(entry).toMatchObject({ relativePath: "dut.core.payload[31:0]", fullPath: "dut.core.payload[31:0]", width: "[31:0]" });
+    expect(filterHardwareHierarchyEntries([entry!], "dut.core.payload[31:0]")).toHaveLength(1);
+  });
+
   it("resolves ancestor scopes and builds paths relative to the selected scope", () => {
     const source = canonicalFixture();
     const document: CanonicalDocument = {

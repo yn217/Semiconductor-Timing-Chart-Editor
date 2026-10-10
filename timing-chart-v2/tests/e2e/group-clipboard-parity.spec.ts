@@ -114,12 +114,27 @@ test("copies, pastes, and duplicates a group as one semantic batch", async ({ pa
   expect(afterPasteCounters.waveDromRenders).toBeGreaterThan(beforeCounters.waveDromRenders);
   expect(afterPasteCounters.localGeometryBuilds).toBeGreaterThan(beforeCounters.localGeometryBuilds);
 
+  const pasteSnapshot = await saveCanonicalDocument(page);
+  const sourceGroupAtPaste = pasteSnapshot.signalGroups.find((group) => group.id === "grp_cycle_control")!;
+  const pastedGroupAtPaste = pasteSnapshot.signalGroups.find((group) => group.id !== sourceGroupAtPaste.id && group.name === sourceGroupAtPaste.name)!;
+  expect(pastedGroupAtPaste.rows).toHaveLength(sourceGroupAtPaste.rows.length);
+  const signalsAtPaste = new Map(pasteSnapshot.signals.map((signal) => [signal.id, signal]));
+  const sourceNestedIdsAtPaste = new Set(sourceGroupAtPaste.rows.flatMap((id) => signalChanges(signalsAtPaste.get(id)!).flatMap((change: Record<string, unknown>) => typeof change.id === "string" ? [change.id] : [])));
+  const pastedNestedIdsAtPaste = pastedGroupAtPaste.rows.flatMap((id) => signalChanges(signalsAtPaste.get(id)!).flatMap((change: Record<string, unknown>) => typeof change.id === "string" ? [change.id] : []));
+  expect(pastedNestedIdsAtPaste).toHaveLength(sourceNestedIdsAtPaste.size);
+  expect(pastedNestedIdsAtPaste.some((id) => sourceNestedIdsAtPaste.has(id))).toBe(false);
+  expect(new Set([...sourceNestedIdsAtPaste, ...pastedNestedIdsAtPaste]).size).toBe(sourceNestedIdsAtPaste.size + pastedNestedIdsAtPaste.length);
+
   const pastedDocument = await page.evaluate(() => JSON.parse(localStorage.getItem("timing-chart-v2.recent") ?? "null"));
   expect(pastedDocument).toBeNull();
   await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
   await ribbon.getByRole("button", { name: "Redo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  // History repair clears entity selection; reselect the pasted Group before
+  // invoking another selection-scoped clipboard action.
+  await host.locator(`[data-role='left-group-header'][data-group-id='${pastedGroupAtPaste.id}'] [data-role='tree-branch']`).click();
+  await expect(page.getByTestId("selection-status")).toHaveText("Control");
   await ribbon.getByRole("button", { name: "Duplicate", exact: true }).first().click();
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
 

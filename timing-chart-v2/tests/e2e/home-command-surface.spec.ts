@@ -9,6 +9,13 @@ async function ready(page: Page) {
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
 }
 
+async function problemCount(page: Page): Promise<number> {
+  const status = await page.getByTestId("problems-status").textContent();
+  const match = status?.match(/Problems: (\d+)/);
+  expect(match, "Problems status exposes its current count").not.toBeNull();
+  return Number(match?.[1]);
+}
+
 function revisionNumber(value: string | null) {
   const match = value?.match(/Canonical revision (\d+)/);
   expect(match).not.toBeNull();
@@ -199,6 +206,7 @@ test("annotation clipboard rejects a colliding foreign Signal ID without retarge
   await expect(ribbon.getByTestId("clipboard-status")).toHaveText(/Copied .* annotation/);
 
   await openJson(page, clipboardCollisionDocument("doc_b"));
+  const problemsBeforePaste = await problemCount(page);
   await page.getByLabel("Ribbon tabs").getByRole("button", { name: "Home", exact: true }).click();
   await edit.getByRole("button", { name: "Paste", exact: true }).click();
   await expect(ribbon.getByTestId("clipboard-status")).toHaveText("Paste rejected: clipboard belongs to another document");
@@ -206,7 +214,7 @@ test("annotation clipboard rejects a colliding foreign Signal ID without retarge
   await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
-  await expect(page.getByTestId("problems-status")).toHaveText("Problems: 1");
+  await expect(page.getByTestId("problems-status")).toHaveText(`Problems: ${problemsBeforePaste + 1}`);
   await page.getByLabel("Bottom context panels").getByRole("tab", { name: "Problems", exact: true }).click();
   await expect(page.getByTestId("problems-panel")).toContainText("CLIPBOARD_FOREIGN_DOCUMENT");
 });
@@ -224,6 +232,7 @@ test("transaction clipboard rejects a colliding foreign linked Signal ID without
   await expect(ribbon.getByTestId("clipboard-status")).toHaveText(/Copied .* transaction/);
 
   await openJson(page, clipboardCollisionDocument("doc_b"));
+  const problemsBeforePaste = await problemCount(page);
   await page.getByLabel("Ribbon tabs").getByRole("button", { name: "Home", exact: true }).click();
   await edit.getByRole("button", { name: "Paste", exact: true }).click();
   await expect(ribbon.getByTestId("clipboard-status")).toHaveText("Paste rejected: clipboard belongs to another document");
@@ -231,7 +240,9 @@ test("transaction clipboard rejects a colliding foreign linked Signal ID without
   await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
-  await expect(page.getByTestId("problems-status")).toHaveText("Problems: 1");
+  await expect(page.getByTestId("problems-status")).toHaveText(`Problems: ${problemsBeforePaste + 1}`);
+  await page.getByLabel("Bottom context panels").getByRole("tab", { name: "Problems", exact: true }).click();
+  await expect(page.getByTestId("problems-panel")).toContainText("CLIPBOARD_FOREIGN_DOCUMENT");
 });
 
 test("multi-selection clipboard preserves stable IDs and commits Duplicate/Cut as one operation", async ({ page }) => {

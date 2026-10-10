@@ -129,6 +129,44 @@ describe("deterministic document export", () => {
     expect(renderExportSvg(scene)).toContain(`<text x="${projected.x2}" y="${projected.y2}"`);
   });
 
+  it("exports authored Stroke width/style/opacity for routed Dependency and Bracket lines", () => {
+    const base = canonicalFixture();
+    const signalId = base.signals[1]!.id;
+    const dependency = { id: "ann_dependency_stroke" as AnnotationId, type: "dependency" as const, label: "Route", visible: true, from: { signalId, cycle: 1, point: "cycle-start" as const }, to: { signalId, cycle: 5, point: "cycle-end" as const }, lineType: "straight" as const, arrowhead: "end" as const, style: { strokeWidth: 5, strokeStyle: "dotted" as const, strokeOpacity: 0.4 } };
+    const bracket = { id: "ann_bracket_stroke" as AnnotationId, type: "bracket" as const, label: "Span", visible: true, start: { signalId, cycle: 2, point: "cycle-start" as const }, end: { signalId, cycle: 7, point: "cycle-end" as const }, style: { strokeWidth: 4, strokeStyle: "dashed" as const, strokeOpacity: 0.6 } };
+    const svg = renderExportSvg(buildExportScene({ ...base, annotations: [dependency, bracket] }, { format: "svg", scope: "document" }));
+    const dependencyGroup = svg.match(/<g data-annotation-id="ann_dependency_stroke"[\s\S]*?<\/g>/)?.[0];
+    const bracketGroup = svg.match(/<g data-annotation-id="ann_bracket_stroke"[\s\S]*?<\/g>/)?.[0];
+    expect(dependencyGroup).toContain('stroke-width="5"');
+    expect(dependencyGroup).toContain('stroke-dasharray="2 3"');
+    expect(dependencyGroup).toContain('stroke-opacity="0.4"');
+    expect(dependencyGroup).toContain('fill-opacity="0.4"');
+    expect(bracketGroup).toContain('stroke-width="4"');
+    expect(bracketGroup).toContain('stroke-dasharray="7 4"');
+    expect(bracketGroup).toContain('stroke-opacity="0.6"');
+    expect(bracketGroup).toContain('data-role="annotation-bracket-caps"');
+  });
+
+  it("exports an explicit solid Highlight stroke instead of restoring the default dashed stroke", () => {
+    const base = canonicalFixture();
+    const highlight = { id: "ann_highlight_solid" as AnnotationId, type: "highlight" as const, label: "Solid highlight", visible: true, start: { cycle: 2, point: "cycle-start" as const }, end: { cycle: 5, point: "cycle-end" as const }, style: { strokeStyle: "solid" as const } };
+    const svg = renderExportSvg(buildExportScene({ ...base, annotations: [highlight] }, { format: "svg", scope: "document" }));
+    const group = svg.match(/<g data-annotation-id="ann_highlight_solid"[\s\S]*?<\/g>/)?.[0];
+    expect(group).toContain("<rect ");
+    expect(group).not.toContain("stroke-dasharray=");
+  });
+
+  it("exports a Callout's authored fill on both its label box and pointer tail", () => {
+    const base = canonicalFixture();
+    const annotation = { id: "ann_callout_fill" as AnnotationId, type: "callout" as const, label: "Callout fill", visible: true, anchor: { cycle: 3, point: "cycle-center" as const }, style: { fillColor: "#00aa00", fillOpacity: 0.4 } };
+    const svg = renderExportSvg(buildExportScene({ ...base, annotations: [annotation] }, { format: "svg", scope: "document" }));
+    const group = svg.match(/<g data-annotation-id="ann_callout_fill"[\s\S]*?<\/g>/)?.[0];
+    expect(group).toContain('data-role="callout-box"');
+    expect(group).toContain('data-role="callout-tail"');
+    expect(group).toContain('fill="#00aa00"');
+    expect(group).toContain('fill-opacity="0.4"');
+  });
+
   it("exports the canonical editable Legend position", () => {
     const document = { ...canonicalFixture(), legend: { ...canonicalFixture().legend, show: true, position: { x: 36, y: 48 } } };
     const scene = buildExportScene(document, { format: "svg", scope: "document" });
@@ -739,6 +777,33 @@ describe("deterministic document export", () => {
     expect(first).toContain('data-role="measurement-marker" data-marker-side="start" data-marker-kind="arrow"');
     expect(first).toContain('data-role="measurement-extension" data-extension-side="start"');
     expect(first).toContain('data-measurement-profile="custom"');
+  });
+
+  it("exports shared Measurement Stroke without changing its lane, markers, or extensions", () => {
+    const base = canonicalFixture();
+    const signal = base.signals[1]!;
+    const measurement = {
+      id: "ann_styled_dimension" as AnnotationId,
+      type: "measurement" as const,
+      label: "styled tPLH",
+      visible: true,
+      color: "#123456",
+      style: { strokeWidth: 5, strokeStyle: "dotted", strokeOpacity: 0.4 },
+      measurement: { profile: "custom" as const, anchorKind: "threshold" as const },
+      measurementLayout: { startMarker: "arrow" as const, endMarker: "bar" as const, arrowLayout: "outward" as const, extensionLines: "both" as const, lane: 2 },
+      start: { signalId: signal.id, cycle: 3, point: "transition-center" as const, transition: { kind: "threshold" as const, value: 0.17 } },
+      end: { signalId: signal.id, cycle: 7, point: "transition-center" as const, transition: { kind: "threshold" as const, value: 0.83 } },
+    };
+    const svg = renderExportSvg(buildExportScene({ ...base, annotations: [measurement] }, { format: "svg", scope: "document" }));
+    const group = svg.match(/<g data-annotation-id="ann_styled_dimension"[\s\S]*?<\/g>/)?.[0] ?? "";
+    expect(group).toContain('data-measurement-lane="2"');
+    expect(group).toContain('data-arrow-layout="outward"');
+    expect(group).toContain('data-role="measurement-marker" data-marker-side="start" data-marker-kind="arrow"');
+    expect(group).toContain('data-role="measurement-marker" data-marker-side="end" data-marker-kind="bar"');
+    expect(group).toContain('data-role="measurement-extension" data-extension-side="start"');
+    expect(group).toContain('data-role="measurement-extension" data-extension-side="end"');
+    expect(group).toContain('data-role="measurement-dimension-line"');
+    expect(group).toContain('stroke-width="5" stroke-dasharray="2 3" stroke-opacity="0.4"');
   });
 
   it("keeps maximum authored Measurement lane coordinates finite and rejects hostile values", () => {

@@ -1715,6 +1715,61 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document.annotations[0]).toMatchObject({ labelPlacement: "end", style: { labelWrap: true, labelMaxWidth: 48, lineHeight: 1.8 } });
   });
 
+  it("validates Stroke/Fill numeric styles at every command ingress and commits atomically", () => {
+    const annotation: Annotation = { id: "ann_stroke_opacity" as AnnotationId, type: "dependency", label: "Opacity", visible: true, from: { signalId: "sig_data" as SignalId, cycle: 2, point: "cycle-start" }, to: { signalId: "sig_data" as SignalId, cycle: 4, point: "cycle-end" } };
+    const session = new CommandHistorySession({ ...canonicalFixture(), annotations: [annotation] });
+    const initial = session.getSnapshot();
+    const invalidStyles = [
+      { field: "strokeWidth", value: 0 }, { field: "strokeWidth", value: 9 },
+      { field: "strokeOpacity", value: -0.01 }, { field: "strokeOpacity", value: 1.01 },
+      { field: "fillOpacity", value: -0.01 }, { field: "fillOpacity", value: 1.01 },
+    ] as const;
+    for (const { field, value } of invalidStyles) {
+      const invalid = session.execute({ id: commandId(`ann_style_invalid_${field}_${value}`), type: "annotation.updateProperties", annotationId: annotation.id, label: annotation.label, visible: true, style: { [field]: value } });
+      expect(invalid).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_ANNOTATION_STYLE", path: `$.style.${field}` }] });
+      expect(session.getSnapshot()).toEqual(initial);
+    }
+    const invalidDiscreteStyles = [
+      { field: "strokeStyle", value: "wavy" },
+      { field: "fillColor", value: "url(javascript:alert(1))" },
+    ] as const;
+    for (const { field, value } of invalidDiscreteStyles) {
+      const invalid = session.execute({ id: commandId(`ann_style_invalid_${field}`), type: "annotation.updateProperties", annotationId: annotation.id, label: annotation.label, visible: true, style: { [field]: value } });
+      expect(invalid).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_ANNOTATION_STYLE", path: `$.style.${field}` }] });
+      expect(session.getSnapshot()).toEqual(initial);
+    }
+    const invalidCreate = session.execute({ id: commandId("ann_style_invalid_create"), type: "annotation.create", annotation: { ...annotation, id: "ann_invalid_create" as AnnotationId, style: { strokeWidth: 9 } } });
+    expect(invalidCreate).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_ANNOTATION_STYLE", path: "$.annotation.style.strokeWidth" }] });
+    expect(session.getSnapshot()).toEqual(initial);
+    const invalidDiscreteCreate = session.execute({ id: commandId("ann_style_invalid_discrete_create"), type: "annotation.create", annotation: { ...annotation, id: "ann_invalid_discrete_create" as AnnotationId, style: { strokeStyle: "wavy" } } });
+    expect(invalidDiscreteCreate).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_ANNOTATION_STYLE", path: "$.annotation.style.strokeStyle" }] });
+    expect(session.getSnapshot()).toEqual(initial);
+    const invalidBulk = session.execute({ id: commandId("ann_style_invalid_bulk"), type: "annotation.bulkCreate", annotations: [{ ...annotation, id: "ann_invalid_bulk" as AnnotationId, style: { fillOpacity: 1.01 } }] });
+    expect(invalidBulk).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_ANNOTATION_STYLE", path: "$.annotations[0].style.fillOpacity" }] });
+    expect(session.getSnapshot()).toEqual(initial);
+    const invalidDiscreteBulk = session.execute({ id: commandId("ann_style_invalid_discrete_bulk"), type: "annotation.bulkCreate", annotations: [{ ...annotation, id: "ann_invalid_discrete_bulk" as AnnotationId, style: { fillColor: "url(javascript:alert(1))" } }] });
+    expect(invalidDiscreteBulk).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_ANNOTATION_STYLE", path: "$.annotations[0].style.fillColor" }] });
+    expect(session.getSnapshot()).toEqual(initial);
+    const invalidReplacement = session.execute({ id: commandId("ann_style_invalid_replace"), type: "annotation.replaceCollection", annotations: [{ ...annotation, style: { strokeOpacity: -0.01 } }] });
+    expect(invalidReplacement).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_ANNOTATION_STYLE", path: "$.annotations[0].style.strokeOpacity" }] });
+    expect(session.getSnapshot()).toEqual(initial);
+    const invalidDiscreteReplacement = session.execute({ id: commandId("ann_style_invalid_discrete_replace"), type: "annotation.replaceCollection", annotations: [{ ...annotation, style: { fillColor: "#ggg" } }] });
+    expect(invalidDiscreteReplacement).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_ANNOTATION_STYLE", path: "$.annotations[0].style.fillColor" }] });
+    expect(session.getSnapshot()).toEqual(initial);
+
+    const applied = session.execute({ id: commandId("ann_stroke_opacity_apply"), type: "annotation.updateProperties", annotationId: annotation.id, label: annotation.label, visible: true, style: { strokeWidth: 5, strokeOpacity: 0.4, fillOpacity: 0.6 } });
+    expect(applied).toMatchObject({ ok: true, changeSet: { annotationStyle: [annotation.id] } });
+    expect(session.getSnapshot().document.annotations[0]?.style).toEqual({ strokeWidth: 5, strokeOpacity: 0.4, fillOpacity: 0.6 });
+    expect(session.historyState().undoDepth).toBe(1);
+    const reopened = parseDocument(serializeValidatedCanonicalDocument(session.getSnapshot().document));
+    expect(reopened.ok).toBe(true);
+    if (reopened.ok) expect(reopened.document.annotations[0]?.style).toEqual({ strokeWidth: 5, strokeOpacity: 0.4, fillOpacity: 0.6 });
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.annotations[0]).toEqual(annotation);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.annotations[0]?.style).toEqual({ strokeWidth: 5, strokeOpacity: 0.4, fillOpacity: 0.6 });
+  });
+
   it("round-trips Marker/Bracket presentation after SemanticCommand edits", () => {
     const marker: Annotation = {
       id: "ann_marker_roundtrip" as AnnotationId,

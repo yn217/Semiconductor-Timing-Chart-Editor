@@ -84,6 +84,76 @@ test("Dependency annotations expose and persist line presentation controls", asy
   await expect(owner.locator("marker")).toHaveCount(2);
 });
 
+test("transition-picked Dependency keeps semantic endpoints and presentation through Undo/Redo and Save/Open", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const waveBox = await surface.locator("[data-role='stable-waveform-surface']").boundingBox();
+  const requestBox = await surface.locator("[data-role='timing-row'][data-row-id='sig_cycle_request']").boundingBox();
+  const readyBox = await surface.locator("[data-role='timing-row'][data-row-id='sig_cycle_ready']").boundingBox();
+  const cycle3 = Number.parseFloat(await page.getByTestId("cycle-ruler").locator("[data-cycle='3']").evaluate((element) => (element as HTMLElement).style.left));
+  const cycle5 = Number.parseFloat(await page.getByTestId("cycle-ruler").locator("[data-cycle='5']").evaluate((element) => (element as HTMLElement).style.left));
+  expect(waveBox && requestBox && readyBox).toBeTruthy();
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByLabel("Annotation type").selectOption("dependency");
+  const priorIds = await snapshotAnnotationIds(host);
+  await page.getByRole("button", { name: "Pick arrow endpoints" }).click();
+  await page.mouse.click(waveBox!.x + cycle3, requestBox!.y + requestBox!.height / 2);
+  await page.mouse.click(waveBox!.x + cycle5, readyBox!.y + readyBox!.height / 2);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const annotationId = await waitForCreatedAnnotationId(host, priorIds, "dependency");
+  expect(annotationId).toBeTruthy();
+  const owner = annotationOwnerById(host, annotationId);
+
+  const editor = page.getByTestId("inspector");
+  await editor.getByLabel("Annotation label", { exact: true }).fill("Request to Ready");
+  await (await styleSection(editor)).getByLabel("Annotation line type").selectOption("diagonal");
+  await (await styleSection(editor)).getByLabel("Annotation arrowhead").selectOption("bidirectional");
+  await editor.getByLabel("Annotation label X").fill("23");
+  await editor.getByLabel("Annotation label Y").fill("-11");
+  await editor.getByTestId("apply-annotation-properties").click();
+  await expect(owner).toHaveAttribute("data-line-type", "diagonal");
+  await expect(owner).toHaveAttribute("data-arrowhead", "bidirectional");
+  await expect(owner).toHaveAttribute("aria-label", /Request to Ready/);
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(owner).toHaveAttribute("data-line-type", "straight");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(owner).toHaveAttribute("data-line-type", "diagonal");
+  await expect(owner).toHaveAttribute("data-arrowhead", "bidirectional");
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  const save = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await save).path();
+  expect(savedPath).toBeTruthy();
+  const fs = await import("node:fs");
+  const saved = JSON.parse(fs.readFileSync(savedPath!, "utf8")) as { annotations: Array<Record<string, unknown>> };
+  const serialized = saved.annotations.find((annotation) => annotation.id === annotationId);
+  expect(serialized).toMatchObject({
+    type: "dependency",
+    label: "Request to Ready",
+    lineType: "diagonal",
+    arrowhead: "bidirectional",
+    labelOffset: { x: 23, y: -11 },
+    from: { cycle: 3, signalId: "sig_cycle_request" },
+    to: { cycle: 5, signalId: "sig_cycle_ready" },
+  });
+
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  const reopened = surface.locator(`[data-role='annotation-owner'][data-annotation-id='${annotationId}']`);
+  await expect(reopened).toHaveAttribute("data-annotation-type", "dependency");
+  await expect(reopened).toHaveAttribute("data-line-type", "diagonal");
+  await expect(reopened).toHaveAttribute("data-arrowhead", "bidirectional");
+  await expect(reopened).toHaveAttribute("aria-label", /Request to Ready/);
+  await expect(reopened.locator("[data-role='annotation-path']")).toHaveAttribute("marker-start", /start/);
+  await expect(reopened.locator("[data-role='annotation-path']")).toHaveAttribute("marker-end", /end/);
+});
+
 // #375 item 12: SVG export must preserve the real route shape, arrow
 // markers and label of a Dependency, not just the live-DOM overlay.
 test("SVG export preserves a Dependency's route shape, arrow markers and label", async ({ page }) => {

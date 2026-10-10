@@ -114,7 +114,7 @@ function cropPng(source: PNG, region: { x: number; y: number; width: number; hei
   return crop;
 }
 
-test("generates V1 reference vs V2 production visual evidence at the locked viewport", async ({ page }) => {
+test("compares the approved V2 v8 reference with production at the locked viewport", async ({ page }) => {
   await mkdir(outputRoot, { recursive: true });
   await mkdir(cropRoot, { recursive: true });
   await page.setViewportSize(viewport);
@@ -140,6 +140,14 @@ test("generates V1 reference vs V2 production visual evidence at the locked view
     } as const;
     const rect = (selector: string) => document.querySelector<HTMLElement>(selector)?.getBoundingClientRect().toJSON() ?? null;
     const actual = Object.fromEntries(Object.entries(selectors).map(([name, selector]) => [name, rect(selector)])) as Record<string, { x: number; y: number; width: number; height: number }>;
+    const rowGeometry = Array.from(document.querySelectorAll<HTMLElement>(".surface-host [data-row-id][data-role]"), (element) => {
+      const bounds = element.getBoundingClientRect();
+      return { role: element.dataset.role, rowId: element.dataset.rowId, top: Math.round(bounds.top * 100) / 100, height: Math.round(bounds.height * 100) / 100 };
+    });
+    const groupGeometry = Array.from(document.querySelectorAll<HTMLElement>(".surface-host [data-role$='group-header']"), (element) => {
+      const bounds = element.getBoundingClientRect();
+      return { role: element.dataset.role, groupId: element.dataset.groupId, top: Math.round(bounds.top * 100) / 100, height: Math.round(bounds.height * 100) / 100 };
+    });
     const inspector = actual.inspector as DOMRect;
     const workspace = actual.workspace as DOMRect;
     const workspaceElement = document.querySelector<HTMLElement>(selectors.workspace);
@@ -157,6 +165,8 @@ test("generates V1 reference vs V2 production visual evidence at the locked view
     return {
       viewport: { width: innerWidth, height: innerHeight, devicePixelRatio },
       actual,
+      rowGeometry,
+      groupGeometry,
       derived: { center, leftPaneWidth: left.width, inspectorWidth: inspector.width, bottomHeight: bottom.height },
       differences,
       ribbonOverflow: { clientWidth: document.querySelector<HTMLElement>("[data-testid='ribbon']")?.clientWidth ?? 0, scrollWidth: document.querySelector<HTMLElement>("[data-testid='ribbon']")?.scrollWidth ?? 0 },
