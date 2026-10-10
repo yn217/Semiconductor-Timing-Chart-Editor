@@ -324,12 +324,16 @@ function valueAt(changes: readonly SignalValueChange[], at: number): SignalValue
   return low > 0 ? changes[low - 1] : undefined;
 }
 
-function deleteChanges(changes: readonly SignalValueChange[], start: number, end: number, nextCycleCount: number, signalId: string): SignalValueChange[] {
+function deleteChanges(changes: readonly SignalValueChange[], start: number, end: number, nextCycleCount: number, signalId: string, reservedIds: Set<string>): SignalValueChange[] {
   const mapped = changes.filter((change) => change.start < start || change.start >= end).map((change) => change.start >= end ? { ...change, start: change.start - (end - start) } : change);
   if (start < nextCycleCount && !mapped.some((change) => change.start === start)) {
     const active = valueAt(changes, end);
     // The surviving change keeps its own ID; the value carried onto the deletion boundary is a new change and needs a fresh one.
-    if (active) mapped.push(active.id === undefined ? { ...active, start } : { ...active, id: valueChangeIdAllocator.allocate(signalId, changes).id, start });
+    if (active) {
+      const allocation = valueChangeIdAllocator.allocate(signalId, changes, reservedIds);
+      reservedIds.add(allocation.id);
+      mapped.push({ ...active, id: allocation.id, start });
+    }
   }
   mapped.sort((left, right) => left.start - right.start);
   const deduplicated: SignalValueChange[] = [];
@@ -385,14 +389,15 @@ function deleteAnnotation(annotation: Annotation, start: number, end: number, ne
 
 function deleteTimeline(document: CanonicalDocument, start: number, end: number): CanonicalDocument {
   const nextCycleCount = document.timeline.cycleCount - (end - start);
+  const reservedIds = new Set(canonicalEntityIds(document));
   const signals = document.signals.map((signal): Signal => {
     if (signal.type === "commentRow") return signal;
     if (signal.type === "clock") return {
       ...signal,
       generator: { ...signal.generator, start: mapDeletePoint(signal.generator.start, start, end, nextCycleCount) },
-      ...(signal.enable ? { enable: deleteChanges(signal.enable, start, end, nextCycleCount, `${signal.id}_enable`) } : {}),
+      ...(signal.enable ? { enable: deleteChanges(signal.enable, start, end, nextCycleCount, `${signal.id}_enable`, reservedIds) } : {}),
     };
-    return mapResetDelete({ ...signal, values: deleteChanges(signal.values, start, end, nextCycleCount, signal.id) }, start, end, nextCycleCount);
+    return mapResetDelete({ ...signal, values: deleteChanges(signal.values, start, end, nextCycleCount, signal.id, reservedIds) }, start, end, nextCycleCount);
   });
   const annotations = document.annotations.map((annotation) => deleteAnnotation(annotation, start, end, nextCycleCount)).filter((annotation): annotation is Annotation => annotation !== undefined);
   const retainedAnnotationIds = new Set(annotations.map((annotation) => annotation.id));

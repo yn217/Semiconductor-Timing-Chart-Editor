@@ -4,9 +4,10 @@ startInCycleSample(test);
 test("Timeline Delete range and Insert commit on a document with stable value IDs", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
-  await host.waitFor();
-  await page.waitForTimeout(1500);
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByLabel("Timeline range end").fill("4");
+  await page.getByLabel("Timeline range start").fill("2");
   const hist = () => page.getByTestId("history-status").textContent();
   await page.getByRole("button", { name: "Delete range" }).click();
   await expect.poll(hist).toBe("History 1 / Redo 0");
