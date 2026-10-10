@@ -937,7 +937,17 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       const index = document.signals.findIndex((signal) => signal.id === command.signalId);
       const signal = document.signals[index];
       if (!signal || signal.type === "clock" || signal.type === "commentRow") return fail("invalid", "SIGNAL_NOT_EDITABLE", "$.signalId", "Value changes require a non-clock timing signal.");
-      const values = [...command.values].sort((left, right) => left.start - right.start);
+      const sorted = [...command.values].sort((left, right) => left.start - right.start);
+      // Imported / pasted tables carry no IDs: keep the ID of the change previously at the same cycle, otherwise allocate a fresh one.
+      const takenIds = new Set(sorted.flatMap((change) => change.id ? [change.id] : []));
+      let nextSequence = 0;
+      const freshId = () => { while (takenIds.has(`value_${signal.id}_${nextSequence}`) || signal.values.some((item) => item.id === `value_${signal.id}_${nextSequence}`)) nextSequence += 1; const id = `value_${signal.id}_${nextSequence}`; takenIds.add(id); return id; };
+      const values = sorted.map((change) => {
+        if (change.id) return change;
+        const previous = signal.values.find((item) => item.start === change.start)?.id;
+        if (previous && !takenIds.has(previous)) { takenIds.add(previous); return { ...change, id: previous }; }
+        return { ...change, id: freshId() };
+      });
       if (values.length === 0) return fail("invalid", "EMPTY_VALUES", "$.values", "A value signal must retain at least one change point.");
       if (values.some((change) => !Number.isInteger(change.start) || change.start < 0 || change.start >= document.timeline.cycleCount)) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.values", "Every change point must be inside the timeline.");
       if (new Set(values.map((change) => change.start)).size !== values.length) return fail("invalid", "DUPLICATE_CHANGE_POINT", "$.values", "Change points must be unique.");

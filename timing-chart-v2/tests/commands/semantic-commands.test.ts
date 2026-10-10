@@ -773,13 +773,17 @@ describe("pure Semantic Command planning", () => {
     const values = [{ start: 0, value: "0" }, { start: 2, value: "1", displayLabel: "READY", comment: "imported" }, { start: 6, value: "0" }];
     const result = session.execute({ id: commandId("cmd_replace_values"), type: "signal.replaceValues", signalId: "sig_data" as SignalId, values });
     expect(result.ok).toBe(true);
-    expect(session.getSnapshot().document.signals.find((signal) => signal.id === "sig_data")?.values).toEqual(values);
+    // Imported changes carry no IDs; the command assigns stable, unique ones (the editor runtime requires them).
+    const imported = session.getSnapshot().document.signals.find((signal) => signal.id === "sig_data")?.values ?? [];
+    expect(imported.map(({ id: _id, ...change }) => change)).toEqual(values);
+    expect(imported.every((change) => typeof change.id === "string" && change.id.length > 0)).toBe(true);
+    expect(new Set(imported.map((change) => change.id)).size).toBe(imported.length);
     expect(session.metrics()).toEqual({ validationRuns: before.validationRuns + 1, commits: before.commits + 1 });
     expect(session.historyState().undoDepth).toBe(1);
     expect(session.undo().ok).toBe(true);
     expect(session.getSnapshot().document.signals.find((signal) => signal.id === "sig_data")?.values).toEqual(source.signals.find((signal) => signal.id === "sig_data")?.values);
     expect(session.redo().ok).toBe(true);
-    expect(session.getSnapshot().document.signals.find((signal) => signal.id === "sig_data")?.values).toEqual(values);
+    expect(session.getSnapshot().document.signals.find((signal) => signal.id === "sig_data")?.values).toEqual(imported);
   });
 });
 
