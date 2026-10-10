@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 438 spec files and 1320 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 438 spec files and 1321 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1262/1320 cases reviewed.
+Semantic review progress: 1263/1321 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 634 |
 | `nightly` | 241 |
 | `performance` | 73 |
-| `pr` | 412 |
+| `pr` | 413 |
 | `visual` | 181 |
 
 ## Top recorded per-case runtimes
@@ -407,7 +407,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `ruler-reference-clock.spec.ts` | 2 | 2/2 reviewed |
 | `ruler-terminal-boundary.spec.ts` | 1 | 1/1 reviewed |
 | `runtime-owner-acceptance.spec.ts` | 2 | 2/2 reviewed |
-| `scenario-add-signal-after-duplicate.spec.ts` | 1 | 1/1 reviewed |
+| `scenario-add-signal-after-duplicate.spec.ts` | 2 | 2/2 reviewed |
 | `signal-editor-draft-survives-unrelated-edit.spec.ts` | 1 | 1/1 reviewed |
 | `signal-editor-group-dropdown.spec.ts` | 2 | 2/2 reviewed |
 | `signal-editor.spec.ts` | 18 | 18/18 reviewed |

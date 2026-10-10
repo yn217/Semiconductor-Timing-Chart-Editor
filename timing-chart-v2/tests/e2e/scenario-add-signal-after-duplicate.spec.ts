@@ -18,3 +18,15 @@ test("adding a Signal in a duplicated Scenario succeeds and Undo removes it", as
   await page.keyboard.press("Control+z");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 1");
 });
+
+test("a Scenario cannot be renamed to a name another Scenario already has", async ({ page }) => {
+  await page.setViewportSize({ width: 1500, height: 900 });
+  await page.goto("/?transaction-demo");
+  await page.getByRole("button", { name: "Enable Scenarios" }).click();
+  await page.getByTestId("scenario-duplicate").click();
+  const rename = page.getByTestId("scenario-rename");
+  await page.getByTestId("scenario-name").fill("Scenario 1");
+  await expect(rename).toBeDisabled();
+  await page.getByTestId("scenario-name").fill("Scenario 2");
+  await expect(rename).toBeEnabled();
+});

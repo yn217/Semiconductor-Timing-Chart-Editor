@@ -17028,6 +17028,24 @@
       "decision": "KEEP",
       "reason": "The empty-history rejection used to be listed as an error Problem; only the real shortcut path shows it.",
       "replacementTest": null
+    },
+    {
+      "file": "scenario-add-signal-after-duplicate.spec.ts",
+      "title": "a Scenario cannot be renamed to a name another Scenario already has",
+      "domain": "scenario-rename-unique",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 2000,
+      "primaryContract": "Rename stays disabled while the typed name belongs to another Scenario.",
+      "duplicateGroup": "scenario-rename-unique",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Two Scenarios with one name are indistinguishable in the Active Scenario selector.",
+      "replacementTest": null
     }
   ]
 }

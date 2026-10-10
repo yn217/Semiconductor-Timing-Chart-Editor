@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T13:21:55.369Z",
+  "generatedAt": "2026-10-10T13:48:23.480Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -12,13 +12,13 @@
     "retryAndFlakySummary": null
   },
   "specFileCount": 438,
-  "caseCount": 1320,
-  "reviewedCaseCount": 1262,
+  "caseCount": 1321,
+  "reviewedCaseCount": 1263,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 412,
+    "pr": 413,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -26696,6 +26696,33 @@
       "runtimeMeasurementScope": "CASE"
     },
     {
+      "file": "scenario-add-signal-after-duplicate.spec.ts",
+      "suitePath": [],
+      "line": 22,
+      "title": "a Scenario cannot be renamed to a name another Scenario already has",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "scenario-rename-unique",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 2000,
+      "primaryContract": "Rename stays disabled while the typed name belongs to another Scenario.",
+      "duplicateGroup": "scenario-rename-unique",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Two Scenarios with one name are indistinguishable in the Active Scenario selector.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "scenario-rename-unique",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
       "file": "signal-editor-draft-survives-unrelated-edit.spec.ts",
       "suitePath": [],
       "line": 13,
@@ -38103,8 +38130,8 @@
     },
     {
       "file": "scenario-add-signal-after-duplicate.spec.ts",
-      "caseCount": 1,
-      "reviewedCaseCount": 1,
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
