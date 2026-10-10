@@ -141,21 +141,30 @@ export function InspectorPanel({ signal, selectedCycle = 0, selectedSignalIds, g
   const committedTransactionRef = useRef<{ id: string | undefined; name: string; start: number; end: number; lane: string; group: string; color: string; description: string }>({ id: undefined, name: "", start: 0, end: 1, lane: "lane_0", group: "", color: "", description: "" });
   useEffect(() => {
     const previous = committedTransactionRef.current;
-    const sameDraft = previous.id === transaction?.id
-      && transactionName === previous.name && transactionStart === previous.start && transactionEnd === previous.end
-      && transactionLane === previous.lane && transactionGroupId === previous.group && transactionColor === previous.color
-      && transactionDescription === previous.description;
-    if (previous.id !== transaction?.id || sameDraft) {
-    setTransactionName(transaction?.name ?? "");
-    setTransactionStart(transaction?.start ?? 0);
-    setTransactionEnd(transaction?.end ?? 1);
-    setTransactionLane(transaction?.laneId ?? "lane_0");
-    setTransactionGroupId(transaction?.groupId ?? "");
-    setTransactionColor(transaction?.color ?? "");
-    setTransactionDescription(transaction?.description ?? "");
-    setTransactionStatus("");
+    const next = { id: transaction?.id, name: transaction?.name ?? "", start: transaction?.start ?? 0, end: transaction?.end ?? 1, lane: transaction?.laneId ?? "lane_0", group: transaction?.groupId ?? "", color: transaction?.color ?? "", description: transaction?.description ?? "" };
+    if (previous.id !== next.id) {
+      setTransactionName(next.name);
+      setTransactionStart(next.start);
+      setTransactionEnd(next.end);
+      setTransactionLane(next.lane);
+      setTransactionGroupId(next.group);
+      setTransactionColor(next.color);
+      setTransactionDescription(next.description);
+      setTransactionStatus("");
+    } else {
+      // Per-field merge (same pattern as the Value Signal editor's #776): a field the user has edited
+      // (draft differs from the base it was started from) keeps its draft; an untouched field follows the
+      // committed Transaction, so an external Start/End change (timeline drag, Undo/Redo) is not hidden
+      // behind a pending Name/Description edit and cannot be re-sent stale by a later Apply.
+      if (transactionName === previous.name) setTransactionName(next.name);
+      if (transactionStart === previous.start) setTransactionStart(next.start);
+      if (transactionEnd === previous.end) setTransactionEnd(next.end);
+      if (transactionLane === previous.lane) setTransactionLane(next.lane);
+      if (transactionGroupId === previous.group) setTransactionGroupId(next.group);
+      if (transactionColor === previous.color) setTransactionColor(next.color);
+      if (transactionDescription === previous.description) setTransactionDescription(next.description);
     }
-    committedTransactionRef.current = { id: transaction?.id, name: transaction?.name ?? "", start: transaction?.start ?? 0, end: transaction?.end ?? 1, lane: transaction?.laneId ?? "lane_0", group: transaction?.groupId ?? "", color: transaction?.color ?? "", description: transaction?.description ?? "" };
+    committedTransactionRef.current = next;
   }, [transaction?.id, transaction?.name, transaction?.start, transaction?.end, transaction?.laneId, transaction?.groupId, transaction?.color, transaction?.description]);
   const previewGroupStyle = (overrides: Partial<SignalGroupStyle> & { readonly showBorder?: boolean } = {}) => {
     if (!group) return;
@@ -253,7 +262,20 @@ export function InspectorPanel({ signal, selectedCycle = 0, selectedSignalIds, g
       {transactionStatus && <output role="status">{transactionStatus}</output>}
       <section><button type="button" className="danger" onClick={() => registry.execute("selection.delete")}>Delete Transaction</button></section>
       </div>
-      <InspectorFooter onCancel={() => { clearPhaseDraft(transaction.id); onCancel(); }} onApply={() => { setTransactionStatus(""); const phaseCommit = phaseDraft ? commitPhaseRows(phaseDraft, transactionStart, transactionEnd, tcPer) : undefined; if (phaseCommit && "error" in phaseCommit) { setTransactionStatus(phaseCommit.error); return; } const result = commands.updateTransaction({ transactionId: transaction.id, name: transactionName, start: transactionStart, end: transactionEnd, laneId: transactionLane, ...(phaseCommit ? { phases: phaseCommit.rows } : {}), ...(transactionGroupId ? { groupId: transactionGroupId as TransactionGroup["id"] } : {}), ...(transactionColor ? { color: transactionColor } : {}), description: transactionDescription });
+      <InspectorFooter onCancel={() => { clearPhaseDraft(transaction.id); onCancel(); }} onApply={() => { setTransactionStatus("");
+        // Pure shift (Start and End move by the same delta) mirrors transaction.move: Phases travel with the
+        // Transaction instead of being validated against the new range and rejected. Any other Start/End edit
+        // keeps Phases as they are (unchanged behaviour, still validated by the command).
+        const delta = transactionStart - transaction.start;
+        const isPureShift = delta !== 0 && transactionEnd - transaction.end === delta;
+        const shiftPhaseRows = <T extends { readonly start: number; readonly end: number }>(rows: readonly T[]): T[] => rows.map((phase) => ({ ...phase, start: phase.start + delta, end: phase.end + delta }));
+        const phaseCommit = phaseDraft
+          ? commitPhaseRows(isPureShift ? shiftPhaseRows(phaseDraft) : phaseDraft, transactionStart, transactionEnd, tcPer)
+          : isPureShift && (transaction.phases?.length ?? 0) > 0 ? commitPhaseRows(shiftPhaseRows(transaction.phases ?? []), transactionStart, transactionEnd, tcPer) : undefined;
+        if (phaseCommit && "error" in phaseCommit) { setTransactionStatus(phaseCommit.error); return; }
+        // Empty Group / empty color are explicit clears (same flags as transaction-bottom-tabs.tsx and
+        // transaction-editor.tsx): "Ungrouped" and "Use group color" must reach the command, not be dropped.
+        const result = commands.updateTransaction({ transactionId: transaction.id, name: transactionName, start: transactionStart, end: transactionEnd, laneId: transactionLane, ...(phaseCommit ? { phases: phaseCommit.rows } : {}), ...(transactionGroupId ? { groupId: transactionGroupId as TransactionGroup["id"] } : { clearGroupId: true }), ...(transactionColor ? { color: transactionColor } : { clearColor: true }), description: transactionDescription });
         // #454 Visual Quality Closure ("unclear draft state"): a rejected
         // Apply (e.g. End beyond the document's own cycle count) used to
         // fail silently -- the draft stayed on-screen looking applied

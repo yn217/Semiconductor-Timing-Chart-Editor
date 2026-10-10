@@ -675,6 +675,13 @@ function moveTimelineRange(document: CanonicalDocument, start: number, end: numb
     return { ...mapped, ...(phases ? { phases } : {}) } as Transaction;
   });
   if (timeGroups.some((group) => group === undefined) || transactions.some((transaction) => transaction === undefined)) return undefined;
+  // A span annotation (start..end) whose two endpoints land on different sides of the moved block would come out inverted
+  // (end before start): like a Transaction or Time Group that would be split, the move is rejected instead.
+  const splitsSpan = document.annotations.some((annotation) => {
+    if (!annotation.start || !annotation.end || annotation.start.cycle > annotation.end.cycle) return false;
+    return moveCycleIndex(annotation.start.cycle, start, end, to) > moveCycleIndex(annotation.end.cycle, start, end, to);
+  });
+  if (splitsSpan) return undefined;
   return {
     ...document,
     signals: document.signals.map((signal): Signal => {
