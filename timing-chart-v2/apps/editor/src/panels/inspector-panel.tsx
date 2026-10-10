@@ -10,7 +10,7 @@ import { DefaultScreenGeometryProjector, resolveTimeAxisGeometry, SemanticSnapCa
 import { CommandHistorySession, type HistoryState } from "@timing-chart-v2/history";
 import { buildHardwareHierarchyEntries, hardwareHierarchyScopes, type DisplayTimeMapping, type HardwareHierarchyView, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { type AnnotationOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
-import { scanJsonSyntax, serializeCanonicalDocument, validateCanonicalDocument, validateDocumentResourceBudget } from "@timing-chart-v2/schema";
+import { parseBusValue, scanJsonSyntax, serializeCanonicalDocument, validateCanonicalDocument, validateDocumentResourceBudget } from "@timing-chart-v2/schema";
 import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type Bookmark, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type ParsedCanonicalDocument, type ResetSemantics, type SemanticAnchor, type Signal, type SignalGroup, type SignalGroupStyle, type SignalId, type SignalRole, type SpacerId, type SpacerRow, type TimeGroupId, type Transaction, type TransactionGroup, type ValueSignal } from "@timing-chart-v2/schema";
 import { mayRouteGlobalShortcut, resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import { ViewMetricsOwner } from "../runtime/view-metrics.js";
@@ -290,17 +290,37 @@ export function InspectorPanel({ signal, selectedCycle = 0, selectedSignalIds, g
   </aside>;
 }
 
+/** Default Bus width after a Binary/State/etc. signal is converted to Bus: 8 bits (the width Clock-to-Bus conversion uses), widened only when an existing value needs more bits. */
+function suggestedBusWidth(signal: ValueSignal): number {
+  let bits = 8;
+  for (const change of signal.values) {
+    try {
+      const parsed = parseBusValue(change.value, undefined, signal.type === "binary" ? "binary" : undefined);
+      if (parsed.kind === "numeric") bits = Math.max(bits, parsed.value === 0n ? 1 : parsed.value!.toString(2).length);
+    } catch {
+      // Not a numeric literal (symbolic or invalid): it does not raise the default width.
+    }
+  }
+  return bits;
+}
+
 export function InspectorValueSignalEditor({ signal, selectedCycle, document, changeSet, viewport, commands, onReveal, onCancel, onClose }: { readonly signal: ValueSignal; readonly selectedCycle: number; readonly document: Readonly<CanonicalDocument>; readonly changeSet: ChangeSet; readonly viewport: RefObject<HTMLDivElement | null>; readonly commands: EditorSurfaceCommandController; readonly onReveal: () => void; readonly onCancel: () => void; readonly onClose: () => void }) {
   const [name, setName] = useState(signal.display.name);
   const [role, setRole] = useState<SignalRole>(signal.role);
   const [signalType, setSignalType] = useState<ValueSignal["type"]>(signal.type);
-  const [width, setWidth] = useState(signal.width ?? 1);
+  // Width is held as text so an emptied field is an invalid draft (inline message, Apply disabled), never a 0 commit attempt.
+  const [widthText, setWidthText] = useState(String(signal.width ?? 1));
+  // State enum is a draft like every other field here (committed by Apply, not on select change).
+  const [enumDraft, setEnumDraft] = useState(signal.type === "state" ? signal.enumId ?? "" : "");
   const [format, setFormat] = useState<NonNullable<ValueSignal["displayFormat"]>>(signal.displayFormat ?? "hex");
   const [visible, setVisible] = useState(signal.display.visible !== false);
   const [spacingBefore, setSpacingBefore] = useState(signal.spacingBefore ?? 0);
   const [spacingAfter, setSpacingAfter] = useState(signal.spacingAfter ?? 0);
-  const [align, setAlign] = useState<NonNullable<Signal["display"]["align"]>>(signal.display.align ?? "left");
-  const [overflow, setOverflow] = useState<NonNullable<Signal["display"]["overflow"]>>(signal.display.overflow ?? "ellipsis");
+  // Show what is actually rendered (signal override, else the document layout); Apply only sends align/overflow when the user changed them.
+  const effectiveAlign = signal.display.align ?? document.layout.signalNameAlign ?? "left";
+  const effectiveOverflow = signal.display.overflow ?? document.layout.overflow ?? "ellipsis";
+  const [align, setAlign] = useState<NonNullable<Signal["display"]["align"]>>(effectiveAlign);
+  const [overflow, setOverflow] = useState<NonNullable<Signal["display"]["overflow"]>>(effectiveOverflow);
   const [style, setStyle] = useState(JSON.stringify(signal.display.style ?? {}));
   const styleObject = signal.display.style ?? {};
   const [textColor, setTextColor] = useState(styleString(styleObject, "color", "#152033"));
@@ -332,13 +352,13 @@ export function InspectorValueSignalEditor({ signal, selectedCycle, document, ch
   // one independent sub-editor (e.g. Reset Semantics) silently discarded an unrelated unapplied Properties/Style draft. Same per-field
   // clean/dirty merge as #775: a field only resyncs to the new canonical value when THAT field's canonical value actually changed AND
   // the local draft is still clean (equal to what it was last synced from); a dirty field is preserved, its baseline still advances.
-  const valueSignalBaseRef = useRef<{ id: SignalId; name: string; role: SignalRole; signalType: ValueSignal["type"]; width: number; format: NonNullable<ValueSignal["displayFormat"]>; visible: boolean; spacingBefore: number; spacingAfter: number; align: NonNullable<Signal["display"]["align"]>; overflow: NonNullable<Signal["display"]["overflow"]>; style: string; textColor: string; rowBackground: string; fontFamily: string; fontSize: number; bold: boolean; italic: boolean; underline: boolean; strikethrough: boolean; waveformColor: string; waveformBackground: string; resetEnabled: boolean; resetPolarity: ResetSemantics["polarity"]; resetSync: ResetSemantics["synchronization"]; resetAssertCycle: string; resetDeassertCycle: string } | undefined>(undefined);
+  const valueSignalBaseRef = useRef<{ id: SignalId; name: string; role: SignalRole; signalType: ValueSignal["type"]; width: string; enumId: string; format: NonNullable<ValueSignal["displayFormat"]>; visible: boolean; spacingBefore: number; spacingAfter: number; align: NonNullable<Signal["display"]["align"]>; overflow: NonNullable<Signal["display"]["overflow"]>; style: string; textColor: string; rowBackground: string; fontFamily: string; fontSize: number; bold: boolean; italic: boolean; underline: boolean; strikethrough: boolean; waveformColor: string; waveformBackground: string; resetEnabled: boolean; resetPolarity: ResetSemantics["polarity"]; resetSync: ResetSemantics["synchronization"]; resetAssertCycle: string; resetDeassertCycle: string } | undefined>(undefined);
   useEffect(() => {
     const nextStyle = signal.display.style ?? {};
     const next = {
-      id: signal.id, name: signal.display.name, role: signal.role, signalType: signal.type, width: signal.width ?? 1, format: signal.displayFormat ?? "hex" as NonNullable<ValueSignal["displayFormat"]>,
+      id: signal.id, name: signal.display.name, role: signal.role, signalType: signal.type, width: String(signal.width ?? 1), enumId: signal.type === "state" ? signal.enumId ?? "" : "", format: signal.displayFormat ?? "hex" as NonNullable<ValueSignal["displayFormat"]>,
       visible: signal.display.visible !== false, spacingBefore: signal.spacingBefore ?? 0, spacingAfter: signal.spacingAfter ?? 0,
-      align: signal.display.align ?? "left" as NonNullable<Signal["display"]["align"]>, overflow: signal.display.overflow ?? "ellipsis" as NonNullable<Signal["display"]["overflow"]>,
+      align: effectiveAlign, overflow: effectiveOverflow,
       style: JSON.stringify(nextStyle), textColor: styleString(nextStyle, "color", "#152033"), rowBackground: styleString(nextStyle, "background", "#ffffff"),
       fontFamily: styleString(nextStyle, "fontFamily", "Segoe UI"), fontSize: styleNumber(nextStyle, "fontSize", 12), bold: nextStyle.fontWeight === "bold", italic: nextStyle.fontStyle === "italic",
       underline: styleString(nextStyle, "textDecoration", "").includes("underline"), strikethrough: styleString(nextStyle, "textDecoration", "").includes("line-through"),
@@ -355,7 +375,8 @@ export function InspectorValueSignalEditor({ signal, selectedCycle, document, ch
     merge("name", name, setName);
     merge("role", role, setRole);
     merge("signalType", signalType, setSignalType);
-    merge("width", width, setWidth);
+    merge("width", widthText, setWidthText);
+    merge("enumId", enumDraft, setEnumDraft);
     merge("format", format, setFormat);
     merge("visible", visible, setVisible);
     merge("spacingBefore", spacingBefore, setSpacingBefore);
@@ -380,7 +401,7 @@ export function InspectorValueSignalEditor({ signal, selectedCycle, document, ch
     merge("resetDeassertCycle", resetDeassertCycle, setResetDeassertCycle);
     valueSignalBaseRef.current = next;
     if (!sameEntity) { setProblem(""); setResetStatus(""); }
-  }, [signal]);
+  }, [signal, document.layout.signalNameAlign, document.layout.overflow]);
   // #402/#426 (Bottom Panel Visual Reference pass): Inspector is now the
   // sole owner of these lightweight Signal properties (Bottom's own
   // duplicate Name/Role/Type/Spacing form + "Apply properties" button was
@@ -399,18 +420,22 @@ export function InspectorValueSignalEditor({ signal, selectedCycle, document, ch
   // boolean -- drives the sticky footer's "● N changes" indicator. Kept
   // as one array so hasChanges (the gate) and changeCount (the label)
   // can never silently drift out of sync with each other.
+  const widthValue = Number(widthText);
+  const widthProblem = signalType === "bus" && !(widthText.trim() !== "" && Number.isInteger(widthValue) && widthValue >= 1) ? "Width must be a positive whole number of bits." : "";
+  const enumChanged = signalType === "state" && enumDraft !== (signal.type === "state" ? signal.enumId ?? "" : "");
   const changedFields = [
     // An edited-but-uncommitted Display Name also arms Apply (Enter/blur still commit it on their own; Apply carries `name` too).
     name !== signal.display.name,
     role !== signal.role,
     signalType !== signal.type,
-    signalType === "bus" && width !== (signal.width ?? 1),
+    signalType === "bus" && widthText.trim() !== String(signal.width ?? 1),
+    enumChanged,
     signalType === "bus" && format !== (signal.displayFormat ?? "hex"),
     visible !== (signal.display.visible !== false),
     spacingBefore !== (signal.spacingBefore ?? 0),
     spacingAfter !== (signal.spacingAfter ?? 0),
-    align !== (signal.display.align ?? "left"),
-    overflow !== (signal.display.overflow ?? "ellipsis"),
+    align !== effectiveAlign,
+    overflow !== effectiveOverflow,
     style !== JSON.stringify(originalStyleForCompare),
     textColor !== styleString(originalStyleForCompare, "color", "#152033"),
     rowBackground !== styleString(originalStyleForCompare, "background", "#ffffff"),
@@ -427,7 +452,7 @@ export function InspectorValueSignalEditor({ signal, selectedCycle, document, ch
   const hasChanges = changeCount > 0;
   const apply = (event?: React.FormEvent) => {
     event?.preventDefault();
-    if (!hasChanges) return;
+    if (!hasChanges || widthProblem !== "") return;
     let parsed: Signal["display"]["style"];
     try {
       const value: unknown = JSON.parse(style || "{}");
@@ -462,7 +487,9 @@ export function InspectorValueSignalEditor({ signal, selectedCycle, document, ch
       || strikethrough !== styleString(originalStyle, "textDecoration", "").includes("line-through")
       || waveformColor !== styleString(originalStyle, "waveformColor", "#111111")
       || waveformBackground !== styleString(originalStyle, "waveformBackground", "#ffffff");
-     commands.updateSignalProperties({ signalId: signal.id, name, role, signalType, ...(signalType === "bus" ? { width, displayFormat: format } : {}), visible, ...(signal.spacingBefore === undefined && spacingBefore === 0 ? {} : { spacingBefore }), ...(signal.spacingAfter === undefined && spacingAfter === 0 ? {} : { spacingAfter }), displayAlign: align, displayOverflow: overflow, ...(styleDraftChanged ? { displayStyle: { ...parsedStyle, ...structuredStyle } } : {}) });
+     const result = commands.updateSignalProperties({ signalId: signal.id, name, role, signalType, ...(signalType === "bus" ? { width: widthValue, displayFormat: format } : {}), visible, ...(signal.spacingBefore === undefined && spacingBefore === 0 ? {} : { spacingBefore }), ...(signal.spacingAfter === undefined && spacingAfter === 0 ? {} : { spacingAfter }), ...(align === effectiveAlign ? {} : { displayAlign: align }), ...(overflow === effectiveOverflow ? {} : { displayOverflow: overflow }), ...(enumChanged ? (enumDraft ? { enumId: enumDraft } : { clearEnumId: true }) : {}), ...(styleDraftChanged ? { displayStyle: { ...parsedStyle, ...structuredStyle } } : {}) });
+    // A rejected Apply (e.g. a value that is not a valid literal at the new Bus width) must say why, not leave the draft silently applied-looking.
+    if (!result.ok && result.reason !== "no-op") setProblem(result.problems[0]?.message ?? "Signal properties were rejected.");
   };
   // #495: draft-vs-committed compare for the Reset Semantics section's own
   // Apply (same "disabled when unchanged" contract as every other Inspector
@@ -487,18 +514,15 @@ export function InspectorValueSignalEditor({ signal, selectedCycle, document, ch
       <InspectorSection sectionId="signal-properties" title="Signal Properties" open={sections["signal-properties"] ?? true} onToggle={() => toggle("signal-properties")}>
          <label>Display Name<InlineNameInput target={signal} value={signal.display.name} ariaLabel="Inspector signal name" onRename={(nextName) => commands.renameSignal(signal.id, nextName)} onCommitted={setName} onDraftChange={setName} /></label>
         <label>Role<select aria-label="Inspector signal role" value={role} onChange={(event) => setRole(event.target.value as SignalRole)}><option value="input">Input</option><option value="output">Output</option><option value="internal">Internal</option></select></label>
-        <label>Type<select aria-label="Inspector signal type" value={signalType} onChange={(event) => setSignalType(event.target.value as ValueSignal["type"])}>{SIGNAL_TYPE_OPTIONS.map((option) => <option key={option.type} value={option.type}>{option.label}</option>)}{
+        <label>Type<select aria-label="Inspector signal type" value={signalType} onChange={(event) => { const nextType = event.target.value as ValueSignal["type"]; setSignalType(nextType); if (nextType === "bus" && signal.type !== "bus") setWidthText(String(suggestedBusWidth(signal))); }}>{SIGNAL_TYPE_OPTIONS.map((option) => <option key={option.type} value={option.type}>{option.label}</option>)}{
           // #400: Pulse is legacy-only -- never offered as a type to switch
           // *into*, but a signal that already is Pulse must stay editable
           // (including its own Type field staying visibly "Pulse") rather
           // than silently losing its own current value from this list.
           signal.type === "pulse" && <option value="pulse">Pulse (legacy)</option>
         }</select></label>
-        {signalType === "state" && <label>State enum<select aria-label="Inspector State enum" value={signal.type === "state" ? signal.enumId ?? "" : ""} onChange={(event) => {
-          const enumId = event.target.value;
-          commands.updateSignalProperties({ signalId: signal.id, name: signal.name, role: signal.role, signalType: "state", ...(enumId ? { enumId } : { clearEnumId: true }) });
-        }}><option value="">No enum</option>{document.enumDefinitions?.map((definition) => <option key={definition.id} value={definition.id}>{definition.name}</option>)}</select></label>}
-        {signalType === "bus" && <><label>Width<input aria-label="Inspector signal width" type="number" min="1" step="1" value={width} onChange={(event) => setWidth(Number(event.target.value))} /></label><label>Bus format<select aria-label="Inspector bus format" value={format} onChange={(event) => setFormat(event.target.value as typeof format)}><option value="hex">Hex</option><option value="binary">Binary</option><option value="decimal">Decimal</option><option value="signed">Signed</option><option value="unsigned">Unsigned</option><option value="symbolic">Symbol</option></select></label>{signal.type === "bus" && <InspectorBusCurrentValue signal={signal} cycle={selectedCycle} />}</>}
+        {signalType === "state" && <label>State enum<select aria-label="Inspector State enum" value={enumDraft} onChange={(event) => setEnumDraft(event.target.value)}><option value="">No enum</option>{document.enumDefinitions?.map((definition) => <option key={definition.id} value={definition.id}>{definition.name}</option>)}</select></label>}
+        {signalType === "bus" && <><label>Width<input aria-label="Inspector signal width" type="number" min="1" step="1" value={widthText} aria-invalid={widthProblem !== ""} onChange={(event) => setWidthText(event.target.value)} /></label>{widthProblem && <div className="editor-problem" role="alert" data-testid="inspector-signal-width-problem">{widthProblem}</div>}<label>Bus format<select aria-label="Inspector bus format" value={format} onChange={(event) => setFormat(event.target.value as typeof format)}><option value="hex">Hex</option><option value="binary">Binary</option><option value="decimal">Decimal</option><option value="signed">Signed</option><option value="unsigned">Unsigned</option><option value="symbolic">Symbol</option></select></label>{signal.type === "bus" && <InspectorBusCurrentValue signal={signal} cycle={selectedCycle} />}</>}
         <PropertyToggle label="Visible" ariaLabel="Inspector signal visible" checked={visible} onChange={setVisible} />
         <label>Spacing Before<input aria-label="Inspector signal spacing before" type="number" min="0" step="1" value={spacingBefore} onChange={(event) => setSpacingBefore(Number(event.target.value))} /></label>
         <label>Spacing After<input aria-label="Inspector signal spacing after" type="number" min="0" step="1" value={spacingAfter} onChange={(event) => setSpacingAfter(Number(event.target.value))} /></label>
@@ -548,7 +572,7 @@ export function InspectorValueSignalEditor({ signal, selectedCycle, document, ch
           `data-testid="inspector-signal-unapplied"` contract every prior
           test/spec keys off keeps working unchanged. */}
       {hasChanges && <output className="draft-unapplied-indicator" data-testid="inspector-signal-unapplied" hidden>● Signal properties: unapplied changes</output>}
-      <InspectorFooter changeCount={changeCount} onCancel={onCancel} onApply={apply} applyDisabled={!hasChanges} applyTestId="apply-inspector-signal" />
+      <InspectorFooter changeCount={changeCount} onCancel={onCancel} onApply={apply} applyDisabled={!hasChanges || widthProblem !== ""} applyTestId="apply-inspector-signal" />
     </form>
     <MiniMap document={document} changeSet={changeSet} viewport={viewport} />
   </aside>;

@@ -127,10 +127,17 @@ describe("transaction.update Start/End without explicit Phases (finding D)", () 
     expect(transactionOf(bottom.ok ? bottom.document : doc).phases).toEqual(transactionOf(drag.ok ? drag.document : doc).phases);
   });
 
-  it("moves an edge-attached Phase with the end edge, matching transaction.resize", () => {
+  it("keeps the Phases unchanged when an outward End edit still contains them, leaving room for a new Phase", () => {
     const doc = documentWith([txn(0, 10, [phase("A", 6, 10)])]);
     const bottom = update(doc, 0, 14);
-    const drag = resize(doc, "end", 14);
+    expect(bottom.ok).toBe(true);
+    expect(transactionOf(bottom.ok ? bottom.document : doc)).toMatchObject({ end: 14, phases: [{ name: "A", start: 6, end: 10 }] });
+  });
+
+  it("moves an edge-attached Phase with an inward End edit, matching transaction.resize", () => {
+    const doc = documentWith([txn(0, 10, [phase("A", 6, 10)])]);
+    const bottom = update(doc, 0, 8);
+    const drag = resize(doc, "end", 8);
     expect(bottom.ok).toBe(true);
     expect(transactionOf(bottom.ok ? bottom.document : doc).phases).toEqual(transactionOf(drag.ok ? drag.document : doc).phases);
   });

@@ -14405,7 +14405,7 @@
     },
     {
       "file": "transaction-phase-bars.spec.ts",
-      "title": "Phase-protected Transaction edge resize is rejected without a canonical change",
+      "title": "Phase-protected Transaction edge resize stops at the Phase limit instead of crossing it",
       "domain": "transaction-phase-edge-resize-guard",
       "originIssue": 429,
       "type": "SEMANTIC_CONTRACT",
@@ -18377,6 +18377,96 @@
       ],
       "decision": "KEEP",
       "reason": "Code review found Document Properties Apply rewriting the legend and related input defects.",
+      "replacementTest": null
+    },
+    {
+      "file": "signal-inspector-type-review-fixes.spec.ts",
+      "title": "Apply does not pin the layout's name alignment or overflow onto an untouched Signal",
+      "domain": "signal-inspector",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Apply does not pin the layout's name alignment or overflow onto an untouched Signal.",
+      "duplicateGroup": "signal-inspector",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Signal Inspector type/width defects.",
+      "replacementTest": null
+    },
+    {
+      "file": "signal-inspector-type-review-fixes.spec.ts",
+      "title": "converting a Binary Signal to Bus defaults the width to 8 bits",
+      "domain": "signal-inspector",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "converting a Binary Signal to Bus defaults the width to 8 bits.",
+      "duplicateGroup": "signal-inspector",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Signal Inspector type/width defects.",
+      "replacementTest": null
+    },
+    {
+      "file": "signal-inspector-type-review-fixes.spec.ts",
+      "title": "an emptied Bus width is an inline draft problem with Apply disabled, not a commit",
+      "domain": "signal-inspector",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "an emptied Bus width is an inline draft problem with Apply disabled, not a commit.",
+      "duplicateGroup": "signal-inspector",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Signal Inspector type/width defects.",
+      "replacementTest": null
+    },
+    {
+      "file": "signal-inspector-type-review-fixes.spec.ts",
+      "title": "a State-to-Bus conversion that an existing value cannot satisfy is explained inline",
+      "domain": "signal-inspector",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "a State-to-Bus conversion that an existing value cannot satisfy is explained inline.",
+      "duplicateGroup": "signal-inspector",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Signal Inspector type/width defects.",
+      "replacementTest": null
+    },
+    {
+      "file": "signal-inspector-type-review-fixes.spec.ts",
+      "title": "the State enum select is a draft committed by Apply, not on select",
+      "domain": "signal-inspector",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "the State enum select is a draft committed by Apply, not on select.",
+      "duplicateGroup": "signal-inspector",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Signal Inspector type/width defects.",
       "replacementTest": null
     }
   ]
