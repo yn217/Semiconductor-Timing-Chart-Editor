@@ -68,4 +68,9 @@ describe("non-integer change points are rejected by the planner", () => {
     const plan = planCommand(canonicalFixture(), { id: commandId("integer_start"), type: "signal.updateValue", signalId: "sig_data" as SignalId, start: 2, value: "A5" });
     expect(plan.ok).toBe(true);
   });
+
+  it.each([-1, canonicalFixture().timeline.cycleCount])("rejects integer change point %p outside the source timeline", (start) => {
+    const plan = planCommand(canonicalFixture(), { id: commandId("out_of_range_start"), type: "signal.updateValue", signalId: "sig_data" as SignalId, start, value: "A5" });
+    expect(plan).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "TIMELINE_OUT_OF_RANGE", path: "$.start", message: "Change point is outside the timeline." }] });
+  });
 });
