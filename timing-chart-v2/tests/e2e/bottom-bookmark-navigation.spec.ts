@@ -93,3 +93,30 @@ test("Bottom Bookmark edit stays a Draft until Apply Changes; the button is disa
   await expect(page.getByTestId("history-status")).not.toHaveText(before.history!);
   await expect(applyButton).toBeDisabled();
 });
+
+test("Bottom Bookmarks Next and Previous visit every Bookmark that shares a cycle", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await openBookmarkFixture(page, [
+    { id: "bm_a", name: "Alpha", start: 4, comment: "" },
+    { id: "bm_b", name: "Beta", start: 4, comment: "" },
+    { id: "bm_c", name: "Gamma", start: 12, comment: "" },
+  ]);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByRole("button", { name: "Open Bookmarks panel", exact: true }).click();
+  const panel = page.getByTestId("bookmark-editor-panel");
+  const name = panel.getByLabel("Bottom Bookmark name");
+  await panel.locator("[data-testid^='bookmark-row-']").filter({ hasText: "Alpha" }).first().click();
+  await expect(name).toHaveValue("Alpha");
+  const visited: string[] = [];
+  for (let step = 0; step < 3; step += 1) {
+    await panel.getByLabel("Next bookmark", { exact: true }).click();
+    await expect(name).not.toHaveValue(visited.at(-1) ?? "Alpha");
+    visited.push(await name.inputValue());
+  }
+  expect(visited).toEqual(["Beta", "Gamma", "Alpha"]);
+  await panel.getByLabel("Previous bookmark", { exact: true }).click();
+  await expect(name).toHaveValue("Gamma");
+  await panel.getByLabel("Previous bookmark", { exact: true }).click();
+  await expect(name).toHaveValue("Beta");
+});

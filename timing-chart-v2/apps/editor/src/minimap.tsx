@@ -5,6 +5,7 @@ import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
 import { buildMiniMapOverview, buildMiniMapTransactionOverview, updateMiniMapOverview, updateMiniMapTransactionOverview } from "@timing-chart-v2/projection";
 import { calculateMiniMapViewportMetrics } from "./runtime/minimap-viewport.js";
 import { timelineScrollOwner } from "./runtime/timeline-scroll-owner.js";
+import { effectiveScrollWidth } from "./runtime/timeline-horizontal-scrollbar-owner.js";
 import { canRetainSignalMiniMapOverview, planSignalMiniMapOverviewUpdate } from "./runtime/minimap-overview-compatibility.js";
 import { MiniMapOverviewRows, MiniMapTransactionOverviewRows } from "./minimap-overview-rows.js";
 
@@ -136,7 +137,7 @@ export function MiniMap({ document, changeSet, viewport, mode = "signal" }: { re
   const overview = currentOverview?.overview ?? cachedSignalOverview;
   const transactionOverview = currentOverview?.transactionOverview;
   // #625: vertical metrics come from the shared viewport, horizontal metrics from the Timeline scroll owner (Cycle).
-  const sync = () => { const element = viewport.current; if (!element) return; const owner = timelineScrollOwner(element); setMetrics(calculateMiniMapViewportMetrics({ scrollTop: element.scrollTop, scrollHeight: element.scrollHeight, clientHeight: element.clientHeight, scrollLeft: owner.scrollLeft, scrollWidth: owner.scrollWidth, clientWidth: owner.clientWidth })); };
+  const sync = () => { const element = viewport.current; if (!element) return; const owner = timelineScrollOwner(element); setMetrics(calculateMiniMapViewportMetrics({ scrollTop: element.scrollTop, scrollHeight: element.scrollHeight, clientHeight: element.clientHeight, scrollLeft: owner.scrollLeft, scrollWidth: effectiveScrollWidth(owner), clientWidth: owner.clientWidth })); };
   useEffect(() => {
     const element = viewport.current;
     if (!element) return undefined;
@@ -163,7 +164,7 @@ export function MiniMap({ document, changeSet, viewport, mode = "signal" }: { re
     const onKeyDown = (event: KeyboardEvent) => {
       const owner = timelineScrollOwner(element);
       if (event.key === "Home") { event.preventDefault(); owner.scrollTo({ left: 0 }); element.scrollTo({ top: 0 }); return; }
-      if (event.key === "End") { event.preventDefault(); owner.scrollTo({ left: owner.scrollWidth }); element.scrollTo({ top: element.scrollHeight }); return; }
+      if (event.key === "End") { event.preventDefault(); owner.scrollTo({ left: Math.max(0, effectiveScrollWidth(owner) - owner.clientWidth) }); element.scrollTo({ top: element.scrollHeight }); return; }
       const delta = keyboardScrollDelta(event.key, Math.min(owner.clientWidth, element.clientHeight));
       if (!delta) return;
       event.preventDefault();
@@ -182,7 +183,7 @@ export function MiniMap({ document, changeSet, viewport, mode = "signal" }: { re
     const horizontalRatio = pointerRatio(clientX, bounds.left, bounds.width);
     element.scrollTop = verticalRatio * Math.max(0, element.scrollHeight - element.clientHeight);
     const owner = timelineScrollOwner(element);
-    owner.scrollLeft = horizontalRatio * Math.max(0, owner.scrollWidth - owner.clientWidth);
+    owner.scrollLeft = horizontalRatio * Math.max(0, effectiveScrollWidth(owner) - owner.clientWidth);
     sync();
   };
   const indicatorWidth = Math.min(1 - metrics.left, Math.max(0.04, metrics.width));

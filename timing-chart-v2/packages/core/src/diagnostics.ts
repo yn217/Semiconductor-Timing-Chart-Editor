@@ -349,8 +349,16 @@ function handshakeDiagnostics(
     const acknowledgePolarity = polarityFrom(data, ["acknowledgePolarity", "ackPolarity", "ackActiveLevel"]);
     const requestChanges = request.values;
     const acknowledgeChanges = assertedChanges(acknowledge, acknowledgePolarity);
+    // One finding per request assertion edge (not per value record): a request held asserted across
+    // split value records is a single handshake. Edges are processed in cycle order and each stable
+    // signal keeps a cursor, so a change between two windows that share an acknowledge is reported once.
+    const stableCursor = new Map<SignalId, number>();
+    let previouslyAsserted = false;
     requestChanges.forEach((requestChange) => {
-      if (!asserted(requestChange, requestPolarity)) return;
+      const isAsserted = asserted(requestChange, requestPolarity);
+      const isEdge = isAsserted && !previouslyAsserted;
+      previouslyAsserted = isAsserted;
+      if (!isEdge) return;
       const ackIndex = firstChangeAtOrAfter(acknowledgeChanges, requestChange.start);
       const ackChange = acknowledgeChanges[ackIndex];
       if (!ackChange) {
@@ -360,11 +368,12 @@ function handshakeDiagnostics(
       if (!enabled.has("stability")) return;
       stableSignals.forEach((stableSignal) => {
         if (!stableSignal || stableSignal.type === "clock" || stableSignal.type === "commentRow") return;
-        const firstRelevant = firstChangeAfter(stableSignal.values, requestChange.start);
-        const endExclusive = firstChangeAtOrAfter(stableSignal.values, ackChange.start);
         const index = indexes.signalIndexById.get(stableSignal.id);
         if (index === undefined) return;
-        for (let changeIndex = firstRelevant; changeIndex < endExclusive; changeIndex += 1) {
+        const firstRelevant = firstChangeAfter(stableSignal.values, requestChange.start);
+        const endExclusive = firstChangeAtOrAfter(stableSignal.values, ackChange.start);
+        const cursor = stableCursor.get(stableSignal.id) ?? 0;
+        for (let changeIndex = Math.max(firstRelevant, cursor); changeIndex < endExclusive; changeIndex += 1) {
           const change = stableSignal.values[changeIndex]!;
           problems.push(signalProblem(
             "HANDSHAKE_DATA_UNSTABLE",
@@ -375,6 +384,7 @@ function handshakeDiagnostics(
             change.value,
           ));
         }
+        stableCursor.set(stableSignal.id, Math.max(cursor, endExclusive));
       });
     });
   });

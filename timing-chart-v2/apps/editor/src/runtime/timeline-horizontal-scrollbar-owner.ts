@@ -1,7 +1,7 @@
 import { timelineScrollOwner } from "./timeline-scroll-owner.js";
 
 /** The scrollable width: the native one, scaled by the zoom published below 100% (scaled layers keep their unscaled layout width). */
-function effectiveScrollWidth(owner: HTMLElement): number {
+export function effectiveScrollWidth(owner: HTMLElement): number {
   const shrink = Number(owner.dataset.scrollShrink);
   return Number.isFinite(shrink) && shrink > 0 && shrink < 1 ? Math.round(owner.scrollWidth * shrink) : owner.scrollWidth;
 }

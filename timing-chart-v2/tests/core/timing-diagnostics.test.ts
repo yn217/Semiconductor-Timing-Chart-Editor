@@ -413,7 +413,7 @@ describe("derived timing diagnostics", () => {
     }
   });
 
-  it("uses indexed acknowledge and stable-change windows without changing overlapping-request findings", () => {
+  it("uses indexed acknowledge and stable-change windows and reports a change inside overlapping request windows once", () => {
     const source = canonicalFixture();
     const request = { ...source.signals[1]!, id: "sig_req_overlap" as SignalId, name: "REQ", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 2, value: 1 }, { start: 4, value: 0 }, { start: 6, value: 1 }] };
     const acknowledge = { ...source.signals[1]!, id: "sig_ack_overlap" as SignalId, name: "ACK", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 10, value: 1 }] };
@@ -421,11 +421,10 @@ describe("derived timing diagnostics", () => {
     const constraint: Constraint = { id: "constraint_handshake_overlap", type: "handshake", data: { requestSignalId: request.id, acknowledgeSignalId: acknowledge.id, stableSignalIds: [payload.id] } };
     const document = withSignals(source, [source.signals[0]!, request, acknowledge, payload], [constraint]);
     const findings = deriveTimingDiagnostics(document).filter((item) => item.code === "HANDSHAKE_DATA_UNSTABLE");
-    expect(findings).toHaveLength(4);
+    expect(findings).toHaveLength(3);
     expect(findings.map((item) => item.path)).toEqual([
       "$.signals[3].values[1].start",
       "$.signals[3].values[2].start",
-      "$.signals[3].values[3].start",
       "$.signals[3].values[3].start",
     ]);
   });
