@@ -27,7 +27,7 @@ for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }])
 
     const bar = page.getByTestId("transaction-lanes").locator("[data-transaction-id]").first();
     const transactionId = (await bar.getAttribute("data-transaction-id"))!;
-    await bar.click();
+    await bar.click({ position: { x: 12, y: 4 } });
     await expect(bar).toHaveAttribute("data-selected", "true");
     await expect(page.getByTestId("inspector").getByLabel("Transaction name", { exact: true })).toHaveValue("APB-style register read");
     await expect(page.getByTestId("bottom-target-mode")).toHaveText(bookmarkLabel!);

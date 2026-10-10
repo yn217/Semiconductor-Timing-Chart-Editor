@@ -36,6 +36,7 @@ for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }])
     const historyBefore = await page.getByTestId("history-status").textContent();
     const dirtyBefore = await page.getByTestId("dirty-status").textContent();
 
+    await page.getByTestId("home-minimap-toggle").check(); // MiniMap is off by default
     const minimap = page.getByTestId("minimap");
     await expect(minimap).toBeVisible();
     await expect(minimap).toHaveAttribute("data-minimap-mode", /transaction|Transaction|split|Split/i);

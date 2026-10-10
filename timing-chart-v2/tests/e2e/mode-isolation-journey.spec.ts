@@ -120,7 +120,7 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
   await expectCombinedColumnsToFollowOwners();
   await expect(page.locator(".split-transaction-pane")).toBeVisible();
   await expect(page.getByTestId("combined-split-divider")).toBeVisible();
-  const combinedViewport = page.getByTestId("cycle-viewport");
+  const combinedViewport = timelineOwner(page) // the nested Timeline viewport owns Combined horizontal scroll;
   // Drive the Combined viewport's own shared horizontal owner like a user.
   await hoverTimelineArea(page);
   await page.mouse.wheel(400, 0);

@@ -48,7 +48,9 @@ export function SignalGeneratorEditor({ signal, cycleCount, commands }: { readon
   let candidateDiffers = true;
   try {
     const candidate = generateSignalPulseValues({ start, initial, active, width: effectiveWidth, period, repeat: repeatMode === "infinite" ? "infinite" : repeatCount, phase, suppressedPeriods: parseSuppressedPeriods(suppressedPeriods), cycleCount });
-    candidateDiffers = JSON.stringify(candidate) !== JSON.stringify(signal.values);
+    // Stored changes carry stable IDs the generated candidate does not; compare the waveform content only.
+    const withoutIds = (changes: readonly { readonly id?: string }[]) => JSON.stringify(changes.map(({ id: _id, ...change }) => change));
+    candidateDiffers = withoutIds(candidate) !== withoutIds(signal.values);
   } catch { candidateDiffers = true; } // Invalid candidates remain submittable so validation can explain the error.
   const hasParameterDraft = start !== 0 || initial !== 0 || active !== 1 || widthMode !== "width" || width !== 1 || duty !== 0.5 || period !== 4 || repeatMode !== "finite" || repeatCount !== 1 || phase !== 0 || suppressedPeriods !== "";
   const hasUnappliedDraft = hasParameterDraft && candidateDiffers;

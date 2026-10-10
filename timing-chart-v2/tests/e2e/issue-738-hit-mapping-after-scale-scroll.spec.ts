@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { setTimelineScrollLeft, timelineScrollLeft } from "./timeline-scroll.js";
+import { setTimelineScrollLeft, timelineOwner, timelineScrollLeft } from "./timeline-scroll.js";
 
 const sizes = [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] as const;
 
@@ -148,7 +148,7 @@ for (const size of sizes) {
     await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Combined");
     await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
     await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
-    const extent = await page.getByTestId("cycle-viewport").evaluate((element) => element.scrollWidth - element.clientWidth);
+    const extent = await timelineOwner(page).evaluate((element) => element.scrollWidth - element.clientWidth);
     expect(extent).toBeGreaterThan(20);
     await setTimelineScrollLeft(page, 0);
     await expect.poll(() => timelineScrollLeft(page)).toBe(0);

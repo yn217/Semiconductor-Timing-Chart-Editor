@@ -40,6 +40,38 @@ function cloneModel<T>(value: T): T {
  * the existing CanonicalDocument projection; History retains the complete
  * Scenario model so Undo/Redo remains global when the active Scenario changes.
  */
+/** Older / hand-written Scenario files may carry value changes without IDs, but the editor runtime keys Transition rows by ID: the live session gets deterministic IDs unique to this Scenario (the stored model is unchanged until the next edit). */
+function withValueChangeIds(document: CanonicalDocument, scenarioId: string): CanonicalDocument {
+  const fill = <C extends { readonly id?: string }>(changes: readonly C[], owner: string): readonly C[] => {
+    if (changes.every((change) => change.id !== undefined)) return changes;
+    const taken = new Set(changes.flatMap((change) => change.id === undefined ? [] : [change.id]));
+    let next = 0;
+    return changes.map((change) => {
+      if (change.id !== undefined) return change;
+      while (taken.has(`value_${owner}_${next}`)) next += 1;
+      const id = `value_${owner}_${next}`;
+      taken.add(id);
+      return { ...change, id };
+    });
+  };
+  let changed = false;
+  const signals = document.signals.map((signal) => {
+    if (signal.type === "commentRow") return signal;
+    if (signal.type === "clock") {
+      if (!signal.enable) return signal;
+      const enable = fill(signal.enable, `${scenarioId}_${signal.id}_enable`);
+      if (enable === signal.enable) return signal;
+      changed = true;
+      return { ...signal, enable };
+    }
+    const values = fill(signal.values, `${scenarioId}_${signal.id}`);
+    if (values === signal.values) return signal;
+    changed = true;
+    return { ...signal, values };
+  });
+  return changed ? { ...document, signals } as CanonicalDocument : document;
+}
+
 export class ScenarioCommandHistorySession {
   #model: ScenarioDocumentModel;
   #activeScenarioId: ScenarioId;
@@ -163,7 +195,7 @@ export class ScenarioCommandHistorySession {
   }
 
   #createProjection(model: ScenarioDocumentModel, scenarioId: ScenarioId): CommandHistorySession {
-    return new CommandHistorySession(projectScenarioAsV2(model, scenarioId), { recordHistory: false });
+    return new CommandHistorySession(withValueChangeIds(projectScenarioAsV2(model, scenarioId), scenarioId), { recordHistory: false });
   }
 
   #archiveProjectionMetrics(): void {

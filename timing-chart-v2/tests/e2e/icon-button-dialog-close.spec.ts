@@ -158,7 +158,8 @@ test("Tree menus close on Escape or outside click without selecting the canvas",
   await expect(moreMenu.getByRole("menuitem").first()).toBeFocused();
   const viewport = page.getByTestId("cycle-viewport");
   const selectedBeforeOutsideClick = await page.getByTestId("selection-status").textContent();
-  await viewport.click({ position: { x: 300, y: 200 } });
+  // The Timeline ruler is canvas chrome with no rows (a click that lands on a Signal row deliberately selects it).
+  await page.getByTestId("cycle-ruler").click({ position: { x: 300, y: 8 } });
   await expect(moreMenu).toBeHidden();
   await expect(moreTrigger).toBeFocused();
   await expect(page.getByTestId("selection-status")).toHaveText(selectedBeforeOutsideClick!);

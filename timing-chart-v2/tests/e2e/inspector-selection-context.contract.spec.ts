@@ -25,7 +25,7 @@ test("Inspector follows active workspace context and retains hidden stable selec
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Transaction");
 
-  await page.getByTestId("transaction-lanes").locator("[data-transaction-id='demo_txn_spi']").click();
+  await page.getByTestId("transaction-lanes").locator("[data-transaction-id='demo_txn_spi']").click({ position: { x: 12, y: 4 } }); // the lower strip is the Phase hit target
   await expect(inspector.getByLabel("Transaction name")).toHaveValue("SPI_0");
   const baseline = {
     revision: await host.getAttribute("data-canonical-revision"),
