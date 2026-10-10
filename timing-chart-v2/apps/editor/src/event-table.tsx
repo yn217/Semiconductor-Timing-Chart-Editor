@@ -37,13 +37,32 @@ function valueHelperCopy(signal: ValueSignal): { readonly label: string; readonl
   }
 }
 
+// Add/Edit Transition prefill: when Start names an existing change point, the
+// form edits that change, so its Value/Comment/Bus format are the starting
+// point. Submitting an untouched form then keeps them instead of silently
+// replacing them with the default value and dropping the comment/format.
+function transitionDraftAt(signal: ValueSignal, cycle: number): { readonly value: string; readonly comment: string; readonly format: string } | undefined {
+  const existing = signal.values.find((change) => change.start === cycle);
+  if (existing === undefined) return undefined;
+  return { value: String(existing.value), comment: existing.comment ?? "", format: existing.displayFormat ?? "" };
+}
+
 export function EventTable({ signal, documentEpoch, projectionGeneration, revision, onImportDiagnostic, cycleCount, enumDefinitions, commands, generatorSlot }: { readonly signal: ValueSignal; readonly documentEpoch: number; readonly projectionGeneration: number; readonly revision: number; readonly onImportDiagnostic: (message: string) => void; readonly cycleCount: number; readonly enumDefinitions?: CanonicalDocument["enumDefinitions"]; readonly commands: Pick<SignalEditorCommandActions, "replaceValues" | "updateValue" | "replaceValue" | "removeValue">; readonly generatorSlot?: ReactNode }) {
   const [start, setStart] = useState(0);
-  const [value, setValue] = useState(defaultEventValue(signal));
+  const initialDraft = transitionDraftAt(signal, 0);
+  const [value, setValue] = useState(initialDraft?.value ?? defaultEventValue(signal));
   // The new Transition's own Bus format ("" follows the Signal's Bus format).
-  const [format, setFormat] = useState("");
+  const [format, setFormat] = useState(initialDraft?.format ?? "");
   const newFormat = (format || undefined) as ValueSignal["displayFormat"];
-  const [comment, setComment] = useState("");
+  const [comment, setComment] = useState(initialDraft?.comment ?? "");
+  const selectStart = (nextStart: number) => {
+    setStart(nextStart);
+    const draft = transitionDraftAt(signal, nextStart);
+    if (draft === undefined) return;
+    setValue(draft.value);
+    setFormat(draft.format);
+    setComment(draft.comment);
+  };
   const [selectedKey, setSelectedKey] = useState<string | undefined>(() => signal.values[0] === undefined ? undefined : transitionIdentity(signal.values[0]));
   // Bottom Panel Visual Reference pass: bulk row selection (checkbox column)
   // is a separate concept from `selectedStart` (single-row click-highlight,
@@ -104,9 +123,11 @@ export function EventTable({ signal, documentEpoch, projectionGeneration, revisi
     const change = index === undefined ? undefined : indexed.ordered[index];
     setSelectedKey(change === undefined ? undefined : transitionIdentity(change));
   };
-  const nextStart = indexed.firstFree() ?? Math.max(0, cycleCount - 1);
+  // No free cycle means Add Row and Duplicate are disabled: there is no
+  // unoccupied change point to target, so they must not fall back to one that is.
+  const freeCycle = indexed.firstFree();
   const emitValue = (nextValues: readonly ValueSignal["values"][number][]): CommandResult => commands.replaceValues(signal.id, nextValues);
-  const addRow = () => commands.updateValue(signal.id, nextStart, canonicalValueFromEditor(signal, enumDefinition, value), undefined, newFormat);
+  const addRow = () => { if (freeCycle !== undefined) commands.updateValue(signal.id, freeCycle, canonicalValueFromEditor(signal, enumDefinition, value), undefined, newFormat); };
   // Row Actions compaction follow-up: the toolbar's Duplicate (targets
   // `selected`) and each row's own Duplicate icon (targets that row
   // directly) are the same operation parametrized over which change point
@@ -118,7 +139,7 @@ export function EventTable({ signal, documentEpoch, projectionGeneration, revisi
     commands.updateValue(signal.id, duplicateStart, source.value, source.comment, source.displayFormat);
   };
   const duplicateRow = () => { if (selected) duplicateChange(selected); };
-  const canDuplicate = nextStart < cycleCount;
+  const canDuplicate = freeCycle !== undefined;
   const exportValues = () => {
     const blob = new Blob([JSON.stringify({ signalId: signal.id, name: signal.name, values: signal.values }, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -151,8 +172,12 @@ export function EventTable({ signal, documentEpoch, projectionGeneration, revisi
         }
         const parsed: unknown = parsedResult.value;
         const values = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === "object" && "values" in parsed ? (parsed as { values: unknown }).values : undefined);
-        if (!Array.isArray(values) || values.length === 0 || values.some((item) => !item || typeof item !== "object" || !Number.isInteger((item as { start?: unknown }).start) || !((item as { value?: unknown }).value === undefined || typeof (item as { value?: unknown }).value === "string" || typeof (item as { value?: unknown }).value === "number"))) {
+        if (!Array.isArray(values) || values.length === 0 || values.some((item) => !item || typeof item !== "object" || !Number.isInteger((item as { start?: unknown }).start))) {
           setImportStatus("Import rejected: expected a non-empty event values array.");
+          return;
+        }
+        if (values.some((item) => { const itemValue = (item as { value?: unknown }).value; return typeof itemValue !== "string" && typeof itemValue !== "number"; })) {
+          setImportStatus("Import rejected: every event needs a value (a string or number), for example \"0\" or \"X\".");
           return;
         }
         const result = emitValue(values as ValueSignal["values"]);
@@ -176,7 +201,10 @@ export function EventTable({ signal, documentEpoch, projectionGeneration, revisi
   // `signal.updateValue` command path.
   const previewEnd = indexed.nextEnd(start);
   const addAndContinue = () => {
-    commands.updateValue(signal.id, start, canonicalValueFromEditor(signal, enumDefinition, value), comment, newFormat);
+    const result = commands.updateValue(signal.id, start, canonicalValueFromEditor(signal, enumDefinition, value), comment, newFormat);
+    // A rejected add (invalid value, duplicate point, ...) keeps Start and
+    // Comment so the user can correct the entry instead of losing it.
+    if (!result.ok) return;
     // Auto-advance Start to the next free cycle (excluding the one just
     // committed) so continuous entry doesn't need manual arithmetic each
     // time -- Value is kept (commonly the next transition reuses it),
@@ -286,7 +314,7 @@ export function EventTable({ signal, documentEpoch, projectionGeneration, revisi
             `min-width: 0` side. See signal-generator-editor.tsx for the
             fuller root-cause note; the same bug pattern applied here too. */}
         <div className="transition-form-row">
-          <label className="field-inline transition-field-start"><span>Start (cycle)</span><input aria-label="New event start" type="number" min="0" max={cycleCount - 1} step="1" value={start} onChange={(event) => setStart(Number(event.target.value))} /></label>
+          <label className="field-inline transition-field-start"><span>Start (cycle)</span><input aria-label="New event start" type="number" min="0" max={cycleCount - 1} step="1" value={start} onChange={(event) => selectStart(Number(event.target.value))} /></label>
           {/* Value Editor Policy pass: this Value field is no longer
               unconditionally free text -- `ValueEditorControl` (shared
               with a Transition row's own inline editor) resolves the
@@ -325,8 +353,8 @@ export function EventTable({ signal, documentEpoch, projectionGeneration, revisi
       <h2>Transitions <span>({signal.values.length})</span></h2>
     </div>
     <div className="event-toolbar" role="toolbar" aria-label="Signal event commands" data-testid="signal-event-toolbar">
-      <span className="event-selected-status" data-testid="event-selected-status" role="status">{selected ? `Selected: transition at cycle ${selected.start}` : "No transition selected"}</span><button type="button" onClick={duplicateRow} disabled={!selected || !canDuplicate} data-testid="event-duplicate">Duplicate</button>
-      <button type="button" onClick={addRow} data-testid="event-add-row">Add Row</button>
+      <span className="event-selected-status" data-testid="event-selected-status" role="status">{selected ? `Selected: transition at cycle ${selected.start}` : "No transition selected"}</span><button type="button" onClick={duplicateRow} disabled={!selected || !canDuplicate} title={canDuplicate ? undefined : "No free cycle for a new transition"} data-testid="event-duplicate">Duplicate</button>
+      <button type="button" onClick={addRow} disabled={!canDuplicate} title={canDuplicate ? undefined : "No free cycle for a new transition"} data-testid="event-add-row">Add Row</button>
       <button type="button" className="danger" onClick={() => selected && commands.removeValue(signal.id, selected.start)} disabled={!selected || signal.values.length === 1} data-testid="event-delete-row">Delete</button>
     </div>
     <div ref={eventViewportRef} className="event-table-scroll" onScroll={(event) => updateEventScroll(event.currentTarget.scrollTop)}>
