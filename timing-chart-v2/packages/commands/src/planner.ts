@@ -221,8 +221,13 @@ function deleteSignals(document: CanonicalDocument, signalIds: readonly SignalId
   }
   const constraintDependents = references.filter((reference) => reference.kind.startsWith("constraint."));
   if (constraintDependents.length > 0) {
-    const dependentIds = [...new Set(constraintDependents.map((reference) => reference.ownerId))].join(", ");
-    return fail("invalid", "SIGNAL_HAS_DEPENDENTS", signalIds.length === 1 ? "$.signalId" : "$.signalIds", `${signalIds.length === 1 ? "Signal has" : "Signals have"} constraint dependents: ${dependentIds}.`);
+    const dependentIds = [...new Set(constraintDependents.map((reference) => reference.ownerId))];
+    const described = dependentIds.map((id) => {
+      const type = document.constraints.find((constraint) => constraint.id === id)?.type;
+      return type === undefined ? id : `${id} (${type})`;
+    }).join(", ");
+    const plural = dependentIds.length > 1;
+    return fail("invalid", "SIGNAL_HAS_DEPENDENTS", signalIds.length === 1 ? "$.signalId" : "$.signalIds", `${signalIds.length === 1 ? "Signal is" : "Signals are"} used by constraint${plural ? "s" : ""} ${described}. Delete or edit ${plural ? "those constraints" : "the constraint"} first (Check tab).`);
   }
 
   const linkedTransactionIds = new Set(references
@@ -833,8 +838,9 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
         return fail("invalid", "INVALID_CHECK_SETTINGS", "$.checkSettings.enabledCategories", "Enabled check categories must be unique supported categories.");
       }
       const requestedCategories = requested as readonly string[] | undefined;
-      const enabled = requestedCategories === undefined ? [] : TIMING_DIAGNOSTIC_CATEGORIES.filter((category) => requestedCategories.includes(category));
-      const checkSettings = enabled.length === TIMING_DIAGNOSTIC_CATEGORIES.length ? {} : { enabledCategories: enabled };
+      // An absent enabledCategories means "all categories enabled" (see enabledDiagnosticCategories).
+      const enabled = requestedCategories === undefined ? [...TIMING_DIAGNOSTIC_CATEGORIES] : TIMING_DIAGNOSTIC_CATEGORIES.filter((category) => requestedCategories.includes(category));
+      const checkSettings = requestedCategories === undefined || enabled.length === TIMING_DIAGNOSTIC_CATEGORIES.length ? {} : { enabledCategories: enabled };
       if (semanticEqual(document.checkSettings, checkSettings)) return fail("no-op", "NO_OP", "$.checkSettings", "Check settings are unchanged.");
       return { ok: true, document: { ...document, checkSettings }, changeSet: {}, inverseChangeSet: {} };
     }
@@ -1973,11 +1979,13 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       if (!["threshold", "ratio"].includes(command.anchorKind)) return fail("invalid", "INVALID_MEASUREMENT_PROFILE", "$.anchorKind", "Measurement anchor kind is not supported.");
       if (![command.start, command.end].every((value) => Number.isFinite(value) && value >= 0 && value <= 1) || command.start > command.end) return fail("invalid", "INVALID_MEASUREMENT_ENDPOINT", "$.start", "Measurement endpoints must be finite fractions in ascending order.");
       if (command.layout?.lane !== undefined && (!Number.isInteger(command.layout.lane) || command.layout.lane < 0 || command.layout.lane > MAX_MEASUREMENT_LANE)) return fail("invalid", "INVALID_LANE", "$.layout.lane", `Measurement lane must be an integer from 0 to ${MAX_MEASUREMENT_LANE}.`);
-      const toCycleAnchor = (anchor: NonNullable<Annotation["start"]>, value: number): NonNullable<Annotation["start"]> => {
+      // Cycle anchors reset the endpoint point too: a transition-picked start returns to the left edge (cycle-start) and end to the
+      // right edge (cycle-end), so switching back does not keep transition-center points that the cycle profile never draws.
+      const toCycleAnchor = (anchor: NonNullable<Annotation["start"]>, value: number, cyclePoint: "cycle-start" | "cycle-end"): NonNullable<Annotation["start"]> => {
         const { threshold: _legacyThreshold, transition: _previousTransition, ...semantic } = anchor;
-        return command.profile === "cycle" ? semantic : { ...semantic, point: "transition-center", transition: { kind: command.anchorKind, value } };
+        return command.profile === "cycle" ? { ...semantic, point: cyclePoint } : { ...semantic, point: "transition-center", transition: { kind: command.anchorKind, value } };
       };
-      const next = { ...annotation, measurement: { profile: command.profile, anchorKind: command.anchorKind }, start: toCycleAnchor(annotation.start, command.start), end: toCycleAnchor(annotation.end, command.end), ...(command.layout === undefined ? {} : { measurementLayout: command.layout }) };
+      const next = { ...annotation, measurement: { profile: command.profile, anchorKind: command.anchorKind }, start: toCycleAnchor(annotation.start, command.start, "cycle-start"), end: toCycleAnchor(annotation.end, command.end, "cycle-end"), ...(command.layout === undefined ? {} : { measurementLayout: command.layout }) };
       if (semanticEqual(annotation, next)) return fail("no-op", "NO_OP", "$", "Measurement semantics are unchanged.");
       const annotations = [...document.annotations]; annotations[index] = next;
       const changeSet: ChangeSet = { annotationPosition: [annotation.id], annotationStyle: [annotation.id] };

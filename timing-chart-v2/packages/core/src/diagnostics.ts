@@ -755,7 +755,10 @@ export function deriveTimingDiagnosticsIfInputsChanged(
         const stabilityOnly = !invalidatedConstraintIds.has(constraint.id);
         const singleConstraintDocument = { ...nextDocument, constraints: [constraint] };
         const diagnostics = constraint.type.toLowerCase() === "handshake"
-          ? handshakeDiagnostics(singleConstraintDocument, enabled, indexes).map((diagnostic) => withRuleMetadata(diagnostic, "timing.handshake"))
+          ? handshakeDiagnostics(singleConstraintDocument, enabled, indexes).map((diagnostic) => withRuleMetadata({
+            ...diagnostic,
+            path: diagnostic.path.replace("$.constraints[0]", `$.constraints[${constraintIndex}]`),
+          }, "timing.handshake"))
           : evaluateSingleConstraintDiagnostics(nextDocument, constraint, constraintIndex, enabled, indexes);
         for (const diagnostic of diagnostics) if (!stabilityOnly || diagnostic.category === "stability") incrementalConstraintDiagnostics.push(diagnostic);
       });

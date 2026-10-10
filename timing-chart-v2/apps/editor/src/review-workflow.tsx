@@ -14,15 +14,28 @@ const checkCategoryLabels: Record<TimingDiagnosticCategory, string> = {
 };
 
 /**
- * A finding is in scope when its own object/entity or path names a scoped ID, or when it is
+ * A finding is in scope when its own objectId/entityId names a scoped ID, or when it is
  * a constraint finding (Handshake / Latency use the constraint ID as objectId) and any signal
  * the constraint references (request, acknowledge, stable, trigger, response, reset) is scoped.
  */
 export function diagnosticMatchesIds(item: DocumentProblem, ids: ReadonlySet<string>, constraintSignals: ReadonlyMap<string, ReadonlySet<string>> = new Map()): boolean {
   if (ids.size === 0) return false;
   const directIds = [item.objectId, item.entityId].filter((value): value is string => typeof value === "string");
-  if (directIds.some((id) => ids.has(id)) || [...ids].some((id) => item.path.includes(id))) return true;
+  // Match exact entity IDs only. Paths are not searched: they contain schema field names and indexes,
+  // so a substring or segment test lets short IDs such as "req" or "data" match unrelated keys.
+  if (directIds.some((id) => ids.has(id))) return true;
   return directIds.some((id) => [...(constraintSignals.get(id) ?? [])].some((signalId) => ids.has(signalId)));
+}
+
+/** Parses the latency editor's cycle bounds. Blank input is rejected rather than read as 0. */
+export function parseLatencyCycleBounds(minText: string, maxText: string): { readonly ok: true; readonly minimum: number; readonly maximum: number } | { readonly ok: false; readonly message: string } {
+  if (minText.trim() === "" || maxText.trim() === "") return { ok: false, message: "Enter both minimum and maximum cycles." };
+  const minimum = Number(minText);
+  const maximum = Number(maxText);
+  if (!Number.isSafeInteger(minimum) || !Number.isSafeInteger(maximum) || minimum < 0 || maximum < minimum) {
+    return { ok: false, message: "Cycle bounds must be integers with 0 ≤ minimum ≤ maximum." };
+  }
+  return { ok: true, minimum, maximum };
 }
 
 export function ReviewWorkflow({ diagnostics, document, selectedSignalId, selectedGroupId, onNavigate, onShowProblems, onRefreshChecks, onToggleCheckCategory, onCreateLatencyConstraint, onDeleteConstraint, problemsIcon }: {
@@ -126,9 +139,10 @@ export function ReviewWorkflow({ diagnostics, document, selectedSignalId, select
       <summary>Latency constraints ({document.constraints.length})</summary>
       <form onSubmit={(event) => {
         event.preventDefault();
-        const minimum = Number(minCycles); const maximum = Number(maxCycles);
-        if (!triggerId || !responseId || !Number.isSafeInteger(minimum) || !Number.isSafeInteger(maximum) || minimum < 0 || maximum < minimum) { setConstraintStatus("Choose Signals and valid integer cycle bounds (0 ≤ min ≤ max)."); return; }
-        const created = onCreateLatencyConstraint({ triggerSignalId: triggerId, triggerEdge, responseSignalId: responseId, responseEdge, minCycles: minimum, maxCycles: maximum });
+        if (!triggerId || !responseId) { setConstraintStatus("Choose Signals for the trigger and response."); return; }
+        const bounds = parseLatencyCycleBounds(minCycles, maxCycles);
+        if (!bounds.ok) { setConstraintStatus(bounds.message); return; }
+        const created = onCreateLatencyConstraint({ triggerSignalId: triggerId, triggerEdge, responseSignalId: responseId, responseEdge, minCycles: bounds.minimum, maxCycles: bounds.maximum });
         setConstraintStatus(created ? "Latency constraint added." : "Constraint was rejected; review the Problems panel.");
       }}>
         <label>Trigger Signal<select aria-label="Constraint trigger signal" value={triggerId} onChange={(event) => setTriggerSignalId(event.target.value as SignalId)} required>{edgeSignals.map((signal) => <option key={signal.id} value={signal.id}>{signal.display.name}</option>)}</select></label>

@@ -292,7 +292,7 @@ describe("canonical stable-ID reference registry", () => {
       transactions: [{ id: transactionId, name: "Read", start: 1, end: 4, groupId: transactionGroupId, linkedSignals: [signal.id] }],
       transactionGroups: [{ id: transactionGroupId, name: "Memory", order: 0 }],
       constraints: [
-        { id: "constraint_handshake_all" as ConstraintId, type: "handshake", data: { requestSignalId: signal.id, acknowledgeSignalId: signal.id, stableSignalIds: [signal.id] } },
+        { id: "constraint_handshake_all" as ConstraintId, type: "handshake", data: { requestSignalId: signal.id, acknowledgeSignalId: signal.id, stableSignalIds: [signal.id], resetSignalId: signal.id } },
         { id: "constraint_range_all" as ConstraintId, type: "latency-range", data: { requestSignalId: signal.id, acknowledgeSignalId: signal.id } },
         { id: "constraint_latency_all" as ConstraintId, type: "latency", data: { triggerSignalId: signal.id, responseSignalId: signal.id } },
       ],
