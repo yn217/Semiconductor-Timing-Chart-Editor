@@ -37,7 +37,7 @@ for (const width of [1280, 1672]) test(`Transaction phases follow semantic durat
   await page.screenshot({ path: resolve(visualArtifactRoot(), `transaction-phases-${width}.png`) });
 });
 
-test("Phase-protected Transaction edge resize is rejected without a canonical change", async ({ page }) => {
+test("Phase-protected Transaction edge resize stops at the Phase limit instead of crossing it", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
@@ -68,11 +68,13 @@ test("Phase-protected Transaction edge resize is rejected without a canonical ch
   expect(endBox).not.toBeNull();
   await page.mouse.move(endBox!.x + endBox!.width / 2, endBox!.y + endBox!.height / 2);
   await page.mouse.down();
-  // Move past the last authored phase boundary (50 -> 60).
+  // Move past the last authored phase start (50): the edge stops one cycle
+  // after it (51 = 5.1 TC), the preview shows the same clamp, and it commits.
   await page.mouse.move(endBox!.x - 420, endBox!.y + endBox!.height / 2, { steps: 4 });
   await page.mouse.up();
-  await expect(inspector.getByLabel("Transaction end")).toHaveValue(beforeEnd);
-  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+  expect(beforeEnd).not.toBe("5.1");
+  await expect(inspector.getByLabel("Transaction end")).toHaveValue("5.1");
+  await expect(host).not.toHaveAttribute("data-canonical-revision", beforeRevision!);
 });
 
 test("Scenario switching never aliases a copied Transaction Phase selection", async ({ page }) => {

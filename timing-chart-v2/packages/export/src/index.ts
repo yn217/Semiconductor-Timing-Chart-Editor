@@ -1,8 +1,8 @@
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { allocateMeasurementLanes } from "@timing-chart-v2/geometry";
-import { buildDisplayTimeMapping, calculateRowLayout, remapValueChangesToDisplay, resolveSourcePosition, type DisplayTimeMapping } from "@timing-chart-v2/projection";
-import { ANNOTATION_LABEL_LINE_HEIGHT, ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_PRESENTATION_NUMERIC_RANGES, MAX_MEASUREMENT_LANE, anchorTransitionFraction, anchorTransitionKind, effectiveLegendEntries, resolveEdgeCounterMarker, resolveLegendPosition, valueSignalWaveDomain, wrapAnnotationLabel, type Annotation, type CanonicalDocument, type ClockSignal, type JsonObject, type MeasurementProfile, type MeasurementLayout, type Signal, type SignalId, type ValueSignal } from "@timing-chart-v2/schema";
-import { renderWaveJsonMarkup, toWaveJson, toWaveJsonMappedClock, toWaveJsonWindow, WaveDromAdapterError, WAVEDROM_VERSION, type WaveJsonSignal } from "@timing-chart-v2/wavedrom-adapter";
+import { buildDisplayTimeMapping, calculateRowLayout, remapValueChangesToDisplay, resolveSourcePosition, compareLaneIds, transactionLaneIdentityKey, type DisplayTimeMapping } from "@timing-chart-v2/projection";
+import { ANNOTATION_LABEL_LINE_HEIGHT, ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_PRESENTATION_NUMERIC_RANGES, MAX_MEASUREMENT_LANE, anchorTransitionFraction, anchorTransitionKind, effectiveLegendEntries, resolveEdgeCounterMarker, resolveLegendPosition, valueSignalWaveDomain, wrapAnnotationLabel, type Annotation, type CanonicalDocument, type ClockSignal, type JsonObject, type MeasurementProfile, type MeasurementLayout, type Signal, type SignalId, type Transaction, type ValueSignal } from "@timing-chart-v2/schema";
+import { busLogicToken, renderWaveJsonMarkup, toWaveJson, toWaveJsonMappedClock, toWaveJsonWindow, WaveDromAdapterError, WAVEDROM_VERSION, type WaveJsonSignal } from "@timing-chart-v2/wavedrom-adapter";
 
 export interface ExportSettings {
   readonly format: "svg" | "png" | "pdf";
@@ -30,7 +30,7 @@ export interface ExportWave { readonly signalId: SignalId; readonly name: string
 export interface ExportLabel { readonly text: string; readonly x: number; readonly y: number; readonly kind: "signal" | "comment" | "group" | "annotation" | "transaction" }
 export interface ExportPoint { readonly x: number; readonly y: number }
 export interface ExportAnnotation { readonly id: string; readonly type: string; readonly label: string; readonly x1: number; readonly x2: number; readonly y1: number; readonly y2: number; readonly opacity?: number; readonly sourceSignalId?: SignalId; readonly traceOffsetCycles?: number; readonly threshold1?: number; readonly threshold2?: number; readonly transitionKind1?: "threshold" | "ratio"; readonly transitionKind2?: "threshold" | "ratio"; readonly measurementProfile?: MeasurementProfile; readonly measurementLayout?: MeasurementLayout; readonly measurementLane?: number; readonly tracePoints?: readonly ExportPoint[]; readonly lineType?: "straight" | "orthogonal" | "curve" | "diagonal"; readonly arrowhead?: "end" | "start" | "bidirectional" | "none"; readonly labelOffsetX?: number; readonly labelOffsetY?: number; readonly labelPlacement?: "start" | "center" | "end" | "above" | "below"; readonly color?: string; readonly style?: JsonObject }
-export interface ExportTransaction { readonly id: string; readonly name: string; readonly laneId: string; readonly x: number; readonly y: number; readonly width: number; readonly linkedSignals: readonly SignalId[] }
+export interface ExportTransaction { readonly id: string; readonly name: string; readonly laneId: string; readonly groupId?: string; readonly fill: string; readonly x: number; readonly y: number; readonly width: number; readonly linkedSignals: readonly SignalId[] }
 export interface ExportGroupBand { readonly id: string; readonly name: string; readonly x: number; readonly y: number; readonly width: number; readonly height: number; readonly fill: string; readonly fillOpacity: number; readonly stroke: string; readonly scope: "label" | "waveform" | "both"; readonly showHeader: boolean }
 export interface ExportAxisBreak { readonly id: string; readonly name: string; readonly sourceStart: number; readonly sourceEnd: number; readonly x: number }
 export interface ExportEdgeCounter { readonly id: string; readonly signalId: SignalId; readonly kind: "rising" | "falling"; readonly cycle: number; readonly x: number; readonly y: number; readonly label: string }
@@ -203,7 +203,8 @@ function boundedWaveJson(signal: Exclude<Signal, { readonly type: "commentRow" }
   const windowLength = range.end - range.start;
   const localSignal = { ...signal, values: valueChangesForWindow(signal, range.start, range.end) };
   const waveJson = toWaveJson({ signal: localSignal, cycleCount: windowLength, enumDefinitions });
-  const semanticValues = valueSignalWaveDomain(signal.type) === "data" ? localSignal.values.map((change) => String(change.value)) : [];
+  // Bus X/Z changes are drawn as WaveDrom logic bricks without a data label, so they must not pair with one.
+  const semanticValues = valueSignalWaveDomain(signal.type) === "data" ? localSignal.values.filter((change) => busLogicToken(signal.type, change.value) === undefined).map((change) => String(change.value)) : [];
   return { waveJson, semanticValues, windowStart: range.start, renderedCycleCount: windowLength };
 }
 
@@ -516,10 +517,30 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
   const waveSignals = signals.filter((signal): signal is Exclude<Signal, { readonly type: "commentRow" }> => signal.type !== "commentRow");
   // Hidden Transactions are not drawn on screen; they must not be exported or reserve a lane either.
   const exportedTransactions = document.transactions.filter((transaction) => transaction.visible !== false);
-  const lanes = [...new Set(exportedTransactions.map((transaction) => transaction.laneId ?? "lane_0"))].sort();
-  const laneIndex = new Map(lanes.map((lane, index) => [lane, index] as const));
+  // Lanes are keyed by (Transaction Group, laneId) exactly as the editor keys them: the same laneId in two Groups is two rows.
+  // Row order matches the editor: Groups by `order`, then ungrouped (and Groups missing from the document), each sorted by laneId (natural order, like the editor).
+  // Without any Group the order is the historical plain laneId sort.
+  const groupRank = new Map((document.transactionGroups ?? []).slice().sort((left, right) => left.order - right.order).map((group, index) => [group.id as string, index] as const));
+  const ungroupedRank = groupRank.size;
+  const laneRefs = new Map<string, { readonly groupId: string | undefined; readonly laneId: string }>();
+  for (const transaction of exportedTransactions) {
+    const laneId = transaction.laneId ?? "lane_0";
+    const key = transactionLaneIdentityKey(transaction.groupId, laneId);
+    if (!laneRefs.has(key)) laneRefs.set(key, { groupId: transaction.groupId, laneId });
+  }
+  const rankOf = (groupId: string | undefined) => groupId === undefined ? ungroupedRank : (groupRank.get(groupId) ?? ungroupedRank);
+  const laneKeys = [...laneRefs.keys()].sort((leftKey, rightKey) => {
+    const left = laneRefs.get(leftKey)!;
+    const right = laneRefs.get(rightKey)!;
+    const byRank = rankOf(left.groupId) - rankOf(right.groupId);
+    if (byRank !== 0) return byRank;
+    if (left.laneId !== right.laneId) return compareLaneIds(left.laneId, right.laneId);
+    return leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0;
+  });
+  const laneIndex = new Map(laneKeys.map((key, index) => [key, index] as const));
+  const groupById = new Map((document.transactionGroups ?? []).map((group) => [group.id as string, group] as const));
   const transactionTop = headerHeight + 14;
-  const waveTop = transactionTop + lanes.length * TRANSACTION_HEIGHT + 34;
+  const waveTop = transactionTop + laneKeys.length * TRANSACTION_HEIGHT + 34;
   const canBoundWaveforms = settings.scope === "selected-range";
   const canBoundSourceWaveforms = canBoundWaveforms && mapping.isIdentity;
   const waveformRanges = new Map<SignalId, Readonly<{ start: number; end: number }>>();
@@ -557,7 +578,7 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
       : undefined;
     const bounded = foldedClockBounded ?? boundedRaw;
     const waveJson = bounded?.waveJson ?? toWaveJson({ signal: displaySignal, cycleCount: mapping.displayCycleCount, enumDefinitions: document.enumDefinitions });
-    const semanticValues = bounded?.semanticValues ?? (signal.type !== "clock" && valueSignalWaveDomain(signal.type) === "data" ? displayValues!.map((change) => String(change.value)) : undefined);
+    const semanticValues = bounded?.semanticValues ?? (signal.type !== "clock" && valueSignalWaveDomain(signal.type) === "data" ? displayValues!.filter((change) => busLogicToken(signal.type, change.value) === undefined).map((change) => String(change.value)) : undefined);
     const svgMarkup = renderWaveJsonMarkup(waveJson, index, semanticValues);
     renderedWaves.push({ signal, waveJson, svgMarkup, windowStart: bounded?.windowStart ?? 0, renderedCycleCount: bounded?.renderedCycleCount ?? mapping.displayCycleCount, ...svgDimensions(svgMarkup) });
     // This checkpoint is free in the synchronous builder and lets the browser
@@ -731,7 +752,10 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
     const displayEnd = Math.max(displayStart + 1, toDisplayCycle(mapping, transaction.end, "ceil"));
     if (displayEnd > range.start && displayStart < range.end) {
       const x = LABEL_WIDTH + (Math.max(range.start, displayStart) - range.start) * cycleWidth;
-      transactions.push({ id: transaction.id, name: transaction.name, laneId, x, y: transactionTop + laneIndex.get(laneId)! * TRANSACTION_HEIGHT, width: (Math.min(range.end, displayEnd) - Math.max(range.start, displayStart)) * cycleWidth, linkedSignals: transaction.linkedSignals ?? [] });
+      const laneKey = transactionLaneIdentityKey(transaction.groupId, laneId);
+      // Same precedence as the editor: Transaction color, then its Group's color, then the default.
+      const fill = transactionFill(transaction, groupById);
+      transactions.push({ id: transaction.id, name: transaction.name, laneId, ...(transaction.groupId === undefined ? {} : { groupId: transaction.groupId }), fill, x, y: transactionTop + laneIndex.get(laneKey)! * TRANSACTION_HEIGHT, width: (Math.min(range.end, displayEnd) - Math.max(range.start, displayStart)) * cycleWidth, linkedSignals: transaction.linkedSignals ?? [] });
     }
     if (checkpoint()) yield;
   }
@@ -884,6 +908,9 @@ async function buildExportSceneCooperatively(document: CanonicalDocument, settin
 }
 
 const xml = (value: string) => value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+const DEFAULT_TRANSACTION_FILL = "#dbeafe";
+const transactionFill = (transaction: Transaction, groupById: ReadonlyMap<string, { readonly color?: string }>): string =>
+  transaction.color ?? (transaction.groupId === undefined ? undefined : groupById.get(transaction.groupId)?.color) ?? DEFAULT_TRANSACTION_FILL;
 
 /** #377: an SVG `<text>` element ignores embedded "\n" -- browsers render
  * every line of text content on one baseline regardless of literal
@@ -1133,7 +1160,7 @@ function* renderExportSvgSteps(scene: ExportScene): Generator<void, readonly str
   const overlayHeight = scene.page ? scene.page.contentHeight : scene.height;
   for (const tick of scene.ruler.ticks) { const x = scene.ruler.x + (tick.cycle - scene.ruler.start) * scene.ruler.cycleWidth; out.push(`<line x1="${x}" y1="${rulerTop}" x2="${x}" y2="${overlayHeight - 24}"/><text x="${x + 3}" y="${rulerTop - 8}" stroke="none">${xml(tick.text)}</text>`); if (checkpoint()) yield; }
   out.push(`</g><g data-layer="transactions" font-family="Segoe UI,Arial,sans-serif" font-size="11">`);
-  for (const item of scene.transactions) { out.push(`<g data-transaction-id="${xml(item.id)}"><rect x="${item.x}" y="${item.y}" width="${item.width}" height="20" rx="4" fill="#dbeafe" stroke="#2563eb"/><text x="${item.x + 6}" y="${item.y + 14}">${xml(item.name)}</text></g>`); if (checkpoint()) yield; }
+  for (const item of scene.transactions) { out.push(`<g data-transaction-id="${xml(item.id)}"><rect x="${item.x}" y="${item.y}" width="${item.width}" height="20" rx="4" fill="${xml(item.fill)}" stroke="#2563eb"/><text x="${item.x + 6}" y="${item.y + 14}">${xml(item.name)}</text></g>`); if (checkpoint()) yield; }
   out.push(`</g><g data-layer="group-bands">`);
   for (const band of scene.groupBands) { out.push(`<rect data-group-id="${xml(band.id)}" data-scope="${band.scope}" x="${band.x}" y="${band.y}" width="${band.width}" height="${band.height}" fill="${xml(band.fill)}" fill-opacity="${band.fillOpacity}" stroke="${xml(band.stroke)}"/>`); if (checkpoint()) yield; }
   out.push(`</g><g data-layer="axis-breaks" font-family="Segoe UI,Arial,sans-serif" font-size="10" fill="#52677d" stroke="#52677d">`);

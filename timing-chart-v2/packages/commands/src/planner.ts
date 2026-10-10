@@ -23,7 +23,7 @@ import type {
   ValueSignal,
   EnumDefinition,
 } from "@timing-chart-v2/schema";
-import { ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_LABEL_PLACEMENTS, MAX_MEASUREMENT_LANE, annotationPresentationStyleIssues, annotationsForReferences, canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesFromOwner, referencesTo, referencesToAny, referencesToSignal, referencesToTimeGroup, validateEnumDefinition, valueSignalValueProblem, valuesCompatibleForType, waveDromLogicToken } from "@timing-chart-v2/schema";
+import { ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_LABEL_PLACEMENTS, MAX_MEASUREMENT_LANE, annotationPresentationStyleIssues, annotationsForReferences, canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesFromOwner, referencesTo, referencesToAny, referencesToSignal, referencesToTimeGroup, validateEnumDefinition, parseBusValue, type BusValueFormat, valueSignalValueProblem, valuesCompatibleForType, waveDromLogicToken } from "@timing-chart-v2/schema";
 import type { ChangeSet, SemanticCommand } from "./types.js";
 import type { CommandPolicyCode } from "./policy.js";
 import { mergeChangeSets } from "./changeset.js";
@@ -617,6 +617,24 @@ function sameValueToken(type: ValueSignal["type"], left: string | number, right:
   return leftToken !== undefined && leftToken === waveDromLogicToken(type, right);
 }
 
+/** Bus-literal problem for one existing value under a Bus width, using the schema's own literal parse (parseBusValue) and the same bit-count rule as document validation. */
+function busValueWidthProblem(change: SignalValueChange, format: BusValueFormat | undefined, width: number): string | undefined {
+  const label = `Value '${String(change.value)}' at cycle ${change.start}`;
+  const invalid = `${label} is not a valid bus literal for width ${width}.`;
+  let bits: number;
+  if (typeof change.value === "number") {
+    if (!Number.isSafeInteger(change.value) || change.value < 0) return invalid;
+    bits = change.value === 0 ? 1 : change.value.toString(2).length;
+  } else {
+    let parsed: ReturnType<typeof parseBusValue>;
+    try { parsed = parseBusValue(change.value, undefined, change.displayFormat ?? format); } catch { return invalid; }
+    if (parsed.kind === "symbolic") return /^[A-Za-z_][A-Za-z0-9_]*$/.test(change.value.trim()) ? undefined : invalid;
+    if (parsed.kind === "unknown") bits = parsed.width ?? 1;
+    else bits = parsed.value === 0n ? 1 : parsed.value!.toString(2).length;
+  }
+  return bits > width ? `${label} needs ${bits} bits but width is ${width}.` : undefined;
+}
+
 /** Sparse equivalent of the old dense per-cycle rebuild (#855): the output is described as source intervals placed at output offsets;
  * the state only changes at an interval start or at a source change point inside it, so only those breakpoints are visited. */
 type RangeSegment = Readonly<{ from: number; to: number; outputStart: number }>;
@@ -977,7 +995,9 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       if (!name) return fail("invalid", "INVALID_NAME", "$.name", "Signal name cannot be empty.");
       if (signal.name === name) return fail("no-op", "NO_OP", "$", "Signal already has this name.");
       const changeSet: ChangeSet = { rowPresentation: [signal.id] };
-      return { ok: true, document: replaceSignal(document, index, { ...signal, name, display: { ...signal.display, name } }), changeSet, inverseChangeSet: changeSet };
+      // A Comment Row keeps name = title (see commentRow.update), so a generic Rename updates its title too.
+      const renamed = signal.type === "commentRow" ? { ...signal, name, title: name, display: { ...signal.display, name } } : { ...signal, name, display: { ...signal.display, name } };
+      return { ok: true, document: replaceSignal(document, index, renamed), changeSet, inverseChangeSet: changeSet };
     }
     case "signal.bulkRename": {
       if (command.updates.length === 0) return fail("no-op", "NO_OP", "$.updates", "No Signals were selected for rename.");
@@ -1181,6 +1201,14 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       const currentStyle = signal.display.style;
       const nextFormat = nextType === "bus" ? command.displayFormat ?? currentFormat : undefined;
       const nextWidth = nextType === "bus" ? command.width ?? currentWidth : undefined;
+      // Converting to Bus or narrowing/widening a Bus must keep every existing literal representable at the new width; reject here
+      // (with the cycle and value) instead of letting document validation reject the commit later without a location.
+      if (signal.type !== "clock" && nextType === "bus" && nextWidth !== undefined && (signal.type !== "bus" || nextWidth !== currentWidth)) {
+        for (const change of signal.values) {
+          const widthProblem = busValueWidthProblem(change, nextFormat, nextWidth);
+          if (widthProblem) return fail("invalid", "UNSUPPORTED_SIGNAL_VALUE", "$.signalType", widthProblem);
+        }
+      }
       if (command.clearEnumId && command.enumId !== undefined) return fail("invalid", "INVALID_ENUM_ASSIGNMENT", "$.enumId", "Enum assignment cannot be set and cleared in the same command.");
       if ((command.enumId !== undefined || command.clearEnumId) && nextType !== "state") return fail("invalid", "INVALID_ENUM_ASSIGNMENT", "$.enumId", "Enum assignments apply only to State Signals.");
       const nextEnumId = nextType === "state"
@@ -1678,9 +1706,11 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       // Start/End edits that carry no explicit Phases follow the same edge
       // policy as an edge drag (see resizeTransactionEdge), so an edge-attached
       // Phase moves with its edge instead of being rejected as out of range.
+      // Only applied when the unchanged Phases would no longer fit, so an
+      // outward edit keeps its new unused cycles for adding a Phase.
       // The edge that moves outward goes first so intermediate ranges stay valid.
       let derivedPhases: readonly TransactionPhase[] | undefined = transaction.phases;
-      if (!command.clearPhases && command.phases === undefined && transaction.phases && transaction.phases.length > 0 &&(command.start !== transaction.start || command.end !== transaction.end)) {
+      if (!command.clearPhases && command.phases === undefined && transaction.phases && transaction.phases.length > 0 && (command.start !== transaction.start || command.end !== transaction.end) && transactionPhasesProblem(transaction.phases, command.start, command.end)) {
         let working: Transaction = transaction;
         const edges: readonly TransactionResizeEdge[] = command.end > transaction.end ? ["end", "start"] : ["start", "end"];
         for (const edge of edges) {

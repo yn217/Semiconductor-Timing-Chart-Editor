@@ -118,6 +118,8 @@ function isSignalRenameOnly(previous: CanonicalDocument, next: CanonicalDocument
     if (!isRecord(after) || before.id !== signalId || after.id !== signalId || !sameOwnKeys(before, after)) return false;
     if (typeof after.name !== "string" || after.name.trim() !== after.name || after.name.length === 0 || after.name === before.name) return false;
     for (const key of Object.keys(before)) {
+      // A Comment Row's title mirrors its name (commentRow.update keeps name = title), so a rename carries it along.
+      if (key === "title" && after.type === "commentRow" && (after as { title?: unknown }).title === after.name) continue;
       if (key !== "name" && key !== "display" && !Object.is(before[key as keyof typeof before], after[key as keyof typeof after])) return false;
     }
     if (!isRecord(before.display) || !isRecord(after.display) || !sameOwnKeys(before.display, after.display) || after.display.name !== after.name || after.display.name === before.display.name) return false;

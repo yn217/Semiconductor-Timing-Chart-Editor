@@ -14405,7 +14405,7 @@
     },
     {
       "file": "transaction-phase-bars.spec.ts",
-      "title": "Phase-protected Transaction edge resize is rejected without a canonical change",
+      "title": "Phase-protected Transaction edge resize stops at the Phase limit instead of crossing it",
       "domain": "transaction-phase-edge-resize-guard",
       "originIssue": 429,
       "type": "SEMANTIC_CONTRACT",
@@ -18377,6 +18377,204 @@
       ],
       "decision": "KEEP",
       "reason": "Code review found Document Properties Apply rewriting the legend and related input defects.",
+      "replacementTest": null
+    },
+    {
+      "file": "signal-inspector-type-review-fixes.spec.ts",
+      "title": "Apply does not pin the layout's name alignment or overflow onto an untouched Signal",
+      "domain": "signal-inspector",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Apply does not pin the layout's name alignment or overflow onto an untouched Signal.",
+      "duplicateGroup": "signal-inspector",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Signal Inspector type/width defects.",
+      "replacementTest": null
+    },
+    {
+      "file": "signal-inspector-type-review-fixes.spec.ts",
+      "title": "converting a Binary Signal to Bus defaults the width to 8 bits",
+      "domain": "signal-inspector",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "converting a Binary Signal to Bus defaults the width to 8 bits.",
+      "duplicateGroup": "signal-inspector",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Signal Inspector type/width defects.",
+      "replacementTest": null
+    },
+    {
+      "file": "signal-inspector-type-review-fixes.spec.ts",
+      "title": "an emptied Bus width is an inline draft problem with Apply disabled, not a commit",
+      "domain": "signal-inspector",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "an emptied Bus width is an inline draft problem with Apply disabled, not a commit.",
+      "duplicateGroup": "signal-inspector",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Signal Inspector type/width defects.",
+      "replacementTest": null
+    },
+    {
+      "file": "signal-inspector-type-review-fixes.spec.ts",
+      "title": "a State-to-Bus conversion that an existing value cannot satisfy is explained inline",
+      "domain": "signal-inspector",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "a State-to-Bus conversion that an existing value cannot satisfy is explained inline.",
+      "duplicateGroup": "signal-inspector",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Signal Inspector type/width defects.",
+      "replacementTest": null
+    },
+    {
+      "file": "signal-inspector-type-review-fixes.spec.ts",
+      "title": "the State enum select is a draft committed by Apply, not on select",
+      "domain": "signal-inspector",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "the State enum select is a draft committed by Apply, not on select.",
+      "duplicateGroup": "signal-inspector",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Signal Inspector type/width defects.",
+      "replacementTest": null
+    },
+    {
+      "file": "transaction-group-naming-review-fixes.spec.ts",
+      "title": "a Group created after deleting a middle Group gets a unique name",
+      "domain": "transaction-groups",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "New Transaction Groups take the lowest unused Group N name and a fresh order.",
+      "duplicateGroup": "transaction-groups",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found auto-named Transaction Groups colliding.",
+      "replacementTest": null
+    },
+    {
+      "file": "review-followups.spec.ts",
+      "title": "Enter that confirms an IME conversion does not commit an inline rename",
+      "domain": "inline-rename",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 4000,
+      "primaryContract": "Inline name inputs ignore Enter/Escape while an IME composition is active.",
+      "duplicateGroup": "inline-rename",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found IME Enter committing half-converted names.",
+      "replacementTest": null
+    },
+    {
+      "file": "selection-command-review-fixes.spec.ts",
+      "title": "Delete with a Transaction Phase selected removes only that Phase as one undoable step",
+      "domain": "selection-commands",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Delete with a Transaction Phase selected removes only that Phase as one undoable step.",
+      "duplicateGroup": "selection-commands",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Delete/Rename acting on the wrong entity for Phase/Spacer selection.",
+      "replacementTest": null
+    },
+    {
+      "file": "selection-command-review-fixes.spec.ts",
+      "title": "Rename is disabled for a selected Spacer and does not rename its parent Group",
+      "domain": "selection-commands",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "Rename is disabled for a selected Spacer and does not rename its parent Group.",
+      "duplicateGroup": "selection-commands",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Delete/Rename acting on the wrong entity for Phase/Spacer selection.",
+      "replacementTest": null
+    },
+    {
+      "file": "comment-row-draft-consistency.spec.ts",
+      "title": "an empty or out-of-range Comment Row spacing is a draft problem that disables Apply",
+      "domain": "comment-row",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 4000,
+      "primaryContract": "Comment Row spacing drafts reject empty or out-of-range values instead of committing 0.",
+      "duplicateGroup": "comment-row",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found empty spacing fields committing 0.",
+      "replacementTest": null
+    },
+    {
+      "file": "comment-row-draft-consistency.spec.ts",
+      "title": "renaming a Comment Row from the Ribbon updates the text drawn in its row",
+      "domain": "comment-row",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 4000,
+      "primaryContract": "A generic Rename of a Comment Row updates the title drawn in its row.",
+      "duplicateGroup": "comment-row",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found Rename left the drawn Comment Row title stale.",
       "replacementTest": null
     }
   ]

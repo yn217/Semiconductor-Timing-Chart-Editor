@@ -85,7 +85,8 @@ export function deriveSelectionCapabilities(document: CanonicalDocument, selecti
     : selection.signalIds.size === 0 && selectedGroup !== undefined && selection.spacerId === undefined
       ? (() => { const index = groups.groupIndexById.get(selectedGroup.id) ?? -1; return index >= 0 && index < document.signalGroups.length - 1; })()
       : false;
-  const canRename = (selection.signalIds.size === 1 && selectedSignal !== undefined) || (selection.signalIds.size === 0 && selection.transactionIds.size <= 1 && (selectedGroup !== undefined || selectedTransaction !== undefined));
+  // A selected Spacer carries its parent Group in selection.groupId, so it must be excluded explicitly or Rename would target the Group.
+  const canRename = (selection.signalIds.size === 1 && selectedSignal !== undefined) || (selection.signalIds.size === 0 && selection.transactionIds.size <= 1 && selection.spacerId === undefined && (selectedGroup !== undefined || selectedTransaction !== undefined));
   const canShow = (selection.signalIds.size > 0 && selectedSignal !== undefined && [...selection.signalIds].some((id) => signalsById.get(id)?.display.visible === false)) || selectedTransactions.some((transaction) => transaction.visible === false);
   const canHide = (selection.signalIds.size > 0 && selectedSignal !== undefined && [...selection.signalIds].some((id) => { const signal = signalsById.get(id); return signal !== undefined && signal.display.visible !== false; })) || selectedTransactions.some((transaction) => transaction.visible !== false);
   return { hasSelectedSignal, hasSelectedEntity, hasSelectedClipboard, hasDeletableSelection, canRename, canMoveUp, canMoveDown, canShow, canHide };

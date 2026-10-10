@@ -18,8 +18,11 @@ function InspectorClockEditor({ signal, document, changeSet, viewport, commands,
   const [visible, setVisible] = useState(signal.display.visible !== false);
   const [spacingBefore, setSpacingBefore] = useState(signal.spacingBefore ?? 0);
   const [spacingAfter, setSpacingAfter] = useState(signal.spacingAfter ?? 0);
-  const [align, setAlign] = useState<NonNullable<Signal["display"]["align"]>>(signal.display.align ?? "left");
-  const [overflow, setOverflow] = useState<NonNullable<Signal["display"]["overflow"]>>(signal.display.overflow ?? "ellipsis");
+  // Show the effective value (signal override, else document layout); Apply only sends align/overflow when the user changed them.
+  const effectiveAlign = signal.display.align ?? document.layout.signalNameAlign ?? "left";
+  const effectiveOverflow = signal.display.overflow ?? document.layout.overflow ?? "ellipsis";
+  const [align, setAlign] = useState<NonNullable<Signal["display"]["align"]>>(effectiveAlign);
+  const [overflow, setOverflow] = useState<NonNullable<Signal["display"]["overflow"]>>(effectiveOverflow);
   const styleObject = signal.display.style ?? {};
   const [textColor, setTextColor] = useState(styleString(styleObject, "color", "#152033"));
   const [rowBackground, setRowBackground] = useState(styleString(styleObject, "background", "#ffffff"));
@@ -46,7 +49,7 @@ function InspectorClockEditor({ signal, document, changeSet, viewport, commands,
     const nextStyle = signal.display.style ?? {};
     const next = {
       id: signal.id, name: signal.name, role: signal.role, visible: signal.display.visible !== false, spacingBefore: signal.spacingBefore ?? 0, spacingAfter: signal.spacingAfter ?? 0,
-      align: signal.display.align ?? "left" as NonNullable<Signal["display"]["align"]>, overflow: signal.display.overflow ?? "ellipsis" as NonNullable<Signal["display"]["overflow"]>,
+      align: effectiveAlign, overflow: effectiveOverflow,
       textColor: styleString(nextStyle, "color", "#152033"), rowBackground: styleString(nextStyle, "background", "#ffffff"), fontFamily: styleString(nextStyle, "fontFamily", "Inter"),
       fontSize: styleNumber(nextStyle, "fontSize", 12), bold: nextStyle.fontWeight === "bold", italic: nextStyle.fontStyle === "italic",
       underline: styleString(nextStyle, "textDecoration", "").includes("underline"), strikethrough: styleString(nextStyle, "textDecoration", "").includes("line-through"),
@@ -82,7 +85,7 @@ function InspectorClockEditor({ signal, document, changeSet, viewport, commands,
     merge("referenceEdge", referenceEdge, setReferenceEdge);
     clockBaseRef.current = next;
     if (!sameEntity) { setProblem(""); setConversionConfirm(false); }
-  }, [signal, document.timeline.edge]);
+  }, [signal, document.timeline.edge, document.layout.signalNameAlign, document.layout.overflow]);
   const { state: sections, toggle } = useInspectorAccordion("clock-signal", { "signal-properties": true, hierarchy: true, "label-style": false, waveform: true, generator: true, "edge-counter": true });
   const number = (key: "start" | "period" | "duty" | "phase", value: string) => setGenerator({ ...generator, [key]: Number(value) });
   const relativeFrequency = clockFrequency({ ...signal, generator } as ClockSignal);
@@ -111,8 +114,8 @@ function InspectorClockEditor({ signal, document, changeSet, viewport, commands,
     || visible !== (signal.display.visible !== false)
     || spacingBefore !== (signal.spacingBefore ?? 0)
     || spacingAfter !== (signal.spacingAfter ?? 0)
-    || align !== (signal.display.align ?? "left")
-    || overflow !== (signal.display.overflow ?? "ellipsis")
+    || align !== effectiveAlign
+    || overflow !== effectiveOverflow
     || textColor !== styleString(styleObject, "color", "#152033")
     || rowBackground !== styleString(styleObject, "background", "#ffffff")
     || fontFamily !== styleString(styleObject, "fontFamily", "Inter")
@@ -127,11 +130,13 @@ function InspectorClockEditor({ signal, document, changeSet, viewport, commands,
   const applyProperties = (event: FormEvent) => {
     event.preventDefault();
     const decorations = [underline ? "underline" : "", strikethrough ? "line-through" : ""].filter(Boolean).join(" ");
-     commands.updateSignalProperties({ signalId: signal.id, name, role, visible, spacingBefore, spacingAfter, displayAlign: align, displayOverflow: overflow, displayStyle: { ...styleObject, color: textColor, background: rowBackground, fontFamily, fontSize, fontWeight: bold ? "bold" : "normal", fontStyle: italic ? "italic" : "normal", textDecoration: decorations, waveformColor, waveformBackground } });
+     const result = commands.updateSignalProperties({ signalId: signal.id, name, role, visible, spacingBefore, spacingAfter, ...(align === effectiveAlign ? {} : { displayAlign: align }), ...(overflow === effectiveOverflow ? {} : { displayOverflow: overflow }), displayStyle: { ...styleObject, color: textColor, background: rowBackground, fontFamily, fontSize, fontWeight: bold ? "bold" : "normal", fontStyle: italic ? "italic" : "normal", textDecoration: decorations, waveformColor, waveformBackground } });
+    if (!result.ok && result.reason !== "no-op") setProblem(result.problems[0]?.message ?? "Signal properties were rejected.");
   };
   const convertClock = () => {
     const result = commands.convertClock(signal.id, conversionTarget);
-    if (!result.ok) setProblem(result.problems[0]?.message ?? "Clock conversion was rejected.");
+    // Show every problem (e.g. several annotations/anchors that block the conversion), not just the first.
+    if (!result.ok) setProblem(result.problems.map((problem) => problem.message).join(" ") || "Clock conversion was rejected.");
     else setConversionConfirm(false);
   };
   return <aside className="inspector" data-testid="inspector" data-inspector-context="clock" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); if (conversionConfirm) setConversionConfirm(false); else onCancel(); } }}>

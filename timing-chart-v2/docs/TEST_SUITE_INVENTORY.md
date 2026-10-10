@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 462 spec files and 1381 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 468 spec files and 1406 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1323/1381 cases reviewed.
+Semantic review progress: 1348/1406 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 634 |
 | `nightly` | 241 |
 | `performance` | 73 |
-| `pr` | 473 |
+| `pr` | 498 |
 | `visual` | 181 |
 
 ## Top recorded per-case runtimes
@@ -105,6 +105,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `callout-body-anchor-drag.spec.ts` | 3 | 3/3 reviewed |
 | `checkbox-dark-color-scheme.spec.ts` | 1 | 1/1 reviewed |
 | `clipboard-entity-parity.spec.ts` | 6 | 6/6 reviewed |
+| `clipboard-review-fixes.spec.ts` | 5 | 5/5 reviewed |
 | `clock-generator-review-fixes.spec.ts` | 3 | 3/3 reviewed |
 | `clock-generator-toolbar-icon-size.spec.ts` | 1 | 1/1 reviewed |
 | `clock-presentation-closure.spec.ts` | 2 | 2/2 reviewed |
@@ -117,7 +118,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `combined-signal-pane-scroll.spec.ts` | 1 | 1/1 reviewed |
 | `combined-tree-add-menus.spec.ts` | 1 | 1/1 reviewed |
 | `command-parity-delete.spec.ts` | 1 | 1/1 reviewed |
-| `comment-row-draft-consistency.spec.ts` | 1 | 1/1 reviewed |
+| `comment-row-draft-consistency.spec.ts` | 3 | 3/3 reviewed |
 | `cursor-signal-split-late-pane.spec.ts` | 2 | 2/2 reviewed |
 | `cycle-default-pitch.spec.ts` | 1 | 1/1 reviewed |
 | `cycle-frozen-columns-scroll.spec.ts` | 2 | 2/2 reviewed |
@@ -128,6 +129,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `design-system-foundation.spec.ts` | 1 | 1/1 reviewed |
 | `diagnostic-aggregator.spec.ts` | 8 | 8/8 reviewed |
 | `dialog-esc-lifecycle.spec.ts` | 2 | 1/2 reviewed |
+| `document-properties-review-fixes.spec.ts` | 6 | 6/6 reviewed |
 | `document-properties.spec.ts` | 1 | 1/1 reviewed |
 | `edge-counter-compact.spec.ts` | 5 | 5/5 reviewed |
 | `edit-commit-contract.spec.ts` | 5 | 5/5 reviewed |
@@ -141,6 +143,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `feature-showcase-startup.spec.ts` | 3 | 3/3 reviewed |
 | `file-beforeunload-dirty-guard.spec.ts` | 3 | 1/3 reviewed |
 | `file-drop-open.spec.ts` | 2 | 2/2 reviewed |
+| `file-lifecycle-review-fixes.spec.ts` | 3 | 3/3 reviewed |
 | `file-operation-feedback.spec.ts` | 8 | 0/8 reviewed |
 | `file-ribbon-blank-controls.spec.ts` | 1 | 1/1 reviewed |
 | `file-shortcuts.spec.ts` | 2 | 2/2 reviewed |
@@ -410,7 +413,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `resource-budget-ui-routes.spec.ts` | 8 | 7/8 reviewed |
 | `result-aware-create-effects.spec.ts` | 2 | 2/2 reviewed |
 | `review-checks-refresh.spec.ts` | 2 | 2/2 reviewed |
-| `review-followups.spec.ts` | 6 | 6/6 reviewed |
+| `review-followups.spec.ts` | 7 | 7/7 reviewed |
 | `review-workflow.spec.ts` | 3 | 3/3 reviewed |
 | `ribbon-caption-layout.spec.ts` | 2 | 2/2 reviewed |
 | `ribbon-cursor-ab.spec.ts` | 4 | 4/4 reviewed |
@@ -424,6 +427,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `ruler-terminal-boundary.spec.ts` | 1 | 1/1 reviewed |
 | `runtime-owner-acceptance.spec.ts` | 2 | 2/2 reviewed |
 | `scenario-add-signal-after-duplicate.spec.ts` | 3 | 3/3 reviewed |
+| `selection-command-review-fixes.spec.ts` | 2 | 2/2 reviewed |
 | `signal-duplicate-review-fixes.spec.ts` | 5 | 5/5 reviewed |
 | `signal-editor-draft-survives-unrelated-edit.spec.ts` | 1 | 1/1 reviewed |
 | `signal-editor-group-dropdown.spec.ts` | 2 | 2/2 reviewed |
@@ -431,6 +435,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `signal-event-table-draft-hint.spec.ts` | 1 | 1/1 reviewed |
 | `signal-filter-clear-affordance.spec.ts` | 1 | 1/1 reviewed |
 | `signal-generator.spec.ts` | 5 | 5/5 reviewed |
+| `signal-inspector-type-review-fixes.spec.ts` | 5 | 5/5 reviewed |
 | `signal-spacing.spec.ts` | 3 | 3/3 reviewed |
 | `signal-split-no-assignment-control.spec.ts` | 1 | 1/1 reviewed |
 | `signal-split-render-routing.spec.ts` | 3 | 3/3 reviewed |
@@ -469,6 +474,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `transaction-empty-state-create-lane-fix.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-export.spec.ts` | 16 | 16/16 reviewed |
 | `transaction-group-management.spec.ts` | 4 | 4/4 reviewed |
+| `transaction-group-naming-review-fixes.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-gui-authoring.spec.ts` | 2 | 2/2 reviewed |
 | `transaction-inspector-apply-validation.spec.ts` | 3 | 3/3 reviewed |
 | `transaction-inspector-bottom-draft-sync.spec.ts` | 1 | 1/1 reviewed |

@@ -45,3 +45,40 @@ test("Comment Row Line Spacing follows the same Draft -> Apply contract as Title
   await editor.getByTestId("cancel-bottom-draft").click();
   await expect(page.getByTestId("history-status")).toHaveText(historyAfterApply!);
 });
+
+test("an empty or out-of-range Comment Row spacing is a draft problem that disables Apply", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Insert", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Comment", exact: true }).click();
+  await page.getByTestId("cycle-viewport").evaluate((element) => { element.scrollTop = element.scrollHeight; });
+  await host.locator("[data-role='left-row'][data-kind='comment'][data-row-id]").click();
+  const editor = page.getByTestId("comment-row-editor");
+  const history = await page.getByTestId("history-status").textContent();
+  await editor.getByLabel("Comment Row line spacing").fill("");
+  await expect(editor.getByTestId("comment-row-draft-problem")).toBeVisible();
+  await expect(editor.getByTestId("apply-comment-row")).toBeDisabled();
+  await editor.getByLabel("Comment Row line spacing").fill("5");
+  await expect(editor.getByTestId("apply-comment-row")).toBeDisabled();
+  await editor.getByLabel("Comment Row line spacing").fill("2");
+  await editor.getByLabel("Comment Row spacing before").fill("");
+  await expect(editor.getByTestId("apply-comment-row")).toBeDisabled();
+  await expect(page.getByTestId("history-status")).toHaveText(history!);
+});
+
+test("renaming a Comment Row from the Ribbon updates the text drawn in its row", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Insert", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Comment", exact: true }).click();
+  await page.getByTestId("cycle-viewport").evaluate((element) => { element.scrollTop = element.scrollHeight; });
+  await host.locator("[data-role='left-row'][data-kind='comment'][data-row-id]").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "More", exact: true }).click();
+  await page.getByRole("menu", { name: "More Home Commands" }).getByRole("menuitem", { name: "Rename", exact: true }).click();
+  await page.getByLabel("New name").fill("Renamed comment");
+  await page.getByLabel("New name").press("Enter");
+  await expect(host.locator("[data-role='comment-row-content']").filter({ hasText: "Renamed comment" })).toHaveCount(1);
+});
