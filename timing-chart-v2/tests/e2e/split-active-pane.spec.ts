@@ -11,6 +11,8 @@ startInCycleMode(test);
 // into ActiveContext, view-only throughout.
 
 test("Split active pane follows clicks on the Signal surface vs Transaction lanes, drives ActiveContext, and stays view-only", async ({ page }) => {
+  // The Signal pane ends at the Bottom editor, so it needs a window tall enough to show waveform rows above it.
+  await page.setViewportSize({ width: 1280, height: 960 });
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
 
