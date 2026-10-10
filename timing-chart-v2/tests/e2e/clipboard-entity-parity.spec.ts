@@ -154,6 +154,7 @@ test("Value Signal Duplicate and Copy/Paste allocate fresh nested IDs through Ho
   expect(singlePaste).toBeTruthy();
   expect(singlePaste.values.map(({ id: _id, ...change }) => change)).toEqual(valueSignal.values.map(({ id: _id, ...change }) => change));
 
+  const idsBeforeMultiDuplicate = new Set(pasted.saved.signals.map((signal) => signal.id));
   await dataRow.click();
   await extraRow.click({ modifiers: ["Control"] });
   await home().click();
@@ -162,13 +163,13 @@ test("Value Signal Duplicate and Copy/Paste allocate fresh nested IDs through Ho
   const multi = await save();
   const allChangeIds = multi.saved.signals.flatMap((signal) => signal.values?.map((change: { id?: string }) => change.id).filter((id: string | undefined): id is string => id !== undefined) ?? []);
   expect(new Set(allChangeIds).size).toBe(allChangeIds.length);
+  const newlyCopied = multi.saved.signals.filter((signal) => !idsBeforeMultiDuplicate.has(signal.id));
+  expect(newlyCopied).toHaveLength(2);
   for (const sourceSignal of [valueSignal, extraSignal]) {
-    const copies = multi.saved.signals.filter((signal) => signal.source.signalName === sourceSignal.source.signalName && signal.id !== sourceSignal.id);
-    expect(copies.length).toBeGreaterThanOrEqual(2);
-    for (const copy of copies) {
-      expect(copy.values.map(({ id: _id, ...change }) => change)).toEqual(sourceSignal.values.map(({ id: _id, ...change }) => change));
-      expect(copy.values.every(({ id }: { id?: string }) => typeof id === "string" && !sourceSignal.values.some((sourceChange) => sourceChange.id === id))).toBe(true);
-    }
+    const [copy] = newlyCopied.filter((signal) => signal.source.signalName === sourceSignal.source.signalName);
+    expect(copy).toBeTruthy();
+    expect(copy!.values.map(({ id: _id, ...change }) => change)).toEqual(sourceSignal.values.map(({ id: _id, ...change }) => change));
+    expect(copy!.values.every(({ id }: { id?: string }) => typeof id === "string" && !sourceSignal.values.some((sourceChange) => sourceChange.id === id))).toBe(true);
   }
 
   await input.setInputFiles(pasted.path);
