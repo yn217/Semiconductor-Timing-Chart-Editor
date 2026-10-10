@@ -27,9 +27,12 @@ ordering assertion is no longer merely authored or unrun. The focused
 endpoints and above/below` passed 1/1 in current-main Chromium on 2026-10-09,
 with tracing disabled and a run-owned local server. It proves live rendered
 positions satisfy Start < Center < End and Above < Center < Below. This
-corrects the older execution note in the machine-readable row; it does not
-close the separate Golden Sample 14 full visual/property matrix tracked by
-#777, so `GUI-ANNOTATION-PRESENTATION` remains open pending that evidence.
+corrects the older execution note in the machine-readable row. Golden Sample
+14 is retained as a legacy V1 migration/regression fixture under #777; it is
+not a normative current-V2 visual baseline. This focused result does not by
+itself close `GUI-ANNOTATION-PRESENTATION`: any remaining current-V2 functional,
+Save/Open, export, or visual acceptance must be stated and evidenced directly,
+without treating a V1 pixel comparison as a blocker.
 
 The complete pre-V2 GitHub Issue universe is recorded in
 [`v1-v2-source-manifest.json`](./v1-v2-source-manifest.json). It was enumerated
@@ -46,8 +49,20 @@ Canvas Cycle Selection, Range Selection, Grid, Snap, Ruler, MiniMap,
 Inspector, Bottom Pin/Follow Selection, Advanced JSON, Header/Footer, Editable
 Legend, Clock Edge Counter, Axis Break, Bookmark, Time Group, Measurement,
 Threshold Anchor, Timing Region/Ghost Trace, Clipboard semantics, Golden
-Samples, and Export. Each currently has `status: OPEN_GAP` unless its evidence
-is complete.
+Samples, and Export. The current status for each is in the machine-readable
+ledger; as of the 2026-10-10 working-tree audit all 28 independent contracts
+are COMPLETE with focused evidence.
+
+### Current-release reconciliation — 2026-10-10
+
+Some dated evidence notes below still use historical phrases such as “V1
+visual parity remains open.” Those refer to the retired V1 pixel comparison,
+not an active release gap. The owner decision on #1095/#1103 is to retain the
+current V2 specification and accept its measured difference from the V2 v8
+Golden (5.83% versus the unchanged 5% threshold). This is accepted variance,
+not a threshold pass; no Golden, reference, threshold, or mask was changed.
+Current V2 functional, geometry, persistence, export, and security evidence
+remain binding and are recorded in `v1-v2-parity.json`.
 
 `legacyIssueAssignments` maps every issue in `legacyIssueCoverage` to at least
 one contract ID. Run `npm run check:parity` (also included in `npm run check`
@@ -56,15 +71,15 @@ unclassified decision, stale source manifest, or MERGED row without evidence.
 
 ## Explicit V1/V2 conflict register
 
-These are specification conflicts, not implementation failures. They remain
-open until the product decision is recorded; none is represented as `DROP`,
-and no visual baseline is changed to make the conflict disappear.
+These are specification conflicts, not implementation failures. Each row
+records its product decision; none is represented as `DROP`, and no visual
+baseline is changed to make a conflict disappear.
 
 | ID | V1 requirement | V2 proposal/current contract | Tradeoff | Recommended resolution | Product decision needed |
 |---|---|---|---|---|---|
-| `CONFLICT-01` | V1 #32 favors compact split/dropdown Signal insertion and a lower-density Ribbon. | V2 #176 exposes feature-rich Home/Insert/Timeline workflows with direct Signal, Clock, Bus and State discovery, using responsive overflow where necessary. | Direct discovery improves findability but consumes Ribbon density; a compact menu preserves density but hides approved actions. | Keep the V2 semantic owners and direct supported entries, retain the V1 command vocabulary/IDs, and use the documented overflow route at constrained widths. | Confirm the V2 feature-rich grouping and overflow behavior as the approved replacement for the compact V1 grouping. |
+| `CONFLICT-01` | V1 #32 favors compact split/dropdown Signal insertion and a lower-density Ribbon. | V2 #176 exposes feature-rich Home/Insert/Timeline workflows with direct Signal, Clock, Bus and State discovery, using responsive overflow where necessary. | Direct discovery improves findability but consumes Ribbon density; a compact menu preserves density but hides approved actions. | Keep the V2 semantic owners and direct supported entries, retain the V1 command vocabulary/IDs, and use the documented overflow route at constrained widths. | RESOLVED: owner decision on 2026-10-10 keeps the current V2 specification/presentation and accepts Golden difference; feature-rich Ribbon and responsive overflow remain the V2 contract. |
 | `CONFLICT-02` | Historical V1 overall/panel crops have different dimensions from V2 v8. | V2 v8 is the approved current-release visual authority. | Direct V1/V2 pixel comparison would conflate intentional layout differences with regressions. | Preserve the V1 pack as history; verify current V2 functionality and V2 visual regressions. | RESOLVED: product owner approved V2 v8 as the formal replacement for the five historical panels on 2026-10-09 (#1095). No V1 panel pixel-match obligation remains. |
-| `CONFLICT-03` | Existing V1 fixtures commonly assume a first/default `clk` reference identity. | V2 timeline state may use a differently named reference Clock and supports the approved clockless mode; no literal `clk` may be semantic truth. | Default-name compatibility is convenient for old fixtures, but it can silently retarget stable IDs and prevents valid clockless documents. | Preserve opaque stable-ID references, test differently named clocks, and keep clockless behavior explicit; do not synthesize a fake `clk`. | Confirm the V2 named-reference/clockless contract as the compatibility policy for legacy fixtures. |
+| `CONFLICT-03` | Existing V1 fixtures commonly assume a first/default `clk` reference identity. | V2 timeline state may use a differently named reference Clock and supports the approved clockless mode; no literal `clk` may be semantic truth. | Default-name compatibility is convenient for old fixtures, but it can silently retarget stable IDs and prevents valid clockless documents. | Preserve opaque stable-ID references, test differently named clocks, and keep clockless behavior explicit; do not synthesize a fake `clk`. | RESOLVED: the owner contract requires reference-clock identity by stable `signalId`, forbids row-index/default-name identity, and defines an explicit no-reference/clockless state. |
 
 ## High-Risk GUI section
 
@@ -388,15 +403,18 @@ Annotation primitive evidence is also current-main browser verified in
 `annotation-multiline-and-export-shapes.spec.ts` (4/4, 2026-09-06): Marker,
 Callout and Bracket have distinct production presentation, multiline Callout
 text survives into exported SVG tspans, Bracket exports cap marks, and Marker
-exports a vertical tick. The Golden Sample 14 visual/reference matrix remains
-open.
+exports a vertical tick. Golden Sample 14 is retained only as a legacy V1
+migration/regression fixture; it is not a current-V2 visual acceptance
+obligation. This evidence does not claim that all current-V2 visual acceptance
+is complete.
 
 The type-aware Annotation presentation audit also passes 3/3 in current-main
 Chromium (`annotation-presentation-controls.spec.ts`): Range Stroke/Fill
 changes are canonical, rendered and exported; Vertical Line exports a
 full-height dashed line; and Text exposes Stroke/Fill as disabled with a
-truthful reason. Lock interaction and the remaining Golden Sample 14 matrix
-stay explicitly open.
+truthful reason. Lock interaction remains a functional acceptance item where
+not yet evidenced. Golden Sample 14 is not a current-V2 acceptance gate;
+current V2 v8 pixel parity is tracked separately under #1103.
 
 Bookmark navigation and editing are current-main browser verified by the two
 focused `timeline-editor.spec.ts` cases (2/2, 2026-09-06): Previous/Next
@@ -451,8 +469,8 @@ available.
 |---|---|---|---|---:|---|---|
 | `GUI-TRANSITION-ARROW` | #375 | `ANNOT-01` | #10, #68 | 15 | `timing-chart-v1/artifacts/issue10/dependency-arrows.png`; `timing-chart-v1/artifacts/issue68/issue68-1672x941.png` | partial production route/marker evidence; full lifecycle/export closure open |
 | `GUI-RULER-LABEL-ANCHOR` | #376 | `TIME-01` | #111 | 16 | `timing-chart-v1/artifacts/issue111/issue111-1672x941.png` | standalone create/edit/list/delete, exact source-cycle ripple, Undo/Redo, no-fold/folded projection and Save/Open verified; focused export tests cover displayed ruler labels in SVG, PNG raster input and PDF; Golden Sample 16 visual comparison remains open |
-| `GUI-ANNOTATION-PRIMITIVES` | #377 | `ANNOT-01` | #40, #69 | 14 | `timing-chart-v1/artifacts/issue40/annotation-1672x941.png`; `timing-chart-v1/artifacts/issue69/issue69-1672x941.png` | Marker/Callout/Bracket production presentation and Callout multiline Save/Open verified; focused export test proves distinct type-specific content reaches SVG, PNG raster input and PDF; full Golden Sample 14 visual/performance matrix remains open |
-| `GUI-ANNOTATION-PRESENTATION` | #378 | `ANNOT-01` | #40, #69 | 14 | `timing-chart-v1/artifacts/issue40/annotation-1672x941.png`; `timing-chart-v1/artifacts/issue69/issue69-1672x941.png` | capability matrix + Lock/Stroke/Fill/z-order/visibility, authored label wrap/max-width (#811/#812), line-height (#821), and semantic Start/Center/End/Above/Below label placement are implemented on the existing draft/Apply, canonical, live-overlay, and SVG-export paths; focused schema/command/export tests pass; placement browser test is authored but not run; full Golden Sample 14 visual/performance matrix remains open |
+| `GUI-ANNOTATION-PRIMITIVES` | #377 | `ANNOT-01` | #40, #69 | 14 | `timing-chart-v1/artifacts/issue40/annotation-1672x941.png`; `timing-chart-v1/artifacts/issue69/issue69-1672x941.png` | Marker/Callout/Bracket production presentation and Callout multiline Save/Open verified; focused export test proves distinct type-specific content reaches SVG, PNG raster input and PDF; Golden Sample 14 is a legacy V1 migration/regression fixture, not a current-V2 visual gate |
+| `GUI-ANNOTATION-PRESENTATION` | #378 | `ANNOT-01` | #40, #69 | 14 | `timing-chart-v1/artifacts/issue40/annotation-1672x941.png`; `timing-chart-v1/artifacts/issue69/issue69-1672x941.png` | capability matrix + Lock/Stroke/Fill/z-order/visibility, authored label wrap/max-width (#811/#812), line-height (#821), and semantic Start/Center/End/Above/Below label placement are implemented on the existing draft/Apply, canonical, live-overlay, and SVG-export paths; focused schema/command/export tests pass; placement browser test is authored but not run; Golden Sample 14 is a legacy V1 migration/regression fixture, not a current-V2 visual gate |
 
 The parity checker requires these four child rows, verifies their parent/V1
 source/Golden mappings, and keeps their status rows synchronized with
