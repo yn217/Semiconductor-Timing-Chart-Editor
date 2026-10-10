@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 449 spec files and 1340 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 450 spec files and 1342 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1282/1340 cases reviewed.
+Semantic review progress: 1284/1342 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 634 |
 | `nightly` | 241 |
 | `performance` | 73 |
-| `pr` | 432 |
+| `pr` | 434 |
 | `visual` | 181 |
 
 ## Top recorded per-case runtimes
@@ -449,6 +449,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `timeline-range-hitarea-closure.spec.ts` | 5 | 5/5 reviewed |
 | `timing-grid-x-scale-closure.spec.ts` | 1 | 1/1 reviewed |
 | `titlebar-controls.spec.ts` | 1 | 1/1 reviewed |
+| `titlebar-view-mode-overlap.spec.ts` | 2 | 2/2 reviewed |
 | `transaction-add-below-selected.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-bottom-draft.contract.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-bottom-panel-table-first.spec.ts` | 1 | 1/1 reviewed |
@@ -691,6 +692,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `timeline-range-100k.spec.ts` | querySelector, dataset, geometryRead |
 | `timeline-range-edit-readability.spec.ts` | geometryRead |
 | `timing-grid-x-scale-closure.spec.ts` | querySelector, dataset, geometryRead |
+| `titlebar-view-mode-overlap.spec.ts` | querySelector, elementContains, geometryRead |
 | `transaction-add-below-selected.spec.ts` | dataset |
 | `transaction-bottom-draft.contract.spec.ts` | getComputedStyle |
 | `transaction-bottom-panel-table.spec.ts` | geometryRead |

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T16:47:07.008Z",
+  "generatedAt": "2026-10-10T16:54:46.499Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 449,
-  "caseCount": 1340,
-  "reviewedCaseCount": 1282,
+  "specFileCount": 450,
+  "caseCount": 1342,
+  "reviewedCaseCount": 1284,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 432,
+    "pr": 434,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -30138,6 +30138,60 @@
       "contractId": "browser-titlebar-native-control-truthfulness"
     },
     {
+      "file": "titlebar-view-mode-overlap.spec.ts",
+      "suitePath": [],
+      "line": 4,
+      "title": "at 1100px a long title does not push the Scenario controls under the View Mode buttons",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "titlebar-view-mode-overlap",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "With a long Document title the Scenario controls stay left of the fixed View Mode group and remain clickable.",
+      "duplicateGroup": "titlebar-view-mode-overlap",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code-review finding: the fixed View Mode group covered Scenario buttons at narrow widths.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "titlebar-view-mode-overlap",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "titlebar-view-mode-overlap.spec.ts",
+      "suitePath": [],
+      "line": 4,
+      "title": "at 900px a long title does not push the Scenario controls under the View Mode buttons",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "titlebar-view-mode-overlap",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "With a long Document title the Scenario controls stay left of the fixed View Mode group and remain clickable.",
+      "duplicateGroup": "titlebar-view-mode-overlap",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code-review finding: the fixed View Mode group covered Scenario buttons at narrow widths.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "titlebar-view-mode-overlap",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
       "file": "transaction-add-below-selected.spec.ts",
       "suitePath": [],
       "line": 7,
@@ -39053,6 +39107,19 @@
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "titlebar-view-mode-overlap.spec.ts",
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [
+        "querySelector",
+        "elementContains",
+        "geometryRead"
+      ],
       "semanticReviewStatus": "REVIEWED"
     },
     {

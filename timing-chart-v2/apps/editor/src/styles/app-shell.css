@@ -34,6 +34,9 @@ body { min-width: 1100px; }
 .cycle-panel { position: relative; grid-column: 2; grid-row: 2; align-self: stretch; min-width: 0; min-height: 0; margin: 0; border: 0; border-right: 1px solid #c7d0dd; border-bottom: 1px solid #bfc8d4; border-radius: 0; box-shadow: none; }
 
 .editor-shell .app-titlebar { position: relative; z-index: 25; }
+/* The View Mode group is position:fixed over the right end of this row: reserve its width so the title (which may shrink) and the Scenario controls never slide underneath it. */
+.editor-shell header.app-titlebar { min-width: 0; padding-right: 290px; }
+.editor-shell header.app-titlebar .scenario-controls, .editor-shell header.app-titlebar .appmark { flex: 0 0 auto; }
 
 .editor-shell .app-titlebar { gap: 6px; padding-inline: 10px; }
 
