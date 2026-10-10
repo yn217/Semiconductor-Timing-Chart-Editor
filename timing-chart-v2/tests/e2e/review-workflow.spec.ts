@@ -113,7 +113,7 @@ test("timing check categories are semantic settings with one-step Undo/Redo", as
   await expect(protocol).toBeChecked();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
-  await page.getByRole("button", { name: "Redo", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Check", exact: true }).click();
   await expect(protocol).not.toBeChecked();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");

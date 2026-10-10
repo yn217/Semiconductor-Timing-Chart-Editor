@@ -156,6 +156,7 @@ test("10k entities hidden by one collapsed fold use bounded rescue DOM and prese
   const lanes = page.getByTestId("transaction-lanes");
   await expect(lanes).toBeVisible({ timeout: 60_000 });
   await expect(lanes).toHaveAttribute("data-hidden-bookmark-fold-summaries", "1");
+  await page.getByTestId("home-minimap-toggle").check(); // MiniMap is off by default
   const minimap = page.getByTestId("minimap");
   await expect(minimap).toBeVisible();
   await expect(minimap).toHaveAttribute("aria-busy", "false", { timeout: 60_000 });
@@ -425,7 +426,7 @@ test("Transaction Fit All and Fit Selection remain view-only", async ({ page }) 
   const host = page.getByTestId("cycle-surface");
   const bar = page.getByTestId("transaction-lanes").locator("[data-transaction-id]").first();
   await expect(bar).toBeVisible();
-  await bar.click();
+  await bar.click({ position: { x: 12, y: 4 } });
   const before = { revision: await host.getAttribute("data-canonical-revision"), history: await page.getByTestId("history-status").textContent(), dirty: await page.getByTestId("dirty-status").textContent() };
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   await page.getByLabel("Zoom preset").selectOption("200");

@@ -12,8 +12,9 @@ import { expect, test } from "@playwright/test";
 async function jsonValues(page: import("@playwright/test").Page, signalId: string): Promise<readonly { start: number; value: number }[]> {
   await page.getByRole("tab", { name: "JSON", exact: true }).click();
   const text = await page.getByTestId("json-panel").locator("pre").textContent();
-  const document_ = JSON.parse(text!) as { signals: readonly { id: string; values?: readonly { start: number; value: number }[] }[] };
-  return document_.signals.find((signal) => signal.id === signalId)?.values ?? [];
+  const document_ = JSON.parse(text!) as { signals: readonly { id: string; values?: readonly { id?: string; start: number; value: number }[] }[] };
+  // Value changes carry stable IDs; the waveform content is what these tests pin.
+  return (document_.signals.find((signal) => signal.id === signalId)?.values ?? []).map(({ id: _id, ...change }: { id?: string; start: number; value: number }) => change);
 }
 
 async function openGenerator(editor: import("@playwright/test").Locator) {
@@ -106,6 +107,7 @@ test("Generator supports an infinite periodic pulse train and suppressed periods
 });
 
 test("Duty mode computes Width from Period, and Generate Waveform is only offered for a Signal (binary), never Level/Bus/State/Event", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 }); // the Bus row sits below the visible rows of a 720px window
   await page.goto("/");
   await enterCycle(page);
   const host = page.getByTestId("cycle-surface");
@@ -123,6 +125,7 @@ test("Duty mode computes Width from Period, and Generate Waveform is only offere
   expect(await jsonValues(page, "sig_cycle_request")).toEqual([{ start: 0, value: 1 }, { start: 3, value: 0 }]);
 
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_data']").click();
+  await page.getByRole("tab", { name: "Signal", exact: true }).click(); // jsonValues left the Bottom panel on its JSON tab
   await expect(editor).toContainText("DATA[7:0] · Bus");
   await expect(editor.getByTestId("apply-signal-generator")).toHaveCount(0);
 });
