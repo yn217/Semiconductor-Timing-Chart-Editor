@@ -107,6 +107,12 @@ export function scenarioModelFromV2(document: CanonicalDocument): ScenarioDocume
   };
 }
 
+/** A Signal state copied from the edited Scenario into another one must not share Transition IDs with it: IDs are unique across the whole document. */
+function stateForScenario(state: ScenarioSignalState | undefined, scenarioId: ScenarioId): ScenarioSignalState | undefined {
+  if (state === undefined || state.kind !== "values") return state;
+  return { ...state, values: state.values.map((change) => change.id === undefined ? change : { ...change, id: `${change.id}_in_${scenarioId}` }) };
+}
+
 /**
  * Reconcile one existing editor Canonical projection back into the v3 owner.
  * Shared definitions/layout are refreshed document-wide; timing payload and
@@ -132,7 +138,7 @@ export function updateScenarioModelFromV2Projection(
       const previous = scenario.signalStates[signalId];
       const projectedState = projectedScenario.signalStates[signalId];
       const expectedKind = definition.type === "clock" ? "clock" : "values";
-      signalStates[signalId] = previous?.kind === expectedKind ? previous : projectedState;
+      signalStates[signalId] = previous?.kind === expectedKind ? previous : stateForScenario(projectedState, scenario.id);
     }
     return { ...scenario, signalStates };
   });

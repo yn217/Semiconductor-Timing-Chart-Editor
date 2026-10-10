@@ -16992,6 +16992,24 @@
       "decision": "KEEP",
       "reason": "The misleading foreign-document rejection only shows through the real paste shortcut.",
       "replacementTest": null
+    },
+    {
+      "file": "scenario-add-signal-after-duplicate.spec.ts",
+      "title": "adding a Signal in a duplicated Scenario succeeds and Undo removes it",
+      "domain": "scenario-add-signal",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "A Signal added while a duplicated Scenario is active is accepted (no duplicate Transition ID across Scenarios) and is one Undo step.",
+      "duplicateGroup": "scenario-add-signal",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The cross-Scenario ID collision only shows through the real Duplicate then Add flow.",
+      "replacementTest": null
     }
   ]
 }

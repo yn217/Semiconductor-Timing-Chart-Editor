@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T11:47:39.218Z",
+  "generatedAt": "2026-10-10T13:16:03.362Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 436,
-  "caseCount": 1318,
-  "reviewedCaseCount": 1260,
+  "specFileCount": 437,
+  "caseCount": 1319,
+  "reviewedCaseCount": 1261,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 410,
+    "pr": 411,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -26669,6 +26669,33 @@
       "contractId": "viewmetrics-resize-edit-zoom-sequence"
     },
     {
+      "file": "scenario-add-signal-after-duplicate.spec.ts",
+      "suitePath": [],
+      "line": 3,
+      "title": "adding a Signal in a duplicated Scenario succeeds and Undo removes it",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "scenario-add-signal",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "A Signal added while a duplicated Scenario is active is accepted (no duplicate Transition ID across Scenarios) and is one Undo step.",
+      "duplicateGroup": "scenario-add-signal",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The cross-Scenario ID collision only shows through the real Duplicate then Add flow.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "scenario-add-signal",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
       "file": "signal-editor-draft-survives-unrelated-edit.spec.ts",
       "suitePath": [],
       "line": 13,
@@ -38045,6 +38072,15 @@
       "candidateSignals": [
         "getComputedStyle"
       ],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "scenario-add-signal-after-duplicate.spec.ts",
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [],
       "semanticReviewStatus": "REVIEWED"
     },
     {

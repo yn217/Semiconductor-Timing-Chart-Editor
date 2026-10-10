@@ -151,6 +151,21 @@ describe("Scenario canonical model adapter", () => {
     expect(validateScenarioDocumentModel(next)).toEqual([]);
   });
 
+  it("gives a Signal added in one Scenario its own Transition IDs in every other Scenario", () => {
+    const initial = scenarioModelFromV2(canonicalFixture());
+    const model = duplicateScenario(initial, initial.scenarios[0]!.id);
+    const [first, copy] = model.scenarios;
+    const base = projectScenarioAsV2(model, first!.id);
+    const added = { id: "sig_added", name: "added", display: { name: "added" }, type: "bus", role: "internal", width: 8, source: { instancePath: ["dut"], signalName: "added" }, values: [{ id: "added_value_0", start: 0, value: "00" }] } as unknown as (typeof base.signals)[number];
+    let next: ReturnType<typeof updateScenarioModelFromV2Projection>;
+    try { next = updateScenarioModelFromV2Projection(model, first!.id, { ...base, signals: [...base.signals, added], signalGroups: base.signalGroups.map((group, index) => index === 0 ? { ...group, rows: [...group.rows, "sig_added"] } : group) }); } catch (e) { throw new Error(JSON.stringify((e as { problems?: unknown }).problems)); }
+    expect(validateScenarioDocumentModel(next)).toEqual([]);
+    const ids = next.scenarios.map((scenario) => (scenario.signalStates["sig_added" as keyof typeof scenario.signalStates] as { values: { id?: string }[] }).values[0]!.id);
+    expect(ids[0]).toBe("added_value_0");
+    expect(ids[1]).not.toBe(ids[0]);
+    expect(copy!.id).not.toBe(first!.id);
+  });
+
   it("renames and deletes Scenarios by stable ID while preserving the final Scenario", () => {
     const initial = scenarioModelFromV2(canonicalFixture());
     const first = initial.scenarios[0]!;
