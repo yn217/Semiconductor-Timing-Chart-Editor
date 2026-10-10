@@ -231,7 +231,7 @@ test("cross-highlights stable linked Signals when a Transaction is selected", as
   await ready(page);
   await createTransaction(page, "Linked Packet", 2, 6);
   const inspector = page.getByTestId("inspector");
-  await linkSignal(inspector, "REQUEST");
+  await linkSignal(page, "REQUEST");
   const historyBeforeSelection = await page.getByTestId("history-status").textContent();
   const surface = page.getByTestId("cycle-surface");
   const before = {
