@@ -5,6 +5,7 @@ import { normalizeDocument, parseJsonInput, scanJsonSyntax, serializeCanonicalDo
 import { replaceSelectedJsonObject } from "./json-selection.js";
 import { selectedJsonProblem } from "./json-problems.js";
 import { advancedJsonDraftStaleReason, captureAdvancedJsonDraftBase, resolveAdvancedJsonEntityTarget } from "./advanced-json-draft-base.js";
+import { MAX_OPEN_FILE_BYTES } from "./file-document-controller.js";
 
 export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, selectedAnnotation, selectedTransaction, documentEpoch, projectionGeneration, revision, onReplaceDocument, onDiagnostic }: { readonly document: CanonicalDocument; readonly selectedSignal: Signal | undefined; readonly selectedGroup: SignalGroup | undefined; readonly selectedAnnotation: Annotation | undefined; readonly selectedTransaction: Transaction | undefined; readonly documentEpoch: number; readonly projectionGeneration: number; readonly revision: number; readonly onReplaceDocument: (document: CanonicalDocument) => CommandResult; readonly onDiagnostic: (diagnostic: DocumentProblem | readonly DocumentProblem[] | undefined) => void }) {
   const [scope, setScope] = useState<"selected" | "document">("document");
@@ -126,6 +127,13 @@ export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, sel
       setStatus(`Stale draft — ${staleReason}`);
       return;
     }
+    // Same byte ceiling as File Open, so a document applied here can always be saved and reopened.
+    const draftBytes = new Blob([draft]).size;
+    if (draftBytes > MAX_OPEN_FILE_BYTES) {
+      onDiagnostic({ code: "RESOURCE_LIMIT_EXCEEDED", path: "$", message: `Apply rejected: the JSON draft is ${draftBytes.toLocaleString()} bytes; the limit is ${MAX_OPEN_FILE_BYTES.toLocaleString()} bytes, the same as Open.`, expected: String(MAX_OPEN_FILE_BYTES), value: draftBytes, severity: "error", operation: "document.json.apply", operationLabel: "Apply Advanced JSON", source: "validation", stage: "parse", recommendation: "Reduce the document size to within the Open limit, then Apply again.", detail: `advanced-json:apply-byte-budget;actualBytes=${draftBytes};allowedBytes=${MAX_OPEN_FILE_BYTES}` });
+      setStatus(`Apply rejected: draft is ${draftBytes.toLocaleString()} bytes; the limit is ${MAX_OPEN_FILE_BYTES.toLocaleString()}`);
+      return;
+    }
     const value = parseDraft();
     if (value === undefined) return; // Preserve parse/resource diagnostics, including line and column.
     if (typeof value !== "object" || value === null || Array.isArray(value)) { setStatus("JSON object required"); return; }
@@ -149,10 +157,13 @@ export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, sel
     if (!normalized.ok) return;
     const result = onReplaceDocument(normalized.document);
     if (!result.ok) { setStatus(`Apply failed: ${result.reason}`); return; }
+    // Report the same migration notices Open shows (information, not problems) so repaired or rounded values are never silent.
+    const notices = normalized.warnings.map((warning, index) => ({ code: warning.code, path: `${warning.path}[migration:${index}]`, message: warning.message, severity: "info" as const, operation: "document.json.apply", operationLabel: "Apply Advanced JSON", source: "validation" as const, stage: "validate" as const, recommendation: "Review the migrated value, then save the document.", detail: `advanced-json:apply-notice:${index}` }));
+    if (notices.length > 0) onDiagnostic(notices);
     setAdvanced(false);
     setUserEdited(false);
     setStaleDraft(false);
-    setStatus("Applied");
+    setStatus(notices.length === 0 ? "Applied" : `Applied with ${notices.length} notice${notices.length === 1 ? "" : "s"} · ${notices[0]!.code} · ${notices[0]!.message}`);
   };
   return <section className="json-panel" data-testid="json-panel"><div className="json-toolbar"><strong>JSON</strong><button type="button" data-testid="json-advanced-toggle" aria-pressed={advanced} onClick={() => setAdvanced((value) => !value)}>{advanced ? "Read Only" : "Advanced Editable"}</button><span aria-label="JSON editing mode">{advanced ? "Advanced" : "Read only"}</span>{advanced && draftChanged && <span data-testid="json-unapplied-status">● Unapplied changes</span>}<select aria-label="JSON scope" value={scope} onChange={(event) => changeScope(event.target.value as typeof scope)}><option value="selected">Selected Object</option><option value="document">Whole Document</option></select><button type="button" onClick={format}>Format</button><button type="button" onClick={validate}>Validate</button><button type="button" onClick={() => void copy()}>Copy</button>{advanced && draftChanged && <button type="button" data-testid="cancel-advanced-json" onClick={cancel}>Cancel</button>}{advanced && staleDraft && <button type="button" data-testid="reload-latest-advanced-json" onClick={reloadLatest}>Reload latest</button>}{advanced && draftChanged && <button type="button" data-testid="apply-advanced-json" onClick={apply}>Apply JSON</button>}<output>{status}</output></div>{advanced ? <textarea aria-label="Advanced JSON" value={draft} onChange={(event) => { if (!userEdited || !draftChanged) draftBaseRef.current = captureAdvancedJsonDraftBase(scope, draftContext, selectedTarget); setUserEdited(true); setDraft(event.target.value); }} spellCheck={false} /> : <pre>{scope === "selected" ? selectedText : text}</pre>}</section>;
 }

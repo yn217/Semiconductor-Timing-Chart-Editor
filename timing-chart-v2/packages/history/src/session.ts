@@ -15,11 +15,13 @@ import {
   type CanonicalSessionMetrics,
   type CanonicalSnapshot,
   type CanonicalStore,
+  type ValidationProblem,
 } from "@timing-chart-v2/core";
-import { isStableId, type CanonicalDocument, type CommandId, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
+import { canonicalDocumentsEqual, isStableId, type CanonicalDocument, type CommandId, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
 import { HISTORY_RETENTION_POLICY, type HistoryController, type HistoryEntry, type HistoryMetrics, type HistoryState, type RecordedAction } from "./types.js";
 
 const noHistory = (operation: "Undo" | "Redo"): CommandResult => ({ ok: false, reason: "no-op", problems: [{ code: "NO_HISTORY", path: "$", message: `${operation} history is empty.` }] });
+const noOpBatch = (problems: readonly ValidationProblem[]): CommandResult => ({ ok: false, reason: "no-op", problems });
 
 // #275: a professional editor session must not retain unbounded Undo
 // history forever -- an open-ended array of HistoryEntry (each holding a
@@ -134,26 +136,49 @@ export class CommandHistorySession implements CanonicalStore, SemanticCommandDis
     const annotationPlan = planAnnotationUpdateBatch(before.document, commands);
     if (annotationPlan) {
       if (!annotationPlan.ok) return { ok: false, reason: annotationPlan.reason, problems: annotationPlan.problems };
-      return this.#commit({ id, type: "batch", commands }, before, annotationPlan.document, annotationPlan.changeSet, annotationPlan.inverseChangeSet);
+      return this.#commitBatch(id, commands, before, annotationPlan.document, annotationPlan.changeSet, annotationPlan.inverseChangeSet);
     }
     let candidate = before.document;
     const forward: ChangeSet[] = [];
     const inverse: ChangeSet[] = [];
     const renameCommands = commands.every((command): command is Extract<SemanticCommand, { type: "signal.rename" }> => command.type === "signal.rename") ? commands : undefined;
-    const commandsToPlan: readonly SemanticCommand[] = renameCommands && renameCommands.length > 1
-      ? [{ id, type: "signal.bulkRename", updates: renameCommands.map(({ signalId, name }) => ({ signalId, name })) }]
-      : commands;
+    let commandsToPlan: readonly SemanticCommand[] = commands;
+    // Bulk renames use one planner pass, but signal.bulkRename aborts as a whole when any Signal already has
+    // its requested name. With distinct Signals the members are independent, so already-named renames are
+    // dropped before bulking. Repeated Signal IDs depend on order and keep the sequential path below.
+    if (renameCommands && renameCommands.length > 1 && new Set(renameCommands.map((command) => command.signalId)).size === renameCommands.length) {
+      const namesById = new Map(before.document.signals.map((signal) => [signal.id, signal.name] as const));
+      const pendingRenames = renameCommands.filter((command) => namesById.get(command.signalId) !== command.name.trim());
+      if (pendingRenames.length === 0) return noOpBatch([{ code: "NO_OP", path: "$", message: "Atomic batch leaves the document unchanged." }]);
+      commandsToPlan = pendingRenames.length === 1
+        ? pendingRenames
+        : [{ id, type: "signal.bulkRename", updates: pendingRenames.map(({ signalId, name }) => ({ signalId, name })) }];
+    }
+    let firstNoOp: readonly ValidationProblem[] | undefined;
     for (const command of commandsToPlan) {
       const plan = planCommand(candidate, command);
-      if (!plan.ok) return { ok: false, reason: plan.reason, problems: plan.problems };
+      if (!plan.ok) {
+        // A member that would leave the document unchanged is skipped; later
+        // members see the same document they would have seen without it.
+        // Real failures still abort the whole batch atomically.
+        if (plan.reason !== "no-op") return { ok: false, reason: plan.reason, problems: plan.problems };
+        firstNoOp ??= plan.problems;
+        continue;
+      }
       candidate = plan.document;
       forward.push(plan.changeSet);
       inverse.push(plan.inverseChangeSet);
     }
+    if (forward.length === 0) return noOpBatch(firstNoOp ?? []);
     // Inverse change sets are merged in reverse command order; push + one reverse avoids O(K^2) unshift.
     inverse.reverse();
-    const action: RecordedAction = { id, type: "batch", commands };
-    return this.#commit(action, before, candidate, mergeChangeSets(forward), mergeChangeSets(inverse));
+    return this.#commitBatch(id, commands, before, candidate, mergeChangeSets(forward), mergeChangeSets(inverse));
+  }
+
+  /** A batch whose final document equals its starting document is a no-op: no history entry, no Modified state. */
+  #commitBatch(id: CommandId, commands: readonly SemanticCommand[], before: CanonicalSnapshot, candidate: CanonicalDocument, changeSet: ChangeSet, inverseChangeSet: ChangeSet): CommandResult {
+    if (candidate !== before.document && canonicalDocumentsEqual(before.document, candidate)) return noOpBatch([{ code: "NO_OP", path: "$", message: "Atomic batch leaves the document unchanged." }]);
+    return this.#commit({ id, type: "batch", commands }, before, candidate, changeSet, inverseChangeSet);
   }
 
   #commit(action: RecordedAction, before: CanonicalSnapshot, candidate: CanonicalDocument, changeSet: ChangeSet, inverseChangeSet: ChangeSet, scopedSignalChange?: Readonly<{ kind: "rename" | "role"; signalId: string }>): CommandResult {

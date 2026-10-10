@@ -18,16 +18,26 @@ export function planAnnotationUpdateBatch(document: CanonicalDocument, commands:
   const updates = new Map<AnnotationId, Annotation>();
   const forward: ChangeSet[] = [];
   const inverse: ChangeSet[] = [];
+  let firstNoOp: Extract<CommandPlanResult, { ok: false }> | undefined;
   for (const command of commands) {
     const annotation = updates.get(command.annotationId) ?? byId.get(command.annotationId);
     // Reuse each command's existing validation and ChangeSet contract against
     // its target, retaining all non-Annotation semantic context unchanged.
     const plan = planCommand({ ...document, annotations: annotation ? [annotation] : [] }, command);
-    if (!plan.ok) return plan;
+    if (!plan.ok) {
+      // A member that would leave its target unchanged is skipped: it adds no
+      // ChangeSet and does not alter the document later members see. Real
+      // failures still abort the whole batch.
+      if (plan.reason !== "no-op") return plan;
+      firstNoOp ??= plan;
+      continue;
+    }
     updates.set(command.annotationId, plan.document.annotations[0]!);
     forward.push(plan.changeSet);
     inverse.push(plan.inverseChangeSet);
   }
+  // Every member was a no-op: the batch as a whole is a no-op.
+  if (forward.length === 0) return firstNoOp;
   return {
     ok: true,
     document: { ...document, annotations: document.annotations.map((annotation) => updates.get(annotation.id) ?? annotation) },
