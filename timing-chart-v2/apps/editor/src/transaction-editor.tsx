@@ -7,6 +7,7 @@ import { createEntityIdAllocator, nextEntityId } from "./entity-id.js";
 import type { TransactionEditorCommandActions } from "./application/editor-surface-command-controller.js";
 import { DraftStatus } from "./draft-status.js";
 import { transactionInsertion } from "./transaction-insertion.js";
+import { nextTransactionGroupDraft } from "./application/transaction-group-naming.js";
 import { selectedTransactionsInDocumentOrder } from "./runtime/transaction-selection-index.js";
 
 export function TransactionEditor({ transaction, selectedTransactionIds, document, cyclesPerTc: perTc = 10, history, onSelect, onSelectTransactions, commands, onUndo, onRedo, onDelete, onCancel }: { readonly transaction: Transaction | undefined; readonly selectedTransactionIds?: ReadonlySet<TransactionId>; readonly document: CanonicalDocument; readonly cyclesPerTc?: number; readonly history: HistoryState; readonly onSelect: (id: TransactionId, additive?: boolean) => void; readonly onSelectTransactions: (ids: ReadonlySet<TransactionId>, primary?: TransactionId) => void; readonly commands: TransactionEditorCommandActions; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void }) {
@@ -180,8 +181,7 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
   };
   const addTransactionGroup = () => {
     const id = nextEntityId("transactionGroup", document) as TransactionGroup["id"];
-    const order = document.transactionGroups?.length ?? 0;
-    commands.createTransactionGroup({ id, name: `Group ${order + 1}`, order });
+    commands.createTransactionGroup({ id, ...nextTransactionGroupDraft(document.transactionGroups) });
   };
   const moveSelectedToGroup = (groupId: TransactionGroup["id"] | undefined) => {
     if (selectedIds.size > 1) bulkMoveToGroup(groupId);

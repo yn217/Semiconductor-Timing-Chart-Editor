@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T18:44:33.188Z",
+  "generatedAt": "2026-10-10T18:58:51.343Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 466,
-  "caseCount": 1400,
-  "reviewedCaseCount": 1342,
+  "specFileCount": 467,
+  "caseCount": 1401,
+  "reviewedCaseCount": 1343,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 492,
+    "pr": 493,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -32483,6 +32483,33 @@
       "contractId": "transaction-ribbon-ungroup-applicability"
     },
     {
+      "file": "transaction-group-naming-review-fixes.spec.ts",
+      "suitePath": [],
+      "line": 10,
+      "title": "a Group created after deleting a middle Group gets a unique name",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "transaction-groups",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "New Transaction Groups take the lowest unused Group N name and a fresh order.",
+      "duplicateGroup": "transaction-groups",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review found auto-named Transaction Groups colliding.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "transaction-groups",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
       "file": "transaction-gui-authoring.spec.ts",
       "suitePath": [],
       "line": 3,
@@ -40899,6 +40926,15 @@
       "file": "transaction-group-management.spec.ts",
       "caseCount": 4,
       "reviewedCaseCount": 4,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "transaction-group-naming-review-fixes.spec.ts",
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],

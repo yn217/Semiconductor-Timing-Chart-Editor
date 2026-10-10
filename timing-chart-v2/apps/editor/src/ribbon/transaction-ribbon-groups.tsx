@@ -1,5 +1,6 @@
 import type { CanonicalDocument, Transaction, TransactionGroup, TransactionId } from "@timing-chart-v2/schema";
 import type { EditorSurfaceCommandController } from "../application/editor-surface-command-controller.js";
+import { nextTransactionGroupDraft } from "../application/transaction-group-naming.js";
 import { nextEntityId } from "../entity-id.js";
 import { TransactionTimeScalePanel } from "../transaction-time-scale-panel.js";
 import type { RibbonGroupSpec } from "../ribbon-schema.js";
@@ -50,8 +51,7 @@ export function buildTransactionRibbonGroups(context: TransactionRibbonContext):
   // button -- same `transactionGroup.create` command/ID generation.
   const addTransactionGroup = () => {
     const id = nextEntityId("transactionGroup", document) as TransactionGroup["id"];
-    const order = document.transactionGroups?.length ?? 0;
-    commands.createTransactionGroup({ id, name: `Group ${order + 1}`, order });
+    commands.createTransactionGroup({ id, ...nextTransactionGroupDraft(document.transactionGroups) });
   };
   return [
     {

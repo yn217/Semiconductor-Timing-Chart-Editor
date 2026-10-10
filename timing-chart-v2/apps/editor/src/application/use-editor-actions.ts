@@ -22,6 +22,7 @@ import { createBottomEditorActions } from "./bottom-editor-actions.js";
 import { transactionInsertion } from "../transaction-insertion.js";
 import { createRevealAIEntityAction, createSelectAIEntityAction } from "./ai-entity-reveal.js";
 import { createSelectionGroupActions, nextSignalGroupName } from "./selection-group-actions.js";
+import { nextTransactionGroupDraft } from "./transaction-group-naming.js";
 
 export interface EditorActionsInput {
   readonly document: CanonicalDocument;
@@ -274,11 +275,11 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
   // one command, select nothing extra (Groups aren't a selectable entity).
   const createTransactionGroup = () => {
     const id = nextEntityId("transactionGroup", input.document) as TransactionGroup["id"];
-    const order = input.document.transactionGroups?.length ?? 0;
+    const draft = nextTransactionGroupDraft(input.document.transactionGroups);
     input.commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", {
       id: input.nextCommandId("tree_transaction_group_create"),
       type: "transactionGroup.create",
-      group: { id, name: `Group ${order + 1}`, order },
+      group: { id, ...draft },
     });
   };
   const renameTransactionGroup = (groupId: TransactionGroup["id"], name: string) => {

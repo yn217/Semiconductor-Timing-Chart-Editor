@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 466 spec files and 1400 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 467 spec files and 1401 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1342/1400 cases reviewed.
+Semantic review progress: 1343/1401 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 634 |
 | `nightly` | 241 |
 | `performance` | 73 |
-| `pr` | 492 |
+| `pr` | 493 |
 | `visual` | 181 |
 
 ## Top recorded per-case runtimes
@@ -473,6 +473,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `transaction-empty-state-create-lane-fix.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-export.spec.ts` | 16 | 16/16 reviewed |
 | `transaction-group-management.spec.ts` | 4 | 4/4 reviewed |
+| `transaction-group-naming-review-fixes.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-gui-authoring.spec.ts` | 2 | 2/2 reviewed |
 | `transaction-inspector-apply-validation.spec.ts` | 3 | 3/3 reviewed |
 | `transaction-inspector-bottom-draft-sync.spec.ts` | 1 | 1/1 reviewed |

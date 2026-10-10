@@ -4,6 +4,7 @@ import type { Bookmark, BookmarkId, CanonicalDocument, Transaction, TransactionI
 import { transactionLaneIdentityKey } from "@timing-chart-v2/projection";
 import { resizeTransactionEdge, transactionResizeRange } from "@timing-chart-v2/commands";
 import { EditorIcon } from "../editor-icon.js";
+import { compareLaneIds } from "../application/transaction-group-naming.js";
 import type { TransactionLaneCommandActions } from "../application/editor-surface-command-controller.js";
 import { InlineNameInput } from "../inline-name-input.js";
 import { registerActiveGestureCancel } from "./active-gesture-cancellation.js";
@@ -586,12 +587,12 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
           lanesByGroup.get(key)!.add(lane);
         }
         const ordered = [...groups].sort((left, right) => left.order - right.order);
-        const result: Section[] = ordered.map((group) => ({ groupId: group.id, label: group.name, color: group.color, lanes: [...(lanesByGroup.get(group.id) ?? [])].sort() }));
-        const ungroupedLanes = [...(lanesByGroup.get(undefined) ?? [])].sort();
+        const result: Section[] = ordered.map((group) => ({ groupId: group.id, label: group.name, color: group.color, lanes: [...(lanesByGroup.get(group.id) ?? [])].sort(compareLaneIds) }));
+        const ungroupedLanes = [...(lanesByGroup.get(undefined) ?? [])].sort(compareLaneIds);
         if (ungroupedLanes.length > 0) result.push({ groupId: undefined, label: "Ungrouped", color: undefined, lanes: ungroupedLanes });
         return result;
       })()
-    : [{ groupId: undefined, label: undefined, color: undefined, lanes: [...new Set(["lane_0", ...document.transactions.map((transaction) => transaction.laneId ?? "lane_0")])].sort() }], [document.transactions, groups, hasGroups]);
+    : [{ groupId: undefined, label: undefined, color: undefined, lanes: [...new Set(["lane_0", ...document.transactions.map((transaction) => transaction.laneId ?? "lane_0")])].sort(compareLaneIds) }], [document.transactions, groups, hasGroups]);
 
   const { groupHeaders, laneBands, laneBandByKey, totalHeight } = useMemo(() => {
     const groupHeaders: GroupHeaderBand[] = [];

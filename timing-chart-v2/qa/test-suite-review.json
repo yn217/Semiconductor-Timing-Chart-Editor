@@ -18468,6 +18468,24 @@
       "decision": "KEEP",
       "reason": "Code review found Signal Inspector type/width defects.",
       "replacementTest": null
+    },
+    {
+      "file": "transaction-group-naming-review-fixes.spec.ts",
+      "title": "a Group created after deleting a middle Group gets a unique name",
+      "domain": "transaction-groups",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "New Transaction Groups take the lowest unused Group N name and a fresh order.",
+      "duplicateGroup": "transaction-groups",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found auto-named Transaction Groups colliding.",
+      "replacementTest": null
     }
   ]
 }
