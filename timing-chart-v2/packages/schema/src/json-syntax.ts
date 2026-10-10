@@ -26,8 +26,15 @@ function context(source: string, offset: number): Pick<JsonSyntaxDiagnostic, "ex
   return { excerpt, caret: `${" ".repeat(Math.min(column, 160))}^` };
 }
 
+/**
+ * The scanner recurses once per nesting level. This cap is far above the document
+ * depth budget (128) but keeps hostile input from exhausting the call stack.
+ */
+const MAX_SCANNER_NESTING_DEPTH = 512;
+
 class JsonSyntaxScanner {
   private index = 0;
+  private depth = 0;
   private failure: JsonSyntaxDiagnostic | undefined;
   constructor(private readonly source: string) {}
 
@@ -48,8 +55,15 @@ class JsonSyntaxScanner {
   private value(): void {
     if (this.failure) return;
     const character = this.source[this.index];
-    if (character === "{") return this.object();
-    if (character === "[") return this.array();
+    if (character === "{" || character === "[") {
+      if (this.depth >= MAX_SCANNER_NESTING_DEPTH) return void this.fail(this.index, "JSON nesting is too deep.");
+      this.depth += 1;
+      try {
+        return character === "{" ? this.object() : this.array();
+      } finally {
+        this.depth -= 1;
+      }
+    }
     if (character === '"') return void this.string();
     if (character === "-" || /[0-9]/.test(character ?? "")) return void this.number();
     for (const literal of ["true", "false", "null"]) {

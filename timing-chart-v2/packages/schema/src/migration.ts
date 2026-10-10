@@ -191,8 +191,11 @@ function normalizeSignal(value: unknown, index: number, warnings: MigrationWarni
   }
 
   common.values = normalizeChanges(source.values, type === "state" ? "IDLE" : type === "bus" ? "X" : 0, warnings, `$.signals[${index}].values`, usedIds, claimedChangeIds);
-  optionalNumber(common, "width", source.width);
-  if (["hex", "binary", "decimal", "signed", "unsigned", "symbolic"].includes(text(source.displayFormat))) common.displayFormat = source.displayFormat;
+  // The canonical schema allows width and displayFormat only on bus Signals; copying them onto other value types fails validation.
+  if (type === "bus") {
+    optionalNumber(common, "width", source.width);
+    if (["hex", "binary", "decimal", "signed", "unsigned", "symbolic"].includes(text(source.displayFormat))) common.displayFormat = source.displayFormat;
+  }
   // Newer fields already present in a v1-tagged file are carried verbatim; canonical validation
   // (INVALID_ENUM_DEFINITION / INVALID_RESET_SEMANTICS) judges them exactly as on the v2 path.
   if (typeof source.enumId === "string") common.enumId = source.enumId;
@@ -220,21 +223,46 @@ const POINT_MAP: Readonly<Record<string, AnchorPoint>> = {
   "transition-end": "transition-end",
 };
 
-function normalizeAnchor(value: unknown, fallbackSignal: SignalId | undefined, externalOffset: unknown, warnings: MigrationWarning[], path: string): MutableRecord {
+/**
+ * Choose the signal for a legacy anchor that names none, such that the resulting anchor satisfies the
+ * canonical point/signal contract: value and transition points need a non-clock timing signal, edge points
+ * need a logic-like signal, and no point may target a comment row. The first clock is still preferred when it fits.
+ */
+function compatibleFallbackSignal(point: AnchorPoint, signals: readonly Signal[]): SignalId | undefined {
+  const fits = (signal: Signal): boolean => {
+    if (signal.type === "commentRow") return false;
+    if (point === "value-start" || point === "value-center" || point.startsWith("transition-")) return signal.type !== "clock";
+    if (point === "rising-edge" || point === "falling-edge") return signal.type !== "bus" && signal.type !== "state" && signal.type !== "event";
+    return true;
+  };
+  const candidates = signals.filter(fits);
+  return (candidates.find((signal) => signal.type === "clock") ?? candidates[0])?.id;
+}
+
+function normalizeAnchor(value: unknown, signals: readonly Signal[], externalOffset: unknown, warnings: MigrationWarning[], path: string): MutableRecord {
   const source = record(value);
   const sourceOffset = record(source.offset ?? externalOffset);
-  const signalId = text(source.signalId, text(source.signal, fallbackSignal));
+  let point: AnchorPoint = POINT_MAP[text(source.point, text(source.anchor, text(source.edge, "cycle-start")))] ?? "cycle-start";
+  let signalId = text(source.signalId, text(source.signal));
+  if (!signalId) {
+    const fallback = compatibleFallbackSignal(point, signals);
+    if (fallback) signalId = fallback;
+    else if (point !== "cycle-start" && point !== "cycle-center" && point !== "cycle-end") {
+      warnings.push({ code: "MIGRATED_ANCHOR_POINT_FALLBACK", path, message: `Anchor point '${point}' has no compatible timing signal in this document; it was migrated as a cycle-start anchor.` });
+      point = "cycle-start";
+    }
+  }
   return {
     ...(signalId ? { signalId } : {}),
     cycle: roundCycle(source.cycle, 0, warnings, `${path}.cycle`),
-    point: POINT_MAP[text(source.point, text(source.anchor, text(source.edge, "cycle-start")))] ?? "cycle-start",
+    point,
     offset: { x: number(sourceOffset.x, 0), y: number(sourceOffset.y, 0) },
     ...(typeof source.threshold === "number" ? { threshold: source.threshold } : {}),
     ...(jsonObject(source.transition) ? { transition: jsonObject(source.transition) } : {}),
   };
 }
 
-function normalizeAnnotation(value: unknown, index: number, fallbackSignal: SignalId | undefined, warnings: MigrationWarning[], usedIds: Set<string>): Annotation {
+function normalizeAnnotation(value: unknown, index: number, signals: readonly Signal[], warnings: MigrationWarning[], usedIds: Set<string>): Annotation {
   const source = record(value);
   const typeMap: Readonly<Record<string, string>> = { dependencyArrow: "dependency", vline: "verticalLine", "vertical-line": "verticalLine" };
   const sourceType = text(source.type, "text");
@@ -249,7 +277,7 @@ function normalizeAnnotation(value: unknown, index: number, fallbackSignal: Sign
   if (typeof source.comment === "string") result.comment = source.comment;
   const offsets: Readonly<Record<string, unknown>> = { anchor: source.offset, start: source.startOffset ?? source.offset, end: source.endOffset ?? source.offset, from: source.startOffset, to: source.endOffset };
   for (const key of ["anchor", "start", "end", "from", "to"] as const) {
-    if (source[key] !== undefined) result[key] = normalizeAnchor(source[key], fallbackSignal, offsets[key], warnings, `$.annotations[${index}].${key}`);
+    if (source[key] !== undefined) result[key] = normalizeAnchor(source[key], signals, offsets[key], warnings, `$.annotations[${index}].${key}`);
   }
   if (source.labelOffset !== undefined) {
     const offset = record(source.labelOffset);
@@ -334,7 +362,6 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
   const legacySignals = list(source.signals ?? cycleView.signals);
   const signals = legacySignals.map((value, index) => normalizeSignal(value, index, warnings, usedIds, claimedChangeIds));
   const signalIds = new Set(signals.map((signal) => signal.id));
-  const fallbackSignal = signals.find((signal) => signal.type === "clock")?.id ?? signals[0]?.id;
   const referenceClockSignal = signals.find((signal) => signal.type === "clock")?.id;
   const legacyReferenceClock = text(timebase.referenceClock);
   const legacyReferenceClockValid = legacyReferenceClock !== "" && signals.some((signal) => signal.id === legacyReferenceClock && signal.type === "clock");
@@ -384,7 +411,7 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
     if (!groups.some((group) => group.rows.includes(id))) warnings.push({ code: "MIGRATION_ORPHAN_ROW", path: "$.signalGroups", message: `Signal '${id}' remains orphaned and will be rejected by validation.` });
   }
 
-  const annotations = list(source.annotations ?? cycleView.annotations).map((value, index) => normalizeAnnotation(value, index, fallbackSignal, warnings, usedIds));
+  const annotations = list(source.annotations ?? cycleView.annotations).map((value, index) => normalizeAnnotation(value, index, signals, warnings, usedIds));
   const transactions = list(source.transactions ?? transactionView.transactions).map((value, index) => normalizeTransaction(value, index, warnings, usedIds));
   const transactionTimeScale = record(source.transactionTimeScale);
   const transactionGroups = list(source.transactionGroups).map((value, index) => { const item = record(value); return { id: migrationId(item, "transactionGroup", index, usedIds), name: text(item.name, `Transaction Group ${index + 1}`), ...(typeof item.color === "string" ? { color: item.color } : {}), order: Number.isInteger(item.order) && Number(item.order) >= 0 ? Number(item.order) : index }; });

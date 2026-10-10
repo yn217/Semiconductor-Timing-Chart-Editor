@@ -145,7 +145,8 @@ const DERIVED_OR_TRANSIENT_KEYS = new Set([
 
 function requiredBits(value: string | number, format?: BusValueFormat): number | undefined {
   if (typeof value === "number") {
-    if (!Number.isSafeInteger(value) || value < 0) return undefined;
+    // Numeric bus literals follow parseBusValue: non-negative safe integers only. Anything else is not a supported literal.
+    if (!Number.isSafeInteger(value) || value < 0) return Number.NaN;
     return value === 0 ? 1 : value.toString(2).length;
   }
   try {
@@ -159,6 +160,9 @@ function requiredBits(value: string | number, format?: BusValueFormat): number |
   }
 }
 
+/** Clock enable tokens accepted by the renderer and exporter (case-insensitive). */
+const CLOCK_ENABLE_VALUES: ReadonlySet<string> = new Set(["0", "1", "true", "false", "high", "low"]);
+
 function validateChanges(signal: Signal, changes: readonly SignalValueChange[], path: string, cycleCount: number, problems: DocumentProblem[]): void {
   let previous = -1;
   changes.forEach((change, index) => {
@@ -168,6 +172,9 @@ function validateChanges(signal: Signal, changes: readonly SignalValueChange[], 
     }
     if (change.start <= previous) problems.push(problem("CHANGE_POINTS_NOT_STRICTLY_SORTED", `${changePath}.start`, "Change points must be strictly increasing with no duplicate start.", signal.id));
     previous = change.start;
+    if (signal.type === "clock" && !CLOCK_ENABLE_VALUES.has(String(change.value).toLowerCase())) {
+      problems.push(problem("UNSUPPORTED_SIGNAL_VALUE", `${changePath}.value`, `Clock enable value '${String(change.value)}' must be 1, 0, true, false, high, or low.`, signal.id));
+    }
     if (signal.type === "bus" && signal.width !== undefined) {
       const bits = requiredBits(change.value, change.displayFormat ?? (signal.type === "bus" ? signal.displayFormat : undefined));
       if (Number.isNaN(bits)) problems.push(problem("INVALID_BUS_LITERAL", `${changePath}.value`, "Bus value is neither a supported literal nor a symbolic identifier.", signal.id));
@@ -332,6 +339,7 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
     }
     if (annotation.type === "ghostTrace") {
       if (!annotation.sourceSignalId) problems.push(problem("MISSING_CROSS_REFERENCE", `$.annotations[${index}].sourceSignalId`, "Ghost Trace requires a source Signal.", annotation.id));
+      else if (signals.get(annotation.sourceSignalId)?.type === "commentRow") problems.push(problem("NON_TIMING_ANCHOR_TARGET", `$.annotations[${index}].sourceSignalId`, "Ghost Trace source must be a timing signal, not a comment row.", annotation.id));
 
       if (annotation.traceOffsetCycles !== undefined && !Number.isFinite(annotation.traceOffsetCycles)) problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].traceOffsetCycles`, "Ghost Trace cycle offset must be finite.", annotation.id));
     }
