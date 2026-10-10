@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 451 spec files and 1349 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 452 spec files and 1353 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1291/1349 cases reviewed.
+Semantic review progress: 1295/1353 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 634 |
 | `nightly` | 241 |
 | `performance` | 73 |
-| `pr` | 441 |
+| `pr` | 445 |
 | `visual` | 181 |
 
 ## Top recorded per-case runtimes
@@ -103,6 +103,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `callout-body-anchor-drag.spec.ts` | 3 | 3/3 reviewed |
 | `checkbox-dark-color-scheme.spec.ts` | 1 | 1/1 reviewed |
 | `clipboard-entity-parity.spec.ts` | 6 | 6/6 reviewed |
+| `clock-generator-review-fixes.spec.ts` | 3 | 3/3 reviewed |
 | `clock-generator-toolbar-icon-size.spec.ts` | 1 | 1/1 reviewed |
 | `clock-presentation-closure.spec.ts` | 2 | 2/2 reviewed |
 | `clock-preview.spec.ts` | 4 | 4/4 reviewed |
@@ -140,7 +141,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `file-ribbon-blank-controls.spec.ts` | 1 | 1/1 reviewed |
 | `file-shortcuts.spec.ts` | 2 | 2/2 reviewed |
 | `find-replace-journey.spec.ts` | 3 | 3/3 reviewed |
-| `find-replace-literal-replacement.spec.ts` | 1 | 1/1 reviewed |
+| `find-replace-literal-replacement.spec.ts` | 2 | 2/2 reviewed |
 | `font-style-commit-contract.spec.ts` | 1 | 1/1 reviewed |
 | `full-gui.spec.ts` | 42 | 42/42 reviewed |
 | `ghost-trace-delete.spec.ts` | 1 | 1/1 reviewed |

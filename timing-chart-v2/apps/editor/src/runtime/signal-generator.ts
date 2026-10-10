@@ -38,9 +38,10 @@ export function generateSignalPulseValues(params: SignalGeneratorParams): readon
   for (let index = 0; index < maxPulses; index += 1) {
     if (suppressedPeriods.includes(index)) continue;
     const pulseStart = effectiveStart + index * period;
-    if (pulseStart < 0 || pulseStart >= cycleCount) continue;
     const pulseEnd = pulseStart + width;
-    points.set(pulseStart, active);
+    // A pulse that starts before cycle 0 (negative Phase) is clipped at 0 rather than dropped.
+    if (pulseStart >= cycleCount || pulseEnd <= 0) continue;
+    points.set(Math.max(0, pulseStart), active);
     if (pulseEnd < cycleCount) points.set(pulseEnd, initial);
   }
   return Object.freeze([...points.entries()].sort((left, right) => left[0] - right[0]).map(([changeStart, value]) => ({ start: changeStart, value })));

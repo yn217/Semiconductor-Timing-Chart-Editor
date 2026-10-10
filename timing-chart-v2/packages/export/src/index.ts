@@ -120,13 +120,17 @@ function valueChangesForWindow(signal: ValueSignal, start: number, end: number):
     else high = middle;
   }
   const active = low > 0 ? signal.values[low - 1] : undefined;
+  // Carry every per-change field (displayLabel, displayFormat, id, comment)
+  // exactly as the full-document path passes it to the WaveDrom conversion.
+  // The synthesized window-start change inherits the presentation of the
+  // change active at that cycle.
   const changes: ValueSignal["values"][number][] = active === undefined
     ? []
-    : [{ start: 0, value: active.value, ...(active.displayLabel === undefined ? {} : { displayLabel: active.displayLabel }) }];
+    : [{ ...active, start: 0 }];
   for (let index = low; index < signal.values.length; index += 1) {
     const change = signal.values[index]!;
     if (change.start >= end) break;
-    changes.push({ start: change.start - start, value: change.value, ...(change.displayLabel === undefined ? {} : { displayLabel: change.displayLabel }) });
+    changes.push({ ...change, start: change.start - start });
   }
   return changes;
 }

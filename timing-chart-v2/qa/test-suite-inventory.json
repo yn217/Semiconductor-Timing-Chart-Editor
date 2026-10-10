@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T17:18:31.962Z",
+  "generatedAt": "2026-10-10T17:24:42.086Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 451,
-  "caseCount": 1349,
-  "reviewedCaseCount": 1291,
+  "specFileCount": 452,
+  "caseCount": 1353,
+  "reviewedCaseCount": 1295,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 441,
+    "pr": 445,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -4946,6 +4946,87 @@
       "contractId": "semantic-clipboard-entity-parity"
     },
     {
+      "file": "clock-generator-review-fixes.spec.ts",
+      "suitePath": [],
+      "line": 16,
+      "title": "applying Edge Counter keeps an unapplied Generator draft",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "clock-editor-drafts",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Bottom Clock editor sections keep each other's unapplied drafts and import syncs the Suppressed periods text.",
+      "duplicateGroup": "clock-editor-drafts",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code-review findings fixed in clock-generator-editor.tsx.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "clock-editor-drafts",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "clock-generator-review-fixes.spec.ts",
+      "suitePath": [],
+      "line": 25,
+      "title": "applying the Generator keeps an unapplied Edge Counter draft",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "clock-editor-drafts",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Bottom Clock editor sections keep each other's unapplied drafts and import syncs the Suppressed periods text.",
+      "duplicateGroup": "clock-editor-drafts",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code-review findings fixed in clock-generator-editor.tsx.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "clock-editor-drafts",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "clock-generator-review-fixes.spec.ts",
+      "suitePath": [],
+      "line": 36,
+      "title": "importing clock settings updates the Suppressed periods field",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "clock-editor-drafts",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Bottom Clock editor sections keep each other's unapplied drafts and import syncs the Suppressed periods text.",
+      "duplicateGroup": "clock-editor-drafts",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code-review findings fixed in clock-generator-editor.tsx.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "clock-editor-drafts",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
       "file": "clock-generator-toolbar-icon-size.spec.ts",
       "suitePath": [],
       "line": 10,
@@ -7296,6 +7377,33 @@
         "pr"
       ],
       "contractId": "find-replace-literal",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "find-replace-literal-replacement.spec.ts",
+      "suitePath": [],
+      "line": 16,
+      "title": "Replace All still renames the other matches when one match is already the replacement",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "find-replace-unchanged-rows",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Matches whose name would not change are skipped, so the remaining matches are still renamed.",
+      "duplicateGroup": "find-replace-unchanged-rows",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code-review finding: one unchanged match made the whole bulk rename a silent no-op.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "find-replace-unchanged-rows",
       "runtimeMeasurementScope": "CASE"
     },
     {
@@ -35713,6 +35821,15 @@
       "semanticReviewStatus": "REVIEWED"
     },
     {
+      "file": "clock-generator-review-fixes.spec.ts",
+      "caseCount": 3,
+      "reviewedCaseCount": 3,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
       "file": "clock-generator-toolbar-icon-size.spec.ts",
       "caseCount": 1,
       "reviewedCaseCount": 1,
@@ -36083,8 +36200,8 @@
     },
     {
       "file": "find-replace-literal-replacement.spec.ts",
-      "caseCount": 1,
-      "reviewedCaseCount": 1,
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
