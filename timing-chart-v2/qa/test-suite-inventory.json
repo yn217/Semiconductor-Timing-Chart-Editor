@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T14:49:21.322Z",
+  "generatedAt": "2026-10-10T14:59:54.474Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 445,
-  "caseCount": 1331,
-  "reviewedCaseCount": 1273,
+  "specFileCount": 446,
+  "caseCount": 1333,
+  "reviewedCaseCount": 1275,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 423,
+    "pr": 425,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -7057,6 +7057,60 @@
         "visual"
       ],
       "contractId": "file-ribbon-visible-control-layout"
+    },
+    {
+      "file": "file-shortcuts.spec.ts",
+      "suitePath": [],
+      "line": 3,
+      "title": "Ctrl+S saves, Ctrl+Shift+S opens Save As and Ctrl+O opens the file chooser",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "file-shortcuts",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "The standard document shortcuts drive Save, Save As and Open instead of the browser's page dialogs.",
+      "duplicateGroup": "file-shortcuts",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Only the real key presses show whether the browser default is prevented.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "file-shortcuts",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "file-shortcuts.spec.ts",
+      "suitePath": [],
+      "line": 22,
+      "title": "Ctrl+S inside a text field still saves the document",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "file-shortcuts",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Ctrl+S while a text field has focus still saves the document.",
+      "duplicateGroup": "file-shortcuts",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Text fields are excluded from most global shortcuts; saving must not depend on focus.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "file-shortcuts",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "find-replace-journey.spec.ts",
@@ -35552,6 +35606,15 @@
         "getComputedStyle",
         "geometryRead"
       ],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "file-shortcuts.spec.ts",
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [],
       "semanticReviewStatus": "REVIEWED"
     },
     {

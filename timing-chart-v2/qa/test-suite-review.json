@@ -17226,6 +17226,42 @@
       "decision": "KEEP",
       "reason": "Same contract as Cycle for the Combined nested viewport.",
       "replacementTest": null
+    },
+    {
+      "file": "file-shortcuts.spec.ts",
+      "title": "Ctrl+S saves, Ctrl+Shift+S opens Save As and Ctrl+O opens the file chooser",
+      "domain": "file-shortcuts",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "The standard document shortcuts drive Save, Save As and Open instead of the browser's page dialogs.",
+      "duplicateGroup": "file-shortcuts",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Only the real key presses show whether the browser default is prevented.",
+      "replacementTest": null
+    },
+    {
+      "file": "file-shortcuts.spec.ts",
+      "title": "Ctrl+S inside a text field still saves the document",
+      "domain": "file-shortcuts",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Ctrl+S while a text field has focus still saves the document.",
+      "duplicateGroup": "file-shortcuts",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Text fields are excluded from most global shortcuts; saving must not depend on focus.",
+      "replacementTest": null
     }
   ]
 }

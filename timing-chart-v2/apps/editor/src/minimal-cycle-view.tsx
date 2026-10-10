@@ -817,6 +817,26 @@ export function MinimalCycleView() {
     window.addEventListener("drop", onDrop);
     return () => { window.removeEventListener("dragover", onDragOver); window.removeEventListener("drop", onDrop); };
   }, []);
+  // Ctrl/Cmd+S saves, Ctrl/Cmd+Shift+S opens Save As, Ctrl/Cmd+O opens a file -- the browser's own "Save page" / "Open file" must never appear in a document editor.
+  const fileShortcutRef = useRef<(key: "s" | "S" | "o") => void>(() => undefined);
+  fileShortcutRef.current = (key) => {
+    if (key === "s") documentLifecycle.save(documentFilename(snapshot.document.document.title));
+    else if (key === "S") { dialogOriginLabelRef.current = "Save As"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setSaveAsVisible(true); }
+    else { pendingFileOriginRef.current = globalThis.document.activeElement instanceof HTMLElement ? globalThis.document.activeElement : null; fileInput.current?.click(); }
+  };
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.isComposing) return;
+      const key = event.key.toLowerCase();
+      if (key !== "s" && key !== "o") return;
+      if (key === "o" && event.shiftKey) return;
+      event.preventDefault();
+      if (document.querySelector("[role='dialog'][aria-modal='true']")) return;
+      fileShortcutRef.current(key === "o" ? "o" : event.shiftKey ? "S" : "s");
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
   return <EditorShellView
     viewModel={{
       style: { "--gui-left-width": `${modeComposition.fixedLeftWidth ?? leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px`, "--gui-role-width": `${snapshot.document.layout.roleColumnWidth}px`, "--gui-signal-width": `${snapshot.document.layout.signalNameWidth}px`, "--gui-signal-align": snapshot.document.layout.signalNameAlign, "--gui-signal-split-upper-ratio": String(signalSplitRatio), "--transaction-tree-row-height": viewMode === "Transaction" ? "29px" : undefined } as React.CSSProperties,
