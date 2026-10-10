@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T14:38:07.508Z",
+  "generatedAt": "2026-10-10T14:49:21.322Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 444,
-  "caseCount": 1329,
-  "reviewedCaseCount": 1271,
+  "specFileCount": 445,
+  "caseCount": 1331,
+  "reviewedCaseCount": 1273,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 421,
+    "pr": 423,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -11298,7 +11298,7 @@
     {
       "file": "issue-175-scrollbar-geometry-matrix.spec.ts",
       "suitePath": [],
-      "line": 38,
+      "line": 40,
       "title": "Timeline scrollbar follows its owner through panel, zoom, mode and document changes at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -11324,7 +11324,7 @@
     {
       "file": "issue-175-scrollbar-geometry-matrix.spec.ts",
       "suitePath": [],
-      "line": 38,
+      "line": 40,
       "title": "Timeline scrollbar follows its owner through panel, zoom, mode and document changes at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -34609,6 +34609,60 @@
       "contractId": "zoom-cross-surface-semantic-x-alignment"
     },
     {
+      "file": "zoom-out-scroll-extent.spec.ts",
+      "suitePath": [],
+      "line": 4,
+      "title": "Combined: below 100% zoom the timeline cannot be scrolled past its end into blank space",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "zoom-out-scroll-extent",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "At 50% zoom the Combined shared horizontal scroll stops at the zoomed content width.",
+      "duplicateGroup": "zoom-out-scroll-extent",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Same contract as Cycle for the Combined nested viewport.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "zoom-out-scroll-extent",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "zoom-out-scroll-extent.spec.ts",
+      "suitePath": [],
+      "line": 4,
+      "title": "Cycle: below 100% zoom the timeline cannot be scrolled past its end into blank space",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "zoom-out-scroll-extent",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "At 50% zoom the horizontal scroll stops at the zoomed content width, not the 100% width.",
+      "duplicateGroup": "zoom-out-scroll-extent",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Transform scaling leaves the layout width at 100%, so only a real scroll shows the blank region.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "zoom-out-scroll-extent",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
       "file": "zoom-text-fidelity.spec.ts",
       "suitePath": [],
       "line": 7,
@@ -35945,6 +35999,7 @@
       "originIssue": "175",
       "declaredTimeoutMs": 240,
       "candidateSignals": [
+        "dataset",
         "geometryRead"
       ],
       "semanticReviewStatus": "REVIEWED"
@@ -39304,6 +39359,17 @@
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "zoom-out-scroll-extent.spec.ts",
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [
+        "explicitWait"
+      ],
       "semanticReviewStatus": "REVIEWED"
     },
     {

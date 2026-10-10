@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 444 spec files and 1329 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 445 spec files and 1331 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1271/1329 cases reviewed.
+Semantic review progress: 1273/1331 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 634 |
 | `nightly` | 241 |
 | `performance` | 73 |
-| `pr` | 421 |
+| `pr` | 423 |
 | `visual` | 181 |
 
 ## Top recorded per-case runtimes
@@ -502,6 +502,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `workspace-preset-density.spec.ts` | 1 | 1/1 reviewed |
 | `workspace-zoom-isolation.spec.ts` | 2 | 2/2 reviewed |
 | `zoom-cross-surface-alignment.spec.ts` | 1 | 1/1 reviewed |
+| `zoom-out-scroll-extent.spec.ts` | 2 | 2/2 reviewed |
 | `zoom-text-fidelity.spec.ts` | 5 | 5/5 reviewed |
 
 ## Static review candidates
@@ -548,7 +549,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `issue-1080-transition-row-selection.spec.ts` | querySelector |
 | `issue-175-prefetch-scroll-layout.spec.ts` | dataset |
 | `issue-175-scroll-group-header-dom.spec.ts` | dataset |
-| `issue-175-scrollbar-geometry-matrix.spec.ts` | geometryRead |
+| `issue-175-scrollbar-geometry-matrix.spec.ts` | dataset, geometryRead |
 | `issue-175-virtualized-group-start.spec.ts` | dataset |
 | `issue-208-open-epoch-coherence.spec.ts` | querySelector |
 | `issue-219-wave-url-lifetime.spec.ts` | querySelector, explicitWait |
@@ -712,6 +713,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `view-ribbon-slot.spec.ts` | querySelector, getComputedStyle, dataset, geometryRead |
 | `visual-grammar-cross-component.spec.ts` | querySelector, geometryRead |
 | `wavedrom-shared-definitions.spec.ts` | querySelector, styleMutation, directDomMutation, explicitWait |
+| `zoom-out-scroll-extent.spec.ts` | explicitWait |
 | `zoom-text-fidelity.spec.ts` | getComputedStyle, dataset, geometryRead, explicitWait |
 
 ## Exact-title duplicate candidates

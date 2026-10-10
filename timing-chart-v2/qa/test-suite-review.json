@@ -17190,6 +17190,42 @@
       "decision": "KEEP",
       "reason": "Covers the unsupported-file branch of the drop handler.",
       "replacementTest": null
+    },
+    {
+      "file": "zoom-out-scroll-extent.spec.ts",
+      "title": "Cycle: below 100% zoom the timeline cannot be scrolled past its end into blank space",
+      "domain": "zoom-out-scroll-extent",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "At 50% zoom the horizontal scroll stops at the zoomed content width, not the 100% width.",
+      "duplicateGroup": "zoom-out-scroll-extent",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Transform scaling leaves the layout width at 100%, so only a real scroll shows the blank region.",
+      "replacementTest": null
+    },
+    {
+      "file": "zoom-out-scroll-extent.spec.ts",
+      "title": "Combined: below 100% zoom the timeline cannot be scrolled past its end into blank space",
+      "domain": "zoom-out-scroll-extent",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "At 50% zoom the Combined shared horizontal scroll stops at the zoomed content width.",
+      "duplicateGroup": "zoom-out-scroll-extent",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Same contract as Cycle for the Combined nested viewport.",
+      "replacementTest": null
     }
   ]
 }
