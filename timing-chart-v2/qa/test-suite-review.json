@@ -16902,6 +16902,42 @@
       "decision": "KEEP",
       "reason": "Native control colours only resolve in a real browser under prefers-color-scheme: dark.",
       "replacementTest": null
+    },
+    {
+      "file": "cycle-short-window-bottom.spec.ts",
+      "title": "Cycle Bottom editor stays inside the window at 650px tall",
+      "domain": "cycle-short-window",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "On a short browser viewport the Cycle Bottom editor ends above the status bar and inside the window.",
+      "duplicateGroup": "cycle-short-window",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The Main area minimum used to push the Bottom editor under the status bar; only real layout shows it.",
+      "replacementTest": null
+    },
+    {
+      "file": "cycle-short-window-bottom.spec.ts",
+      "title": "Cycle Bottom editor stays inside the window at 600px tall",
+      "domain": "cycle-short-window",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "On a short browser viewport the Cycle Bottom editor ends above the status bar and inside the window.",
+      "duplicateGroup": "cycle-short-window",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The Main area minimum used to push the Bottom editor under the status bar; only real layout shows it.",
+      "replacementTest": null
     }
   ]
 }

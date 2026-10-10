@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T10:53:14.045Z",
+  "generatedAt": "2026-10-10T11:04:39.165Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 433,
-  "caseCount": 1313,
-  "reviewedCaseCount": 1255,
+  "specFileCount": 434,
+  "caseCount": 1315,
+  "reviewedCaseCount": 1257,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 405,
+    "pr": 407,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -5726,6 +5726,60 @@
         "integration"
       ],
       "contractId": "cycle-ruler-grid-scroll-geometry"
+    },
+    {
+      "file": "cycle-short-window-bottom.spec.ts",
+      "suitePath": [],
+      "line": 8,
+      "title": "Cycle Bottom editor stays inside the window at 600px tall",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "cycle-short-window",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "On a short browser viewport the Cycle Bottom editor ends above the status bar and inside the window.",
+      "duplicateGroup": "cycle-short-window",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The Main area minimum used to push the Bottom editor under the status bar; only real layout shows it.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "cycle-short-window",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "cycle-short-window-bottom.spec.ts",
+      "suitePath": [],
+      "line": 8,
+      "title": "Cycle Bottom editor stays inside the window at 650px tall",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "cycle-short-window",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "On a short browser viewport the Cycle Bottom editor ends above the status bar and inside the window.",
+      "duplicateGroup": "cycle-short-window",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The Main area minimum used to push the Bottom editor under the status bar; only real layout shows it.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "cycle-short-window",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "dark-scheme-contrast.spec.ts",
@@ -34870,6 +34924,15 @@
     },
     {
       "file": "cycle-scroll-pitch-invariant.spec.ts",
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "cycle-short-window-bottom.spec.ts",
       "caseCount": 2,
       "reviewedCaseCount": 2,
       "originIssue": null,
