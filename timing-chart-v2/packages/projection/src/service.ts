@@ -137,7 +137,7 @@ export class DefaultProjectionService implements ProjectionService {
     const layout = this.#layout;
     const navigationLayout = this.#navigationLayout;
     this.#projectionBuilds += 1;
-    if (!groupStylePreviewChanged && request.previous && request.snapshot.revision === request.previous.revision && Object.keys(request.changeSet).length === 0 && request.previous.collapsedGroupIds.join("\u0000") === collapsedGroupKey) {
+    if (!groupStylePreviewChanged && request.previous && request.snapshot.revision === request.previous.revision && Object.keys(request.changeSet).length === 0 && request.previous.collapsedGroupIds.join("\u0000") === collapsedGroupKey && request.previous.signalTreeFilter === signalTreeFilter && request.previous.signalTreeTypeFilter === signalTreeTypeFilter) {
       this.#viewportOnlyBuilds += 1;
       return this.#projectViewportOnly(request, layout);
     }

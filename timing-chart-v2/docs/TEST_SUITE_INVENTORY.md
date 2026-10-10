@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 431 spec files and 1311 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 432 spec files and 1312 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1253/1311 cases reviewed.
+Semantic review progress: 1254/1312 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 634 |
 | `nightly` | 241 |
 | `performance` | 73 |
-| `pr` | 403 |
+| `pr` | 404 |
 | `visual` | 181 |
 
 ## Top recorded per-case runtimes
@@ -26,6 +26,7 @@ These are case-level observations recorded directly on case reviews. Inventory g
 | 28400 | `visual` | `issue-441-ribbon-label-integrity.spec.ts` | Ribbon labels are intact across Cycle, Transaction and Combined at 1672x941 |
 | 25200 | `visual` | `issue-441-ribbon-label-integrity.spec.ts` | Ribbon labels are intact across Cycle, Transaction and Combined at 1280x720 |
 | 25100 | `visual` | `issue-441-ribbon-label-integrity.spec.ts` | Ribbon labels are intact across Cycle, Transaction and Combined at 1024x700 |
+| 14000 | `pr` | `timeline-edits-stable-ids.spec.ts` | Timeline Delete range and Insert commit on a document with stable value IDs |
 | 13900 | `pr` | `issue-753-bookmark-navigation-stays-in-app.spec.ts` | every Bookmark gesture stays inside the SPA in Combined mode |
 | 13400 | `pr` | `issue-753-bookmark-navigation-stays-in-app.spec.ts` | every Bookmark gesture stays inside the SPA in Cycle mode |
 | 12000 | `pr` | `combined-signal-pane-scroll.spec.ts` | Combined Signal rows scroll into view above the Bottom editor |
@@ -41,7 +42,6 @@ These are case-level observations recorded directly on case reviews. Inventory g
 | 8100 | `pr` | `issue-767-zoom-keeps-glyph-shape.spec.ts` | a narrow Transaction bar keeps a body drag handle and can be moved |
 | 7700 | `visual` | `left-pane-constraint.spec.ts` | left pane starts at the approved minimum without a resize jump (/) |
 | 7600 | `pr` | `issue-744-diagnostics-freshness.spec.ts` | timing diagnostics stay current across a semantic edit, Undo and Redo (no silent clear) |
-| 7000 | `pr` | `combined-tree-add-menus.spec.ts` | Combined Signals and Transactions Add menus each open and stay open |
 
 ## Recorded spec-level runtimes
 
@@ -427,6 +427,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `time-group-lifecycle.spec.ts` | 1 | 1/1 reviewed |
 | `time-mapping-scale-closure.spec.ts` | 1 | 1/1 reviewed |
 | `timeline-editor.spec.ts` | 29 | 29/29 reviewed |
+| `timeline-edits-stable-ids.spec.ts` | 1 | 1/1 reviewed |
 | `timeline-range-100k.spec.ts` | 3 | 3/3 reviewed |
 | `timeline-range-band-presentation.spec.ts` | 9 | 9/9 reviewed |
 | `timeline-range-edit-readability.spec.ts` | 3 | 3/3 reviewed |
@@ -665,6 +666,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `stable-id-collision.spec.ts` | querySelector |
 | `stable-surface.spec.ts` | dataset |
 | `timeline-editor.spec.ts` | dataset, geometryRead |
+| `timeline-edits-stable-ids.spec.ts` | explicitWait |
 | `timeline-range-100k.spec.ts` | querySelector, dataset, geometryRead |
 | `timeline-range-edit-readability.spec.ts` | geometryRead |
 | `timing-grid-x-scale-closure.spec.ts` | querySelector, dataset, geometryRead |

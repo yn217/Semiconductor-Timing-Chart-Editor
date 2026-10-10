@@ -16866,6 +16866,24 @@
       "decision": "KEEP",
       "reason": "Row visibility above the Bottom editor depends on real layout and a wheel gesture.",
       "replacementTest": null
+    },
+    {
+      "file": "timeline-edits-stable-ids.spec.ts",
+      "title": "Timeline Delete range and Insert commit on a document with stable value IDs",
+      "domain": "timeline-ripple-stable-ids",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 14000,
+      "primaryContract": "Timeline Delete range and Insert commit as history entries on a document whose value changes carry stable IDs, without duplicate-ID rejection.",
+      "duplicateGroup": "timeline-ripple-stable-ids",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The failure (duplicate value-change IDs after a ripple) is only visible through the committed command on the production sample.",
+      "replacementTest": null
     }
   ]
 }

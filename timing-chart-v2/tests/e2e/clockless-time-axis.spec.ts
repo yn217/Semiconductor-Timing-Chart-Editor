@@ -155,7 +155,7 @@ test("Transaction clipboard preserves semantic fields and uses fresh IDs", async
   await page.getByLabel("Ribbon tabs").getByRole("button", { name: "Transaction", exact: true }).click();
   const lanes = page.getByTestId("transaction-lanes");
   const original = lanes.locator("[data-transaction-id='txn_original']");
-  await original.click();
+  await original.click({ position: { x: 12, y: 4 } }); // the lower strip is the Phase hit target
   const edit = page.getByTestId("ribbon").locator(".home-edit-group");
   const before = await page.getByTestId("history-status").textContent();
   await edit.getByRole("button", { name: "Copy", exact: true }).click();
@@ -165,7 +165,7 @@ test("Transaction clipboard preserves semantic fields and uses fresh IDs", async
   // Lane bars no longer carry the Transaction name, so the duplicate is the one whose id is not the original.
   const copied = lanes.locator("[data-transaction-id]:not([data-transaction-id='txn_original'])");
   await expect(copied).toHaveCount(1);
-  await copied.click();
+  await copied.click({ position: { x: 12, y: 4 } });
   await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("0.1");
   await expect(page.getByTestId("inspector").getByLabel("Transaction end")).toHaveValue("0.5");
   await expect(page.getByTestId("inspector").getByLabel("Transaction lane")).toHaveValue("lane_0");

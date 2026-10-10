@@ -1165,7 +1165,7 @@ test("applies Transaction Inspector phases through one semantic operation", asyn
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
   // Verify the committed phases through the structured table itself
   // (re-selecting to force a fresh read of the committed document).
-  await page.getByTestId("transaction-lanes").locator("[data-transaction-id]").first().click();
+  await page.getByTestId("transaction-lanes").locator("[data-transaction-id]").first().click({ position: { x: 12, y: 4 } });
   await expect(inspector.getByLabel("Phase 1 name")).toHaveValue("Address");
   await expect(inspector.getByLabel("Phase 2 name")).toHaveValue("Data");
 });

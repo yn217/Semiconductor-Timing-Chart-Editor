@@ -324,11 +324,12 @@ function valueAt(changes: readonly SignalValueChange[], at: number): SignalValue
   return low > 0 ? changes[low - 1] : undefined;
 }
 
-function deleteChanges(changes: readonly SignalValueChange[], start: number, end: number, nextCycleCount: number): SignalValueChange[] {
+function deleteChanges(changes: readonly SignalValueChange[], start: number, end: number, nextCycleCount: number, signalId: string): SignalValueChange[] {
   const mapped = changes.filter((change) => change.start < start || change.start >= end).map((change) => change.start >= end ? { ...change, start: change.start - (end - start) } : change);
   if (start < nextCycleCount && !mapped.some((change) => change.start === start)) {
     const active = valueAt(changes, end);
-    if (active) mapped.push({ ...active, start });
+    // The surviving change keeps its own ID; the value carried onto the deletion boundary is a new change and needs a fresh one.
+    if (active) mapped.push(active.id === undefined ? { ...active, start } : { ...active, id: valueChangeIdAllocator.allocate(signalId, changes).id, start });
   }
   mapped.sort((left, right) => left.start - right.start);
   const deduplicated: SignalValueChange[] = [];
@@ -389,9 +390,9 @@ function deleteTimeline(document: CanonicalDocument, start: number, end: number)
     if (signal.type === "clock") return {
       ...signal,
       generator: { ...signal.generator, start: mapDeletePoint(signal.generator.start, start, end, nextCycleCount) },
-      ...(signal.enable ? { enable: deleteChanges(signal.enable, start, end, nextCycleCount) } : {}),
+      ...(signal.enable ? { enable: deleteChanges(signal.enable, start, end, nextCycleCount, `${signal.id}_enable`) } : {}),
     };
-    return mapResetDelete({ ...signal, values: deleteChanges(signal.values, start, end, nextCycleCount) }, start, end, nextCycleCount);
+    return mapResetDelete({ ...signal, values: deleteChanges(signal.values, start, end, nextCycleCount, signal.id) }, start, end, nextCycleCount);
   });
   const annotations = document.annotations.map((annotation) => deleteAnnotation(annotation, start, end, nextCycleCount)).filter((annotation): annotation is Annotation => annotation !== undefined);
   const retainedAnnotationIds = new Set(annotations.map((annotation) => annotation.id));
@@ -517,8 +518,19 @@ type RangeSegment = Readonly<{ from: number; to: number; outputStart: number }>;
 function sparseChangesFromSegments(changes: readonly SignalValueChange[], segments: readonly RangeSegment[]): SignalValueChange[] {
   const result: SignalValueChange[] = [];
   let previous: SignalValueChange | undefined;
+  // A change copied into the output (range duplicate / move) keeps its ID the first time; each further copy gets a derived unique one.
+  const usedIds = new Set<string>();
+  const reservedIds = new Set(changes.flatMap((change) => change.id ? [change.id] : []));
+  const idFor = (state: SignalValueChange): { readonly id: string } | Record<string, never> => {
+    if (state.id === undefined) return {};
+    let id = state.id;
+    let copy = 0;
+    while (usedIds.has(id) || (copy > 0 && reservedIds.has(id))) { copy += 1; id = `${state.id}_c${copy}`; }
+    usedIds.add(id);
+    return { id };
+  };
   const visit = (start: number, state: SignalValueChange | undefined) => {
-    if (state && !sameValue(state, previous)) result.push({ start, value: state.value, ...(state.displayFormat === undefined ? {} : { displayFormat: state.displayFormat }), ...(state.comment === undefined ? {} : { comment: state.comment }) });
+    if (state && !sameValue(state, previous)) result.push({ ...idFor(state), start, value: state.value, ...(state.displayFormat === undefined ? {} : { displayFormat: state.displayFormat }), ...(state.comment === undefined ? {} : { comment: state.comment }) });
     previous = state;
   };
   for (const segment of [...segments].filter((item) => item.to > item.from).sort((left, right) => left.outputStart - right.outputStart)) {

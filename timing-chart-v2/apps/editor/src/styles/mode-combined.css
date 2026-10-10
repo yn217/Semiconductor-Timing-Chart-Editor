@@ -114,7 +114,8 @@
   pointer-events: auto;
   /* Starts below the Cycle header's filter strip (it overlays the first 14px of the rail) and stops above the divider. */
   margin-top: 14px;
-  flex: 0 0 calc(clamp(160px, calc(var(--gui-signal-split-upper-ratio, 0.5) * 100%), 280px) - 22px);
+  /* Same height as the Transaction pane beside it, which yields to the Signal pane on short windows (the 145px is the divider, the Signals header and the Signal pane's 100px floor). */
+  flex: 0 0 calc(max(72px, min(clamp(160px, calc(var(--gui-signal-split-upper-ratio, 0.5) * 100%), 280px), 100% - 145px)) - 22px);
   background: #f8fafc;
   border-right: 1px solid #cbd4df;
 }

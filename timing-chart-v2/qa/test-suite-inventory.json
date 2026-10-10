@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T03:08:06.836Z",
+  "generatedAt": "2026-10-10T03:50:37.262Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 431,
-  "caseCount": 1311,
-  "reviewedCaseCount": 1253,
+  "specFileCount": 432,
+  "caseCount": 1312,
+  "reviewedCaseCount": 1254,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 403,
+    "pr": 404,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -512,7 +512,7 @@
     {
       "file": "acceptance-429-transaction-colors.spec.ts",
       "suitePath": [],
-      "line": 65,
+      "line": 66,
       "title": "Transaction Time Scale label reflects the document's authored 1 TC = 10 cycles",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -647,7 +647,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 88,
+      "line": 89,
       "title": "Transaction fully inside a collapsed TimeGroup remains selectable",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -674,7 +674,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 108,
+      "line": 109,
       "title": "Bookmark inside a collapsed TimeGroup is identified in the Bookmarks panel",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -701,7 +701,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 155,
+      "line": 156,
       "title": "Combined View keeps the shared fold visible in the Transaction pane",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -728,7 +728,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 176,
+      "line": 177,
       "title": "Transaction MiniMap marks collapsed source ranges without changing viewport policy",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -755,7 +755,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 191,
+      "line": 194,
       "title": "Range crossing a fold keeps source boundaries across Cycle and Transaction",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -782,7 +782,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 220,
+      "line": 223,
       "title": "Transaction reference composition at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -809,7 +809,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 220,
+      "line": 223,
       "title": "Transaction reference composition at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -836,7 +836,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 248,
+      "line": 252,
       "title": "Transaction canvas body and edge drags commit through the semantic command path",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -863,7 +863,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 300,
+      "line": 305,
       "title": "Transaction demo is available after a browser reload",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -890,7 +890,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 317,
+      "line": 322,
       "title": "Fold, Bookmark, and Transaction source values survive Save/Open",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -917,7 +917,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 341,
+      "line": 346,
       "title": "Moving a folded Transaction uses source-cycle geometry",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -944,7 +944,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 366,
+      "line": 371,
       "title": "Resizing a folded Transaction preserves the opposite source boundary and undoes",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -971,7 +971,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 402,
+      "line": 408,
       "title": "Transaction starting inside a fold shows a start-hidden affordance",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -998,7 +998,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 420,
+      "line": 426,
       "title": "Transaction ending inside a fold shows an end-hidden affordance",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1025,7 +1025,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 439,
+      "line": 445,
       "title": "Folded Transaction visual evidence at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1052,7 +1052,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 439,
+      "line": 445,
       "title": "Folded Transaction visual evidence at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1079,7 +1079,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 453,
+      "line": 459,
       "title": "Transaction sample is shown after reloading the default browser URL",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1106,7 +1106,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 464,
+      "line": 470,
       "title": "Transaction Tree drag moves a transaction into another group",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1133,7 +1133,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 474,
+      "line": 480,
       "title": "Transaction Tree group drag is one undoable and redoable semantic operation",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1160,7 +1160,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 491,
+      "line": 497,
       "title": "Transaction Tree group drag survives Save/Open",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1187,7 +1187,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 507,
+      "line": 513,
       "title": "Center additive selection projects to Tree and Bottom",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1214,7 +1214,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 522,
+      "line": 528,
       "title": "focused Transaction Tree row supports Delete shortcut",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1241,7 +1241,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 532,
+      "line": 538,
       "title": "Transaction Tree Shift-click selects all visible children in a group",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1268,7 +1268,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 542,
+      "line": 548,
       "title": "Transaction Tree group header supports left and right collapse navigation",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1295,7 +1295,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 553,
+      "line": 559,
       "title": "Transaction Tree Group menu shows and hides all child projections",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1322,7 +1322,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 566,
+      "line": 572,
       "title": "Transaction Tree Group menu selects all children",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1349,7 +1349,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 575,
+      "line": 581,
       "title": "Transaction Tree visibility control hides only the selected transaction projection",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1376,7 +1376,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "suitePath": [],
-      "line": 587,
+      "line": 593,
       "title": "focused Transaction Tree row supports F2 rename",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -28888,6 +28888,33 @@
       "contractId": "timeline-range-move-permutation"
     },
     {
+      "file": "timeline-edits-stable-ids.spec.ts",
+      "suitePath": [],
+      "line": 4,
+      "title": "Timeline Delete range and Insert commit on a document with stable value IDs",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "timeline-ripple-stable-ids",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 14000,
+      "primaryContract": "Timeline Delete range and Insert commit as history entries on a document whose value changes carry stable IDs, without duplicate-ID rejection.",
+      "duplicateGroup": "timeline-ripple-stable-ids",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The failure (duplicate value-change IDs after a ripple) is only visible through the committed command on the production sample.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "timeline-ripple-stable-ids",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
       "file": "timeline-range-100k.spec.ts",
       "suitePath": [],
       "line": 40,
@@ -38045,6 +38072,17 @@
       "candidateSignals": [
         "dataset",
         "geometryRead"
+      ],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "timeline-edits-stable-ids.spec.ts",
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [
+        "explicitWait"
       ],
       "semanticReviewStatus": "REVIEWED"
     },

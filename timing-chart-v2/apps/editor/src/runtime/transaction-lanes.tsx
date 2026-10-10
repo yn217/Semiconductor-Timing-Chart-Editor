@@ -134,6 +134,8 @@ function previewPhases(transaction: Transaction, preview: TransactionPreview, ed
  * (the full name stays in title / aria-label / the Inspector); the font is never shrunk. */
 const BAR_LABEL_MIN_PX = 56;
 const PHASE_LABEL_MIN_PX = 40;
+/** A press this close to a bar edge on a Phase hit target never becomes a body drag, so the edge resize handles keep their meaning. */
+const PHASE_PRESS_EDGE_PX = 8;
 const TRANSACTION_DRAG_THRESHOLD_PX = 4;
 
 function TransactionBar({ transaction, documentEpoch, viewMode, row, color, selected, selectedPhaseId, cycleCount, getBoundaryX, boundaryXByCycle, visibleBoundaryXs, foldRanges, onSnap, onSelect, onSelectPhase, commands, onContextMenu }: {
@@ -166,6 +168,8 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
   const dragPreviewUpdates = useRef(0);
   const dragSnapQueries = useRef(0);
   const dragThresholdCrossed = useRef(false);
+  // A press on a Phase hit target selects that Phase on click, but dragging from it moves the Transaction like its body.
+  const phasePress = useRef<number | undefined>(undefined);
   const current = preview ?? { start: transaction.start, end: transaction.end };
   const transactionFolds = transactionFoldRangesIntersecting(foldRanges, transaction.start, transaction.end);
   const startFold = transactionFoldContainingCycle(foldRanges, transaction.start);
@@ -258,7 +262,8 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
     event.stopPropagation();
     // Pin the active bar through horizontal viewport re-projection while the
     // captured pointer crosses the viewport boundary.
-    onSelect(transaction.id);
+    // A Ctrl/Cmd press is an additive selection: leave it to the click handler, which toggles instead of replacing.
+    if (!event.ctrlKey && !event.metaKey) onSelect(transaction.id);
     buttonRef.current?.setPointerCapture(event.pointerId);
     dragPointerMoves.current = 0;
     dragPreviewFrames.current = 0;
@@ -326,7 +331,7 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
     const from = resolveSegmentBoundary(segment.start, 1);
     const to = resolveSegmentBoundary(segment.end, -1);
     if (from === undefined || to === undefined || endX <= startX) return null;
-    return <button key={`${phase.id}:${segment.start}:${segment.end}`} type="button" className="transaction-phase-hit-target" data-phase-transaction-id={transaction.id} data-phase-id={phase.id} data-selected={String(selectedPhaseId === phase.id)} aria-pressed={selectedPhaseId === phase.id} aria-label={`${transaction.name}, phase ${phase.name}, cycles ${phase.start} to ${phase.end}`} title={`${phase.name}: ${phase.start}–${phase.end}`} style={{ left: from, width: Math.min(endX - from, Math.max(8, to - from)), top: 19 + row * LANE_ROW_HEIGHT }} onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); onSelectPhase(transaction.id, phase.id); }} />;
+    return <button key={`${phase.id}:${segment.start}:${segment.end}`} type="button" className="transaction-phase-hit-target" data-phase-transaction-id={transaction.id} data-phase-id={phase.id} data-selected={String(selectedPhaseId === phase.id)} aria-pressed={selectedPhaseId === phase.id} aria-label={`${transaction.name}, phase ${phase.name}, cycles ${phase.start} to ${phase.end}`} title={`${phase.name}: ${phase.start}–${phase.end}`} style={{ left: from, width: Math.min(endX - from, Math.max(8, to - from)), top: 19 + row * LANE_ROW_HEIGHT }} onPointerDown={(event) => { const bar = buttonRef.current?.getBoundingClientRect(); phasePress.current = bar && (event.clientX - bar.left < PHASE_PRESS_EDGE_PX || bar.right - event.clientX < PHASE_PRESS_EDGE_PX) ? undefined : event.clientX; }} onPointerMove={(event) => { if (phasePress.current !== undefined && event.buttons === 1 && Math.abs(event.clientX - phasePress.current) >= TRANSACTION_DRAG_THRESHOLD_PX) { phasePress.current = undefined; begin(event, "body"); } }} onPointerUp={() => { phasePress.current = undefined; }} onPointerCancel={() => { phasePress.current = undefined; }} onClick={(event) => { event.stopPropagation(); onSelectPhase(transaction.id, phase.id); }} />;
   })) : undefined;
   return <><button ref={buttonRef} type="button" data-transaction-id={transaction.id} data-selected={String(selected)} data-drag-preview={String(preview !== undefined)} title={transaction.name} aria-label={transaction.name} style={{ left: startX, width: endX - startX, top: 4 + row * LANE_ROW_HEIGHT, ...(color ? { "--transaction-color": color } as CSSProperties : {}) }} onClick={(event) => onSelect(transaction.id, event.ctrlKey || event.metaKey)} onContextMenu={(event) => { event.preventDefault(); onSelect(transaction.id); onContextMenu?.(event, transaction.id); }} onPointerMove={updatePreview} onPointerUp={finish} onPointerCancel={cancel}><i data-edge="start" onPointerDown={(event) => begin(event, "start")} />{startHiddenFold && <i className="transaction-fold-affordance" data-fold-affordance="start-hidden" title="Transaction starts inside collapsed range" aria-label="Transaction start hidden in collapsed range" /> }<span onPointerDown={(event) => begin(event, "body")} data-label-compact={String(endX - startX < BAR_LABEL_MIN_PX)}>{endX - startX < BAR_LABEL_MIN_PX ? "" : transaction.name}</span>{visibleSegments.length > 1 && visibleSegments.map((segment, index) => { const from = resolveSegmentBoundary(segment.start, 1); const to = resolveSegmentBoundary(segment.end, -1); return from === undefined || to === undefined ? null : <i key={`segment-${index}`} className="transaction-axis-segment" data-transaction-segment="true" aria-hidden="true" style={{ left: `${100 * (from - startX) / (endX - startX)}%`, width: `${100 * (to - from) / (endX - startX)}%` }} />; })}{gaps.map((gap, index) => <i key={`axis-break-${index}`} className="transaction-axis-break-gap" style={gap} aria-hidden="true" />)}<div className="transaction-phases" aria-hidden="true">{phases?.flatMap((phase) => phaseSegments(phase).map((segment, index) => { const from = resolveSegmentBoundary(segment.start, 1); const to = resolveSegmentBoundary(segment.end, -1); if (from === undefined || to === undefined || endX <= startX) return null; return <small key={`${phase.id}:${index}`} data-phase-id={phase.id} data-phase-segment="true" data-selected={String(selectedPhaseId === phase.id)} title={`${phase.name}: ${phase.start}–${phase.end}`} style={{ left: `${100 * (from - startX) / (endX - startX)}%`, width: `${100 * (to - from) / (endX - startX)}%` }}>{to - from < PHASE_LABEL_MIN_PX ? "" : phase.name}</small>; }))}</div>{endHiddenFold && <i className="transaction-fold-affordance" data-fold-affordance="end-hidden" title="Transaction ends inside collapsed range" aria-label="Transaction end hidden in collapsed range" /> }<i data-edge="end" onPointerDown={(event) => begin(event, "end")} /></button>{phaseButtons}</>;
 }
