@@ -72,6 +72,56 @@ function withValueChangeIds(document: CanonicalDocument, scenarioId: string): Ca
   return changed ? { ...document, signals } as CanonicalDocument : document;
 }
 
+/**
+ * Transition IDs are owned document-wide, but each Scenario's projection allocates new ones from its own values only, so two
+ * Scenarios can independently pick the same ID (e.g. both add a transition to one Signal). Rename the active projection's
+ * colliding IDs before reconciling; `changed` tells the caller to rebuild the projection so later commands see the new IDs.
+ */
+function withoutCrossScenarioValueIdCollisions(document: CanonicalDocument, model: ScenarioDocumentModel, scenarioId: ScenarioId): { readonly document: CanonicalDocument; readonly changed: boolean } {
+  const owned = new Set<string>();
+  for (const scenario of model.scenarios) {
+    if (scenario.id === scenarioId) continue;
+    for (const state of Object.values(scenario.signalStates)) {
+      if (!state) continue;
+      const changes = state.kind === "clock" ? state.enable ?? [] : state.values;
+      for (const change of changes) if (change.id !== undefined) owned.add(change.id);
+    }
+  }
+  if (owned.size === 0) return { document, changed: false };
+  const taken = new Set<string>(owned);
+  for (const signal of document.signals) {
+    if (signal.type === "commentRow") continue;
+    const changes = signal.type === "clock" ? signal.enable ?? [] : signal.values;
+    for (const change of changes) if (change.id !== undefined) taken.add(change.id);
+  }
+  const rename = <C extends { readonly id?: string }>(changes: readonly C[]): readonly C[] => {
+    if (!changes.some((change) => change.id !== undefined && owned.has(change.id))) return changes;
+    return changes.map((change) => {
+      if (change.id === undefined || !owned.has(change.id)) return change;
+      let id = `${change.id}_${scenarioId}`;
+      for (let n = 2; taken.has(id); n += 1) id = `${change.id}_${scenarioId}_${n}`;
+      taken.add(id);
+      return { ...change, id };
+    });
+  };
+  let changed = false;
+  const signals = document.signals.map((signal) => {
+    if (signal.type === "commentRow") return signal;
+    if (signal.type === "clock") {
+      if (!signal.enable) return signal;
+      const enable = rename(signal.enable);
+      if (enable === signal.enable) return signal;
+      changed = true;
+      return { ...signal, enable };
+    }
+    const values = rename(signal.values);
+    if (values === signal.values) return signal;
+    changed = true;
+    return { ...signal, values };
+  });
+  return changed ? { document: { ...document, signals } as CanonicalDocument, changed } : { document, changed };
+}
+
 export class ScenarioCommandHistorySession {
   #model: ScenarioDocumentModel;
   #activeScenarioId: ScenarioId;
@@ -216,8 +266,11 @@ export class ScenarioCommandHistorySession {
 
   #acceptProjection(action: RecordedAction, before: ScenarioDocumentModel, changeSet: ChangeSet, document: Readonly<CanonicalDocument>): CommandResult {
     let after: ScenarioDocumentModel;
+    let projectionIdsRenamed = false;
     try {
-      after = freezeModel(updateScenarioModelFromV2Projection(this.#model, this.#activeScenarioId, document as CanonicalDocument));
+      const reconciled = withoutCrossScenarioValueIdCollisions(document as CanonicalDocument, this.#model, this.#activeScenarioId);
+      projectionIdsRenamed = reconciled.changed;
+      after = freezeModel(updateScenarioModelFromV2Projection(this.#model, this.#activeScenarioId, reconciled.document));
     } catch (error) {
       this.#archiveProjectionMetrics();
       this.#activeProjection = this.#createProjection(before, this.#activeScenarioId);
@@ -227,6 +280,7 @@ export class ScenarioCommandHistorySession {
       return { ok: false, reason: "invalid", problems };
     }
     this.#model = after;
+    if (projectionIdsRenamed) { this.#archiveProjectionMetrics(); this.#activeProjection = this.#createProjection(after, this.#activeScenarioId); }
     this.#revision += 1;
     this.#undo.push({ action, before, after, beforeActiveScenarioId: this.#activeScenarioId, afterActiveScenarioId: this.#activeScenarioId, changeSet });
     this.#redo = [];

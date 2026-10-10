@@ -17316,6 +17316,114 @@
       "decision": "KEEP",
       "reason": "Guards the symmetrical mode switch.",
       "replacementTest": null
+    },
+    {
+      "file": "review-followups.spec.ts",
+      "title": "dismissing a popover with a right-click does not swallow the next left click",
+      "domain": "outside-dismiss-click",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "A right-click that dismisses a popover leaves no click swallower behind for the next left click.",
+      "duplicateGroup": "outside-dismiss-click",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code-review follow-up for consumeOutsidePointerDown.",
+      "replacementTest": null
+    },
+    {
+      "file": "review-followups.spec.ts",
+      "title": "Undo with nothing to undo keeps an earlier failed Open message",
+      "domain": "noop-keeps-message",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "A no-op Undo leaves the failed-Open operation message visible.",
+      "duplicateGroup": "noop-keeps-message",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code-review follow-up: no-op rejections used to clear unrelated messages.",
+      "replacementTest": null
+    },
+    {
+      "file": "zoom-out-scroll-extent.spec.ts",
+      "title": "zooming out while scrolled to the far right pulls the view back to the zoomed content end",
+      "domain": "zoom-out-scroll-extent",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Zooming below 100% while scrolled to the end clamps the position to the zoomed content end.",
+      "duplicateGroup": "zoom-out-scroll-extent",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code-review follow-up: zoom changes fire no scroll event.",
+      "replacementTest": null
+    },
+    {
+      "file": "scenario-add-signal-after-duplicate.spec.ts",
+      "title": "each Scenario can add a transition to the same Signal",
+      "domain": "scenario-value-id-collision",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "A transition added in a duplicated Scenario after one was added in the original is accepted (no cross-Scenario Transition ID collision).",
+      "duplicateGroup": "scenario-value-id-collision",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code-review finding: each Scenario projection allocated Transition IDs from its own values only.",
+      "replacementTest": null
+    },
+    {
+      "file": "titlebar-view-mode-overlap.spec.ts",
+      "title": "at 1100px a long title does not push the Scenario controls under the View Mode buttons",
+      "domain": "titlebar-view-mode-overlap",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "With a long Document title the Scenario controls stay left of the fixed View Mode group and remain clickable.",
+      "duplicateGroup": "titlebar-view-mode-overlap",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code-review finding: the fixed View Mode group covered Scenario buttons at narrow widths.",
+      "replacementTest": null
+    },
+    {
+      "file": "titlebar-view-mode-overlap.spec.ts",
+      "title": "at 900px a long title does not push the Scenario controls under the View Mode buttons",
+      "domain": "titlebar-view-mode-overlap",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "With a long Document title the Scenario controls stay left of the fixed View Mode group and remain clickable.",
+      "duplicateGroup": "titlebar-view-mode-overlap",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code-review finding: the fixed View Mode group covered Scenario buttons at narrow widths.",
+      "replacementTest": null
     }
   ]
 }

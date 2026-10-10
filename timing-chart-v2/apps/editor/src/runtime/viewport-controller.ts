@@ -48,6 +48,8 @@ export function applyTimelineZoom(next: number, context: TimelineZoomSurfaceCont
     // Publish the zoom; the horizontal scrollbar owner clamps scrolling to scrollWidth * zoom and sizes its thumb from it.
     const scrollOwner = timelineScrollOwner(context.viewport);
     if (zoom < 1) scrollOwner.dataset.scrollShrink = String(zoom); else delete scrollOwner.dataset.scrollShrink;
+    // Zooming out does not fire a scroll event: pull a position that is now past the shrunken end back to it.
+    if (zoom < 1) { const maxLeft = Math.max(0, Math.round(scrollOwner.scrollWidth * zoom) - scrollOwner.clientWidth); if (scrollOwner.scrollLeft > maxLeft) scrollOwner.scrollLeft = maxLeft; }
     // Scroll width changes are not observable through ResizeObserver on the
     // viewport itself. Notify view-only consumers such as MiniMap after the
     // zoom-owned width write has been applied.
