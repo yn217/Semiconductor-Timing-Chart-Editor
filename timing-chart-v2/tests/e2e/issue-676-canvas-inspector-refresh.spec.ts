@@ -40,14 +40,17 @@ for (const viewport of viewports) test(`canvas Annotation drag keeps Inspector/l
   const offsetField = inspector.getByLabel("Inspector annotation anchor X");
   const beforeOffset = await offsetField.inputValue();
   const box = (await handle.boundingBox())!;
+  const label = owner.locator("[data-role='annotation-label']");
+  const labelBefore = (await label.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
   await page.mouse.move(box.x + box.width / 2 + 90, box.y + box.height / 2, { steps: 6 });
   await page.mouse.up();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
 
-  const afterBox = (await handle.boundingBox())!;
-  expect(afterBox.x - box.x, JSON.stringify({ afterBox, box, annotationId })).toBeGreaterThan(20);
+  // Dragging the callout anchor handle moves the callout label by the offset; the anchor point itself stays on its cycle.
+  const labelAfter = (await label.boundingBox())!;
+  expect(labelAfter.x - labelBefore.x, JSON.stringify({ labelAfter, labelBefore, annotationId })).toBeGreaterThan(20);
   await expect(offsetField).not.toHaveValue(beforeOffset);
   const movedOffset = await offsetField.inputValue();
   await expect(selectedRow).toHaveAttribute("data-annotation-list-id", annotationId!);
