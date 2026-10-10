@@ -1,10 +1,28 @@
 import { describe, expect, it } from "vitest";
 import { ScenarioCommandHistorySession } from "../../packages/history/src/scenario-session.js";
 import { DOCUMENT_RESOURCE_BUDGET, type BookmarkId } from "@timing-chart-v2/schema";
-import { createScenariosFromHandshakeSuggestions, projectScenarioAsV2, scenarioModelFromV2 } from "../../packages/schema/src/scenario-model.js";
+import { createScenariosFromHandshakeSuggestions, projectScenarioAsV2, scenarioModelFromV2, validateScenarioDocumentModel } from "../../packages/schema/src/scenario-model.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 describe("ScenarioCommandHistorySession", () => {
+  it("lets two Scenarios each add a transition to the same Signal (Transition IDs stay unique document-wide)", () => {
+    const session = new ScenarioCommandHistorySession(scenarioModelFromV2(canonicalFixture()));
+    const first = session.scenarioModel().scenarios[0]!.id;
+    expect(session.execute({ id: "cmd_first_add" as never, type: "signal.updateValue", signalId: "sig_data" as never, start: 6, value: "11" }).ok).toBe(true);
+    const second = session.duplicateScenario(first);
+    session.switchScenario(second);
+    const added = session.execute({ id: "cmd_second_add" as never, type: "signal.updateValue", signalId: "sig_data" as never, start: 7, value: "22" });
+    expect(added.ok).toBe(true);
+    // The rebuilt projection carries the renamed ID, so editing that transition again still works.
+    expect(session.execute({ id: "cmd_second_edit" as never, type: "signal.updateValue", signalId: "sig_data" as never, start: 7, value: "33" }).ok).toBe(true);
+    session.switchScenario(first);
+    expect(session.execute({ id: "cmd_first_again" as never, type: "signal.updateValue", signalId: "sig_data" as never, start: 7, value: "44" }).ok).toBe(true);
+    expect(validateScenarioDocumentModel(session.scenarioModel())).toEqual([]);
+    while (session.historyState().canUndo) expect(session.undo().ok).toBe(true);
+    while (session.historyState().canRedo) expect(session.redo().ok).toBe(true);
+    expect(validateScenarioDocumentModel(session.scenarioModel())).toEqual([]);
+  });
+
   it("switches projections without dirtying and undoes edits globally across Scenarios", () => {
     const base = scenarioModelFromV2(canonicalFixture());
     const first = base.scenarios[0]!;

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T16:42:30.957Z",
+  "generatedAt": "2026-10-10T16:47:07.008Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -12,13 +12,13 @@
     "retryAndFlakySummary": null
   },
   "specFileCount": 449,
-  "caseCount": 1339,
-  "reviewedCaseCount": 1281,
+  "caseCount": 1340,
+  "reviewedCaseCount": 1282,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 431,
+    "pr": 432,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -27101,6 +27101,33 @@
       "runtimeMeasurementScope": "CASE"
     },
     {
+      "file": "scenario-add-signal-after-duplicate.spec.ts",
+      "suitePath": [],
+      "line": 34,
+      "title": "each Scenario can add a transition to the same Signal",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "scenario-value-id-collision",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "A transition added in a duplicated Scenario after one was added in the original is accepted (no cross-Scenario Transition ID collision).",
+      "duplicateGroup": "scenario-value-id-collision",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code-review finding: each Scenario projection allocated Transition IDs from its own values only.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "scenario-value-id-collision",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
       "file": "signal-editor-draft-survives-unrelated-edit.spec.ts",
       "suitePath": [],
       "line": 13,
@@ -38704,8 +38731,8 @@
     },
     {
       "file": "scenario-add-signal-after-duplicate.spec.ts",
-      "caseCount": 2,
-      "reviewedCaseCount": 2,
+      "caseCount": 3,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
