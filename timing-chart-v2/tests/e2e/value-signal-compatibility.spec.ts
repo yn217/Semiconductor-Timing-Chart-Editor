@@ -202,6 +202,19 @@ test("Event Table exposes one action route and visibly rejects invalid imports",
   expect(await host.getAttribute("data-canonical-revision")).toBe(before.revision);
   expect(await page.getByTestId("history-status").textContent()).toBe(before.history);
   expect(await page.getByTestId("dirty-status").textContent()).toBe(before.dirty);
+
+  await bottom.getByLabel("Import signal events").setInputFiles({
+    name: "duplicate-event-ids.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify({ values: [
+      { id: "duplicate_event_change", start: 0, value: "NONE" },
+      { id: "duplicate_event_change", start: 2, value: "RISE" },
+    ] })),
+  });
+  await expect(bottom.getByTestId("event-import-status")).toHaveText(/^Import rejected: .+/);
+  expect(await host.getAttribute("data-canonical-revision")).toBe(before.revision);
+  expect(await page.getByTestId("history-status").textContent()).toBe(before.history);
+  expect(await page.getByTestId("dirty-status").textContent()).toBe(before.dirty);
 });
 
 test("Event Table valid import uses canonical validation and one history entry", async ({ page }) => {
