@@ -1087,7 +1087,7 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       const signal = document.signals[index];
       if (!signal) return fail("invalid", "SIGNAL_NOT_FOUND", "$.signalId", `Signal '${command.signalId}' does not exist.`);
       if (signal.type !== "clock") return fail("invalid", "SIGNAL_NOT_CLOCK", "$.signalId", "Only Clock signals can use Clock conversion.");
-      const values: readonly SignalValueChange[] = [{ start: 0, value: command.targetType === "state" ? "IDLE" : command.targetType === "bus" ? "00" : 0 }];
+      const values: readonly SignalValueChange[] = [{ id: valueChangeIdAllocator.allocate(signal.id, []).id, start: 0, value: command.targetType === "state" ? "IDLE" : command.targetType === "bus" ? "00" : 0 }];
       const next: ValueSignal = command.targetType === "bus"
         ? { id: signal.id, name: signal.name, role: signal.role, type: "bus", source: signal.source, display: { ...signal.display }, values, width: 8, displayFormat: "hex", ...(signal.spacingBefore === undefined ? {} : { spacingBefore: signal.spacingBefore }), ...(signal.spacingAfter === undefined ? {} : { spacingAfter: signal.spacingAfter }) }
         : { id: signal.id, name: signal.name, role: signal.role, type: command.targetType, source: signal.source, display: { ...signal.display }, values, ...(signal.spacingBefore === undefined ? {} : { spacingBefore: signal.spacingBefore }), ...(signal.spacingAfter === undefined ? {} : { spacingAfter: signal.spacingAfter }) };
