@@ -1,5 +1,6 @@
 import type { TransactionPhase } from "@timing-chart-v2/schema";
 import { cyclesToTc, tcUnitLabel } from "./transaction-tc.js";
+import { randomId } from "./random-id.js";
 
 /**
  * #751: the Phase draft model shared by the Bottom editor and the Inspector.
@@ -12,7 +13,7 @@ import { cyclesToTc, tcUnitLabel } from "./transaction-tc.js";
 export interface DraftPhase extends TransactionPhase { readonly uid: string }
 
 let newPhaseSequence = 0;
-export const newPhaseUid = (): string => { newPhaseSequence += 1; return `transactionPhase_draft_${globalThis.crypto.randomUUID()}_${newPhaseSequence}`; };
+export const newPhaseUid = (): string => { newPhaseSequence += 1; return `transactionPhase_draft_${randomId()}_${newPhaseSequence}`; };
 export const toDraftPhases = (phases: readonly TransactionPhase[]): DraftPhase[] => phases.map((phase) => ({ ...phase, uid: phase.id }));
 export const stripPhaseUid = (phase: TransactionPhase & { readonly uid?: string }): TransactionPhase => ({ id: phase.id, name: phase.name, start: phase.start, end: phase.end });
 /** Start-time projection: Start, then End, then uid (stable). */

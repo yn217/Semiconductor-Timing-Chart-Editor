@@ -3,6 +3,10 @@ import type { MouseEvent, ReactNode } from "react";
 export function consumeOutsidePointerDown(event: PointerEvent, onDismiss: () => void) {
   event.preventDefault();
   event.stopImmediatePropagation();
+  // The press only dismisses: the click that completes it must not also reach whatever sits under the pointer (a Signal row, a bar, ...).
+  const swallowClick = (clickEvent: globalThis.MouseEvent) => { clickEvent.stopImmediatePropagation(); clickEvent.preventDefault(); };
+  window.addEventListener("click", swallowClick, { capture: true, once: true });
+  window.setTimeout(() => window.removeEventListener("click", swallowClick, true), 600);
   onDismiss();
 }
 

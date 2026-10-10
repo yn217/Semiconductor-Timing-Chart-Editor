@@ -6,6 +6,10 @@ import { generatePerformanceDocument } from "@timing-chart-v2/testing";
  * rebuilt, every other row is reused, and the value changes visited stay on the order of the edited Signal (not the whole document).
  * Edit-to-idle latency is logged for the Issue. (The overview counters describe the last build, not a running total.)
  */
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
+
 test("a single Signal edit rebuilds one MiniMap overview row and reuses the rest", async ({ page }) => {
   test.setTimeout(240_000);
   await page.addInitScript(() => { try { window.localStorage.setItem("timing-chart-v2.view-mode", "Cycle"); } catch { /* best effort */ } });
@@ -18,6 +22,7 @@ test("a single Signal edit rebuilds one MiniMap overview row and reuses the rest
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "b869.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
   await expect(page.locator(".editor-shell")).toHaveAttribute("data-signal-count", "5000", { timeout: 180_000 });
   await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 180_000 });
+  await page.getByTestId("home-minimap-toggle").check(); // MiniMap is off by default
   const minimap = page.getByTestId("minimap");
   await expect(minimap).toBeVisible({ timeout: 60_000 });
   const counters = () => minimap.evaluate((element) => {
@@ -25,7 +30,7 @@ test("a single Signal edit rebuilds one MiniMap overview row and reuses the rest
     return { builds: read("builds"), rebuilt: read("rows-rebuilt"), reused: read("rows-reused"), visited: read("value-changes-visited") };
   });
   // Select the Signal; its Bottom Event Table appears.
-  await page.locator(`[data-role='frozen-row'][data-row-id='${target.id}']`).first().click({ force: true });
+  await page.locator(`[data-role='frozen-row'][data-row-id='${target.id}']`).first().click();
   await expect(page.getByTestId("event-add-row")).toBeVisible({ timeout: 60_000 });
   await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
   const before = await counters();

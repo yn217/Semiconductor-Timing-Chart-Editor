@@ -33,7 +33,7 @@ test("Legend Canvas-corner anchor survives resize, Save/Open, and SVG export", a
   expect(savedPath).toBeTruthy();
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
   await expect(legend).toHaveAttribute("data-legend-position-x", "12");
-  await legend.click();
+  await page.getByTestId("editor-legend").click(); // Open clears the selection; re-select the Legend to inspect it
   await expect(page.getByTestId("inspector").getByLabel("Legend position mode")).toHaveValue("canvas-corner");
   await expect(page.getByTestId("inspector").getByLabel("Legend canvas corner")).toHaveValue("top-right");
 

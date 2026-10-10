@@ -94,7 +94,7 @@ export function FindReplacePanel({ document, mode = "signals", onRenameSignals, 
     let validCount = 0;
     if (replacementExpression) {
       for (const item of matches) {
-        const nextName = itemName(item).replace(replacementExpression, deferredReplaceText).trim();
+        const nextName = itemName(item).replace(replacementExpression, () => deferredReplaceText).trim();
         if (nextName.length === 0) continue;
         validCount += 1;
         if (rows.length < 20) rows.push({ item, nextName });
@@ -107,7 +107,7 @@ export function FindReplacePanel({ document, mode = "signals", onRenameSignals, 
   const replaceAll = () => {
     if (!inputIsSettled || preview.validCount === 0 || !replacementExpression) return;
     const replacements = matches.flatMap((item) => {
-      const nextName = itemName(item).replace(replacementExpression, deferredReplaceText).trim();
+      const nextName = itemName(item).replace(replacementExpression, () => deferredReplaceText).trim();
       return nextName.length === 0 ? [] : [{ item, nextName }];
     });
     if (mode === "transactions") onRenameTransactions?.(replacements.map(({ item, nextName }) => ({ transactionId: item.id as TransactionId, name: nextName })));

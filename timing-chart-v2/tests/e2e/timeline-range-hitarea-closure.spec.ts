@@ -45,7 +45,9 @@ test("accepts range drag from waveform, semantic row, comment row, blank timing 
   const start = await cyclePoint(page, 3);
   const end = await cyclePoint(page, 8);
 
-  for (const y of [waveBox!.y + waveBox!.height / 2, semanticBox!.y + semanticBox!.height / 2, viewportBox!.y + viewportBox!.height - 4]) {
+  // Points inside the visible Timeline area: the waveform surface extends under the Bottom editor and the horizontal scrollbar overlay.
+  const visibleBottom = (await page.getByTestId("bottom-editor").boundingBox())!.y - 24;
+  for (const y of [waveBox!.y + 40, semanticBox!.y + semanticBox!.height / 2, visibleBottom]) {
     await dragRange(page, { x: start.x, y }, { x: end.x, y });
     await expect(page.getByLabel("Timeline range start")).toHaveValue("3");
     await expect(page.getByLabel("Timeline range end")).toHaveValue("8");
@@ -91,7 +93,7 @@ test("keeps the preview boundary and current-cycle playhead on one pointer snaps
   const start = await cyclePoint(page, 2);
   const first = await cyclePoint(page, 6);
   const second = await cyclePoint(page, 9);
-  const y = waveBox!.y + waveBox!.height / 2;
+  const y = waveBox!.y + 40;
   await page.mouse.move(start.x, y);
   await page.mouse.down();
   for (const point of [first, second]) {
@@ -145,7 +147,7 @@ test("normalizes reverse drags, supports Shift extension, and reaches the termin
   const cycle8 = await cyclePoint(page, 8);
   const cycle10 = await cyclePoint(page, 10);
   const terminal = await cyclePoint(page, 24);
-  const y = wave!.y + wave!.height / 2;
+  const y = wave!.y + 40;
 
   await dragRange(page, { x: cycle8.x, y }, { x: cycle3.x, y });
   await expect(page.getByLabel("Timeline range start")).toHaveValue("3");
@@ -177,7 +179,7 @@ test("does not start a range gesture from dedicated controls and cancels transie
   const end = await cyclePoint(page, 7);
   const wave = await host.locator("[data-role='stable-waveform-surface']").boundingBox();
   expect(wave).not.toBeNull();
-  const y = wave!.y + wave!.height / 2;
+  const y = wave!.y + 40;
   await page.mouse.move(start.x, y);
   await page.mouse.down();
   await page.mouse.move(end.x, y);

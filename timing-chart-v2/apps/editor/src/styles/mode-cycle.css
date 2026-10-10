@@ -4,7 +4,7 @@
    surface. Keep that established owner intact while Transaction/Combined use
    the real left-column + center-column composition above. */
 .desktop-workspace[data-workspace-owner="CycleWorkspace"] {
-  grid-template-rows: minmax(260px, 1fr) 10px var(--gui-bottom-height);
+  grid-template-rows: minmax(160px, 1fr) 10px var(--gui-bottom-height);
 }
 .desktop-workspace[data-workspace-owner="CycleWorkspace"] .cycle-panel {
   --time-domain-left: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px));

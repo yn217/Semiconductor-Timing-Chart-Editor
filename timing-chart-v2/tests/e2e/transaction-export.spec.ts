@@ -231,7 +231,7 @@ test("cross-highlights stable linked Signals when a Transaction is selected", as
   await ready(page);
   await createTransaction(page, "Linked Packet", 2, 6);
   const inspector = page.getByTestId("inspector");
-  await linkSignal(inspector, "REQUEST");
+  await linkSignal(page, "REQUEST");
   const historyBeforeSelection = await page.getByTestId("history-status").textContent();
   const surface = page.getByTestId("cycle-surface");
   const before = {
@@ -240,7 +240,7 @@ test("cross-highlights stable linked Signals when a Transaction is selected", as
   };
 
   await page.getByRole("button", { name: "Combined", exact: true }).click();
-  await page.getByTestId("transaction-lanes").locator("[data-transaction-id]").last().click();
+  await page.getByTestId("transaction-lanes").locator("[data-transaction-id]").last().click({ position: { x: 12, y: 4 } }); // the lower strip is the Phase hit target
   const linkedRows = surface.locator("[data-row-id='sig_cycle_request'][data-transaction-linked='true']");
   await expect(linkedRows.first()).toBeVisible();
   expect(await linkedRows.count()).toBeGreaterThanOrEqual(2);

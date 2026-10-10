@@ -48,6 +48,7 @@ import { refreshRendererOverlays } from "./runtime/render-coordinator.js";
 import { useEditorDomBridgeEffects } from "./runtime/use-editor-dom-bridge-effects.js";
 import { resolveEditorStartupDocument } from "./workspace/editor-startup-document.js";
 import { useEditorInteractionLifecycle } from "./workspace/use-editor-interaction-lifecycle.js";
+import { documentFilename } from "./document-filename.js";
 
 export function MinimalCycleView() {
   const { visualReference, initialDocument, productTemplate, initialViewMode } = resolveEditorStartupDocument(typeof window !== "undefined" ? window.location.search : undefined);
@@ -143,7 +144,7 @@ export function MinimalCycleView() {
     focusLinkedSignals, setFocusLinkedSignals,
     activePane, setActivePane,
   } = workspace;
-  const { bottomMaxHeight, setBottomHeight, resetBottomHeight, ribbonProps: bottomRibbonProps } = useBottomPanelSizing(host, setRawBottomHeight, setBottomVisible, bottomVisible, bottomHeight);
+  const { bottomMaxHeight, setBottomHeight, resetBottomHeight, ribbonProps: bottomRibbonProps } = useBottomPanelSizing(host, setRawBottomHeight, setBottomVisible, bottomVisible, bottomHeight, viewMode);
   const presentation = useEditorPresentationState({ hostRef: host, mode: viewMode, selection: selection.state, selectionRef: selection.refs.state, initialMinimapEnabled: visualReference });
   const {
     arrowPickStatus, setArrowPickStatus,
@@ -165,7 +166,8 @@ export function MinimalCycleView() {
   const timelineNavigation = useTimelineNavigationOwner(viewMode, documentEpoch);
   const zoom = timelineNavigation.zoom;
   useEffect(() => {
-    if (typeof window !== "undefined" && modeComposition.persistsAsDefault) window.localStorage.setItem("timing-chart-v2.view-mode", viewMode);
+    // The preferred mode is best-effort: blocked storage (private mode, site data disabled) must not take the editor down.
+    try { if (typeof window !== "undefined" && modeComposition.persistsAsDefault) window.localStorage.setItem("timing-chart-v2.view-mode", viewMode); } catch { /* ignored */ }
   }, [viewMode]);
   const modeComposition = composeMode(viewMode);
   const workspaceActions = useEditorWorkspaceActions({
@@ -644,7 +646,7 @@ export function MinimalCycleView() {
       onGroupCreated: selection.selectGroup,
       onSpacerCreated: selection.selectSpacer,
       onTransactionCreated: selection.selectTransaction,
-      problemsCount: diagnostics.length,
+      problemsCount: diagnostics.filter((item) => item.severity !== "info").length, // migration notices are information, not problems
       problemsPending: validationPending,
       diagnostics,
       onNavigateProblem: navigateProblem,
@@ -704,7 +706,7 @@ export function MinimalCycleView() {
       onDelete: () => commandRegistry.current.execute("selection.delete"),
       onNew: requestNewDocument,
       onOpen: () => { pendingFileOriginRef.current = globalThis.document.activeElement instanceof HTMLElement ? globalThis.document.activeElement : null; fileInput.current?.click(); },
-      onSave: () => { documentLifecycle.save(`${snapshot.document.document.title || "timing-chart"}.tcd`); },
+      onSave: () => { documentLifecycle.save(documentFilename(snapshot.document.document.title)); },
       onSaveAs: () => { dialogOriginLabelRef.current = "Save As"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setSaveAsVisible(true); },
       onRecent: documentLifecycle.openRecent,
       onProperties: () => { dialogOriginLabelRef.current = "Properties"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setPropertiesVisible(true); },
@@ -767,7 +769,7 @@ export function MinimalCycleView() {
     redoDepth: history.redoDepth,
     timeAxisStatus: `Time Axis: ${snapshot.document.timeline.referenceClock ? `Clock · ${referenceClockSignal?.display.name ?? snapshot.document.timeline.referenceClock}` : "Time · No Clock Reference"}`,
     dirty: history.dirty,
-    problemsCount: diagnostics.length,
+    problemsCount: diagnostics.filter((item) => item.severity !== "info").length, // migration notices are information, not problems
     problemsPending: validationPending,
     waveDromHasError,
     cursorStatus: cursorStatusReadout(cursorA, cursorB, cursorDelta, snapshot.document.timeline.physicalTimebase),
@@ -799,6 +801,45 @@ export function MinimalCycleView() {
       });
     },
   };
+  // Dropping a file anywhere on the window opens it like File > Open. Without this the browser navigates to the dropped file and the unsaved document is lost.
+  const openDroppedFileRef = useRef<(file: File) => void>(() => undefined);
+  openDroppedFileRef.current = (file) => { capturePendingFileOrigin(); void documentLifecycle.readFile(file); };
+  useEffect(() => {
+    const hasFiles = (event: DragEvent) => Array.from(event.dataTransfer?.types ?? []).includes("Files");
+    const onDragOver = (event: DragEvent) => { if (!hasFiles(event)) return; event.preventDefault(); if (event.dataTransfer) event.dataTransfer.dropEffect = "copy"; };
+    const onDrop = (event: DragEvent) => {
+      if (!hasFiles(event)) return;
+      event.preventDefault();
+      const file = event.dataTransfer?.files?.[0];
+      if (file) openDroppedFileRef.current(file);
+    };
+    window.addEventListener("dragover", onDragOver);
+    window.addEventListener("drop", onDrop);
+    return () => { window.removeEventListener("dragover", onDragOver); window.removeEventListener("drop", onDrop); };
+  }, []);
+  // The browser tab names the document (and marks unsaved changes) so several open editors can be told apart.
+  const tabTitle = `${history.dirty ? "* " : ""}${snapshot.document.document.title.replace(/\s+(?:--|—)\s+(?:Cycle|Transaction|Combined)\s+Mode$/i, "").trim() || snapshot.document.document.title.trim() || "Untitled"} - Timing Chart Editor`;
+  useEffect(() => { globalThis.document.title = tabTitle; }, [tabTitle]);
+  // Ctrl/Cmd+S saves, Ctrl/Cmd+Shift+S opens Save As, Ctrl/Cmd+O opens a file -- the browser's own "Save page" / "Open file" must never appear in a document editor.
+  const fileShortcutRef = useRef<(key: "s" | "S" | "o") => void>(() => undefined);
+  fileShortcutRef.current = (key) => {
+    if (key === "s") documentLifecycle.save(documentFilename(snapshot.document.document.title));
+    else if (key === "S") { dialogOriginLabelRef.current = "Save As"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setSaveAsVisible(true); }
+    else { pendingFileOriginRef.current = globalThis.document.activeElement instanceof HTMLElement ? globalThis.document.activeElement : null; fileInput.current?.click(); }
+  };
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.isComposing) return;
+      const key = event.key.toLowerCase();
+      if (key !== "s" && key !== "o") return;
+      if (key === "o" && event.shiftKey) return;
+      event.preventDefault();
+      if (document.querySelector("[role='dialog'][aria-modal='true']")) return;
+      fileShortcutRef.current(key === "o" ? "o" : event.shiftKey ? "S" : "s");
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
   return <EditorShellView
     viewModel={{
       style: { "--gui-left-width": `${modeComposition.fixedLeftWidth ?? leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px`, "--gui-role-width": `${snapshot.document.layout.roleColumnWidth}px`, "--gui-signal-width": `${snapshot.document.layout.signalNameWidth}px`, "--gui-signal-align": snapshot.document.layout.signalNameAlign, "--gui-signal-split-upper-ratio": String(signalSplitRatio), "--transaction-tree-row-height": viewMode === "Transaction" ? "29px" : undefined } as React.CSSProperties,

@@ -54,9 +54,9 @@ test("View exposes stable Show/Panels/Guides/Zoom/Workspace/Layout slots", async
   await page.getByTestId("view-show-roles").uncheck();
   await page.getByTestId("grid-toggle").uncheck();
   await page.getByTestId("view-panel-minimap").click();
-  await expect(page.locator(".editor-shell")).toHaveAttribute("data-minimap-enabled", "false");
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-minimap-enabled", "true"); // MiniMap is off by default, so the toggle turns it on
   await expect(shell).toHaveAttribute("data-show-roles", "false");
-  await expect(shell).toHaveAttribute("data-minimap-enabled", "false");
+  await expect(shell).toHaveAttribute("data-minimap-enabled", "true");
   expect(await surface.getAttribute("data-canonical-revision")).toBe(before.revision);
   expect(await surface.getAttribute("data-history-depth")).toBe(before.history);
   expect(await shell.getAttribute("data-workspace-preset")).toBe(before.dirty);

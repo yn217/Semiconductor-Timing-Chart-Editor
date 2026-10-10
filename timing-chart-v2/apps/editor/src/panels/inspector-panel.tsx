@@ -183,7 +183,7 @@ export function InspectorPanel({ signal, selectedCycle = 0, selectedSignalIds, g
   return <aside className="inspector" data-testid="inspector" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}>
     <InspectorHeaderBar onClose={onClose} />
     {group && <InspectorSelectionHeader kind="Group" title={group.name} detail={`${group.rows.length} row${group.rows.length === 1 ? "" : "s"}`} />}
-    {transaction && <InspectorSelectionHeader kind="Transaction" title={transactionName || transaction.name} detail={`${transaction.id} · Cycle ${transaction.start}–${transaction.end} · ${transaction.laneId}`} />}
+    {transaction && <InspectorSelectionHeader kind="Transaction" title={transactionName || transaction.name} detail={[transaction.id, `Cycle ${transaction.start}–${transaction.end}`, transaction.laneId].filter((part) => part !== undefined && part !== "").join(" · ")} />}
     {!signal && !group && !annotation && !transaction && <section className="inspector-empty">No selection</section>}
     {spacerEditor}
     {spacerMoveEditor}

@@ -1,6 +1,7 @@
 import type { CanonicalDocument } from "@timing-chart-v2/schema";
 import { clampTimelineZoom, type TimelineViewportRuntime } from "./timeline-viewport-runtime.js";
 import { publishZoomX, syncRulerScroll } from "./timeline-presentation-refresh.js";
+import { timelineScrollOwner } from "./timeline-scroll-owner.js";
 
 export type TimelineZoomSurfaceContext = {
   readonly rendererHost: HTMLElement;
@@ -43,6 +44,10 @@ export function applyTimelineZoom(next: number, context: TimelineZoomSurfaceCont
     context.onPresentationScale(zoom);
     context.rendererHost.style.width = `${width}px`;
     context.timingSurface.style.setProperty("width", `${width}px`);
+    // Below 100% the scaled layers keep their unscaled layout width, so the native scroll extent would stay at the 100% width and scroll into blank space.
+    // Publish the zoom; the horizontal scrollbar owner clamps scrolling to scrollWidth * zoom and sizes its thumb from it.
+    const scrollOwner = timelineScrollOwner(context.viewport);
+    if (zoom < 1) scrollOwner.dataset.scrollShrink = String(zoom); else delete scrollOwner.dataset.scrollShrink;
     // Scroll width changes are not observable through ResizeObserver on the
     // viewport itself. Notify view-only consumers such as MiniMap after the
     // zoom-owned width write has been applied.

@@ -16884,6 +16884,438 @@
       "decision": "KEEP",
       "reason": "The failure (duplicate value-change IDs after a ripple) is only visible through the committed command on the production sample.",
       "replacementTest": null
+    },
+    {
+      "file": "dark-scheme-contrast.spec.ts",
+      "title": "no unreadable text under the OS dark colour scheme (ribbon tabs and every Bottom tab)",
+      "domain": "dark-scheme-readability",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 14000,
+      "primaryContract": "Under the OS dark colour scheme no visible text resolves to the same colour as its surface (white-on-white native controls).",
+      "duplicateGroup": "dark-scheme-readability",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Native control colours only resolve in a real browser under prefers-color-scheme: dark.",
+      "replacementTest": null
+    },
+    {
+      "file": "cycle-short-window-bottom.spec.ts",
+      "title": "Cycle Bottom editor stays inside the window at 650px tall",
+      "domain": "cycle-short-window",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "On a short browser viewport the Cycle Bottom editor ends above the status bar and inside the window.",
+      "duplicateGroup": "cycle-short-window",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The Main area minimum used to push the Bottom editor under the status bar; only real layout shows it.",
+      "replacementTest": null
+    },
+    {
+      "file": "cycle-short-window-bottom.spec.ts",
+      "title": "Cycle Bottom editor stays inside the window at 600px tall",
+      "domain": "cycle-short-window",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "On a short browser viewport the Cycle Bottom editor ends above the status bar and inside the window.",
+      "duplicateGroup": "cycle-short-window",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The Main area minimum used to push the Bottom editor under the status bar; only real layout shows it.",
+      "replacementTest": null
+    },
+    {
+      "file": "status-bar-narrow-window.spec.ts",
+      "title": "status bar keeps Clean/Modified and Problems visible at 1000px wide",
+      "domain": "status-bar-narrow",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 4000,
+      "primaryContract": "On narrow windows the dirty flag and the Problems count stay visible in the status bar.",
+      "duplicateGroup": "status-bar-narrow",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Clipping of the right-hand status items is only visible in a real layout.",
+      "replacementTest": null
+    },
+    {
+      "file": "status-bar-narrow-window.spec.ts",
+      "title": "status bar keeps Clean/Modified and Problems visible at 800px wide",
+      "domain": "status-bar-narrow",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 4000,
+      "primaryContract": "On narrow windows the dirty flag and the Problems count stay visible in the status bar.",
+      "duplicateGroup": "status-bar-narrow",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Clipping of the right-hand status items is only visible in a real layout.",
+      "replacementTest": null
+    },
+    {
+      "file": "paste-without-copy.spec.ts",
+      "title": "Paste before anything was copied says so and raises no Problem",
+      "domain": "clipboard-empty-paste",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Pasting with an empty clipboard reports that there is nothing to paste and does not add a Problem.",
+      "duplicateGroup": "clipboard-empty-paste",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The misleading foreign-document rejection only shows through the real paste shortcut.",
+      "replacementTest": null
+    },
+    {
+      "file": "scenario-add-signal-after-duplicate.spec.ts",
+      "title": "adding a Signal in a duplicated Scenario succeeds and Undo removes it",
+      "domain": "scenario-add-signal",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "A Signal added while a duplicated Scenario is active is accepted (no duplicate Transition ID across Scenarios) and is one Undo step.",
+      "duplicateGroup": "scenario-add-signal",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The cross-Scenario ID collision only shows through the real Duplicate then Add flow.",
+      "replacementTest": null
+    },
+    {
+      "file": "undo-empty-history.spec.ts",
+      "title": "Undo and Redo with nothing to undo or redo do not raise a Problem",
+      "domain": "history-empty-undo",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 2000,
+      "primaryContract": "Ctrl+Z / Ctrl+Y on an empty history leave the Problems count at zero.",
+      "duplicateGroup": "history-empty-undo",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The empty-history rejection used to be listed as an error Problem; only the real shortcut path shows it.",
+      "replacementTest": null
+    },
+    {
+      "file": "scenario-add-signal-after-duplicate.spec.ts",
+      "title": "a Scenario cannot be renamed to a name another Scenario already has",
+      "domain": "scenario-rename-unique",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 2000,
+      "primaryContract": "Rename stays disabled while the typed name belongs to another Scenario.",
+      "duplicateGroup": "scenario-rename-unique",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Two Scenarios with one name are indistinguishable in the Active Scenario selector.",
+      "replacementTest": null
+    },
+    {
+      "file": "find-replace-literal-replacement.spec.ts",
+      "title": "Find and Replace treats the replacement text literally ($& and $$ are not expanded)",
+      "domain": "find-replace-literal",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 2000,
+      "primaryContract": "The Replace-with text is used exactly as typed; JavaScript replacement patterns are not expanded.",
+      "duplicateGroup": "find-replace-literal",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Only the real panel input shows the preview and the renamed Signal names.",
+      "replacementTest": null
+    },
+    {
+      "file": "paste-without-copy.spec.ts",
+      "title": "a clipboard rejection from another Scenario clears once something is copied again",
+      "domain": "clipboard-foreign-clears",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "The Paste rejection for a payload copied in another Scenario does not stay in Problems after a fresh copy.",
+      "duplicateGroup": "clipboard-foreign-clears",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The stale error only shows through the real copy / switch Scenario / paste sequence.",
+      "replacementTest": null
+    },
+    {
+      "file": "long-document-title.spec.ts",
+      "title": "a very long Document title is truncated and does not push the View Mode buttons away",
+      "domain": "titlebar-long-title",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "A 300-character Document title is ellipsized and the View Mode buttons stay inside the window.",
+      "duplicateGroup": "titlebar-long-title",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The overflow only shows with real layout after applying the title in Properties.",
+      "replacementTest": null
+    },
+    {
+      "file": "status-bar-long-selection.spec.ts",
+      "title": "a very long selected Signal name does not push Clean/Modified and Problems out of the status bar",
+      "domain": "status-bar-long-selection",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "A 250-character Signal name (also shown as the Time Axis clock) is ellipsized and the Modified and Problems items stay inside the window.",
+      "duplicateGroup": "status-bar-long-selection",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The overflow only shows with real layout after renaming a selected Signal.",
+      "replacementTest": null
+    },
+    {
+      "file": "blocked-browser-storage.spec.ts",
+      "title": "the editor still starts, switches mode and saves when browser storage is blocked",
+      "domain": "blocked-storage",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "With localStorage and sessionStorage throwing SecurityError the editor renders, switches mode and saves.",
+      "duplicateGroup": "blocked-storage",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "A blocked-storage browser (private mode, site data disabled) used to show a blank page.",
+      "replacementTest": null
+    },
+    {
+      "file": "insecure-context-random-id.spec.ts",
+      "title": "the editor starts and saves where crypto.randomUUID does not exist (plain http)",
+      "domain": "insecure-context-random-id",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Without crypto.randomUUID (plain-http deployment) the editor renders and saves.",
+      "duplicateGroup": "insecure-context-random-id",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The missing API used to throw at startup and leave a blank page.",
+      "replacementTest": null
+    },
+    {
+      "file": "file-drop-open.spec.ts",
+      "title": "dropping a .tcd file on the window opens it and does not navigate away",
+      "domain": "file-drop-open",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "A file dropped on the window is opened like File > Open and the browser never navigates to it.",
+      "duplicateGroup": "file-drop-open",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Only real drag events show the default navigation that used to discard the unsaved document.",
+      "replacementTest": null
+    },
+    {
+      "file": "file-drop-open.spec.ts",
+      "title": "dropping a non-tcd file reports a failed Open instead of leaving the page",
+      "domain": "file-drop-open",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "A dropped file that is not a valid document reports the Open failure and keeps the page.",
+      "duplicateGroup": "file-drop-open",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Covers the unsupported-file branch of the drop handler.",
+      "replacementTest": null
+    },
+    {
+      "file": "zoom-out-scroll-extent.spec.ts",
+      "title": "Cycle: below 100% zoom the timeline cannot be scrolled past its end into blank space",
+      "domain": "zoom-out-scroll-extent",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "At 50% zoom the horizontal scroll stops at the zoomed content width, not the 100% width.",
+      "duplicateGroup": "zoom-out-scroll-extent",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Transform scaling leaves the layout width at 100%, so only a real scroll shows the blank region.",
+      "replacementTest": null
+    },
+    {
+      "file": "zoom-out-scroll-extent.spec.ts",
+      "title": "Combined: below 100% zoom the timeline cannot be scrolled past its end into blank space",
+      "domain": "zoom-out-scroll-extent",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "At 50% zoom the Combined shared horizontal scroll stops at the zoomed content width.",
+      "duplicateGroup": "zoom-out-scroll-extent",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Same contract as Cycle for the Combined nested viewport.",
+      "replacementTest": null
+    },
+    {
+      "file": "file-shortcuts.spec.ts",
+      "title": "Ctrl+S saves, Ctrl+Shift+S opens Save As and Ctrl+O opens the file chooser",
+      "domain": "file-shortcuts",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "The standard document shortcuts drive Save, Save As and Open instead of the browser's page dialogs.",
+      "duplicateGroup": "file-shortcuts",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Only the real key presses show whether the browser default is prevented.",
+      "replacementTest": null
+    },
+    {
+      "file": "file-shortcuts.spec.ts",
+      "title": "Ctrl+S inside a text field still saves the document",
+      "domain": "file-shortcuts",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Ctrl+S while a text field has focus still saves the document.",
+      "duplicateGroup": "file-shortcuts",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Text fields are excluded from most global shortcuts; saving must not depend on focus.",
+      "replacementTest": null
+    },
+    {
+      "file": "browser-tab-title.spec.ts",
+      "title": "the browser tab names the document and marks unsaved changes",
+      "domain": "browser-tab-title",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "The tab title shows the document name and a leading * while there are unsaved changes.",
+      "duplicateGroup": "browser-tab-title",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The title is set on the real page; unit tests cannot observe the tab.",
+      "replacementTest": null
+    },
+    {
+      "file": "bottom-expanded-after-mode-switch.spec.ts",
+      "title": "Combined: Bottom Expanded fits a short window after switching mode",
+      "domain": "bottom-expanded-mode-switch",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "After switching to another mode, Bottom Expanded stays above the status bar in a 600px-high window.",
+      "duplicateGroup": "bottom-expanded-mode-switch",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The stale limit only shows after a real startup mode and mode switch.",
+      "replacementTest": null
+    },
+    {
+      "file": "bottom-expanded-after-mode-switch.spec.ts",
+      "title": "Cycle: Bottom Expanded fits a short window after switching mode",
+      "domain": "bottom-expanded-mode-switch",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Same contract for Cycle.",
+      "duplicateGroup": "bottom-expanded-mode-switch",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Guards the symmetrical mode switch.",
+      "replacementTest": null
     }
   ]
 }

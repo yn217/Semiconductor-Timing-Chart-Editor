@@ -58,8 +58,8 @@ export function MiniMap({ document, changeSet, viewport, mode = "signal" }: { re
   useEffect(() => {
     let active = true;
     let pollFrame = 0;
-    let scheduledBuild: number | undefined;
-    let scheduledBuildKind: "idle" | "timer" | undefined;
+    let scheduledIdleBuild: number | undefined;
+    let scheduledTimerBuild: ReturnType<typeof globalThis.setTimeout> | undefined;
     const buildOverview = () => {
       if (!active) return;
       let overview: MiniMapOverview | undefined;
@@ -97,11 +97,9 @@ export function MiniMap({ document, changeSet, viewport, mode = "signal" }: { re
     };
     const scheduleOverviewBuild = () => {
       if (typeof globalThis.requestIdleCallback === "function") {
-        scheduledBuildKind = "idle";
-        scheduledBuild = globalThis.requestIdleCallback(buildOverview, { timeout: 1000 });
+        scheduledIdleBuild = globalThis.requestIdleCallback(buildOverview, { timeout: 1000 });
       } else {
-        scheduledBuildKind = "timer";
-        scheduledBuild = globalThis.setTimeout(buildOverview, 0);
+        scheduledTimerBuild = globalThis.setTimeout(buildOverview, 0);
       }
     };
 
@@ -125,9 +123,8 @@ export function MiniMap({ document, changeSet, viewport, mode = "signal" }: { re
     return () => {
       active = false;
       if (pollFrame !== 0) globalThis.cancelAnimationFrame(pollFrame);
-      if (scheduledBuild === undefined) return;
-      if (scheduledBuildKind === "idle" && typeof globalThis.cancelIdleCallback === "function") globalThis.cancelIdleCallback(scheduledBuild);
-      else if (scheduledBuildKind === "timer") globalThis.clearTimeout(scheduledBuild);
+      if (scheduledIdleBuild !== undefined && typeof globalThis.cancelIdleCallback === "function") globalThis.cancelIdleCallback(scheduledIdleBuild);
+      if (scheduledTimerBuild !== undefined) globalThis.clearTimeout(scheduledTimerBuild);
     };
   }, [document, changeSet, mode, viewport]);
   const currentOverview = overviewState?.document === document && overviewState.mode === mode ? overviewState : undefined;

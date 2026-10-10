@@ -70,5 +70,6 @@ export function resolveAnchorPoint(anchor: SemanticAnchor | undefined, document:
     })()
     : undefined;
   const authoritativeX = anchor.point === "cycle-start" ? timeAxisMetrics?.sourceBoundaryToContentX(anchor.cycle) : undefined;
-  return { x: authoritativeX ?? (sharedBoundary?.x ?? local.point.x) * xScale, y: rowY + local.point.y };
+  // The authoritative boundary X is the bare cycle edge; the other branches already include the anchor's display offset.
+  return { x: authoritativeX !== undefined ? authoritativeX + (anchor.offset?.x ?? 0) * xScale : (sharedBoundary?.x ?? local.point.x) * xScale, y: rowY + local.point.y };
 }

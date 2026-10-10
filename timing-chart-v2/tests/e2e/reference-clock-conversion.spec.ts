@@ -95,7 +95,7 @@ for (const target of ["binary", "bus", "state"] as const) {
     expect(converted).not.toHaveProperty("generator");
     expect(converted).not.toHaveProperty("edgeCounter");
     expect(converted).not.toHaveProperty("enable");
-    expect(converted?.values).toEqual([{ start: 0, value: target === "state" ? "IDLE" : target === "bus" ? "00" : 0 }]);
+    expect(converted?.values).toEqual([{ id: expect.any(String), start: 0, value: target === "state" ? "IDLE" : target === "bus" ? "00" : 0 }]);
     if (target === "bus") expect(converted).toMatchObject({ width: 8, displayFormat: "hex" });
     expect(saved.timeline).not.toHaveProperty("referenceClock");
 

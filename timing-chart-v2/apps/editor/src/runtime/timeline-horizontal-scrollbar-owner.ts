@@ -1,5 +1,11 @@
 import { timelineScrollOwner } from "./timeline-scroll-owner.js";
 
+/** The scrollable width: the native one, scaled by the zoom published below 100% (scaled layers keep their unscaled layout width). */
+function effectiveScrollWidth(owner: HTMLElement): number {
+  const shrink = Number(owner.dataset.scrollShrink);
+  return Number.isFinite(shrink) && shrink > 0 && shrink < 1 ? Math.round(owner.scrollWidth * shrink) : owner.scrollWidth;
+}
+
 /** Owns DOM measurement, scroll synchronization, listeners and observation for the Cycle timeline track. */
 export function mountTimelineHorizontalScrollbar(view: HTMLDivElement, bar: HTMLDivElement, filler: HTMLDivElement): () => void {
   view.dataset.ownHscroll = "true";
@@ -19,12 +25,19 @@ export function mountTimelineHorizontalScrollbar(view: HTMLDivElement, bar: HTML
     view.style.setProperty("--cycle-fill", `${Math.max(0, view.clientHeight - 34)}px`);
     bar.style.top = `${viewRect.bottom - panelRect.top - 15 - cover}px`;
     bar.style.width = `${Math.max(0, owner.clientWidth - offset)}px`;
-    filler.style.width = `${Math.max(0, owner.scrollWidth - offset)}px`;
+    const scrollExtent = effectiveScrollWidth(owner);
+    filler.style.width = `${Math.max(0, scrollExtent - offset)}px`;
     bar.dataset.timelineLeft = String(Math.round(originLeft));
-    bar.hidden = owner.scrollWidth <= owner.clientWidth;
+    bar.hidden = scrollExtent <= owner.clientWidth;
     if (!syncing) bar.scrollLeft = owner.scrollLeft;
   };
-  const onViewScroll = () => { if (syncing) return; syncing = true; bar.scrollLeft = timelineScrollOwner(view).scrollLeft; syncing = false; };
+  const onViewScroll = () => {
+    if (syncing) return;
+    const owner = timelineScrollOwner(view);
+    const maxLeft = Math.max(0, effectiveScrollWidth(owner) - owner.clientWidth);
+    if (owner.scrollLeft > maxLeft) owner.scrollLeft = maxLeft;
+    syncing = true; bar.scrollLeft = owner.scrollLeft; syncing = false;
+  };
   const onBarScroll = () => { if (syncing) return; syncing = true; timelineScrollOwner(view).scrollLeft = bar.scrollLeft; syncing = false; };
   layout();
   view.addEventListener("scroll", onViewScroll, { passive: true, capture: true });

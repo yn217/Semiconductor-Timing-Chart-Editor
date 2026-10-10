@@ -9,6 +9,8 @@ export function useBottomPanelSizing(
   setBottomVisible: (value: boolean | ((current: boolean) => boolean)) => void,
   bottomVisible: boolean,
   bottomHeight: number,
+  /** A mode change mounts a new workspace element: the limit must be measured (and observed) on that one. */
+  layoutKey?: string,
 ) {
   const [bottomMaxHeight, setBottomMaxHeight] = useState(BOTTOM_PANEL_MAX_HEIGHT);
   const bottomMaxHeightRef = useRef(BOTTOM_PANEL_MAX_HEIGHT);
@@ -35,7 +37,7 @@ export function useBottomPanelSizing(
       observer.disconnect();
       window.removeEventListener("resize", updateBottomLimit);
     };
-  }, [host, setRawBottomHeight]);
+  }, [host, setRawBottomHeight, layoutKey]);
 
   const setBottomSize = (size: SizePreset) => {
     if (size === "hidden") {

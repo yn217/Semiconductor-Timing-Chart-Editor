@@ -54,7 +54,7 @@ test("moves a whole Transaction by dragging its body to a snapped cycle with one
   const revisionBefore = await host.getAttribute("data-canonical-revision");
   const dirtyBefore = await page.getByTestId("dirty-status").textContent();
   const y = before.y + before.height / 2;
-  await transaction.locator("span").hover();
+  await transaction.locator("span").hover({ position: { x: 20, y: 4 } }); // upper surface: the lower strip is the Phase hit target
   await page.mouse.down();
   await page.mouse.move(cycle10.x - 30, y);
   await page.mouse.move(cycle10.x - 10, y);
@@ -100,7 +100,7 @@ test("keeps canonical state unchanged during a dense Transaction preview drag", 
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await page.waitForTimeout(800);
   const minimapBefore = await page.getByTestId("minimap").getAttribute("data-transaction-overview-builds");
-  await transaction.locator("span").hover();
+  await transaction.locator("span").hover({ position: { x: 20, y: 4 } }); // upper surface: the lower strip is the Phase hit target
   await page.mouse.down();
   for (let index = 0; index < 120; index += 1) await page.mouse.move(box.x + 20 + (index % 12), box.y + box.height / 2);
   await expect(transaction).toHaveAttribute("data-drag-preview", "true");
@@ -136,7 +136,7 @@ test("resizes a Transaction's start/end edge with snap and keeps start < end", a
   const historyBefore = await page.getByTestId("history-status").textContent();
   const dirtyBefore = await page.getByTestId("dirty-status").textContent();
   const y = before.y + before.height / 2;
-  await transaction.locator("[data-edge='start']").hover();
+  await transaction.locator("[data-edge='start']").hover({ position: { x: 2, y: 4 } });
   await page.mouse.down();
   await page.mouse.move(cycle10.x, y);
   await expect(transaction).toHaveAttribute("data-drag-preview", "true");
@@ -163,7 +163,7 @@ test("clamps a Transaction edge drag at the terminal boundary and cannot cross t
   const historyBefore = await page.getByTestId("history-status").textContent();
   const dirtyBefore = await page.getByTestId("dirty-status").textContent();
   const y = before.y + before.height / 2;
-  await transaction.locator("[data-edge='end']").hover();
+  await transaction.locator("[data-edge='end']").hover({ position: { x: 2, y: 4 } });
   await page.mouse.down();
   await page.mouse.move(terminal.x + 30, y);
   await expect(transaction).toHaveAttribute("data-drag-preview", "true");
@@ -190,7 +190,7 @@ test("Escape cancels an in-progress Transaction drag without any semantic mutati
   const revisionBefore = await host.getAttribute("data-canonical-revision");
   const cycle10 = (await page.getByTestId("cycle-ruler").locator("[data-cycle='10']").boundingBox())!;
   const y = before.y + before.height / 2;
-  await transaction.locator("span").hover();
+  await transaction.locator("span").hover({ position: { x: 20, y: 4 } }); // upper surface: the lower strip is the Phase hit target
   await page.mouse.down();
   await page.mouse.move(cycle10.x, y);
   await expect(transaction).toHaveAttribute("data-drag-preview", "true");
@@ -212,7 +212,7 @@ test("pointercancel discards a live Transaction preview without semantic mutatio
   const revisionBefore = await host.getAttribute("data-canonical-revision");
   const historyBefore = await page.getByTestId("history-status").textContent();
   const cycle10 = (await page.getByTestId("cycle-ruler").locator("[data-cycle='10']").boundingBox())!;
-  await transaction.locator("span").hover();
+  await transaction.locator("span").hover({ position: { x: 20, y: 4 } }); // upper surface: the lower strip is the Phase hit target
   await page.mouse.down();
   await page.mouse.move(cycle10.x, before.y + before.height / 2);
   await expect(transaction).toHaveAttribute("data-drag-preview", "true");
@@ -236,7 +236,7 @@ test("live drag keeps unrelated overlapping Transaction stack rows and positions
   const stableBefore = await stable.boundingBox();
   const cycle10 = (await page.getByTestId("cycle-ruler").locator("[data-cycle='10']").boundingBox())!;
   const draggedBox = (await dragged.boundingBox())!;
-  await dragged.locator("span").hover();
+  await dragged.locator("span").hover({ position: { x: 2, y: 4 } }); // upper surface: the lower strip is the Phase hit target
   await page.mouse.down();
   await page.mouse.move(cycle10.x, draggedBox.y + draggedBox.height / 2);
   await expect(dragged).toHaveAttribute("data-drag-preview", "true");
@@ -276,7 +276,7 @@ test("rejects a Transaction resize that would clip a Phase without changing hist
   const beforeHistory = await page.getByTestId("history-status").textContent();
   const box = (await transaction.boundingBox())!;
   const phaseBoundary = (await page.getByTestId("cycle-ruler").locator("[data-cycle='20']").boundingBox())!;
-  await transaction.locator("[data-edge='start']").hover();
+  await transaction.locator("[data-edge='start']").hover({ position: { x: 2, y: 4 } });
   await page.mouse.down();
   await page.mouse.move(phaseBoundary.x, box.y + box.height / 2);
   await page.mouse.up();
@@ -300,7 +300,7 @@ test("rejects an End resize that would remove the final Phase", async ({ page })
   await transaction.locator("[data-edge='end']").scrollIntoViewIfNeeded();
   const box = (await transaction.boundingBox())!;
   const phaseBoundary = (await page.getByTestId("cycle-ruler").locator("[data-cycle='50']").boundingBox())!;
-  await transaction.locator("[data-edge='end']").hover();
+  await transaction.locator("[data-edge='end']").hover({ position: { x: 2, y: 4 } });
   await page.mouse.down();
   await page.mouse.move(phaseBoundary.x, box.y + box.height / 2);
   await page.mouse.up();
@@ -325,7 +325,7 @@ test("persists a valid Transaction resize and its Phases through Save/Open", asy
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   }, targetBeforeScroll.x);
   const target = (await targetLocator.boundingBox())!;
-  await transaction.locator("[data-edge='end']").hover();
+  await transaction.locator("[data-edge='end']").hover({ position: { x: 2, y: 4 } });
   await page.mouse.down();
   await page.mouse.move(target.x, before.y + before.height / 2);
   await page.mouse.up();

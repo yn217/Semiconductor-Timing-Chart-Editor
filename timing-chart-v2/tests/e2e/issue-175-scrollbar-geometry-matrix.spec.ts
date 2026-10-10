@@ -18,7 +18,9 @@ const geometry = (page: Page) => page.evaluate(() => {
   const wrapper = document.querySelector<HTMLElement>(".editor-shell[data-view-mode='Cycle'] [data-role='timeline-viewport']");
   const owner = wrapper ?? view;
   const track = bar.firstElementChild as HTMLElement;
-  return { hidden: bar.hidden, scrolls: owner.scrollWidth > owner.clientWidth, barWidth: bar.getBoundingClientRect().width, trackWidth: track.getBoundingClientRect().width, ownerClient: owner.clientWidth, ownerScroll: owner.scrollWidth, barLeft: bar.getBoundingClientRect().left, ownerLeft: owner.getBoundingClientRect().left, barScrollLeft: bar.scrollLeft, ownerScrollLeft: owner.scrollLeft };
+  // Below 100% zoom the scaled layers keep their unscaled layout width; the owner publishes the zoom and the scrollable extent is scrollWidth * zoom.
+  const scrollWidth = Math.round(owner.scrollWidth * (Number(owner.dataset.scrollShrink) || 1));
+  return { hidden: bar.hidden, scrolls: scrollWidth > owner.clientWidth, barWidth: bar.getBoundingClientRect().width, trackWidth: track.getBoundingClientRect().width, ownerClient: owner.clientWidth, ownerScroll: scrollWidth, barLeft: bar.getBoundingClientRect().left, ownerLeft: owner.getBoundingClientRect().left, barScrollLeft: bar.scrollLeft, ownerScrollLeft: owner.scrollLeft };
 });
 
 async function expectFollowsOwner(page: Page, label: string): Promise<void> {

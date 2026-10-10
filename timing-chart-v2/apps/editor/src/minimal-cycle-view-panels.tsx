@@ -21,7 +21,7 @@ export function MinimalCycleViewPanels({ children, workspace, tail, bottom, insp
 
 export function ContextMenuPanel({ contextMenu, hasSelectedClipboard, clipboardAvailable, hasSelectedEntity, hasSelectedSignal, hasDeletableSelection, canRenameSelection, canMoveUp, canMoveDown, canShowSelection, canHideSelection, signalPinned, togglePinnedSignals, copySelectedSignal, cutSelectedSignal, pasteSelectedEntity, duplicateSelectedEntity, moveSelection, setSelectionVisibility, renameSelection, closeContextMenu, deleteSelection, addBookmarkAtCycle, transactionGroups = [], selectedTransactionGroupId, moveSelectedTransactionToGroup }: any) {
   if (contextMenu?.target === "ruler") return <ContextMenuSurface anchor={contextMenu} target="ruler" label="Ruler context menu" onDismiss={closeContextMenu}>
-    <button type="button" role="menuitem" data-testid="ruler-add-bookmark" onClick={() => { addBookmarkAtCycle(contextMenu.cycle); closeContextMenu(); }}>ブックマークを追加</button>
+    <button type="button" role="menuitem" data-testid="ruler-add-bookmark" onClick={() => { addBookmarkAtCycle(contextMenu.cycle); closeContextMenu(); }}>Add bookmark</button>
   </ContextMenuSurface>;
   return contextMenu ? <ContextMenuSurface anchor={contextMenu} target={contextMenu.target} label={contextMenu.target === "group" ? "Group context menu" : contextMenu.target === "annotation" ? "Annotation context menu" : contextMenu.target === "transaction" ? "Transaction context menu" : "Signal context menu"} onDismiss={closeContextMenu}>
     {contextMenu.target === "signal" && <button type="button" role="menuitemcheckbox" aria-checked={Boolean(signalPinned)} aria-label={`${signalPinned ? "Unpin" : "Pin"} selected Signals`} disabled={!hasSelectedSignal} onClick={() => { togglePinnedSignals?.(); closeContextMenu(); }}>{signalPinned ? "Unpin selected Signals" : "Pin selected Signals"}</button>}
@@ -76,11 +76,12 @@ export function MinimalCycleViewTitleBar({ title, dirty, viewMode, scenarios, sc
     ? compareScenarioSignalStreams(scenarioModel, activeScenario.id, comparisonTargetId)
     : [], [scenarioModel, activeScenario, comparisonTargetId]);
   useEffect(() => onScenarioComparisonChange?.(compareOpen ? differences : []), [compareOpen, differences, onScenarioComparisonChange]);
-  return <header className="app-titlebar"><span className="appmark">∿</span><h1 data-testid="titlebar-document-title" aria-label={`${displayTitle}${dirty ? " (unsaved changes)" : ""}`}>{displayTitle}{dirty && <span className="document-dirty-indicator" data-testid="titlebar-unsaved-indicator" aria-label="Unsaved changes">*</span>}</h1>
+  const scenarioNameTaken = (scenarios ?? []).some((scenario) => scenario.id !== activeScenarioId && scenario.name === scenarioName.trim());
+  return <header className="app-titlebar"><span className="appmark">∿</span><h1 data-testid="titlebar-document-title" aria-label={`${displayTitle}${dirty ? " (unsaved changes)" : ""}`} title={displayTitle}><span className="document-title-text">{displayTitle}</span>{dirty && <span className="document-dirty-indicator" data-testid="titlebar-unsaved-indicator" aria-label="Unsaved changes">*</span>}</h1>
     {scenarios ? <div className="scenario-controls" data-testid="scenario-controls" aria-label="Scenario controls">
       <label>Scenario<select aria-label="Active Scenario" data-testid="active-scenario" value={activeScenarioId ?? ""} onChange={(event) => onScenarioChange?.(event.target.value as ScenarioId)}>{scenarios.map((scenario) => <option key={scenario.id} value={scenario.id}>{scenario.name}</option>)}</select></label>
       <input aria-label="Scenario name" data-testid="scenario-name" value={scenarioName} onChange={(event) => setScenarioName(event.target.value)} />
-      <button type="button" data-testid="scenario-rename" disabled={!scenarioName.trim() || scenarioName === activeScenario?.name} onClick={() => activeScenarioId && onScenarioRename?.(activeScenarioId, scenarioName.trim())}>Rename</button>
+      <button type="button" data-testid="scenario-rename" disabled={!scenarioName.trim() || scenarioName === activeScenario?.name || scenarioNameTaken} title={scenarioNameTaken ? "Another Scenario already has this name" : undefined} onClick={() => activeScenarioId && onScenarioRename?.(activeScenarioId, scenarioName.trim())}>Rename</button>
       <button type="button" data-testid="scenario-duplicate" onClick={() => activeScenarioId && onScenarioDuplicate?.(activeScenarioId)}>Duplicate</button>
       <button type="button" data-testid="scenario-delete" disabled={scenarios.length <= 1} onClick={() => activeScenarioId && onScenarioDelete?.(activeScenarioId)}>Delete</button>
       <button type="button" data-testid="scenario-compare-toggle" disabled={scenarios.length <= 1 || scenarioModel === undefined} aria-expanded={compareOpen} onClick={() => setCompareOpen((open) => !open)}>Compare</button>
@@ -463,13 +464,13 @@ export function EditorStatusBar({ toolStatus, selectionStatus, signalCount, anno
     <button type="button" className="status-diagnostics-toggle" data-testid="status-diagnostics-toggle" aria-pressed={diagnosticsOpen} title="Show developer diagnostics (Canonical revision, History counters, renderer state)" onClick={() => setDiagnosticsOpen((open) => !open)}>Diagnostics</button>
     {cursorStatus && <span data-testid="cursor-status">{cursorStatus}</span>}
     {activePaneStatus && <span data-testid="active-pane-status">{activePaneStatus}</span>}
-    <span>Selected: <strong data-testid="selection-status">{selectionStatus}</strong></span>
+    <span className="status-selection" title={selectionStatus}>Selected: <strong data-testid="selection-status">{selectionStatus}</strong></span>
     <span data-testid="signal-count-status">Signals: {signalCount}</span><span data-testid="annotation-count-status">Annotations: {annotationCount}</span><span data-testid="range-status">{rangeStatus}</span><span data-testid="cycle-status">{viewMode === "Cycle" ? "Cycle" : "Source cycle"} {selectedCycle}</span><span data-testid="zoom-status-bar">Zoom: {Math.round(zoom * 100)}%</span><span data-testid="snap-status">Snap: {snapEnabled ? "On" : "Off"}</span><span data-testid="view-mode-status">Mode: {viewMode === "Split" ? "Combined" : viewMode}</span>
     <span className="status-context" data-testid="status-context">{statusContext}</span>
     <span className={diagnosticClass} data-testid="revision-status">Canonical revision {revision}</span>
     <span className={diagnosticClass} data-testid="history-status">History {undoDepth} / Redo {redoDepth}</span>
     {openPerformanceDetails !== undefined && <span className="visually-hidden" data-testid="open-performance-diagnostics" role="note">Open performance diagnostics: {openPerformanceDetails}</span>}
-    <span data-testid="time-axis-status">{timeAxisStatus}</span><span data-testid="dirty-status">{dirty ? "Modified" : "Clean"}</span><span data-testid="problems-status">{problemsPending ? "Problems: Checking…" : `Problems: ${problemsCount}`}</span><span className={waveDromHasError ? undefined : diagnosticClass} data-testid="wavedrom-status">WaveDrom: {waveDromHasError ? "Error" : "Ready"}</span>
+    <span data-testid="time-axis-status" title={timeAxisStatus}>{timeAxisStatus}</span><span data-testid="dirty-status">{dirty ? "Modified" : "Clean"}</span><span data-testid="problems-status">{problemsPending ? "Problems: Checking…" : `Problems: ${problemsCount}`}</span><span className={waveDromHasError ? undefined : diagnosticClass} data-testid="wavedrom-status">WaveDrom: {waveDromHasError ? "Error" : "Ready"}</span>
   </footer>;
 }
 

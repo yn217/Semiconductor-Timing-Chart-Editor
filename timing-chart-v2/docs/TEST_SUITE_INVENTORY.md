@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 432 spec files and 1312 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 448 spec files and 1336 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1254/1312 cases reviewed.
+Semantic review progress: 1278/1336 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 634 |
 | `nightly` | 241 |
 | `performance` | 73 |
-| `pr` | 404 |
+| `pr` | 428 |
 | `visual` | 181 |
 
 ## Top recorded per-case runtimes
@@ -26,6 +26,7 @@ These are case-level observations recorded directly on case reviews. Inventory g
 | 28400 | `visual` | `issue-441-ribbon-label-integrity.spec.ts` | Ribbon labels are intact across Cycle, Transaction and Combined at 1672x941 |
 | 25200 | `visual` | `issue-441-ribbon-label-integrity.spec.ts` | Ribbon labels are intact across Cycle, Transaction and Combined at 1280x720 |
 | 25100 | `visual` | `issue-441-ribbon-label-integrity.spec.ts` | Ribbon labels are intact across Cycle, Transaction and Combined at 1024x700 |
+| 14000 | `pr` | `dark-scheme-contrast.spec.ts` | no unreadable text under the OS dark colour scheme (ribbon tabs and every Bottom tab) |
 | 14000 | `pr` | `timeline-edits-stable-ids.spec.ts` | Timeline Delete range and Insert commit on a document with stable value IDs |
 | 13900 | `pr` | `issue-753-bookmark-navigation-stays-in-app.spec.ts` | every Bookmark gesture stays inside the SPA in Combined mode |
 | 13400 | `pr` | `issue-753-bookmark-navigation-stays-in-app.spec.ts` | every Bookmark gesture stays inside the SPA in Cycle mode |
@@ -41,7 +42,6 @@ These are case-level observations recorded directly on case reviews. Inventory g
 | 8600 | `visual` | `issue-767-zoom-keeps-glyph-shape.spec.ts` | zoom does not stretch Transaction text at 1280x720 |
 | 8100 | `pr` | `issue-767-zoom-keeps-glyph-shape.spec.ts` | a narrow Transaction bar keeps a body drag handle and can be moved |
 | 7700 | `visual` | `left-pane-constraint.spec.ts` | left pane starts at the approved minimum without a resize jump (/) |
-| 7600 | `pr` | `issue-744-diagnostics-freshness.spec.ts` | timing diagnostics stay current across a semantic edit, Undo and Redo (no silent clear) |
 
 ## Recorded spec-level runtimes
 
@@ -88,14 +88,17 @@ These values were measured for a whole spec file and are deliberately not copied
 | `axis-break-compression.spec.ts` | 1 | 1/1 reviewed |
 | `badge-parity.spec.ts` | 2 | 2/2 reviewed |
 | `badge-visual-evidence.spec.ts` | 1 | 1/1 reviewed |
+| `blocked-browser-storage.spec.ts` | 1 | 1/1 reviewed |
 | `bottom-bookmark-navigation.spec.ts` | 2 | 2/2 reviewed |
 | `bottom-context.spec.ts` | 5 | 5/5 reviewed |
 | `bottom-editor-row-contrast.spec.ts` | 3 | 3/3 reviewed |
+| `bottom-expanded-after-mode-switch.spec.ts` | 2 | 2/2 reviewed |
 | `bottom-panel-cancel-apply-height.spec.ts` | 1 | 1/1 reviewed |
 | `bottom-panel-full-width.spec.ts` | 2 | 2/2 reviewed |
 | `bottom-splitter-interaction-closure.spec.ts` | 4 | 4/4 reviewed |
 | `bottom-tab-header-visibility.spec.ts` | 2 | 2/2 reviewed |
 | `bottom-transaction-fixed-target.spec.ts` | 8 | 0/8 reviewed |
+| `browser-tab-title.spec.ts` | 1 | 1/1 reviewed |
 | `bulk-registration-strict.spec.ts` | 2 | 2/2 reviewed |
 | `callout-body-anchor-drag.spec.ts` | 3 | 3/3 reviewed |
 | `checkbox-dark-color-scheme.spec.ts` | 1 | 1/1 reviewed |
@@ -117,6 +120,8 @@ These values were measured for a whole spec file and are deliberately not copied
 | `cycle-frozen-columns-scroll.spec.ts` | 2 | 2/2 reviewed |
 | `cycle-ruler-long-document-pitch.spec.ts` | 1 | 1/1 reviewed |
 | `cycle-scroll-pitch-invariant.spec.ts` | 2 | 2/2 reviewed |
+| `cycle-short-window-bottom.spec.ts` | 2 | 2/2 reviewed |
+| `dark-scheme-contrast.spec.ts` | 1 | 1/1 reviewed |
 | `design-system-foundation.spec.ts` | 1 | 1/1 reviewed |
 | `diagnostic-aggregator.spec.ts` | 8 | 8/8 reviewed |
 | `dialog-esc-lifecycle.spec.ts` | 2 | 1/2 reviewed |
@@ -130,9 +135,12 @@ These values were measured for a whole spec file and are deliberately not copied
 | `export-user-text-boundary.spec.ts` | 1 | 1/1 reviewed |
 | `feature-showcase-startup.spec.ts` | 3 | 3/3 reviewed |
 | `file-beforeunload-dirty-guard.spec.ts` | 3 | 1/3 reviewed |
+| `file-drop-open.spec.ts` | 2 | 2/2 reviewed |
 | `file-operation-feedback.spec.ts` | 8 | 0/8 reviewed |
 | `file-ribbon-blank-controls.spec.ts` | 1 | 1/1 reviewed |
+| `file-shortcuts.spec.ts` | 2 | 2/2 reviewed |
 | `find-replace-journey.spec.ts` | 3 | 3/3 reviewed |
+| `find-replace-literal-replacement.spec.ts` | 1 | 1/1 reviewed |
 | `font-style-commit-contract.spec.ts` | 1 | 1/1 reviewed |
 | `full-gui.spec.ts` | 42 | 42/42 reviewed |
 | `ghost-trace-delete.spec.ts` | 1 | 1/1 reviewed |
@@ -155,6 +163,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `home-ribbon-timegroup-cleanup.spec.ts` | 1 | 1/1 reviewed |
 | `icon-button-dialog-close.spec.ts` | 5 | 5/5 reviewed |
 | `incremental-invalidation-matrix.spec.ts` | 1 | 1/1 reviewed |
+| `insecure-context-random-id.spec.ts` | 1 | 1/1 reviewed |
 | `insert-icon-semantics.spec.ts` | 3 | 3/3 reviewed |
 | `insert-timeline-ribbon.spec.ts` | 10 | 10/10 reviewed |
 | `inspector-accordion.spec.ts` | 2 | 2/2 reviewed |
@@ -362,6 +371,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `legend-canvas-anchor.spec.ts` | 1 | 0/1 reviewed |
 | `listener-lifecycle.spec.ts` | 2 | 2/2 reviewed |
 | `local-geometry-dom-batch.spec.ts` | 1 | 1/1 reviewed |
+| `long-document-title.spec.ts` | 1 | 1/1 reviewed |
 | `measurement-anchor-drag.spec.ts` | 5 | 5/5 reviewed |
 | `measurement-dimension-layout.spec.ts` | 1 | 1/1 reviewed |
 | `measurement-export-matrix.spec.ts` | 1 | 1/1 reviewed |
@@ -375,6 +385,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `name-draft-identity.spec.ts` | 1 | 1/1 reviewed |
 | `open-progressive-wave-yield.spec.ts` | 3 | 3/3 reviewed |
 | `open-validation-handoff.spec.ts` | 3 | 3/3 reviewed |
+| `paste-without-copy.spec.ts` | 2 | 2/2 reviewed |
 | `perf-755-far-jump-longtask.spec.ts` | 1 | 1/1 reviewed |
 | `perf-fixed-full-span-open.spec.ts` | 5 | 5/5 reviewed |
 | `performance-closure.spec.ts` | 11 | 11/11 reviewed |
@@ -404,6 +415,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `ruler-reference-clock.spec.ts` | 2 | 2/2 reviewed |
 | `ruler-terminal-boundary.spec.ts` | 1 | 1/1 reviewed |
 | `runtime-owner-acceptance.spec.ts` | 2 | 2/2 reviewed |
+| `scenario-add-signal-after-duplicate.spec.ts` | 2 | 2/2 reviewed |
 | `signal-editor-draft-survives-unrelated-edit.spec.ts` | 1 | 1/1 reviewed |
 | `signal-editor-group-dropdown.spec.ts` | 2 | 2/2 reviewed |
 | `signal-editor.spec.ts` | 18 | 18/18 reviewed |
@@ -423,6 +435,8 @@ These values were measured for a whole spec file and are deliberately not copied
 | `splitter-view-state.contract.spec.ts` | 3 | 3/3 reviewed |
 | `stable-id-collision.spec.ts` | 1 | 1/1 reviewed |
 | `stable-surface.spec.ts` | 1 | 1/1 reviewed |
+| `status-bar-long-selection.spec.ts` | 1 | 1/1 reviewed |
+| `status-bar-narrow-window.spec.ts` | 2 | 2/2 reviewed |
 | `status-context.spec.ts` | 4 | 4/4 reviewed |
 | `time-group-lifecycle.spec.ts` | 1 | 1/1 reviewed |
 | `time-mapping-scale-closure.spec.ts` | 1 | 1/1 reviewed |
@@ -474,6 +488,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `transaction-viewport-hscroll.spec.ts` | 1 | 1/1 reviewed |
 | `tree-drag-drop.spec.ts` | 5 | 5/5 reviewed |
 | `tree-keyboard.spec.ts` | 2 | 2/2 reviewed |
+| `undo-empty-history.spec.ts` | 1 | 1/1 reviewed |
 | `undo-redo-selection-context.spec.ts` | 11 | 4/11 reviewed |
 | `unsaved-file-dialog.spec.ts` | 15 | 14/15 reviewed |
 | `v8-gui-contract-coverage.spec.ts` | 1 | 1/1 reviewed |
@@ -490,6 +505,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `workspace-preset-density.spec.ts` | 1 | 1/1 reviewed |
 | `workspace-zoom-isolation.spec.ts` | 2 | 2/2 reviewed |
 | `zoom-cross-surface-alignment.spec.ts` | 1 | 1/1 reviewed |
+| `zoom-out-scroll-extent.spec.ts` | 2 | 2/2 reviewed |
 | `zoom-text-fidelity.spec.ts` | 5 | 5/5 reviewed |
 
 ## Static review candidates
@@ -507,6 +523,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `badge-parity.spec.ts` | querySelector, getComputedStyle, geometryRead |
 | `badge-visual-evidence.spec.ts` | geometryRead |
 | `bottom-editor-row-contrast.spec.ts` | getComputedStyle |
+| `bottom-expanded-after-mode-switch.spec.ts` | querySelector, geometryRead |
 | `bottom-panel-cancel-apply-height.spec.ts` | geometryRead |
 | `bottom-panel-full-width.spec.ts` | geometryRead |
 | `bottom-tab-header-visibility.spec.ts` | getComputedStyle, dataset, geometryRead |
@@ -515,6 +532,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `cursor-signal-split-late-pane.spec.ts` | querySelector, dataset, geometryRead |
 | `cycle-default-pitch.spec.ts` | querySelector, getComputedStyle, geometryRead, explicitWait |
 | `cycle-frozen-columns-scroll.spec.ts` | getComputedStyle |
+| `dark-scheme-contrast.spec.ts` | getComputedStyle, geometryRead, explicitWait |
 | `design-system-foundation.spec.ts` | querySelector, getComputedStyle, directDomMutation, geometryRead |
 | `edge-counter-compact.spec.ts` | querySelector, geometryRead |
 | `empty-group-tree-projection.spec.ts` | dataset, explicitWait |
@@ -535,7 +553,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `issue-1080-transition-row-selection.spec.ts` | querySelector |
 | `issue-175-prefetch-scroll-layout.spec.ts` | dataset |
 | `issue-175-scroll-group-header-dom.spec.ts` | dataset |
-| `issue-175-scrollbar-geometry-matrix.spec.ts` | geometryRead |
+| `issue-175-scrollbar-geometry-matrix.spec.ts` | dataset, geometryRead |
 | `issue-175-virtualized-group-start.spec.ts` | dataset |
 | `issue-208-open-epoch-coherence.spec.ts` | querySelector |
 | `issue-219-wave-url-lifetime.spec.ts` | querySelector, explicitWait |
@@ -640,6 +658,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `left-tree-type-filter.spec.ts` | dataset |
 | `listener-lifecycle.spec.ts` | dataset |
 | `local-geometry-dom-batch.spec.ts` | querySelector, dataset |
+| `long-document-title.spec.ts` | querySelector, geometryRead |
 | `measurement-anchor-drag.spec.ts` | explicitWait |
 | `measurement-export-matrix.spec.ts` | dataset |
 | `measurement-lane-stacking.spec.ts` | dataset |
@@ -665,6 +684,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `splitter-view-state.contract.spec.ts` | getComputedStyle, explicitWait |
 | `stable-id-collision.spec.ts` | querySelector |
 | `stable-surface.spec.ts` | dataset |
+| `status-bar-long-selection.spec.ts` | querySelector, geometryRead |
 | `timeline-editor.spec.ts` | dataset, geometryRead |
 | `timeline-edits-stable-ids.spec.ts` | explicitWait |
 | `timeline-range-100k.spec.ts` | querySelector, dataset, geometryRead |
@@ -697,6 +717,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `view-ribbon-slot.spec.ts` | querySelector, getComputedStyle, dataset, geometryRead |
 | `visual-grammar-cross-component.spec.ts` | querySelector, geometryRead |
 | `wavedrom-shared-definitions.spec.ts` | querySelector, styleMutation, directDomMutation, explicitWait |
+| `zoom-out-scroll-extent.spec.ts` | explicitWait |
 | `zoom-text-fidelity.spec.ts` | getComputedStyle, dataset, geometryRead, explicitWait |
 
 ## Exact-title duplicate candidates
