@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T14:33:40.513Z",
+  "generatedAt": "2026-10-10T14:38:07.508Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 443,
-  "caseCount": 1327,
-  "reviewedCaseCount": 1269,
+  "specFileCount": 444,
+  "caseCount": 1329,
+  "reviewedCaseCount": 1271,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 419,
+    "pr": 421,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -6801,6 +6801,60 @@
       "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
       "replacementTest": null,
       "reviewStatus": "UNREVIEWED"
+    },
+    {
+      "file": "file-drop-open.spec.ts",
+      "suitePath": [],
+      "line": 3,
+      "title": "dropping a .tcd file on the window opens it and does not navigate away",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "file-drop-open",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "A file dropped on the window is opened like File > Open and the browser never navigates to it.",
+      "duplicateGroup": "file-drop-open",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Only real drag events show the default navigation that used to discard the unsaved document.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "file-drop-open",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "file-drop-open.spec.ts",
+      "suitePath": [],
+      "line": 27,
+      "title": "dropping a non-tcd file reports a failed Open instead of leaving the page",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "file-drop-open",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "A dropped file that is not a valid document reports the Open failure and keeps the page.",
+      "duplicateGroup": "file-drop-open",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Covers the unsupported-file branch of the drop handler.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "file-drop-open",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "file-operation-feedback.spec.ts",
@@ -35415,6 +35469,15 @@
       "declaredTimeoutMs": 5000,
       "candidateSignals": [],
       "semanticReviewStatus": "PARTIAL"
+    },
+    {
+      "file": "file-drop-open.spec.ts",
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "file-operation-feedback.spec.ts",

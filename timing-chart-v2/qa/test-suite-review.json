@@ -17154,6 +17154,42 @@
       "decision": "KEEP",
       "reason": "The missing API used to throw at startup and leave a blank page.",
       "replacementTest": null
+    },
+    {
+      "file": "file-drop-open.spec.ts",
+      "title": "dropping a .tcd file on the window opens it and does not navigate away",
+      "domain": "file-drop-open",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "A file dropped on the window is opened like File > Open and the browser never navigates to it.",
+      "duplicateGroup": "file-drop-open",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Only real drag events show the default navigation that used to discard the unsaved document.",
+      "replacementTest": null
+    },
+    {
+      "file": "file-drop-open.spec.ts",
+      "title": "dropping a non-tcd file reports a failed Open instead of leaving the page",
+      "domain": "file-drop-open",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "A dropped file that is not a valid document reports the Open failure and keeps the page.",
+      "duplicateGroup": "file-drop-open",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Covers the unsupported-file branch of the drop handler.",
+      "replacementTest": null
     }
   ]
 }

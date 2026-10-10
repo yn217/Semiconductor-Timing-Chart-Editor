@@ -801,6 +801,22 @@ export function MinimalCycleView() {
       });
     },
   };
+  // Dropping a file anywhere on the window opens it like File > Open. Without this the browser navigates to the dropped file and the unsaved document is lost.
+  const openDroppedFileRef = useRef<(file: File) => void>(() => undefined);
+  openDroppedFileRef.current = (file) => { capturePendingFileOrigin(); void documentLifecycle.readFile(file); };
+  useEffect(() => {
+    const hasFiles = (event: DragEvent) => Array.from(event.dataTransfer?.types ?? []).includes("Files");
+    const onDragOver = (event: DragEvent) => { if (!hasFiles(event)) return; event.preventDefault(); if (event.dataTransfer) event.dataTransfer.dropEffect = "copy"; };
+    const onDrop = (event: DragEvent) => {
+      if (!hasFiles(event)) return;
+      event.preventDefault();
+      const file = event.dataTransfer?.files?.[0];
+      if (file) openDroppedFileRef.current(file);
+    };
+    window.addEventListener("dragover", onDragOver);
+    window.addEventListener("drop", onDrop);
+    return () => { window.removeEventListener("dragover", onDragOver); window.removeEventListener("drop", onDrop); };
+  }, []);
   return <EditorShellView
     viewModel={{
       style: { "--gui-left-width": `${modeComposition.fixedLeftWidth ?? leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px`, "--gui-role-width": `${snapshot.document.layout.roleColumnWidth}px`, "--gui-signal-width": `${snapshot.document.layout.signalNameWidth}px`, "--gui-signal-align": snapshot.document.layout.signalNameAlign, "--gui-signal-split-upper-ratio": String(signalSplitRatio), "--transaction-tree-row-height": viewMode === "Transaction" ? "29px" : undefined } as React.CSSProperties,
