@@ -18,6 +18,7 @@ export type CanonicalReferenceKind =
   | "constraint.handshakeRequest"
   | "constraint.handshakeAcknowledge"
   | "constraint.handshakeStableSignal"
+  | "constraint.handshakeReset"
   | "constraint.latencyRangeRequest"
   | "constraint.latencyRangeAcknowledge"
   | "constraint.latencyTrigger"
@@ -30,7 +31,7 @@ export const CANONICAL_REFERENCE_KINDS = Object.freeze([
   "signal.enum", "timeline.referenceClock", "timeGroup.parent", "signal.edgeCounter.marker",
   "annotation.anchor", "annotation.ghostTraceSource", "annotation.markerSpanStart", "annotation.markerSpanEnd",
   "transaction.linkedSignal", "transaction.group", "annotationGroup.member", "timeGroup.resumeLabelAnchor",
-  "constraint.handshakeRequest", "constraint.handshakeAcknowledge", "constraint.handshakeStableSignal",
+  "constraint.handshakeRequest", "constraint.handshakeAcknowledge", "constraint.handshakeStableSignal", "constraint.handshakeReset",
   "constraint.latencyRangeRequest", "constraint.latencyRangeAcknowledge", "constraint.latencyTrigger", "constraint.latencyResponse",
   "labelAnchor.ownerTimeGroup", "signalGroup.row", "spacer.ownerGroup",
 ] as const satisfies readonly CanonicalReferenceKind[]);
@@ -110,6 +111,7 @@ export function constraintReferences(constraints: CanonicalDocument["constraints
       case "handshake":
         push("constraint.handshakeRequest", scalar(["requestSignalId", "request", "reqSignalId", "req"]));
         push("constraint.handshakeAcknowledge", scalar(["acknowledgeSignalId", "ackSignalId", "acknowledge", "ack"]));
+        push("constraint.handshakeReset", scalar(["resetSignalId"]));
         {
           const stable = list(["stableSignalIds", "dataSignalIds", "stableSignals", "dataSignals"]);
           stable?.values.forEach((value, itemIndex) => references.push({ kind: "constraint.handshakeStableSignal", ownerId: constraint.id, targetId: value, targetType: "signal", path: `$.constraints[${index}].data.${stable.key}[${itemIndex}]` }));

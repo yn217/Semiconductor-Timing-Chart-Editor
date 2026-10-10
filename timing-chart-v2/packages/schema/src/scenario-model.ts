@@ -201,6 +201,7 @@ export function projectScenarioAsV2(document: ScenarioDocumentModel, scenarioId:
 /** Rename a Scenario without changing its semantic identity or owned data. */
 export function renameScenario(document: ScenarioDocumentModel, scenarioId: ScenarioId, name: string): ScenarioDocumentModel {
   if (name.trim().length === 0) throw new Error("Scenario name must be a non-empty string.");
+  if (document.scenarios.some((scenario) => scenario.id !== scenarioId && scenario.name.trim() === name.trim())) throw new Error(`Scenario name '${name.trim()}' is already used by another Scenario.`);
   let found = false;
   let changed = false;
   const scenarios = document.scenarios.map((scenario) => {
@@ -236,6 +237,16 @@ function scenarioEntityIds(document: ScenarioDocumentModel): Set<string> {
     for (const entity of canonicalEntityInventory(projectScenarioAsV2(document, scenario.id))) used.add(entity.id);
   }
   return used;
+}
+
+/** A generated default name gets a numeric suffix when another Scenario already uses it. */
+function uniqueScenarioName(document: ScenarioDocumentModel, base: string): string {
+  const used = new Set(document.scenarios.map((scenario) => scenario.name.trim()));
+  if (!used.has(base.trim())) return base;
+  for (let index = 2; ; index += 1) {
+    const candidate = `${base} ${index}`;
+    if (!used.has(candidate)) return candidate;
+  }
 }
 
 /**
@@ -280,10 +291,11 @@ export function duplicateScenario(document: ScenarioDocumentModel, scenarioId: S
     }];
     return [signalId, { ...state, values: state.values.map((change) => ({ ...change, ...(change.id === undefined ? {} : { id: signalValueChangeIds.get(change.id)! }) })) }];
   }));
+  const copiedName = name ?? uniqueScenarioName(document, `${source.name} Copy`);
   const copied: TimingScenario = {
     ...source,
     id: copiedScenarioId,
-    name: name ?? `${source.name} Copy`,
+    name: copiedName,
     signalStates,
     timeline: {
       ...source.timeline,
@@ -422,10 +434,40 @@ function activeLevel(constraint: TimingScenario["constraints"][number], keys: re
   return 1;
 }
 
-function replaceSignalSpan(state: ScenarioSignalState, start: number, end: number, events: readonly SignalValueChange[]): ScenarioSignalState {
+/** Replace the generated span [start, end). The original value in effect at `end` is restored so the generated value does not leak past the span. */
+function replaceSignalSpan(state: ScenarioSignalState, start: number, end: number, events: readonly SignalValueChange[], allocateId: () => string): ScenarioSignalState {
   if (state.kind !== "values") return state;
   const values = [...state.values.filter((change) => change.start < start || change.start >= end), ...events].sort((left, right) => left.start - right.start);
+  const originalAtEnd = latestChange(state.values, end);
+  const hasEventAtEnd = values.some((change) => change.start === end);
+  if (originalAtEnd !== undefined && !hasEventAtEnd && latestChange(values, end)?.value !== originalAtEnd.value) {
+    values.push({ start: end, value: originalAtEnd.value, id: allocateId() });
+    values.sort((left, right) => left.start - right.start);
+  }
   return { ...state, values };
+}
+
+function latestChange(changes: readonly SignalValueChange[], cycle: number): SignalValueChange | undefined {
+  let found: SignalValueChange | undefined;
+  for (const change of changes) {
+    if (change.start > cycle) break;
+    found = change;
+  }
+  return found;
+}
+
+/** Every ID already used in the document, so generated change IDs stay unique across all Scenarios. */
+function documentIds(document: ScenarioDocumentModel): Set<string> {
+  const ids = new Set<string>();
+  for (const scenario of document.scenarios) {
+    ids.add(scenario.id);
+    for (const item of canonicalEntityInventory(projectScenarioAsV2(document, scenario.id))) ids.add(item.id);
+    for (const state of Object.values(scenario.signalStates)) {
+      if (!state) continue;
+      for (const change of state.kind === "clock" ? state.enable ?? [] : state.values) if (change.id !== undefined) ids.add(change.id);
+    }
+  }
+  return ids;
 }
 
 function valueAt(state: ScenarioSignalState, cycle: number): string | number | undefined {
@@ -467,21 +509,26 @@ function applyHandshakeCase(scenario: TimingScenario, suggestion: HandshakeMissi
   const selected = cases[suggestion.kind];
   if (selected.end > scenario.timeline.end) throw new Error("Timeline is too short for this Handshake case.");
   let signalStates = { ...scenario.signalStates };
-  signalStates[suggestion.requestSignalId] = replaceSignalSpan(requestState, start, selected.end, events(suggestion.requestSignalId, selected.request));
-  signalStates[suggestion.acknowledgeSignalId] = replaceSignalSpan(acknowledgeState, start, selected.end, events(suggestion.acknowledgeSignalId, selected.acknowledge));
+  const replaceSpan = (signalId: SignalId, state: ScenarioSignalState, changes: readonly SignalValueChange[]): ScenarioSignalState => replaceSignalSpan(state, start, selected.end, changes, () => {
+    const id = opaqueDerivedId(`handshake-restore:${suggestion.constraintId}:${suggestion.kind}:${signalId}:${selected.end}`, usedIds);
+    usedIds.add(id);
+    return id;
+  });
+  signalStates[suggestion.requestSignalId] = replaceSpan(suggestion.requestSignalId, requestState, events(suggestion.requestSignalId, selected.request));
+  signalStates[suggestion.acknowledgeSignalId] = replaceSpan(suggestion.acknowledgeSignalId, acknowledgeState, events(suggestion.acknowledgeSignalId, selected.acknowledge));
   if (suggestion.kind === "reset-during-transaction") {
     if (!suggestion.resetSignalId) throw new Error("Reset case requires an explicitly configured Reset Signal ID.");
     const resetState = signalStates[suggestion.resetSignalId];
     if (resetState?.kind !== "values") throw new Error("Reset case requires a value-signal Reset state.");
     const resetActive = activeLevel(constraint, ["resetPolarity"]);
-    signalStates[suggestion.resetSignalId] = replaceSignalSpan(resetState, start, selected.end, events(suggestion.resetSignalId, [{ cycle: start + 2, value: resetActive === 1 ? 1 : 0 }, { cycle: start + 3, value: resetActive === 1 ? 0 : 1 }]));
+    signalStates[suggestion.resetSignalId] = replaceSpan(suggestion.resetSignalId, resetState, events(suggestion.resetSignalId, [{ cycle: start + 2, value: resetActive === 1 ? 1 : 0 }, { cycle: start + 3, value: resetActive === 1 ? 0 : 1 }]));
   }
   if (suggestion.kind === "stable-data-while-stalled") {
     for (const id of suggestion.stableSignalIds) {
       const state = signalStates[id];
       const held = state ? valueAt(state, start) : undefined;
       if (state?.kind !== "values" || held === undefined) throw new Error(`Stable Signal '${id}' has no value to hold during the generated stall.`);
-      signalStates[id] = replaceSignalSpan(state, start, selected.end, events(id, [{ cycle: start, value: held }]));
+      signalStates[id] = replaceSpan(id, state, events(id, [{ cycle: start, value: held }]));
     }
   }
   return { ...scenario, name: `${scenario.name} · ${suggestion.title}`, signalStates };
@@ -511,7 +558,7 @@ export function createScenariosFromHandshakeSuggestions(
     if (!created) throw new Error("Selected Handshake case did not create a Scenario.");
     const copiedConstraint = created.constraints[sourceConstraintIndex];
     if (!copiedConstraint) throw new Error("Duplicated Scenario is missing its Handshake constraint.");
-    const generated = applyHandshakeCase(created, { ...suggestion, constraintId: copiedConstraint.id }, scenarioEntityIds(duplicated));
+    const generated = applyHandshakeCase(created, { ...suggestion, constraintId: copiedConstraint.id }, documentIds(duplicated));
     next = { ...duplicated, scenarios: duplicated.scenarios.map((candidate) => candidate.id === created.id ? generated : candidate) };
     const problems = validateScenarioDocumentModel(next);
     if (problems.length > 0) throw new Error(`Generated Handshake Scenario is invalid (${problems.map((problem) => problem.code).join(", ")}).`);

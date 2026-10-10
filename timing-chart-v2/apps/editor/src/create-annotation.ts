@@ -1,7 +1,20 @@
-import { DEFAULT_MEASUREMENT_LAYOUT, type Annotation, type AnnotationId, type AnnotationType, type CanonicalDocument, type MeasurementProfile, type SemanticAnchor, type SignalId, type TransitionAnchorKind } from "@timing-chart-v2/schema";
+import { DEFAULT_MEASUREMENT_LAYOUT, type Annotation, type AnnotationId, type AnnotationType, type CanonicalDocument, type MeasurementProfile, type SemanticAnchor, type Signal, type SignalId, type TransitionAnchorKind } from "@timing-chart-v2/schema";
 import { nextEntityId } from "./entity-id.js";
 
 export interface MeasurementThresholdSpec { readonly profile: Exclude<MeasurementProfile, "cycle">; readonly anchorKind: TransitionAnchorKind; readonly start: number; readonly end: number }
+
+/** Editor-side mirror of the anchor point/signal rules enforced by `validateAnchor` in packages/schema/src/validation.ts, so
+ * the Inspector only offers points that commit and the Ribbon can refuse a combination before it is created. Keep in sync
+ * with that validator (the commit path is still the authority). `signalType` is the target Signal's type, or `undefined`
+ * when the anchor has no signalId. */
+export function anchorPointFitsSignalType(point: SemanticAnchor["point"], signalType: Signal["type"] | undefined): boolean {
+  if (signalType === "commentRow") return false;
+  if (signalType === undefined) return !["rising-edge", "falling-edge", "value-start", "value-center", "row-center"].includes(point);
+  if ((point === "value-start" || point === "value-center") && signalType === "clock") return false;
+  if ((point === "rising-edge" || point === "falling-edge") && (signalType === "bus" || signalType === "state" || signalType === "event")) return false;
+  if ((point === "transition-start" || point === "transition-center" || point === "transition-end") && signalType === "clock") return false;
+  return true;
+}
 
 export function createAnnotation(type: AnnotationType, signalId: SignalId, range: { readonly start: number; readonly end: number }, document: CanonicalDocument, thresholdSpec?: MeasurementThresholdSpec, arrowheadOverride?: Annotation["arrowhead"]): Annotation {
   const id = nextEntityId("annotation", document) as AnnotationId;

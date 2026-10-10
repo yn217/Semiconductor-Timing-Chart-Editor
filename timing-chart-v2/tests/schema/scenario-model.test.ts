@@ -342,7 +342,7 @@ describe("Scenario canonical model adapter", () => {
       },
     };
     expect(compareScenarioSignalStreams({ ...duplicatedModel, scenarios: [original, changedEnable] }, original.id, duplicate.id)).toEqual([
-      { signalId: clock.id, ranges: [{ start: 0, end: 8 }] },
+      { signalId: clock.id, ranges: [{ start: 1, end: 5 }] },
     ]);
 
     const changedBookmark = { ...duplicate, bookmarks: duplicate.bookmarks.map((bookmark) => ({ ...bookmark, start: bookmark.start + 1 })) };

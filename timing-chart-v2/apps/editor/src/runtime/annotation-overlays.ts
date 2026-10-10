@@ -1,5 +1,5 @@
 import { anchorTransitionFraction, anchorTransitionKind } from "@timing-chart-v2/schema";
-import type { Annotation, CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
+import type { Annotation, CanonicalDocument, SemanticAnchor, SignalId } from "@timing-chart-v2/schema";
 import { formatPhysicalTime } from "@timing-chart-v2/projection";
 import { allocateMeasurementLanes, findSourceAnchorGeometry, type LocalGeometryMap, type Point } from "@timing-chart-v2/geometry";
 import { rowsIntersectingVerticalViewport, type DisplayTimeMapping, type DisplayTimeViewport, type RenderProjection } from "@timing-chart-v2/projection";
@@ -92,11 +92,25 @@ export function indexedAnnotationsNearViewport(annotations: readonly Annotation[
   return { items: ordered.map((position) => annotations[position]!), indexEntriesVisited, wideNodesVisited, pinnedInjectedCount };
 }
 
+/** Within-cycle offset of a cycle-anchored point, matching the drawn geometry (start = 0, center = 1/2, end = 1 cycle). */
+function cyclePointOffset(point: SemanticAnchor["point"]): number {
+  return point === "cycle-center" || point === "value-center" || point === "row-center" ? 0.5 : point === "cycle-end" ? 1 : 0;
+}
+
+/** Cycle span a Measurement actually draws between its endpoints. A right-edge `cycle-end` resolves one cycle later than its
+ * source cycle, so a Ribbon range [5,6) (start cycle-start @5, end cycle-end @5) spans one cycle, not zero. Transition-resolved
+ * endpoints (threshold or ratio) keep their source cycle, so threshold Measurements are unchanged. */
+export function measurementCycleSpan(annotation: Pick<Annotation, "start" | "end">): number | undefined {
+  if (!annotation.start || !annotation.end) return undefined;
+  const edge = (anchor: SemanticAnchor): number => anchor.cycle + (anchorTransitionFraction(anchor) === undefined ? cyclePointOffset(anchor.point) : 0);
+  return Math.abs(edge(annotation.end) - edge(annotation.start));
+}
+
 function measurementAnchorLabel(annotation: Pick<Annotation, "label" | "measurement" | "start" | "end">, document: CanonicalDocument): string {
   if (!annotation.start || !annotation.end) return annotation.label;
   const start = anchorTransitionFraction(annotation.start);
   const end = anchorTransitionFraction(annotation.end);
-  const cycleDelta = Math.abs(annotation.end.cycle - annotation.start.cycle);
+  const cycleDelta = measurementCycleSpan(annotation) ?? 0;
   const timeDelta = document.timeline.physicalTimebase ? ` (${formatPhysicalTime(cycleDelta, document.timeline.physicalTimebase)})` : "";
   if (start === undefined || end === undefined || annotation.measurement?.profile === "cycle") return `${annotation.label} · cycle anchors · Δ ${cycleDelta} cycles${timeDelta}`;
   const profile = annotation.measurement?.profile;
