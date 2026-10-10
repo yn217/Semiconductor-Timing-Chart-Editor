@@ -173,7 +173,7 @@ test("annotation clipboard rejects a colliding foreign Signal ID without retarge
   await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
-  await expect(page.getByTestId("problems-status")).toHaveText("Problems: 2");
+  await expect(page.getByTestId("problems-status")).toHaveText("Problems: 1");
   await page.getByLabel("Bottom context panels").getByRole("tab", { name: "Problems", exact: true }).click();
   await expect(page.getByTestId("problems-panel")).toContainText("CLIPBOARD_FOREIGN_DOCUMENT");
 });
@@ -198,7 +198,7 @@ test("transaction clipboard rejects a colliding foreign linked Signal ID without
   await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
-  await expect(page.getByTestId("problems-status")).toHaveText("Problems: 2");
+  await expect(page.getByTestId("problems-status")).toHaveText("Problems: 1");
 });
 
 test("multi-selection clipboard preserves stable IDs and commits Duplicate/Cut as one operation", async ({ page }) => {

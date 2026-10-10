@@ -55,7 +55,7 @@ test("rejects an oversized Open file before reading and preserves document state
   await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
   await expect(page.locator(".app-titlebar h1")).toHaveText(before.title!);
   await expect(page.getByTestId("problems-status")).toHaveText("Problems: 1");
-  await expect(page.getByText(/Open rejected before parsing: oversized\.tcd\.json/)).toBeVisible();
+  await expect(page.getByTestId("operation-feedback").getByText(/Open rejected before parsing: oversized\.tcd\.json/)).toBeVisible();
 });
 
 test("rejects an over-budget canonical resource before session replacement", async ({ page }) => {
@@ -78,5 +78,5 @@ test("rejects an over-budget canonical resource before session replacement", asy
   await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
   await expect(page.locator(".app-titlebar h1")).toHaveText(before.title!);
   await expect(page.getByTestId("problems-status")).toHaveText("Problems: 1");
-  await expect(page.getByText(/Document resource limit exceeded for cycles/)).toBeVisible();
+  await expect(page.getByTestId("operation-feedback").getByText(/Document resource limit exceeded for cycles/)).toBeVisible();
 });

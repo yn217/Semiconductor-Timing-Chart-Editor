@@ -30,7 +30,7 @@ export function commitDocumentReplacement(port: DocumentReplacementPort, input: 
     const problems = validateDocumentResourceBudget(document);
     if (problems.length > 0) return { ok: false, reason: "resource-budget", problems };
   }
-  const diagnostics = migrationWarnings.map((warning, index) => ({ code: warning.code, path: `${warning.path}[migration:${index}]`, message: warning.message }));
+  const diagnostics = migrationWarnings.map((warning, index) => ({ code: warning.code, path: `${warning.path}[migration:${index}]`, message: warning.message, severity: "info" as const }));
   let session: CommandHistorySession;
   try {
     session = port.replaceSession(input, diagnostics);

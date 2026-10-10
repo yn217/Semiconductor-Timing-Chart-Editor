@@ -644,7 +644,7 @@ export function MinimalCycleView() {
       onGroupCreated: selection.selectGroup,
       onSpacerCreated: selection.selectSpacer,
       onTransactionCreated: selection.selectTransaction,
-      problemsCount: diagnostics.length,
+      problemsCount: diagnostics.filter((item) => item.severity !== "info").length, // migration notices are information, not problems
       problemsPending: validationPending,
       diagnostics,
       onNavigateProblem: navigateProblem,
@@ -767,7 +767,7 @@ export function MinimalCycleView() {
     redoDepth: history.redoDepth,
     timeAxisStatus: `Time Axis: ${snapshot.document.timeline.referenceClock ? `Clock · ${referenceClockSignal?.display.name ?? snapshot.document.timeline.referenceClock}` : "Time · No Clock Reference"}`,
     dirty: history.dirty,
-    problemsCount: diagnostics.length,
+    problemsCount: diagnostics.filter((item) => item.severity !== "info").length, // migration notices are information, not problems
     problemsPending: validationPending,
     waveDromHasError,
     cursorStatus: cursorStatusReadout(cursorA, cursorB, cursorDelta, snapshot.document.timeline.physicalTimebase),
