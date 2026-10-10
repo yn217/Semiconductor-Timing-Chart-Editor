@@ -193,7 +193,7 @@ export function TransactionTree({
       globalThis.visualViewport?.removeEventListener("resize", updatePosition);
       globalThis.visualViewport?.removeEventListener("scroll", updatePosition);
     };
-  }, [openMenu]);
+  }, [openMenu, submenuOpen]); // expanding "Move to Group" grows the menu, so it must be re-fitted to the window
   const groups = useMemo(
     () =>
       [...(document.transactionGroups ?? [])].sort(

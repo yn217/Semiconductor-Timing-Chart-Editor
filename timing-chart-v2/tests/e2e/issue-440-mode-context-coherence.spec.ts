@@ -64,7 +64,7 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
     await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
     await expect(page.getByTestId("ribbon-context")).toHaveCount(0);
     await expect(page.getByTestId("active-pane-status")).toHaveText("Active Pane: Signal");
-    await page.getByTestId("transaction-lanes").click({ position: { x: 100, y: 12 } });
+    await page.getByTestId("transaction-lanes").click({ position: { x: 600, y: 40 } }); // the left 35px strip under the header holds the Transactions filter
     await expect(page.getByTestId("active-pane-status")).toHaveText("Active Pane: Transaction");
     await expect(page.getByTestId("ribbon-context")).toHaveCount(0);
     await page.locator(".surface-host").click({ position: { x: 100, y: 100 } });
