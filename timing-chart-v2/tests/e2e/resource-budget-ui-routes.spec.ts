@@ -87,7 +87,7 @@ test("bulk registration crosses the exact signal budget once and rejects overflo
   const dialog = page.getByRole("dialog", { name: "Bulk Signal Registration" });
   await dialog.getByLabel("Bulk signal definitions").fill("bulk.alpha binary\nbulk.beta binary");
   await dialog.getByTestId("bulk-register-preview-button").click();
-  await expect(dialog.getByTestId("bulk-register-preview")).toContainText("Ready to register 2 signals");
+  await expect(dialog.getByTestId("bulk-register-preview")).toContainText("Ready to register 2 of 2 signals");
   await dialog.getByTestId("bulk-register-apply").click();
   await expect(page.getByTestId("signal-count-status")).toHaveText("Signals: 10000");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
