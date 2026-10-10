@@ -117,7 +117,7 @@
       },
       "to": {
         "file": "transaction-export.spec.ts",
-        "title": "creates, edits, links, saves and reopens one canonical Transaction"
+        "title": "creates, edits, links, saves and reopens one canonical Transaction at 1672x941"
       },
       "protectedInvariant": "Canonical Transaction identity and timing survive production Save/Open with clean History after reopening.",
       "reason": "The replacement verifies more persisted Transaction fields, stable linked Signal identity, Undo/Redo and History reset; separate Combined projection cases retain mode coverage."

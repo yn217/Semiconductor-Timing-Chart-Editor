@@ -159,9 +159,10 @@
 .desktop-workspace[data-workspace-owner="CombinedWorkspace"] { --combined-bottom-cover: 0px; }
 .editor-shell[data-bottom-visible="true"] .desktop-workspace[data-workspace-owner="CombinedWorkspace"] { --combined-bottom-cover: calc(var(--gui-bottom-height) + 10px); }
 /* The panel runs under the Bottom editor, so the Signal pane's scroller must stop at the editor's top edge (Cycle reaches the same result by
-   scrolling its rows above the editor): rows then scroll within the visible Main area instead of sitting hidden behind the editor. */
-.desktop-workspace[data-workspace-owner="CombinedWorkspace"] .cycle-panel.mode-split .split-signal-content { margin-bottom: var(--combined-bottom-cover); min-height: 0; }
-.cycle-panel.mode-split .split-transaction-pane { flex: 0 0 clamp(160px, calc((100% - var(--combined-bottom-cover, 0px)) * var(--gui-signal-split-upper-ratio, 0.5)), 280px); }
+   scrolling its rows above the editor): rows then scroll within the visible Main area instead of sitting hidden behind the editor. On a short window the Transaction pane yields
+   (down to 72px) so the Signal pane keeps at least 100px. */
+.desktop-workspace[data-workspace-owner="CombinedWorkspace"] .cycle-panel.mode-split .split-signal-content { flex: 1 1 0; margin-bottom: var(--combined-bottom-cover); min-height: 100px; }
+.cycle-panel.mode-split .split-transaction-pane { min-height: 72px; flex: 0 1 clamp(160px, calc((100% - var(--combined-bottom-cover, 0px)) * var(--gui-signal-split-upper-ratio, 0.5)), 280px); }
 /* Combined: Transactions header on top (workspace header), Signals / Groups header (the Cycle header) between the divider and the Signal pane. */
 .cycle-panel.mode-split .combined-signal-header { flex: 0 0 37px; position: relative; z-index: 22; }
 .cycle-panel.mode-split .combined-signal-header > .column-headings { height: 37px; }

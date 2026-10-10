@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 416 spec files and 1240 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 431 spec files and 1311 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1240/1240 cases reviewed.
+Semantic review progress: 1253/1311 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 629 |
-| `nightly` | 238 |
+| `integration` | 634 |
+| `nightly` | 241 |
 | `performance` | 73 |
-| `pr` | 396 |
-| `visual` | 180 |
+| `pr` | 403 |
+| `visual` | 181 |
 
 ## Top recorded per-case runtimes
 
@@ -28,30 +28,20 @@ These are case-level observations recorded directly on case reviews. Inventory g
 | 25100 | `visual` | `issue-441-ribbon-label-integrity.spec.ts` | Ribbon labels are intact across Cycle, Transaction and Combined at 1024x700 |
 | 13900 | `pr` | `issue-753-bookmark-navigation-stays-in-app.spec.ts` | every Bookmark gesture stays inside the SPA in Combined mode |
 | 13400 | `pr` | `issue-753-bookmark-navigation-stays-in-app.spec.ts` | every Bookmark gesture stays inside the SPA in Cycle mode |
+| 12000 | `pr` | `combined-signal-pane-scroll.spec.ts` | Combined Signal rows scroll into view above the Bottom editor |
 | 10600 | `visual` | `left-header-action-alignment.spec.ts` | right-aligns Left Tree header actions without changing command behavior |
 | 10200 | `pr` | `issue-760-combined-horizontal-wheel.spec.ts` | Combined horizontal wheel scrolls the shared viewport at 1280x720 |
 | 9700 | `visual` | `left-tree-compact-footer.spec.ts` | keeps the left tree footer compact at laptop viewport |
 | 9300 | `pr` | `issue-753-bookmark-navigation-stays-in-app.spec.ts` | every Bookmark gesture stays inside the SPA in Transaction mode |
 | 9000 | `integration` | `left-tree-interaction.spec.ts` | collapses only Left Tree descendants and restores stable rows without a canonical mutation |
+| 9000 | `pr` | `redo-ctrl-y.spec.ts` | Ctrl+Y redoes what Ctrl+Z undid |
 | 8800 | `pr` | `issue-750-geometry-10-to-50.spec.ts` | 1 TC = 10 cycles -> 50 cycles compresses bars 5x, keeps TC label pitch, never changes canonical cycles (1280x720) |
 | 8700 | `pr` | `issue-750-custom-tc-scale.spec.ts` | Custom TC scale accepts only a positive integer and never applies an invalid draft |
 | 8600 | `visual` | `issue-767-zoom-keeps-glyph-shape.spec.ts` | zoom does not stretch Transaction text at 1280x720 |
 | 8100 | `pr` | `issue-767-zoom-keeps-glyph-shape.spec.ts` | a narrow Transaction bar keeps a body drag handle and can be moved |
 | 7700 | `visual` | `left-pane-constraint.spec.ts` | left pane starts at the approved minimum without a resize jump (/) |
 | 7600 | `pr` | `issue-744-diagnostics-freshness.spec.ts` | timing diagnostics stay current across a semantic edit, Undo and Redo (no silent clear) |
-| 6900 | `visual` | `left-tree-compact-footer.spec.ts` | keeps the left tree footer compact at the Golden viewport |
-| 6600 | `performance` | `local-geometry-dom-batch.spec.ts` | keeps WaveDrom DOM writes and Local Geometry reads inside one render batch |
-| 6400 | `integration` | `listener-lifecycle.spec.ts` | registers the Left Tree keydown handler exactly once per mount (no duplicate listener) |
-
-## PR profile runtime
-
-### PR profile rerun after stale-assertion fixes (2026-10-06, Windows)
-
-| Profile | Selected cases | Result | Playwright wall time | Workers |
-| --- | ---: | --- | ---: | ---: |
-| `pr` (`npm run test:e2e:pr`) | 396 | 395 passed, 1 failed | 3.7 min | 10 |
-
-The remaining failure is `icon-button-dialog-close.spec.ts:140`: outside-click closes the menu, but the same click selects the underlying `READY` row (`selection-status` changes from `None` to `READY`). This is the unresolved #431 product decision, not a test-architecture failure. The run is below the #782 eight-minute review threshold. Inventory collection ran as the command pre-step; Playwright test tracing remained configured to retain only failures.
+| 7000 | `pr` | `combined-tree-add-menus.spec.ts` | Combined Signals and Transactions Add menus each open and stay open |
 
 ## Recorded spec-level runtimes
 
@@ -65,26 +55,27 @@ These values were measured for a whole spec file and are deliberately not copied
 | 3600 | `integration`, `visual` | `issue-746-visible-group-create.spec.ts` |
 | 952 | `performance`, `nightly` | `perf-fixed-full-span-open.spec.ts` |
 
-> This inventory's cases all have explicit semantic review records. Classification does not imply that the full execution suite or every acceptance profile has been run.
+> This is a complete name/location inventory, not a completed semantic review. 58 cases remain `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
 | Spec file | Cases | Review status |
 | --- | ---: | --- |
 | `acceptance-397-sample-a.spec.ts` | 4 | 4/4 reviewed |
-| `acceptance-397-sample-c.spec.ts` | 5 | 5/5 reviewed |
+| `acceptance-397-sample-c.spec.ts` | 7 | 7/7 reviewed |
 | `acceptance-397-sample-d.spec.ts` | 4 | 4/4 reviewed |
 | `acceptance-429-transaction-colors.spec.ts` | 4 | 4/4 reviewed |
 | `acceptance-429-transaction-composition.spec.ts` | 32 | 32/32 reviewed |
+| `advanced-json-apply-roundtrip.spec.ts` | 2 | 0/2 reviewed |
 | `advanced-json-diagnostic.spec.ts` | 7 | 7/7 reviewed |
 | `ai-bridge.spec.ts` | 14 | 14/14 reviewed |
 | `ai-domain-coverage.spec.ts` | 1 | 1/1 reviewed |
 | `ai-proposal-workflow.spec.ts` | 10 | 10/10 reviewed |
 | `annotation-bottom-list.spec.ts` | 1 | 1/1 reviewed |
-| `annotation-highlight-position-mode.spec.ts` | 2 | 2/2 reviewed |
+| `annotation-highlight-position-mode.spec.ts` | 3 | 2/3 reviewed |
 | `annotation-inspector-anchor.spec.ts` | 1 | 1/1 reviewed |
 | `annotation-line-rendering.spec.ts` | 4 | 4/4 reviewed |
 | `annotation-marker-vertical-span.spec.ts` | 1 | 1/1 reviewed |
 | `annotation-multi-select-font.spec.ts` | 1 | 1/1 reviewed |
-| `annotation-multiline-and-export-shapes.spec.ts` | 6 | 6/6 reviewed |
+| `annotation-multiline-and-export-shapes.spec.ts` | 7 | 7/7 reviewed |
 | `annotation-presentation-controls.spec.ts` | 6 | 6/6 reviewed |
 | `annotation-presentation.spec.ts` | 1 | 1/1 reviewed |
 | `annotation-preview-update.spec.ts` | 3 | 3/3 reviewed |
@@ -104,6 +95,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `bottom-panel-full-width.spec.ts` | 2 | 2/2 reviewed |
 | `bottom-splitter-interaction-closure.spec.ts` | 4 | 4/4 reviewed |
 | `bottom-tab-header-visibility.spec.ts` | 2 | 2/2 reviewed |
+| `bottom-transaction-fixed-target.spec.ts` | 8 | 0/8 reviewed |
 | `bulk-registration-strict.spec.ts` | 2 | 2/2 reviewed |
 | `callout-body-anchor-drag.spec.ts` | 3 | 3/3 reviewed |
 | `checkbox-dark-color-scheme.spec.ts` | 1 | 1/1 reviewed |
@@ -113,9 +105,11 @@ These values were measured for a whole spec file and are deliberately not copied
 | `clock-preview.spec.ts` | 4 | 4/4 reviewed |
 | `clockless-open-readiness.spec.ts` | 2 | 2/2 reviewed |
 | `clockless-time-axis.spec.ts` | 7 | 7/7 reviewed |
-| `combined-column-resize-alignment.spec.ts` | 1 | 1/1 reviewed |
+| `combined-column-resize-alignment.spec.ts` | 2 | 2/2 reviewed |
 | `combined-left-panel-transaction-tree.spec.ts` | 2 | 2/2 reviewed |
 | `combined-long-fixture-acceptance.spec.ts` | 2 | 2/2 reviewed |
+| `combined-signal-pane-scroll.spec.ts` | 1 | 1/1 reviewed |
+| `combined-tree-add-menus.spec.ts` | 1 | 1/1 reviewed |
 | `command-parity-delete.spec.ts` | 1 | 1/1 reviewed |
 | `comment-row-draft-consistency.spec.ts` | 1 | 1/1 reviewed |
 | `cursor-signal-split-late-pane.spec.ts` | 2 | 2/2 reviewed |
@@ -125,7 +119,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `cycle-scroll-pitch-invariant.spec.ts` | 2 | 2/2 reviewed |
 | `design-system-foundation.spec.ts` | 1 | 1/1 reviewed |
 | `diagnostic-aggregator.spec.ts` | 8 | 8/8 reviewed |
-| `dialog-esc-lifecycle.spec.ts` | 1 | 1/1 reviewed |
+| `dialog-esc-lifecycle.spec.ts` | 2 | 1/2 reviewed |
 | `document-properties.spec.ts` | 1 | 1/1 reviewed |
 | `edge-counter-compact.spec.ts` | 5 | 5/5 reviewed |
 | `edit-commit-contract.spec.ts` | 5 | 5/5 reviewed |
@@ -135,7 +129,8 @@ These values were measured for a whole spec file and are deliberately not copied
 | `export-fold-mapping.spec.ts` | 1 | 1/1 reviewed |
 | `export-user-text-boundary.spec.ts` | 1 | 1/1 reviewed |
 | `feature-showcase-startup.spec.ts` | 3 | 3/3 reviewed |
-| `file-beforeunload-dirty-guard.spec.ts` | 1 | 1/1 reviewed |
+| `file-beforeunload-dirty-guard.spec.ts` | 3 | 1/3 reviewed |
+| `file-operation-feedback.spec.ts` | 8 | 0/8 reviewed |
 | `file-ribbon-blank-controls.spec.ts` | 1 | 1/1 reviewed |
 | `find-replace-journey.spec.ts` | 3 | 3/3 reviewed |
 | `font-style-commit-contract.spec.ts` | 1 | 1/1 reviewed |
@@ -174,14 +169,19 @@ These values were measured for a whole spec file and are deliberately not copied
 | `issue-1007-transaction-add-menu.spec.ts` | 4 | 4/4 reviewed |
 | `issue-1055-signal-tree-offscreen-filter.spec.ts` | 1 | 1/1 reviewed |
 | `issue-1072-cross-surface-alignment.spec.ts` | 2 | 2/2 reviewed |
-| `issue-175-scroll-group-header-dom.spec.ts` | 2 | 2/2 reviewed |
+| `issue-1080-transition-row-selection.spec.ts` | 1 | 0/1 reviewed |
+| `issue-1099-scenario-context.spec.ts` | 7 | 0/7 reviewed |
+| `issue-175-prefetch-scroll-layout.spec.ts` | 1 | 0/1 reviewed |
+| `issue-175-scroll-group-header-dom.spec.ts` | 3 | 3/3 reviewed |
 | `issue-175-scrollbar-effect-lifecycle.spec.ts` | 1 | 1/1 reviewed |
 | `issue-175-scrollbar-geometry-matrix.spec.ts` | 2 | 2/2 reviewed |
+| `issue-175-virtualized-group-start.spec.ts` | 1 | 0/1 reviewed |
 | `issue-208-open-epoch-coherence.spec.ts` | 1 | 1/1 reviewed |
 | `issue-219-wave-url-lifetime.spec.ts` | 4 | 4/4 reviewed |
 | `issue-426-event-selection-scope.spec.ts` | 1 | 1/1 reviewed |
 | `issue-426-external-bottom-draft-update.spec.ts` | 3 | 3/3 reviewed |
 | `issue-426-inspector-bookmark-rebase.spec.ts` | 2 | 2/2 reviewed |
+| `issue-431-bottom-presets.spec.ts` | 1 | 0/1 reviewed |
 | `issue-431-bus-radix.spec.ts` | 2 | 2/2 reviewed |
 | `issue-431-constraint-authoring.spec.ts` | 1 | 1/1 reviewed |
 | `issue-431-constraint-problem-reveal.spec.ts` | 1 | 1/1 reviewed |
@@ -190,8 +190,8 @@ These values were measured for a whole spec file and are deliberately not copied
 | `issue-431-physical-timebase.spec.ts` | 1 | 1/1 reviewed |
 | `issue-431-protocol-check-toggle.spec.ts` | 2 | 2/2 reviewed |
 | `issue-431-scenario-lifecycle.spec.ts` | 2 | 2/2 reviewed |
-| `issue-431-signal-pin.spec.ts` | 1 | 1/1 reviewed |
-| `issue-431-signal-selection-groups.spec.ts` | 1 | 1/1 reviewed |
+| `issue-431-signal-pin.spec.ts` | 2 | 2/2 reviewed |
+| `issue-431-signal-selection-groups.spec.ts` | 2 | 1/2 reviewed |
 | `issue-440-mode-context-coherence.spec.ts` | 3 | 3/3 reviewed |
 | `issue-440-pinned-bookmark-transaction.spec.ts` | 2 | 2/2 reviewed |
 | `issue-441-ribbon-label-integrity.spec.ts` | 3 | 3/3 reviewed |
@@ -204,6 +204,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `issue-593-inflight-mode-switch.spec.ts` | 2 | 2/2 reviewed |
 | `issue-593-mode-layout-isolation.spec.ts` | 8 | 8/8 reviewed |
 | `issue-593-mode-workspace-acceptance.spec.ts` | 2 | 2/2 reviewed |
+| `issue-602-transition-start-reuse.spec.ts` | 1 | 0/1 reviewed |
 | `issue-621-far-jump-no-rewindow-storm.spec.ts` | 1 | 1/1 reviewed |
 | `issue-623-cycle-entry-settles-once.spec.ts` | 1 | 1/1 reviewed |
 | `issue-624-cycle-reload-mode.spec.ts` | 2 | 2/2 reviewed |
@@ -306,7 +307,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `issue-799-orphan-divider.spec.ts` | 7 | 7/7 reviewed |
 | `issue-835-async-annotation-import.spec.ts` | 6 | 6/6 reviewed |
 | `issue-836-hardware-hierarchy-performance.spec.ts` | 1 | 1/1 reviewed |
-| `issue-837-legend-cancel-draft.spec.ts` | 4 | 4/4 reviewed |
+| `issue-837-legend-cancel-draft.spec.ts` | 6 | 4/6 reviewed |
 | `issue-838-visible-hierarchy-copy-selection.spec.ts` | 1 | 1/1 reviewed |
 | `issue-839-large-showcase-clock-phase.spec.ts` | 2 | 2/2 reviewed |
 | `issue-840-stale-cycle-context.spec.ts` | 2 | 2/2 reviewed |
@@ -358,6 +359,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `left-tree-menu-contrast.spec.ts` | 1 | 1/1 reviewed |
 | `left-tree-projection-policy-correction.spec.ts` | 2 | 2/2 reviewed |
 | `left-tree-type-filter.spec.ts` | 2 | 2/2 reviewed |
+| `legend-canvas-anchor.spec.ts` | 1 | 0/1 reviewed |
 | `listener-lifecycle.spec.ts` | 2 | 2/2 reviewed |
 | `local-geometry-dom-batch.spec.ts` | 1 | 1/1 reviewed |
 | `measurement-anchor-drag.spec.ts` | 5 | 5/5 reviewed |
@@ -366,6 +368,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `measurement-lane-stacking.spec.ts` | 3 | 3/3 reviewed |
 | `measurement-top-row-clip.spec.ts` | 2 | 2/2 reviewed |
 | `minimal-cycle-view.spec.ts` | 3 | 3/3 reviewed |
+| `minimap-default-off.spec.ts` | 1 | 0/1 reviewed |
 | `minimap-overview-performance.spec.ts` | 4 | 4/4 reviewed |
 | `minimap-viewport-closure.spec.ts` | 1 | 1/1 reviewed |
 | `mode-isolation-journey.spec.ts` | 2 | 2/2 reviewed |
@@ -377,14 +380,16 @@ These values were measured for a whole spec file and are deliberately not copied
 | `performance-closure.spec.ts` | 11 | 11/11 reviewed |
 | `performance-internal-latency.spec.ts` | 1 | 1/1 reviewed |
 | `performance-view-only-validation.spec.ts` | 1 | 1/1 reviewed |
-| `pinned-bottom-target.spec.ts` | 4 | 4/4 reviewed |
+| `pinned-bottom-target.spec.ts` | 10 | 4/10 reviewed |
 | `production-presentation-equivalence.spec.ts` | 1 | 1/1 reviewed |
 | `qa-cross-mode-journey.spec.ts` | 2 | 2/2 reviewed |
 | `qa-fresh-state-journeys.spec.ts` | 9 | 9/9 reviewed |
+| `redo-ctrl-y.spec.ts` | 1 | 1/1 reviewed |
 | `reference-clock-conversion.spec.ts` | 4 | 4/4 reviewed |
+| `release-legacy-migration.spec.ts` | 2 | 0/2 reviewed |
 | `reorder-visibility.spec.ts` | 8 | 8/8 reviewed |
 | `reset-semantics-inspector.spec.ts` | 2 | 2/2 reviewed |
-| `resource-budget-ui-routes.spec.ts` | 7 | 7/7 reviewed |
+| `resource-budget-ui-routes.spec.ts` | 8 | 7/8 reviewed |
 | `result-aware-create-effects.spec.ts` | 2 | 2/2 reviewed |
 | `review-checks-refresh.spec.ts` | 2 | 2/2 reviewed |
 | `review-workflow.spec.ts` | 3 | 3/3 reviewed |
@@ -432,11 +437,11 @@ These values were measured for a whole spec file and are deliberately not copied
 | `transaction-bottom-draft.contract.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-bottom-panel-table-first.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-bottom-panel-table.spec.ts` | 2 | 2/2 reviewed |
-| `transaction-bottom-phase-linked-signals.spec.ts` | 1 | 1/1 reviewed |
+| `transaction-bottom-phase-linked-signals.spec.ts` | 2 | 2/2 reviewed |
 | `transaction-bottom-toolbar-add-ungroup.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-drag.spec.ts` | 11 | 11/11 reviewed |
 | `transaction-empty-state-create-lane-fix.spec.ts` | 1 | 1/1 reviewed |
-| `transaction-export.spec.ts` | 14 | 14/14 reviewed |
+| `transaction-export.spec.ts` | 16 | 16/16 reviewed |
 | `transaction-group-management.spec.ts` | 4 | 4/4 reviewed |
 | `transaction-gui-authoring.spec.ts` | 2 | 2/2 reviewed |
 | `transaction-inspector-apply-validation.spec.ts` | 3 | 3/3 reviewed |
@@ -448,7 +453,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `transaction-minimap-overview.spec.ts` | 2 | 2/2 reviewed |
 | `transaction-onboarding.spec.ts` | 7 | 7/7 reviewed |
 | `transaction-partial-update-preserves-fields.spec.ts` | 1 | 1/1 reviewed |
-| `transaction-phase-bars.spec.ts` | 4 | 4/4 reviewed |
+| `transaction-phase-bars.spec.ts` | 6 | 4/6 reviewed |
 | `transaction-ribbon-groups.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-selection-smoke.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-selection.contract.spec.ts` | 3 | 3/3 reviewed |
@@ -468,8 +473,8 @@ These values were measured for a whole spec file and are deliberately not copied
 | `transaction-viewport-hscroll.spec.ts` | 1 | 1/1 reviewed |
 | `tree-drag-drop.spec.ts` | 5 | 5/5 reviewed |
 | `tree-keyboard.spec.ts` | 2 | 2/2 reviewed |
-| `undo-redo-selection-context.spec.ts` | 3 | 3/3 reviewed |
-| `unsaved-file-dialog.spec.ts` | 14 | 14/14 reviewed |
+| `undo-redo-selection-context.spec.ts` | 11 | 4/11 reviewed |
+| `unsaved-file-dialog.spec.ts` | 15 | 14/15 reviewed |
 | `v8-gui-contract-coverage.spec.ts` | 1 | 1/1 reviewed |
 | `value-label-layout.spec.ts` | 1 | 1/1 reviewed |
 | `value-signal-compatibility.spec.ts` | 7 | 7/7 reviewed |
@@ -515,6 +520,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `feature-showcase-startup.spec.ts` | geometryRead |
 | `file-ribbon-blank-controls.spec.ts` | getComputedStyle, geometryRead |
 | `find-replace-journey.spec.ts` | dataset |
+| `full-gui.spec.ts` | geometryRead |
 | `gui-density-tokens.spec.ts` | getComputedStyle |
 | `gui-left-pane-resize.spec.ts` | getComputedStyle, geometryRead |
 | `gui-reference-v8.spec.ts` | getComputedStyle, dataset, geometryRead |
@@ -525,15 +531,20 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `inspector-hide-compacts-rows.spec.ts` | dataset, geometryRead |
 | `issue-1004-group-hierarchy.spec.ts` | querySelector, getComputedStyle, geometryRead |
 | `issue-1072-cross-surface-alignment.spec.ts` | geometryRead |
+| `issue-1080-transition-row-selection.spec.ts` | querySelector |
+| `issue-175-prefetch-scroll-layout.spec.ts` | dataset |
 | `issue-175-scroll-group-header-dom.spec.ts` | dataset |
 | `issue-175-scrollbar-geometry-matrix.spec.ts` | geometryRead |
+| `issue-175-virtualized-group-start.spec.ts` | dataset |
 | `issue-208-open-epoch-coherence.spec.ts` | querySelector |
 | `issue-219-wave-url-lifetime.spec.ts` | querySelector, explicitWait |
+| `issue-431-bus-radix.spec.ts` | querySelector |
+| `issue-431-scenario-lifecycle.spec.ts` | getComputedStyle |
 | `issue-431-signal-selection-groups.spec.ts` | dataset |
 | `issue-441-ribbon-label-integrity.spec.ts` | getComputedStyle, geometryRead |
 | `issue-549-cursor-multi-frame-drag.spec.ts` | dataset |
 | `issue-573-combined-shared-time-axis.spec.ts` | geometryRead, explicitWait |
-| `issue-573-combined-single-hscroll.spec.ts` | getComputedStyle, geometryRead, explicitWait |
+| `issue-573-combined-single-hscroll.spec.ts` | getComputedStyle, elementContains, geometryRead, explicitWait |
 | `issue-593-inflight-mode-switch.spec.ts` | querySelector, getComputedStyle, dataset, geometryRead, explicitWait |
 | `issue-593-mode-layout-isolation.spec.ts` | dataset, geometryRead, explicitWait |
 | `issue-593-mode-workspace-acceptance.spec.ts` | querySelector, getComputedStyle, dataset, geometryRead, explicitWait |
@@ -676,6 +687,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `transaction-tree-more-menu-visible.spec.ts` | elementContains, geometryRead |
 | `transaction-viewport-hscroll.spec.ts` | geometryRead |
 | `tree-drag-drop.spec.ts` | dataset |
+| `undo-redo-selection-context.spec.ts` | querySelector, geometryRead |
 | `unsaved-file-dialog.spec.ts` | getComputedStyle, elementContains, geometryRead, explicitWait |
 | `v8-gui-contract-coverage.spec.ts` | geometryRead |
 | `view-metrics-owner.spec.ts` | dataset, geometryRead |
@@ -712,7 +724,7 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 - `qa-fresh-state-journeys.spec.ts` “J6 annotation create -> drag -> Escape leaves Canonical untouched” → `keyboard-shortcut-router.spec.ts` “Escape cancels an in-progress Annotation drag, closes the context menu, and resets dependency-arrow pick”. **Invariant:** Escape cancels a real Annotation drag without changing Canonical revision, History, or Dirty state and without runtime errors. **Reason:** The keyboard lifecycle test already creates an Annotation through production UI, resolves its stable ID, performs a real pointer drag, and asserts revision and History preservation; it now also checks Dirty and runtime errors. Keeping the stronger test removes a duplicate fresh journey without weakening the cancellation contract.
 - `full-gui.spec.ts` “keeps view-only selection, tabs, zoom and panel state out of History and WaveDrom” → `performance-view-only-validation.spec.ts` “view-only GUI operations do not validate or semantically rerender the document”. **Invariant:** Composed view-only selection, tabs, zoom and panel operations do not mutate History or trigger semantic validation/rendering. **Reason:** The focused replacement exercises the same operations and additionally protects Dirty, validation, RowLayout, and pane resizer/scroll-owner counters.
 - `golden-samples.spec.ts` “switches representative Golden Samples through production File Input without stale row ownership” → `golden-samples.spec.ts` “opens all 20 immutable Golden Samples in the production browser path”. **Invariant:** Sequential production File Input replacement leaves only current canonical row identities, without stale or duplicate rows. **Reason:** The all-20 production Open journey verifies exact canonical Left/Frozen row identity after each replacement, covering the representative A-to-B switch subset.
-- `transaction-export.spec.ts` “preserves canonical Split View content through Save/Open” → `transaction-export.spec.ts` “creates, edits, links, saves and reopens one canonical Transaction”. **Invariant:** Canonical Transaction identity and timing survive production Save/Open with clean History after reopening. **Reason:** The replacement verifies more persisted Transaction fields, stable linked Signal identity, Undo/Redo and History reset; separate Combined projection cases retain mode coverage.
+- `transaction-export.spec.ts` “preserves canonical Split View content through Save/Open” → `transaction-export.spec.ts` “creates, edits, links, saves and reopens one canonical Transaction at 1672x941”. **Invariant:** Canonical Transaction identity and timing survive production Save/Open with clean History after reopening. **Reason:** The replacement verifies more persisted Transaction fields, stable linked Signal identity, Undo/Redo and History reset; separate Combined projection cases retain mode coverage.
 - `transaction-export.spec.ts` “Export dialog applies page and fit settings to the exported scene” → `transaction-export.spec.ts` “keeps long document layout metadata through page-fit SVG, PNG and PDF export”. **Invariant:** Production Export page size/orientation/fit/margin settings produce the expected page viewBox and page-content layer. **Reason:** The replacement preserves the page-content layer and exact A4 portrait/page-fit/margin assertion, then covers metadata, alternate orientation/fit, PNG and PDF.
 - `signal-split.spec.ts` “Upper and Lower scroll vertically independently while sharing one horizontal time domain” → `acceptance-397-sample-d.spec.ts` “Signal Split ON shows the same 24-Signal row sequence in both panes with independent vertical scroll and shared horizontal scroll, OFF returns to one viewport, view-only throughout”. **Invariant:** Upper/Lower Vertical scrolling stays independent while both panes share the horizontal time mapping and view-only state. **Reason:** The Sample D replacement exercises real vertical overflow in both directions, shared horizontal scrolling and zoom, row parity, view-only invariants, and Split OFF using a representative 24-Signal production fixture; the default-fixture predecessor only scrolled Upper and checked ruler transforms.
 - `ribbon-more-popover-closure.spec.ts` “does not create horizontal Ribbon overflow at 1024px” → `ribbon-responsive-overflow.spec.ts` “keeps Home commands reachable without a Ribbon scrollbar at 1024px”. **Invariant:** The Ribbon fits within the viewport at 1024px without horizontal scrolling, and compact Home commands remain reachable through More. **Reason:** The replacement covers the same no-overflow invariant and additionally verifies the compact More menu's command reachability in the same browser journey.
