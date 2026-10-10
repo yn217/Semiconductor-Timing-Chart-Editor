@@ -95,7 +95,8 @@ export function FindReplacePanel({ document, mode = "signals", onRenameSignals, 
     if (replacementExpression) {
       for (const item of matches) {
         const nextName = itemName(item).replace(replacementExpression, () => deferredReplaceText).trim();
-        if (nextName.length === 0) continue;
+        // A row whose name would not change is not a rename: counting it made the batch a no-op and nothing was renamed.
+        if (nextName.length === 0 || nextName === itemName(item)) continue;
         validCount += 1;
         if (rows.length < 20) rows.push({ item, nextName });
       }
@@ -108,7 +109,7 @@ export function FindReplacePanel({ document, mode = "signals", onRenameSignals, 
     if (!inputIsSettled || preview.validCount === 0 || !replacementExpression) return;
     const replacements = matches.flatMap((item) => {
       const nextName = itemName(item).replace(replacementExpression, () => deferredReplaceText).trim();
-      return nextName.length === 0 ? [] : [{ item, nextName }];
+      return nextName.length === 0 || nextName === itemName(item) ? [] : [{ item, nextName }];
     });
     if (mode === "transactions") onRenameTransactions?.(replacements.map(({ item, nextName }) => ({ transactionId: item.id as TransactionId, name: nextName })));
     else onRenameSignals?.(replacements.map(({ item, nextName }) => ({ signalId: item.id as SignalId, name: nextName })));
@@ -124,7 +125,7 @@ export function FindReplacePanel({ document, mode = "signals", onRenameSignals, 
     {open && createPortal(<div ref={panelRef} className="find-replace-panel" role="dialog" aria-label="Find and Replace" data-testid="find-replace-panel" style={{ left: `${position?.left ?? 0}px`, top: `${position?.top ?? 0}px`, maxHeight: `${position?.maxHeight ?? 200}px`, visibility: position ? "visible" : "hidden" }}>
       <label>Find<input aria-label="Find" data-testid="find-replace-find" value={findText} onChange={(event) => setFindText(event.target.value)} autoFocus /></label>
       <label>Replace with<input aria-label="Replace with" data-testid="find-replace-replace" value={replaceText} onChange={(event) => setReplaceText(event.target.value)} /></label>
-      <output data-testid="find-replace-count">{needle ? `${preview.validCount} ${mode === "transactions" ? "transaction" : "signal"}${preview.validCount === 1 ? "" : "s"} will be renamed${preview.skippedCount > 0 ? ` (${preview.skippedCount} skipped: would become empty)` : ""}` : "Enter text to search for"}</output>
+      <output data-testid="find-replace-count">{needle ? `${preview.validCount} ${mode === "transactions" ? "transaction" : "signal"}${preview.validCount === 1 ? "" : "s"} will be renamed${preview.skippedCount > 0 ? ` (${preview.skippedCount} skipped: unchanged or would become empty)` : ""}` : "Enter text to search for"}</output>
       {preview.validCount > 0 && <ul className="find-replace-preview">{preview.rows.map(({ item, nextName }) => <li key={item.id}><span>{itemName(item)}</span><RibbonIcon name="i-chevron-right" /><span>{nextName}</span></li>)}{preview.validCount > preview.rows.length && <li className="find-replace-more">…and {preview.validCount - preview.rows.length} more</li>}</ul>}
       <div className="find-replace-actions">
         <button type="button" data-testid="find-replace-apply" disabled={!inputIsSettled || preview.validCount === 0} onClick={replaceAll}>Replace All</button>

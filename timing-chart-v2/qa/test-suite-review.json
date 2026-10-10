@@ -17550,6 +17550,24 @@
       "decision": "KEEP",
       "reason": "Code-review findings fixed in inspector-panel.tsx.",
       "replacementTest": null
+    },
+    {
+      "file": "find-replace-literal-replacement.spec.ts",
+      "title": "Replace All still renames the other matches when one match is already the replacement",
+      "domain": "find-replace-unchanged-rows",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 3000,
+      "primaryContract": "Matches whose name would not change are skipped, so the remaining matches are still renamed.",
+      "duplicateGroup": "find-replace-unchanged-rows",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code-review finding: one unchanged match made the whole bulk rename a silent no-op.",
+      "replacementTest": null
     }
   ]
 }
