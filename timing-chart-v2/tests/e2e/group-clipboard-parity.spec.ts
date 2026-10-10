@@ -40,7 +40,9 @@ test("duplicates a 2000-row Group with fresh identities and exact one-step Undo/
   copied.rows.forEach((id: string, index: number) => {
     const { id: _originalId, ...original } = before.signals[index];
     const { id: _copiedId, ...copy } = byId.get(id) as Record<string, unknown>;
-    expect(copy).toEqual(original);
+    // Value-change IDs are unique across the Document, so the copy carries fresh ones; everything else matches.
+    const withoutValueIds = (signal: Record<string, unknown>) => ({ ...signal, ...(Array.isArray(signal.values) ? { values: signal.values.map(({ id: _valueId, ...change }: { id?: string }) => change) } : {}) });
+    expect(withoutValueIds(copy)).toEqual(withoutValueIds(original));
   });
   await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");

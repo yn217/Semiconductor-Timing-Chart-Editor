@@ -20,6 +20,14 @@ export const NO_SIGNAL_GROUP_STATUS = "No Signal Group to insert into";
  * left out), Duplicate/Delete act on the Annotations. */
 const mixedNote = (annotations: number) => annotations > 0 ? ` (${annotations} selected annotation${annotations === 1 ? "" : "s"} not included: Signals take precedence)` : "";
 
+/** A copied Signal must not share value-change IDs with its source (IDs are unique across the Document). */
+function withFreshValueChangeIds<T extends Signal>(signal: T): T {
+  const fresh = <C extends { readonly id?: string }>(changes: readonly C[], scope: string): C[] => changes.map((change, index) => change.id === undefined ? change : { ...change, id: `value_${signal.id}${scope}_${index}` });
+  if (signal.type === "commentRow") return signal;
+  if (signal.type === "clock") return signal.enable ? { ...signal, enable: fresh(signal.enable, "_enable") } : signal;
+  return { ...signal, values: fresh(signal.values, "") };
+}
+
 export function useClipboardActions({ application, selection }: { application: EditorApplicationOwner; selection: SelectionOwner }) {
   const [status, setStatus] = useState("Empty");
   const [available, setAvailable] = useState(false);
@@ -209,7 +217,7 @@ export function useClipboardActions({ application, selection }: { application: E
       const id = signalId(allocateId(source.signal.type === "commentRow" ? "commentRow" : "signal"));
       const copyOrdinal = created.length + 1;
       const name = `${source.signal.display.name}_${operation === "duplicate" ? "duplicate" : "copy"}${input.length > 1 ? `_${copyOrdinal}` : ""}`;
-      const signal: Signal = { ...source.signal, id, name, display: { ...source.signal.display, name } };
+      const signal: Signal = withFreshValueChangeIds({ ...source.signal, id, name, display: { ...source.signal.display, name } });
       created.push(signal);
       const bucket = createdByGroup.get(target.id) ?? { target, signals: [] };
       bucket.signals.push(signal);
@@ -248,7 +256,7 @@ export function useClipboardActions({ application, selection }: { application: E
       const source = sourceSignalsById.get(rowId as SignalId);
       if (source) {
         const id = signalId(allocateId(source.type === "commentRow" ? "commentRow" : "signal"));
-        const signal: Signal = { ...source, id };
+        const signal: Signal = withFreshValueChangeIds({ ...source, id });
         createdSignals.push(signal);
         newIdByOldId.set(rowId, id);
         newSignalIdByOldId.set(rowId as SignalId, id);
