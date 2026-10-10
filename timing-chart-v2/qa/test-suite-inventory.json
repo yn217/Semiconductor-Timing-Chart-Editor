@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T19:07:04.358Z",
+  "generatedAt": "2026-10-10T19:10:35.652Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -12,13 +12,13 @@
     "retryAndFlakySummary": null
   },
   "specFileCount": 468,
-  "caseCount": 1404,
-  "reviewedCaseCount": 1346,
+  "caseCount": 1405,
+  "reviewedCaseCount": 1347,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 496,
+    "pr": 497,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -5977,6 +5977,33 @@
         "pr"
       ],
       "contractId": "comment-row-line-spacing-draft-apply"
+    },
+    {
+      "file": "comment-row-draft-consistency.spec.ts",
+      "suitePath": [],
+      "line": 49,
+      "title": "an empty or out-of-range Comment Row spacing is a draft problem that disables Apply",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "comment-row",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 4000,
+      "primaryContract": "Comment Row spacing drafts reject empty or out-of-range values instead of committing 0.",
+      "duplicateGroup": "comment-row",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Code review found empty spacing fields committing 0.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "comment-row",
+      "runtimeMeasurementScope": "CASE"
     },
     {
       "file": "cursor-signal-split-late-pane.spec.ts",
@@ -37339,8 +37366,8 @@
     },
     {
       "file": "comment-row-draft-consistency.spec.ts",
-      "caseCount": 1,
-      "reviewedCaseCount": 1,
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],

@@ -990,7 +990,9 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       if (!name) return fail("invalid", "INVALID_NAME", "$.name", "Signal name cannot be empty.");
       if (signal.name === name) return fail("no-op", "NO_OP", "$", "Signal already has this name.");
       const changeSet: ChangeSet = { rowPresentation: [signal.id] };
-      return { ok: true, document: replaceSignal(document, index, { ...signal, name, display: { ...signal.display, name } }), changeSet, inverseChangeSet: changeSet };
+      // A Comment Row keeps name = title (see commentRow.update), so a generic Rename updates its title too.
+      const renamed = signal.type === "commentRow" ? { ...signal, name, title: name, display: { ...signal.display, name } } : { ...signal, name, display: { ...signal.display, name } };
+      return { ok: true, document: replaceSignal(document, index, renamed), changeSet, inverseChangeSet: changeSet };
     }
     case "signal.bulkRename": {
       if (command.updates.length === 0) return fail("no-op", "NO_OP", "$.updates", "No Signals were selected for rename.");

@@ -18540,6 +18540,24 @@
       "decision": "KEEP",
       "reason": "Code review found Delete/Rename acting on the wrong entity for Phase/Spacer selection.",
       "replacementTest": null
+    },
+    {
+      "file": "comment-row-draft-consistency.spec.ts",
+      "title": "an empty or out-of-range Comment Row spacing is a draft problem that disables Apply",
+      "domain": "comment-row",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 4000,
+      "primaryContract": "Comment Row spacing drafts reject empty or out-of-range values instead of committing 0.",
+      "duplicateGroup": "comment-row",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "Code review found empty spacing fields committing 0.",
+      "replacementTest": null
     }
   ]
 }
