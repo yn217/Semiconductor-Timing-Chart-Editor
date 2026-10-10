@@ -293,9 +293,12 @@ function insertTimeline(document: CanonicalDocument, at: number, count: number):
     const mapped = insertRange(transaction, at, count);
     return { ...mapped, ...(transaction.phases ? { phases: transaction.phases.map((phase) => insertRange(phase, at, count)) } : {}) };
   };
+  // A Time Group's resume anchor sits at group.end. insertRange does not extend a group whose end equals the insertion
+  // point, so such an anchor must stay with its group instead of being shifted past it (LABEL_ANCHOR_BOUNDARY_MISMATCH).
+  const ownersEndingAtInsert = new Set(document.timeGroups.filter((group) => group.end === at).map((group) => group.id));
   return {
     ...document,
-    timeline: { ...document.timeline, end: document.timeline.end + count, cycleCount: document.timeline.cycleCount + count, labelAnchors: document.timeline.labelAnchors.map((anchor) => ({ ...anchor, source: mapInsertPoint(anchor.source, at, count) })) },
+    timeline: { ...document.timeline, end: document.timeline.end + count, cycleCount: document.timeline.cycleCount + count, labelAnchors: document.timeline.labelAnchors.map((anchor) => ({ ...anchor, source: anchor.ownerTimeGroupId !== undefined && ownersEndingAtInsert.has(anchor.ownerTimeGroupId) ? anchor.source : mapInsertPoint(anchor.source, at, count) })) },
     signals,
     annotations: document.annotations.map(mapAnnotation),
     bookmarks: document.bookmarks.map((bookmark) => ({ ...bookmark, start: mapInsertPoint(bookmark.start, at, count) })),
@@ -375,6 +378,13 @@ function deleteAnnotation(annotation: Annotation, start: number, end: number, ne
     return anchor !== undefined && anchor.cycle >= start && anchor.cycle < end;
   });
   if (requiredFields.length > 1 && fullyDeleted) return undefined;
+  // Span endpoints are boundaries: a span whose mapped endpoints collapse covers no surviving cycle, so it is removed exactly
+  // like a Time Group or Transaction that deleteRange drops (Range [5,10] minus [3,10) would otherwise become zero-width).
+  if (requiredFields[0] === "start") { // spans only: an arrow/dependency whose ends meet still links two rows
+    const first = annotation[requiredFields[0]];
+    const second = requiredFields[1] === undefined ? undefined : annotation[requiredFields[1]];
+    if (first && second && first.cycle < second.cycle && mapDeleteBoundary(first.cycle, start, end) >= mapDeleteBoundary(second.cycle, start, end)) return undefined;
+  }
   const mapped: Record<string, unknown> = { ...annotation };
   for (const field of fields) {
     const anchor = annotation[field];
