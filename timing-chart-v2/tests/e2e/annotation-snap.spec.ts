@@ -451,6 +451,31 @@ test("edits Measurement semantics with one history step and preserves them throu
   await expect(owner.locator("[data-role='annotation-handle'][data-anchor-transition-kind='ratio']")).toHaveCount(2);
 });
 
+test("Clock-anchored Measurement keeps cycle mode available and disables transition profiles", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await selectRequestSignal(host);
+  const measurement = await createAnnotation(page, "measurement");
+  await measurement.locator("[data-role='annotation-label']").click();
+
+  const editor = page.getByTestId("annotation-editor");
+  await editor.getByLabel("Inspector annotation endpoint").selectOption("start");
+  await editor.getByLabel("Inspector annotation anchor signal").fill("CLK");
+  await editor.getByRole("option", { name: "CLK", exact: true }).click();
+  await editor.getByTestId("apply-inspector-annotation-anchor").click();
+
+  const historyAfterAnchor = await page.getByTestId("history-status").textContent();
+  const profile = editor.getByLabel("Measurement profile");
+  await profile.selectOption("30-70");
+  await expect(editor.getByTestId("apply-measurement-semantics")).toBeDisabled();
+  await expect(editor.getByRole("status")).toContainText("non-Clock timing signals");
+  await expect(page.getByTestId("history-status")).toHaveText(historyAfterAnchor ?? "");
+
+  await profile.selectOption("cycle");
+  await expect(editor.getByTestId("apply-measurement-semantics")).toBeEnabled();
+});
+
 test("Measurement lane UI rejects values above the document-safe maximum", async ({ page }) => {
   await page.goto("/");
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
