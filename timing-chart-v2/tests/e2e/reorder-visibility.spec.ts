@@ -24,7 +24,7 @@ test("creates an empty Signal Group from the tree through one group.create comma
   await page.getByRole("button", { name: "Add signal or group", exact: true }).click();
   await page.getByTestId("create-group").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
-  await expect(page.getByLabel("Inspector group name")).toHaveValue("Group 4");
+  await expect(page.getByLabel("Inspector group name")).toHaveValue("Group 1");
   const countersAfter = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   expect(countersAfter.waveDromRenders).toBe(countersBefore.waveDromRenders);
   expect(countersAfter.localGeometryBuilds).toBe(countersBefore.localGeometryBuilds);
