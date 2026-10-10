@@ -74,6 +74,11 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
   const pendingOpenDiagnosticsCompletionRef = useRef<(() => void) | undefined>(undefined);
 
   const dispatchResult = useCallback((result: CommandResult, context: AcceptedContext): CommandResult => {
+    if (!result.ok && result.reason === "no-op") {
+      // Nothing to do (empty Undo/Redo history, a value that is already set) is not a Problem: it must not add an error to the Problems list.
+      setProblem(""); setRuntimeDiagnostics(withoutCommandRejectionDiagnostics);
+      return result;
+    }
     if (!result.ok) {
       const target = commandDiagnosticTarget(context.command);
       const diagnostics = buildCommandRejectionDiagnostics({

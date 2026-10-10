@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T13:16:03.362Z",
+  "generatedAt": "2026-10-10T13:21:55.369Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 437,
-  "caseCount": 1319,
-  "reviewedCaseCount": 1261,
+  "specFileCount": 438,
+  "caseCount": 1320,
+  "reviewedCaseCount": 1262,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 411,
+    "pr": 412,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -32732,6 +32732,33 @@
       "contractId": "signal-tree-filter-collapse-focus-repair"
     },
     {
+      "file": "undo-empty-history.spec.ts",
+      "suitePath": [],
+      "line": 3,
+      "title": "Undo and Redo with nothing to undo or redo do not raise a Problem",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "history-empty-undo",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 2000,
+      "primaryContract": "Ctrl+Z / Ctrl+Y on an empty history leave the Problems count at zero.",
+      "duplicateGroup": "history-empty-undo",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The empty-history rejection used to be listed as an error Problem; only the real shortcut path shows it.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "history-empty-undo",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
       "file": "undo-redo-selection-context.spec.ts",
       "suitePath": [],
       "line": 7,
@@ -38790,6 +38817,15 @@
       "file": "tree-keyboard.spec.ts",
       "caseCount": 2,
       "reviewedCaseCount": 2,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "undo-empty-history.spec.ts",
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],

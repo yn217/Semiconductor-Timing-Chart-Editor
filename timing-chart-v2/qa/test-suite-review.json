@@ -17010,6 +17010,24 @@
       "decision": "KEEP",
       "reason": "The cross-Scenario ID collision only shows through the real Duplicate then Add flow.",
       "replacementTest": null
+    },
+    {
+      "file": "undo-empty-history.spec.ts",
+      "title": "Undo and Redo with nothing to undo or redo do not raise a Problem",
+      "domain": "history-empty-undo",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 2000,
+      "primaryContract": "Ctrl+Z / Ctrl+Y on an empty history leave the Problems count at zero.",
+      "duplicateGroup": "history-empty-undo",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "The empty-history rejection used to be listed as an error Problem; only the real shortcut path shows it.",
+      "replacementTest": null
     }
   ]
 }

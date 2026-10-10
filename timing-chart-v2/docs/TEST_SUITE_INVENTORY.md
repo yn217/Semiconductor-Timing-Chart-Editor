@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 437 spec files and 1319 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 438 spec files and 1320 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 1261/1319 cases reviewed.
+Semantic review progress: 1262/1320 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 634 |
 | `nightly` | 241 |
 | `performance` | 73 |
-| `pr` | 411 |
+| `pr` | 412 |
 | `visual` | 181 |
 
 ## Top recorded per-case runtimes
@@ -479,6 +479,7 @@ These values were measured for a whole spec file and are deliberately not copied
 | `transaction-viewport-hscroll.spec.ts` | 1 | 1/1 reviewed |
 | `tree-drag-drop.spec.ts` | 5 | 5/5 reviewed |
 | `tree-keyboard.spec.ts` | 2 | 2/2 reviewed |
+| `undo-empty-history.spec.ts` | 1 | 1/1 reviewed |
 | `undo-redo-selection-context.spec.ts` | 11 | 4/11 reviewed |
 | `unsaved-file-dialog.spec.ts` | 15 | 14/15 reviewed |
 | `v8-gui-contract-coverage.spec.ts` | 1 | 1/1 reviewed |
