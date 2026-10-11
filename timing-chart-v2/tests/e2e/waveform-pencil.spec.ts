@@ -159,6 +159,23 @@ test("Escape cancels the active stroke without a semantic edit and disables the 
   await expect(page.getByTestId("signal-editor").locator("[data-event-start='5']")).toHaveCount(0);
 });
 
+test("Escape leaves an idle Pencil session and preserves the current document", async ({ page }) => {
+  const surface = await openBinarySignal(page);
+  const baselineRevision = await surface.getAttribute("data-canonical-revision");
+  const history = await page.getByTestId("history-status").innerText();
+  const bottomTool = page.getByTestId("bottom-waveform-pencil");
+  await bottomTool.click();
+  await expect(bottomTool).toHaveAttribute("aria-pressed", "true");
+
+  await page.keyboard.press("Escape");
+
+  await expect(bottomTool).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByTestId("ribbon-waveform-pencil")).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator("[data-testid='waveform-pencil-preview']")).toHaveCount(0);
+  await expect(surface).toHaveAttribute("data-canonical-revision", baselineRevision!);
+  await expect(page.getByTestId("history-status")).toHaveText(history);
+});
+
 for (const destination of [{ label: "Transaction", mode: "Transaction" }, { label: "Combined", mode: "Split" }]) {
   test(`switching to ${destination.label} cancels an active stroke and removes the Cycle-only tool`, async ({ page }) => {
     const surface = await openBinarySignal(page);
