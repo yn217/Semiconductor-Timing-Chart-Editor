@@ -393,6 +393,30 @@ test("Scenario switch cancels an in-flight stroke as view-only state", async ({ 
   await expect(page.getByTestId("dirty-status")).toHaveText(dirty);
 });
 
+test("deleting the stroke target cancels its preview and never commits a second edit", async ({ page }) => {
+  const surface = await openBinarySignal(page);
+  const baselineRevision = Number(await surface.getAttribute("data-canonical-revision"));
+  await page.getByTestId("waveform-pencil-ribbon").click();
+  const from = await cellPoint(page, 4, 0.2);
+  const to = await cellPoint(page, 7, 0.8);
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(to.x, to.y, { steps: 2 });
+  await expect(page.locator("[data-role='waveform-pencil-preview']")).toHaveCount(1);
+
+  // Invoke the actual Signal Delete button's React activation while pointer
+  // capture owns the mouse. This models an external command removing the
+  // target; it does not add a test-only production command/API.
+  await page.getByTestId("signal-delete").evaluate((button: HTMLButtonElement) => button.click());
+  await expect(surface.locator(`[data-role='frozen-row'][data-row-id='${signalId}']`)).toHaveCount(0);
+  await expect(page.locator("[data-role='waveform-pencil-preview']")).toHaveCount(0);
+  const afterDeleteHistory = await page.getByTestId("history-status").innerText();
+  expect(afterDeleteHistory).toBe("History 1 / Redo 0");
+  await page.mouse.up();
+  await expect(page.getByTestId("history-status")).toHaveText(afterDeleteHistory);
+  expect(Number(await surface.getAttribute("data-canonical-revision"))).toBe(baselineRevision + 1);
+});
+
 test("large full-span waveform stroke updates only its preview, not mounted WaveDrom owners", async ({ page }) => {
   await page.addInitScript(() => {
     const target = window as typeof window & { __wavePencilLongTasks?: Array<{ startTime: number; duration: number; attribution: string[] }>; __wavePencilMarks?: Array<{ name: string; time: number }> };
