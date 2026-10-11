@@ -4,6 +4,22 @@ import { startInCycleSample } from "./cycle-startup.js";
 
 startInCycleSample(test);
 
+test("keeps Layout Inspector guidance readable at release viewports", async ({ page }) => {
+  for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }]) {
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    const inspector = page.getByTestId("inspector-layout-editor");
+    const explanation = inspector.getByText("Controls how signal rows and labels are displayed. Cycle values are unchanged.");
+    const draftNote = inspector.getByTestId("layout-draft-note");
+    await expect(explanation).toBeVisible();
+    await expect(draftNote).toHaveText("Auto Fit and Reset update this draft only. Apply applies all pending layout changes; Revert discards them.");
+    await expect(inspector).not.toContainText("RowLayout");
+    const bounds = await explanation.boundingBox();
+    expect(bounds).not.toBeNull();
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(viewport.width);
+  }
+});
+
 test("edits global row layout through one semantic operation and preserves it through Save/Open", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
@@ -11,6 +27,9 @@ test("edits global row layout through one semantic operation and preserves it th
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   const inspector = page.getByTestId("inspector-layout-editor");
   await expect(inspector).toBeVisible();
+  await expect(inspector).toContainText("Controls how signal rows and labels are displayed. Cycle values are unchanged.");
+  await expect(inspector).not.toContainText("RowLayout");
+  await expect(inspector.getByTestId("layout-draft-note")).toHaveText("Auto Fit and Reset update this draft only. Apply applies all pending layout changes; Revert discards them.");
   const rows = host.locator("[data-role='wave-owner']");
   const firstRow = rows.first();
   const secondRow = rows.nth(1);
@@ -78,7 +97,7 @@ test("auto fits a long rendered signal label through one layout command", async 
   await page.getByRole("menu", { name: "More Home Commands" }).getByRole("menuitem", { name: "Clear Selection", exact: true }).click();
   const layout = page.getByTestId("inspector-layout-editor");
   const before = Number(await layout.getByLabel("Inspector signal name width").inputValue());
-  await expect(layout.getByTestId("layout-draft-note")).toContainText("only change this draft");
+  await expect(layout.getByTestId("layout-draft-note")).toContainText("update this draft only");
   await layout.getByTestId("auto-fit-inspector-layout").click();
   // Auto Fit only fills the Layout draft (no Canonical change) -- Apply commits it as one command.
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
