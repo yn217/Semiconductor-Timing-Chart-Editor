@@ -6,6 +6,7 @@ import type { CanonicalDocument, Transaction, TransactionGroup, TransactionId, T
 import { createEntityIdAllocator, nextEntityId } from "./entity-id.js";
 import type { TransactionEditorCommandActions } from "./application/editor-surface-command-controller.js";
 import { DraftStatus } from "./draft-status.js";
+import { reconcileExternalDraftFields } from "./runtime/external-draft-reconciliation.js";
 import { transactionInsertion } from "./transaction-insertion.js";
 import { nextTransactionGroupDraft } from "./application/transaction-group-naming.js";
 import { selectedTransactionsInDocumentOrder } from "./runtime/transaction-selection-index.js";
@@ -29,19 +30,30 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
   type RowDraft = { readonly name: string; readonly start: number; readonly end: number; readonly laneId: string; readonly groupId: TransactionGroup["id"] | undefined; readonly color: string; readonly description: string };
   const baseOf = (item: Transaction | undefined): RowDraft => ({ name: item?.name ?? "", start: item?.start ?? 0, end: item?.end ?? 1, laneId: item?.laneId ?? "", groupId: item?.groupId, color: item?.color ?? "", description: item?.description ?? "" });
   const draftStoreRef = useRef(new Map<TransactionId, { readonly base: RowDraft; readonly draft: RowDraft }>());
+  const [externalConflicts, setExternalConflicts] = useState<readonly (keyof RowDraft)[]>([]);
   const liveRef = useRef<{ id: TransactionId | undefined; base: RowDraft; draft: RowDraft }>({ id: transaction?.id, base: baseOf(transaction), draft: baseOf(transaction) });
   liveRef.current = { id: liveRef.current.id, base: liveRef.current.base, draft: { name: editName, start: editStart, end: editEnd, laneId: editLaneId, groupId: editGroupId, color: editColor, description: editDescription } };
   useEffect(() => {
     const previous = liveRef.current;
     const nextBase = baseOf(transaction);
     let next = nextBase;
+    let reconciledBase = nextBase;
+    let conflicts: readonly (keyof RowDraft)[] = [];
     if (previous.id !== transaction?.id) {
       if (previous.id !== undefined && JSON.stringify(previous.draft) !== JSON.stringify(previous.base)) draftStoreRef.current.set(previous.id, { base: previous.base, draft: previous.draft });
       const stored = transaction ? draftStoreRef.current.get(transaction.id) : undefined;
-      if (stored && JSON.stringify(stored.base) === JSON.stringify(nextBase)) next = stored.draft;
+      if (stored) {
+        const result = reconcileExternalDraftFields(stored.base, stored.draft, nextBase);
+        next = result.value; reconciledBase = result.base; conflicts = result.conflicts;
+      }
       else if (transaction) draftStoreRef.current.delete(transaction.id);
-    } else if (transaction) draftStoreRef.current.delete(transaction.id);
-    liveRef.current = { id: transaction?.id, base: nextBase, draft: next };
+    } else if (transaction) {
+      const result = reconcileExternalDraftFields(previous.base, previous.draft, nextBase);
+      next = result.value; reconciledBase = result.base; conflicts = result.conflicts;
+      draftStoreRef.current.delete(transaction.id);
+    }
+    setExternalConflicts(conflicts);
+    liveRef.current = { id: transaction?.id, base: reconciledBase, draft: next };
     setEditName(next.name);
     setEditStart(next.start);
     setEditEnd(next.end);
@@ -59,7 +71,7 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
   const hasChanges = transaction !== undefined && (editName !== transaction.name || editStart !== transaction.start || editEnd !== transaction.end || (editLaneId.trim() || undefined) !== transaction.laneId || editGroupId !== transaction.groupId || (editColor.trim() || undefined) !== transaction.color || editDescription !== (transaction.description ?? ""));
   const createHasChanges = transaction === undefined && (name !== "Transaction" || start !== 1 || end !== Math.min(5, document.timeline.cycleCount) || laneId !== "");
   const applyTransactionDraft = () => {
-    if (!transaction || !hasChanges) return;
+    if (!transaction || !hasChanges || externalConflicts.length > 0) return;
     // #461: `transaction.update` reconstructs the entity and only preserves
     // groupId/color/description when the command itself carries them --
     // this Apply used to send just name/start/end/laneId/phases, so editing
@@ -74,6 +86,9 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
   const resetTransactionDraft = () => {
     if (!transaction) return;
     setApplyError("");
+    setExternalConflicts([]);
+    liveRef.current = { id: transaction.id, base: baseOf(transaction), draft: baseOf(transaction) };
+    draftStoreRef.current.delete(transaction.id);
     setEditName(transaction.name);
     setEditStart(transaction.start);
     setEditEnd(transaction.end);
@@ -289,7 +304,7 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
   // Transaction details belong to the Inspector. The Bottom panel remains
   // table-first after a row is selected; only the zero-Transaction state uses
   // the compact create form below.
-  if (transaction) return <section className="transaction-editor" data-testid="transaction-editor" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); if (hasChanges) resetTransactionDraft(); else onCancel(); } }}>{toolbarAndTable}{applyError && hasChanges && <p className="inspector-note editor-problem" role="alert" data-testid="transaction-apply-error">{applyError}</p>}<div className="bottom-sticky-actions" data-testid="transaction-inline-draft-actions">{hasChanges && <DraftStatus testId="transaction-properties-unapplied" />}<span className="bottom-sticky-buttons"><button type="button" data-testid="revert-transaction-properties" onClick={resetTransactionDraft} disabled={!hasChanges}>Revert</button><button type="button" data-testid="apply-transaction-properties" onClick={applyTransactionDraft} disabled={!hasChanges}>Apply</button></span></div></section>;
+  if (transaction) return <section className="transaction-editor" data-testid="transaction-editor" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); if (hasChanges) resetTransactionDraft(); else onCancel(); } }}>{toolbarAndTable}{externalConflicts.length > 0 && <p role="alert" data-testid="transaction-draft-conflict">Transaction changed externally: {externalConflicts.join(", ")}. Revert to reload latest, or <button type="button" onClick={() => { liveRef.current.base = baseOf(transaction); setExternalConflicts([]); }}>Keep my draft</button>.</p>}{applyError && hasChanges && <p className="inspector-note editor-problem" role="alert" data-testid="transaction-apply-error">{applyError}</p>}<div className="bottom-sticky-actions" data-testid="transaction-inline-draft-actions">{hasChanges && <DraftStatus testId="transaction-properties-unapplied" />}<span className="bottom-sticky-buttons"><button type="button" data-testid="revert-transaction-properties" onClick={resetTransactionDraft} disabled={!hasChanges}>Revert</button><button type="button" data-testid="apply-transaction-properties" onClick={applyTransactionDraft} disabled={!hasChanges || externalConflicts.length > 0}>Apply</button></span></div></section>;
   return <section className="transaction-editor" data-testid="transaction-editor" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}><header><strong>Transaction Editor</strong><button type="button" onClick={onUndo} disabled={!history.canUndo}>Undo</button><button type="button" onClick={onRedo} disabled={!history.canRedo}>Redo</button></header>{/* #534: the zero-Transaction state is the create form below (part of toolbarAndTable), shown directly -- no separate "No Transactions yet" onboarding block. */}{toolbarAndTable}{transaction ? <><form id="transaction-properties-form" onSubmit={(event) => { event.preventDefault(); applyTransactionDraft(); }}><label>Name<input aria-label="Transaction name" value={editName} onChange={(event) => setEditName(event.target.value)} /></label><label>Start<input aria-label="Transaction start" type="number" min="0" max={editEnd - 1} value={editStart} onChange={(event) => setEditStart(Number(event.target.value))} /></label><label>End<input aria-label="Transaction end" type="number" min={editStart + 1} max={document.timeline.cycleCount} value={editEnd} onChange={(event) => setEditEnd(Number(event.target.value))} /></label><label>Lane<input aria-label="Transaction lane" value={editLaneId} onChange={(event) => setEditLaneId(event.target.value)} /><span className="inspector-note">A visual/semantic grouping row -- Transactions sharing a Lane render stacked in the same track.</span></label>
       </form>
       <div className="bottom-sticky-actions">{hasChanges && <DraftStatus testId="transaction-properties-unapplied" />}<span className="bottom-sticky-buttons"><button type="button" data-testid="cancel-bottom-draft" onClick={onCancel}>Cancel</button><button type="submit" form="transaction-properties-form" data-testid="apply-transaction-properties" disabled={!hasChanges}>Apply Transaction</button></span></div></> : <form onSubmit={(event) => { event.preventDefault(); const id = nextEntityId("transaction", document) as TransactionId; const result = commands.createTransactionFromBottom({ id, name: name.trim() || "Transaction", start, end, ...(laneId.trim() ? { laneId: laneId.trim() } : {}) }); if (result.ok) onSelect(id); }}><label>Name<input aria-label="New Transaction name" value={name} onChange={(event) => setName(event.target.value)} /></label><label>{tcFieldLabel("Start", perTc)}<input aria-label="New Transaction start" type="number" min="0" max={cyclesToTc(end - 1, perTc)} step={perTc === 1 ? 1 : 1 / perTc} value={cyclesToTc(start, perTc)} onChange={(event) => setStart(tcToCycles(Number(event.target.value), perTc))} /></label><label>{tcFieldLabel("End", perTc)}<input aria-label="New Transaction end" type="number" min={cyclesToTc(start + 1, perTc)} max={cyclesToTc(document.timeline.cycleCount, perTc)} step={perTc === 1 ? 1 : 1 / perTc} value={cyclesToTc(end, perTc)} onChange={(event) => setEnd(tcToCycles(Number(event.target.value), perTc))} /></label><label>Lane<input aria-label="New Transaction lane" value={laneId} onChange={(event) => setLaneId(event.target.value)} /><span className="inspector-note">A visual/semantic grouping row -- Transactions sharing a Lane render stacked in the same track.</span></label><button type="submit">Create Transaction</button></form>}</section>;
