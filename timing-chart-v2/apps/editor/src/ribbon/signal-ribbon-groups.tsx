@@ -13,8 +13,6 @@ export type SignalRibbonContext = Readonly<{
   viewMode: "Cycle" | "Transaction" | "Split";
   onMoveUp: () => void;
   onMoveDown: () => void;
-  waveformPencilEnabled: boolean;
-  onToggleWaveformPencil: () => void;
 }>;
 
 /**
@@ -23,7 +21,7 @@ export type SignalRibbonContext = Readonly<{
  * merges them by ActiveContext.
  */
 export function buildSignalRibbonGroups(context: SignalRibbonContext): readonly RibbonGroupSpec[] {
-  const { document, range, commands, compactCycleCount, canMoveUp, canMoveDown, viewMode, onMoveUp, onMoveDown, waveformPencilEnabled, onToggleWaveformPencil } = context;
+  const { document, range, commands, compactCycleCount, canMoveUp, canMoveDown, viewMode, onMoveUp, onMoveDown } = context;
   return [
     {
       id: "draw", majorGroup: "Draw", caption: "Draw", items: [

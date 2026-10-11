@@ -20,6 +20,8 @@ async function openBinarySignal(page: Page, viewport = { width: 1280, height: 72
   await expect(page.getByTestId("signal-editor")).toBeVisible();
   await expect(page.getByTestId("ribbon-waveform-pencil")).toBeVisible();
   await expect(page.getByTestId("bottom-waveform-pencil")).toBeVisible();
+  await expect(page.getByTestId("bottom-tabs").getByTestId("bottom-waveform-pencil")).toHaveCount(0);
+  await expect(page.getByTestId("signal-editor").locator(".transition-form-row").getByTestId("bottom-waveform-pencil")).toHaveCount(1);
   return surface;
 }
 
@@ -61,10 +63,10 @@ test("draws a freehand Binary stroke as one semantic edit and round-trips throug
   const ribbonTool = page.getByTestId("ribbon-waveform-pencil");
   await expect(bottomTool).toBeEnabled();
   await bottomTool.hover();
-  await expect(page.getByRole("tooltip", { name: /Draw HIGH\/LOW directly on a Binary Signal/ })).toBeVisible();
+  await expect(page.getByRole("tooltip", { name: "Waveform Pencil — Draw HIGH/LOW directly on a Signal by dragging" })).toBeVisible();
   await bottomTool.focus();
-  await expect(page.getByRole("tooltip", { name: /Draw HIGH\/LOW directly on a Binary Signal/ })).toBeVisible();
-  await expect(ribbonTool).toHaveAttribute("title", /Binary Signal.*Clock, Bus, and Enum signals are not supported/);
+  await expect(page.getByRole("tooltip", { name: "Waveform Pencil — Draw HIGH/LOW directly on a Signal by dragging" })).toBeVisible();
+  await expect(ribbonTool).toHaveAttribute("title", "Waveform Pencil — Draw HIGH/LOW directly on a Signal by dragging");
   const pencilBounds = await bottomTool.boundingBox();
   expect(pencilBounds?.width).toBeGreaterThanOrEqual(28);
   expect(pencilBounds?.width).toBeLessThanOrEqual(30);

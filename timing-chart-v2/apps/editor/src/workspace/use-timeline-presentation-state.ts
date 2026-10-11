@@ -1,8 +1,7 @@
 import { useCallback, useRef, useState } from "react";
-import type { Dispatch, MutableRefObject, RefObject, SetStateAction } from "react";
+import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import type { GroupId, SignalGroupStyle } from "@timing-chart-v2/schema";
 import type { SelectedClockEdge } from "../runtime/edge-counter-projection.js";
-import { useWaveformPencilTool } from "../runtime/use-waveform-pencil-tool.js";
 
 export type TimelineRange = Readonly<{ start: number; end: number }>;
 
@@ -17,8 +16,6 @@ export interface TimelinePresentationState {
   readonly timelineRange: TimelineRange;
   readonly rangeSelectionActive: boolean;
   readonly selectedCycle: number;
-  readonly waveformPencilEnabled: boolean;
-  readonly setWaveformPencilEnabled: StateSetter<boolean>;
   readonly selectedEdge: SelectedClockEdge | undefined;
   readonly setCollapsedGroups: (next: ReadonlySet<GroupId>) => void;
   readonly resetCollapsedGroups: () => void;
@@ -39,12 +36,10 @@ export interface TimelinePresentationState {
     readonly selectedCycleRef: MutableRefObject<number>;
     readonly selectedEdgeRef: MutableRefObject<SelectedClockEdge | undefined>;
     readonly groupStylePreviewRef: MutableRefObject<(groupId: GroupId, style: SignalGroupStyle | undefined) => void>;
-    readonly waveformPencilEnabledRef: MutableRefObject<boolean>;
   };
-  readonly waveformPencilTool: ReturnType<typeof useWaveformPencilTool>;
 }
 
-export function useTimelinePresentationState(input: { readonly visualReference: boolean; readonly viewMode: "Cycle" | "Transaction" | "Split"; readonly hostRef: RefObject<HTMLDivElement | null>; readonly documentEpoch: number; readonly activeScenarioId: string | undefined; readonly revision: number }): TimelinePresentationState {
+export function useTimelinePresentationState(input: { readonly visualReference: boolean }): TimelinePresentationState {
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<ReadonlySet<GroupId>>(new Set());
   const [treePresentationRevision, setTreePresentationRevision] = useState(0);
   const [playheadPresentationRevision, setPlayheadPresentationRevision] = useState(0);
@@ -55,18 +50,11 @@ export function useTimelinePresentationState(input: { readonly visualReference: 
   const [timelineRangeState, setTimelineRangeState] = useState<TimelineRange>(() => input.visualReference ? { start: 0, end: 1 } : { start: 2, end: 4 });
   const [rangeSelectionActiveState, setRangeSelectionActiveState] = useState(false);
   const [selectedCycleState, setSelectedCycleState] = useState(() => input.visualReference ? 0 : 2);
-  const [waveformPencilEnabled, setWaveformPencilEnabledState] = useState(false);
   const timelineRangeRef = useRef(timelineRangeState);
   const rangeSelectionActiveRef = useRef(rangeSelectionActiveState);
   const selectedCycleRef = useRef(selectedCycleState);
   const selectedEdgeRef = useRef<SelectedClockEdge | undefined>(undefined);
   const groupStylePreviewRef = useRef<(groupId: GroupId, style: SignalGroupStyle | undefined) => void>(() => undefined);
-  const waveformPencilEnabledRef = useRef(false);
-  const setWaveformPencilEnabled = useCallback<StateSetter<boolean>>((next) => {
-    const resolved = typeof next === "function" ? next(waveformPencilEnabledRef.current) : next;
-    waveformPencilEnabledRef.current = resolved;
-    setWaveformPencilEnabledState(resolved);
-  }, []);
   const setCollapsedGroups = useCallback((next: ReadonlySet<GroupId>) => {
     const stable = new Set(next);
     collapsedGroupIdsRef.current = stable;
@@ -120,7 +108,6 @@ export function useTimelinePresentationState(input: { readonly visualReference: 
     selectedCycleRef.current = resolved;
     setSelectedCycleState(resolved);
   }, []);
-  const waveformPencilTool = useWaveformPencilTool({ enabled: waveformPencilEnabled, enabledRef: waveformPencilEnabledRef, setEnabled: setWaveformPencilEnabled, viewMode: input.viewMode, hostRef: input.hostRef, documentEpoch: input.documentEpoch, activeScenarioId: input.activeScenarioId, revision: input.revision });
 
   timelineRangeRef.current = timelineRangeState;
   rangeSelectionActiveRef.current = rangeSelectionActiveState;
@@ -135,9 +122,6 @@ export function useTimelinePresentationState(input: { readonly visualReference: 
     timelineRange: timelineRangeState,
     rangeSelectionActive: rangeSelectionActiveState,
     selectedCycle: selectedCycleState,
-    waveformPencilEnabled,
-    setWaveformPencilEnabled,
-    waveformPencilTool,
     selectedEdge: selectedEdgeRef.current,
     setCollapsedGroups,
     resetCollapsedGroups,
@@ -150,6 +134,6 @@ export function useTimelinePresentationState(input: { readonly visualReference: 
     setTimelineRange,
     setRangeSelectionActive,
     setSelectedCycle,
-    refs: { collapsedGroupIdsRef, applyCollapsedGroupsRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, groupStylePreviewRef, waveformPencilEnabledRef },
+    refs: { collapsedGroupIdsRef, applyCollapsedGroupsRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, groupStylePreviewRef },
   };
 }

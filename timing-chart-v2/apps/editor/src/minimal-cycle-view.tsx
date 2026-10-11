@@ -30,6 +30,7 @@ import { EditorShellView } from "./editor-shell-view.js";
 import { OperationFeedback } from "./operation-feedback.js";
 import { composeMode } from "./workspace/mode-composition.js";
 import { useViewModeTransition } from "./runtime/use-view-mode-transition.js";
+import { useWaveformPencilLifecycle } from "./runtime/use-waveform-pencil-tool.js";
 import { useActivePaneTracking } from "./runtime/use-active-pane-tracking.js";
 import { useOverlayPresentationRefresh } from "./runtime/use-overlay-presentation-refresh.js";
 import { EditorDialogLayer } from "./editor-dialog-layer.js";
@@ -149,6 +150,7 @@ export function MinimalCycleView() {
   const { bottomMaxHeight, setBottomHeight, resetBottomHeight, ribbonProps: bottomRibbonProps } = useBottomPanelSizing(host, setRawBottomHeight, setBottomVisible, bottomVisible, bottomHeight, viewMode);
   const presentation = useEditorPresentationState({ hostRef: host, mode: viewMode, selection: selection.state, selectionRef: selection.refs.state, timelineRuntimeRef, initialMinimapEnabled: visualReference });
   const waveformPencil = useMemo(createWaveformPencilMode, []);
+  useWaveformPencilLifecycle({ documentEpoch, activeScenarioId, revision: snapshot.revision });
   const {
     arrowPickStatus, setArrowPickStatus,
     gridEnabled, setGridEnabled, gridEnabledRef,
@@ -278,7 +280,7 @@ export function MinimalCycleView() {
   const bulkRegistrationDialogRef = useRef<HTMLElement>(null);
   const unsavedFileDialogRef = useRef<HTMLElement>(null);
   const compatibilityDialogRef = useRef<HTMLElement>(null);
-  const timelinePresentation = useTimelinePresentationState({ visualReference, viewMode, hostRef: host, documentEpoch, activeScenarioId, revision: snapshot.revision });
+  const timelinePresentation = useTimelinePresentationState({ visualReference });
   const {
     collapsedGroupIds,
     treePresentationRevision,
@@ -539,7 +541,7 @@ export function MinimalCycleView() {
     closeTreeMoreMenu,
   });
   const secondarySurfaces = useEditorSecondarySurfaces({
-    ...timelinePresentation.waveformPencilTool.secondarySurfaceProps, scenario: { model: scenarioModel, activeScenarioId, generateHandshakeScenarios: application.generateHandshakeScenarios }, document: snapshot.document,
+    scenario: { model: scenarioModel, activeScenarioId, generateHandshakeScenarios: application.generateHandshakeScenarios }, document: snapshot.document,
     changeSet: lastChangeSet,
     validationDiagnostics,
     validationPending,
@@ -627,7 +629,7 @@ export function MinimalCycleView() {
       showGroupBackground,
       signalTreeVisible,
       inspectorVisible,
-      ...bottomRibbonProps, ...timelinePresentation.waveformPencilTool.ribbonProps, arrowPickStatus,
+      ...bottomRibbonProps, arrowPickStatus,
       selectedSignalId: annotationTargetSignalId,
       selectedInsertionSignalId: selectedSignal?.id,
       selectedGroupId: selectedGroup?.id,
