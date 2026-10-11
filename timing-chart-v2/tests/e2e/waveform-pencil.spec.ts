@@ -580,8 +580,13 @@ test("large full-span waveform stroke updates only its preview, not mounted Wave
   const mountedSvgCount = await owners.locator(":scope > svg").count();
   expect(mountedSvgCount).toBe(100);
   const gestureStarted = await page.evaluate(() => {
-    const target = window as typeof window & { __wavePencilDomSnapshot?: { waveSvgs: Element[]; rows: Element[] } };
-    target.__wavePencilDomSnapshot = { waveSvgs: [...document.querySelectorAll("[data-role='wave-owner'] > svg")], rows: [...document.querySelectorAll("[data-role='frozen-row']")] };
+    const target = window as typeof window & { __wavePencilDomSnapshot?: { waveSvgs: Element[]; waveChildren: Array<readonly Node[]>; rows: Element[] } };
+    const waveSvgs = [...document.querySelectorAll("[data-role='wave-owner'] > svg")];
+    target.__wavePencilDomSnapshot = {
+      waveSvgs,
+      waveChildren: waveSvgs.map((svg) => [...svg.childNodes]),
+      rows: [...document.querySelectorAll("[data-role='frozen-row']")],
+    };
     performance.mark("pencil:gesture-start");
     return performance.now();
   });
@@ -591,19 +596,24 @@ test("large full-span waveform stroke updates only its preview, not mounted Wave
   await page.mouse.move(middle.x, middle.y, { steps: 2 });
   await page.mouse.move(to.x, to.y, { steps: 2 });
   const during = await page.evaluate(() => {
-    const target = window as typeof window & { __wavePencilDomSnapshot?: { waveSvgs: Element[]; rows: Element[] } };
+    const target = window as typeof window & { __wavePencilDomSnapshot?: { waveSvgs: Element[]; waveChildren: Array<readonly Node[]>; rows: Element[] } };
     const host = document.querySelector<HTMLElement>("[data-testid='cycle-surface']");
+    const waveChildrenUnchanged = target.__wavePencilDomSnapshot?.waveSvgs.every((svg, index) => {
+      const before = target.__wavePencilDomSnapshot?.waveChildren[index] ?? [];
+      return svg.childNodes.length === before.length && before.every((node, childIndex) => svg.childNodes[childIndex] === node);
+    });
     return {
       previewCount: document.querySelectorAll("[data-testid='waveform-pencil-preview']").length,
       history: document.querySelector<HTMLElement>("[data-testid='history-status']")?.innerText,
       dirty: document.querySelector<HTMLElement>("[data-testid='dirty-status']")?.innerText,
       revision: host?.dataset.canonicalRevision,
       waveSvgsConnected: target.__wavePencilDomSnapshot?.waveSvgs.filter((element) => element.isConnected).length,
+      waveChildrenUnchanged,
       rowsConnected: target.__wavePencilDomSnapshot?.rows.filter((element) => element.isConnected).length,
       rowCount: target.__wavePencilDomSnapshot?.rows.length,
     };
   });
-  expect(during).toMatchObject({ previewCount: 1, history: baselineHistory, dirty: baselineDirty, revision: baselineRevision, waveSvgsConnected: 100 });
+  expect(during).toMatchObject({ previewCount: 1, history: baselineHistory, dirty: baselineDirty, revision: baselineRevision, waveSvgsConnected: 100, waveChildrenUnchanged: true });
   expect(during.rowCount).toBeGreaterThan(0);
   expect(during.rowsConnected).toBe(during.rowCount);
   const beforeUp = await page.evaluate(() => performance.now());
