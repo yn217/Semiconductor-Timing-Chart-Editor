@@ -46,6 +46,18 @@ describe("mapVcdVariablesToSignals", () => {
     ]);
   });
 
+  it("reuses candidate identity lists for repeated ambiguous VCD declarations", () => {
+    const signals = Array.from({ length: 64 }, (_, index) => signal(`ready-${index}`, "ready", []));
+    const variables = Array.from({ length: 128 }, (_, index) => variable("ready", ["top", `missing-block-${index}`], `code-${index}`));
+    const result = mapVcdVariablesToSignals(signals, variables);
+    expect(result.status).toBe("ok");
+    if (result.status !== "ok") return;
+    expect(result.mappings).toHaveLength(128);
+    expect(result.mappings.every(({ status }) => status === "ambiguous")).toBe(true);
+    expect(result.mappings[0]!.candidateSignalIds).toHaveLength(64);
+    expect(result.mappings.every(({ candidateSignalIds }) => candidateSignalIds === result.mappings[0]!.candidateSignalIds)).toBe(true);
+  });
+
   it("does not case-normalize and reports absent names as missing", () => {
     const result = mapVcdVariablesToSignals([signal("a", "Ready")], [variable("ready"), variable("other", [], "\"")]);
     expect(result.status).toBe("ok");

@@ -13,7 +13,7 @@ export type VcdSignalMappingResult =
   | Readonly<{ status: "ok"; mappings: readonly VcdSignalMapping[] }>
   | Readonly<{ status: "resource-limit"; limit: number }>;
 
-type CanonicalCandidate = Readonly<{ signal: Exclude<Signal, { type: "commentRow" }>; completeHierarchy: boolean }>;
+type CanonicalCandidate = Readonly<{ signal: Exclude<Signal, { type: "commentRow" }> }>;
 
 function nameKey(name: string): string {
   return name;
@@ -40,10 +40,11 @@ export function mapVcdVariablesToSignals(
 
   const byName = new Map<string, CanonicalCandidate[]>();
   const byHierarchy = new Map<string, CanonicalCandidate[]>();
+  const byIncompleteName = new Map<string, CanonicalCandidate[]>();
   for (const signal of signals) {
     if (signal.type === "commentRow" || signal.source.signalName.length === 0) continue;
     const hasHierarchy = completeHierarchy(signal.source.instancePath, signal.source.signalName);
-    const candidate: CanonicalCandidate = { signal, completeHierarchy: hasHierarchy };
+    const candidate: CanonicalCandidate = { signal };
     const nameCandidates = byName.get(nameKey(signal.source.signalName)) ?? [];
     nameCandidates.push(candidate);
     byName.set(nameKey(signal.source.signalName), nameCandidates);
@@ -52,15 +53,36 @@ export function mapVcdVariablesToSignals(
       const hierarchyCandidates = byHierarchy.get(key) ?? [];
       hierarchyCandidates.push(candidate);
       byHierarchy.set(key, hierarchyCandidates);
+    } else {
+      const incompleteCandidates = byIncompleteName.get(nameKey(signal.source.signalName)) ?? [];
+      incompleteCandidates.push(candidate);
+      byIncompleteName.set(nameKey(signal.source.signalName), incompleteCandidates);
     }
   }
 
+  const candidateSetsByIdentity = new Map<string, readonly CanonicalCandidate[]>();
   const candidatesByVariable = variables.map((variable) => {
     const hasHierarchy = completeHierarchy(variable.scope, variable.reference);
-    const nameCandidates = byName.get(nameKey(variable.reference)) ?? [];
-    if (!hasHierarchy) return nameCandidates;
-    const exactHierarchy = byHierarchy.get(hierarchyKey(variable.scope, variable.reference)) ?? [];
-    return [...exactHierarchy, ...nameCandidates.filter((candidate) => !candidate.completeHierarchy)];
+    const identityKey = hierarchyKey(hasHierarchy ? variable.scope : [], variable.reference);
+    const existing = candidateSetsByIdentity.get(identityKey);
+    if (existing) return existing;
+
+    const name = nameKey(variable.reference);
+    const nameCandidates = byName.get(name) ?? [];
+    let candidates: readonly CanonicalCandidate[];
+    if (!hasHierarchy) {
+      candidates = nameCandidates;
+    } else {
+      const exactHierarchy = byHierarchy.get(hierarchyKey(variable.scope, variable.reference)) ?? [];
+      const fallbackCandidates = byIncompleteName.get(name) ?? [];
+      candidates = exactHierarchy.length === 0
+        ? fallbackCandidates
+        : fallbackCandidates.length === 0
+          ? exactHierarchy
+          : [...exactHierarchy, ...fallbackCandidates];
+    }
+    candidateSetsByIdentity.set(identityKey, candidates);
+    return candidates;
   });
 
   const vcdCandidatesBySignal = new Map<SignalId, number[]>();
@@ -72,9 +94,14 @@ export function mapVcdVariablesToSignals(
     vcdCandidatesBySignal.set(signalId, indexes);
   });
 
+  const candidateIdsBySet = new WeakMap<readonly CanonicalCandidate[], readonly SignalId[]>();
   const mappings = variables.map((variable, index): VcdSignalMapping => {
     const candidates = candidatesByVariable[index]!;
-    const candidateSignalIds = candidates.map(({ signal }) => signal.id);
+    let candidateSignalIds = candidateIdsBySet.get(candidates);
+    if (!candidateSignalIds) {
+      candidateSignalIds = candidates.map(({ signal }) => signal.id);
+      candidateIdsBySet.set(candidates, candidateSignalIds);
+    }
     if (candidates.length === 0) return { variable, status: "missing", candidateSignalIds };
     if (candidates.length > 1) {
       return { variable, status: "ambiguous", candidateSignalIds, reason: "multiple-canonical-candidates" };
