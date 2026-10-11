@@ -2,10 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 import type { SelectionState } from "./use-selection-owner.js";
 import { applySelectionDecorationToHost } from "./selection-decoration.js";
+import type { SimulationTraceSnapshot } from "../simulation/simulation-trace.js";
 
 /** Owns editor-only visual toggles and transient selection decoration state.
  * None of these values are canonical document fields or history entries. */
-export function useEditorPresentationState(input: { readonly hostRef: MutableRefObject<HTMLDivElement | null>; readonly mode: string; readonly selection: SelectionState; readonly selectionRef: MutableRefObject<SelectionState>; readonly initialMinimapEnabled?: boolean }) {
+export function useEditorPresentationState(input: { readonly hostRef: MutableRefObject<HTMLDivElement | null>; readonly mode: string; readonly selection: SelectionState; readonly selectionRef: MutableRefObject<SelectionState>; readonly timelineRuntimeRef: MutableRefObject<{ readonly refreshOverlays: (reason?: string) => void } | null>; readonly initialMinimapEnabled?: boolean }) {
   const [arrowPickStatus, setArrowPickStatus] = useState<"idle" | "from" | "to">("idle");
   const [gridEnabled, setGridEnabled] = useState(true);
   const gridEnabledRef = useRef(true);
@@ -22,6 +23,11 @@ export function useEditorPresentationState(input: { readonly hostRef: MutableRef
   const [showTransactions, setShowTransactions] = useState(true);
   const [showGroupBackground, setShowGroupBackground] = useState(true);
   const previousSelectionDecorationRef = useRef<SelectionState | undefined>(undefined);
+  const simulationTraceRef = useRef<SimulationTraceSnapshot | undefined>(undefined);
+  const publishSimulationTrace = useCallback((trace: SimulationTraceSnapshot | undefined) => {
+    simulationTraceRef.current = trace;
+    input.timelineRuntimeRef.current?.refreshOverlays("simulation-trace");
+  }, [input.timelineRuntimeRef]);
   const applySelectionDecorations = useCallback((next: SelectionState): void => {
     const rendererHost = input.hostRef.current;
     if (!rendererHost) return;
@@ -48,6 +54,8 @@ export function useEditorPresentationState(input: { readonly hostRef: MutableRef
     showTransactions, setShowTransactions,
     showGroupBackground, setShowGroupBackground,
     previousSelectionDecorationRef,
+    simulationTraceRef,
+    publishSimulationTrace,
     applySelectionDecorations,
     reapplySelectionRef,
   } as const;

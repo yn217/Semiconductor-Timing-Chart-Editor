@@ -3,6 +3,7 @@ import type { AnnotationId, GroupId, SignalGroupStyle, SignalId } from "@timing-
 import type { TimelineViewportRuntime } from "./timeline-viewport-runtime.js";
 import type { SelectedClockEdge } from "./edge-counter-projection.js";
 import type { ScenarioSignalDifference } from "@timing-chart-v2/schema";
+import type { SimulationTraceSnapshot } from "../simulation/simulation-trace.js";
 
 type TimelineRange = Readonly<{ start: number; end: number }>;
 
@@ -28,6 +29,7 @@ export interface TimelineSurfacePresentationPort {
   readonly selectedEdgeRef: MutableRefObject<SelectedClockEdge | undefined>;
   readonly selectedAnnotationRef: MutableRefObject<AnnotationId | undefined>;
   readonly scenarioDifferencesRef: MutableRefObject<readonly ScenarioSignalDifference[]>;
+  readonly simulationTraceRef: MutableRefObject<SimulationTraceSnapshot | undefined>;
   readonly gridEnabledRef: MutableRefObject<boolean>;
   readonly snapEnabledRef: MutableRefObject<boolean>;
   readonly treeFocusRowIdRef: MutableRefObject<string | undefined>;

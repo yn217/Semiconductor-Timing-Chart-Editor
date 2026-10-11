@@ -190,6 +190,14 @@ export interface ScenarioDifferenceOverlayPrimitive {
   readonly height: number;
 }
 
+export interface SimulationTraceOverlayPrimitive {
+  readonly signalId: string;
+  readonly signalName: string;
+  readonly sourceStart: number;
+  readonly sourceEnd: number;
+  readonly path: string;
+}
+
 export interface Point { readonly x: number; readonly y: number }
 
 export interface SnapGuidePrimitive {
@@ -220,6 +228,7 @@ export interface TimingChartRenderer {
   updatePresentation(projection: RenderProjection): void;
   updateOverlays(primitives: readonly AnnotationOverlayPrimitive[]): void;
   updateScenarioDifferences(primitives: readonly ScenarioDifferenceOverlayPrimitive[]): void;
+  updateSimulationTraces(primitives: readonly SimulationTraceOverlayPrimitive[]): void;
   /** Upsert only the given overlay owners (by id); every other owner, and DOM order, is left untouched. Used by drag Preview so a
    * per-pointermove update costs O(dragged) instead of re-signing every rendered Annotation. */
   patchOverlays(primitives: readonly AnnotationOverlayPrimitive[]): number;
