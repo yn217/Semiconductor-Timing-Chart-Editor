@@ -19,6 +19,9 @@ export const TIMING_DIAGNOSTIC_CODES = [
   "LATENCY_CONSTRAINT_INVALID",
   "LATENCY_RESPONSE_MISSING",
   "LATENCY_OUT_OF_RANGE",
+  "SETUP_HOLD_CONSTRAINT_INVALID",
+  "SETUP_TIME_VIOLATION",
+  "HOLD_TIME_VIOLATION",
 ] as const;
 
 export type TimingDiagnosticCode = typeof TIMING_DIAGNOSTIC_CODES[number];
@@ -290,11 +293,48 @@ function numberFrom(data: ConstraintData, key: string): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
-function edgeCycles(signal: Signal, edge: "rising" | "falling"): number[] {
-  if (signal.type === "clock" || signal.type === "commentRow") return [];
+function edgeCycles(signal: Signal, edge: "rising" | "falling", cycleCount: number): number[] {
+  if (signal.type === "commentRow") return [];
   const matches = (before: "high" | "low" | "unknown", after: "high" | "low" | "unknown"): boolean => edge === "rising"
     ? before === "low" && after === "high"
     : before === "high" && after === "low";
+  if (signal.type === "clock") {
+    const { generator } = signal;
+    const period = generator.period;
+    const totalHalfCycles = period * 2;
+    const activeHalfCycles = Math.round(totalHalfCycles * generator.duty);
+    const activeLevel = generator.polarity === "positive" ? 1 : 0;
+    const suppressed = new Set(generator.suppressedPeriods ?? []);
+    const enable = signal.enable ?? [];
+    const levelAt = (time: number): "high" | "low" => {
+      if (time < generator.start) return generator.initial === 1 ? "high" : "low";
+      const slotStart = Math.floor(time / period) * period;
+      let low = 0;
+      let high = enable.length;
+      while (low < high) {
+        const middle = (low + high) >>> 1;
+        if (enable[middle]!.start <= slotStart) low = middle + 1;
+        else high = middle;
+      }
+      const enabled = low === 0 || level(enable[low - 1]!.value) === "high";
+      const slot = Math.floor((slotStart - generator.start) / period);
+      if (!enabled || suppressed.has(slot)) return generator.initial === 1 ? "high" : "low";
+      const phase = ((generator.phase % period) + period) % period;
+      const position = ((((time - generator.start - phase) % period) + period) % period) * 2;
+      const active = position < activeHalfCycles;
+      return (active ? activeLevel : 1 - activeLevel) === 1 ? "high" : "low";
+    };
+    const cycles: number[] = [];
+    // Canonical clock phase and duty are half-cycle aligned; evaluate those
+    // semantic transition boundaries without consulting rendered SVG geometry.
+    for (let half = 0; half <= cycleCount * 2; half += 1) {
+      const time = half / 2;
+      const before = half === 0 ? (generator.initial === 1 ? "high" : "low") : levelAt(time - 0.000001);
+      const after = levelAt(time + 0.000001);
+      if (matches(before, after)) cycles.push(time);
+    }
+    return cycles;
+  }
   const cycles: number[] = [];
   for (let index = 1; index < signal.values.length; index += 1) {
     const before = level(signal.values[index - 1]!.value);
@@ -417,8 +457,8 @@ function latencyDiagnostics(document: CanonicalDocument, enabled: ReadonlySet<Ti
       problems.push({ code: "LATENCY_CONSTRAINT_INVALID", category: "protocol", severity: "warning", path: basePath, message: "Latency constraint requires value-signal IDs, rising/falling edges, and integer cycle bounds where 0 ≤ minCycles ≤ maxCycles.", entityId: constraint.id, objectType: "constraint", objectId: constraint.id, source: "validation", stage: "validate" });
       return;
     }
-    const triggerCycles = edgeCycles(trigger, triggerEdge);
-    const responseCycles = edgeCycles(response, responseEdge);
+    const triggerCycles = edgeCycles(trigger, triggerEdge, document.timeline.cycleCount);
+    const responseCycles = edgeCycles(response, responseEdge, document.timeline.cycleCount);
     let responseIndex = 0;
     const responseIndexInDocument = indexes.signalIndexById.get(response.id) ?? -1;
     triggerCycles.forEach((triggerCycle) => {
@@ -434,6 +474,86 @@ function latencyDiagnostics(document: CanonicalDocument, enabled: ReadonlySet<Ti
         problems.push({ code: "LATENCY_OUT_OF_RANGE", category: "protocol", severity: "warning", path: `$.signals[${responseIndexInDocument}]`, message: `Signal '${response.name}' edge at cycle ${responseCycle} is ${latency} cycles after '${trigger.name}' at cycle ${triggerCycle}; expected ${minCycles}..${maxCycles}.`, entityId: response.id, objectType: "constraint", objectId: constraint.id, objectLabel: constraint.id, source: "validation", stage: "validate", sourceCycle: responseCycle, value: latency, expected: `${minCycles}..${maxCycles} cycles` });
       }
     });
+  });
+  return problems;
+}
+
+/** Check setup/hold against source-cycle transitions. Equality at the requested
+ * interval passes; a data transition on the capture cycle is considered
+ * simultaneous (setup distance 0), while hold checks only later transitions. */
+function setupHoldDiagnostics(document: CanonicalDocument, enabled: ReadonlySet<TimingDiagnosticCategory>, providedIndexes?: TimingDiagnosticIndexes): TimingDiagnostic[] {
+  if (!enabled.has("protocol")) return [];
+  const indexes = providedIndexes ?? buildTimingDiagnosticIndexes(document, enabled);
+  const problems: TimingDiagnostic[] = [];
+  const captureEdgeCache = new Map<string, readonly number[]>();
+  document.constraints.forEach((constraint, constraintIndex) => {
+    const kind = constraint.type.toLowerCase();
+    if (kind !== "setup" && kind !== "hold") return;
+    const data = constraintData(constraint.data);
+    const dataId = textFrom(data, ["dataSignalId"]) as SignalId | undefined;
+    const captureId = textFrom(data, ["captureSignalId"]) as SignalId | undefined;
+    const edge = textFrom(data, ["captureEdge"]);
+    const minCycles = data.minCycles;
+    const source = dataId ? indexes.signalsById.get(dataId) : undefined;
+    const capture = captureId ? indexes.signalsById.get(captureId) : undefined;
+    const basePath = `$.constraints[${constraintIndex}].data`;
+    if (!dataId || !captureId || dataId === captureId || !source || source.type === "clock" || source.type === "commentRow"
+      || !capture || (capture.type !== "binary" && capture.type !== "logic" && capture.type !== "bus" && capture.type !== "pulse" && capture.type !== "clock")
+      || (edge !== "rising" && edge !== "falling") || typeof minCycles !== "number" || !Number.isSafeInteger(minCycles) || minCycles < 0) {
+      problems.push({ code: "SETUP_HOLD_CONSTRAINT_INVALID", category: "protocol", severity: "warning", path: basePath, message: "Setup/Hold constraint requires distinct Data and edge-capable capture Signals (including Clock), a rising/falling capture edge, and a non-negative safe-integer minimum interval.", entityId: constraint.id, objectType: "constraint", objectId: constraint.id, source: "validation", stage: "validate" });
+      return;
+    }
+    const edgeKey = `${capture.id}:${edge}`;
+    let captures = captureEdgeCache.get(edgeKey);
+    if (!captures) {
+      captures = edgeCycles(capture, edge, document.timeline.cycleCount);
+      captureEdgeCache.set(edgeKey, captures);
+    }
+    const dataChanges = source.values.filter((change, index, values) => index === 0
+      ? change.start > 0
+      : change.value !== values[index - 1]!.value);
+    const sourceIndex = indexes.signalIndexById.get(source.id) ?? -1;
+    const lowerBound = (cycle: number, inclusive: boolean): number => {
+      let low = 0;
+      let high = dataChanges.length;
+      while (low < high) {
+        const middle = low + ((high - low) >>> 1);
+        if (inclusive ? dataChanges[middle]!.start < cycle : dataChanges[middle]!.start <= cycle) low = middle + 1;
+        else high = middle;
+      }
+      return low;
+    };
+    for (const captureCycle of captures) {
+      const violation = kind === "setup"
+        ? (() => {
+          const priorIndex = lowerBound(captureCycle, false) - 1;
+          const prior = dataChanges[priorIndex];
+          return priorIndex < 0 ? undefined : captureCycle - prior!.start;
+        })()
+        : (() => {
+          const next = dataChanges[lowerBound(captureCycle, false)];
+          return next === undefined ? undefined : next.start - captureCycle;
+        })();
+      if (violation === undefined || violation >= minCycles) continue;
+      const code = kind === "setup" ? "SETUP_TIME_VIOLATION" : "HOLD_TIME_VIOLATION";
+      const observed = kind === "setup" ? `${violation} cycles before` : `${violation} cycles after`;
+      problems.push({
+        code,
+        category: "protocol",
+        severity: "warning",
+        path: `$.signals[${sourceIndex}]`,
+        message: `${kind === "setup" ? "Setup" : "Hold"} requirement for '${source.name}' at ${capture.name} ${edge} edge (cycle ${captureCycle}) is ${observed}; at least ${minCycles} cycles are required.`,
+        entityId: source.id,
+        objectType: "constraint",
+        objectId: constraint.id,
+        objectLabel: constraint.id,
+        source: "validation",
+        stage: "validate",
+        sourceCycle: captureCycle,
+        value: violation,
+        expected: `>= ${minCycles} cycles`,
+      });
+    }
   });
   return problems;
 }
@@ -482,6 +602,7 @@ export const TIMING_DIAGNOSTIC_RULES: readonly TimingDiagnosticRule[] = [
   { id: "timing.handshake", category: "protocol", categories: ["protocol", "stability"], evaluate: handshakeDiagnostics },
   { id: "timing.latency-range", category: "protocol", evaluate: latencyRangeDiagnostics },
   { id: "timing.latency", category: "protocol", evaluate: latencyDiagnostics },
+  { id: "timing.setup-hold", category: "protocol", evaluate: setupHoldDiagnostics },
 ];
 
 function enabledDiagnosticCategories(document: CanonicalDocument): ReadonlySet<TimingDiagnosticCategory> {
@@ -511,6 +632,7 @@ function evaluateSingleConstraintDiagnostics(document: CanonicalDocument, constr
   const type = constraint.type.toLowerCase();
   if (type === "latency-range" && enabled.has("protocol")) append(latencyRangeDiagnostics(singleConstraintDocument, enabled, indexes), "timing.latency-range");
   else if (type === "latency" && enabled.has("protocol")) append(latencyDiagnostics(singleConstraintDocument, enabled, indexes), "timing.latency");
+  else if ((type === "setup" || type === "hold") && enabled.has("protocol")) append(setupHoldDiagnostics(singleConstraintDocument, enabled, indexes), "timing.setup-hold");
   return output;
 }
 

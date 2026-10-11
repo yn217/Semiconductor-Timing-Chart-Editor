@@ -14,6 +14,60 @@ function withSignals(document: CanonicalDocument, signals: CanonicalDocument["si
 }
 
 describe("derived timing diagnostics", () => {
+  it("checks setup against the last Data transition at or before each capture edge; equality passes", () => {
+    const source = canonicalFixture();
+    const template = source.signals[1]!;
+    const data = { ...template, id: "sig_setup_data" as SignalId, name: "DATA", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 1, value: 1 }] };
+    const capture = { ...template, id: "sig_setup_capture" as SignalId, name: "CAPTURE", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 2, value: 1 }, { start: 4, value: 0 }, { start: 6, value: 1 }] };
+    const constraint: Constraint = { id: "constraint_setup", type: "setup", data: { dataSignalId: data.id, captureSignalId: capture.id, captureEdge: "rising", minCycles: 2 } };
+    const document = withSignals(source, [source.signals[0]!, data, capture], [constraint]);
+    expect(deriveTimingDiagnostics(document).filter((item) => item.objectId === constraint.id)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "SETUP_TIME_VIOLATION", entityId: data.id, sourceCycle: 2, value: 1, expected: ">= 2 cycles" }),
+    ]));
+    const equalBoundary = withSignals(document, [{ ...data, values: [{ start: 0, value: 0 }, { start: 1, value: 0 }] }, capture], [constraint]);
+    expect(deriveTimingDiagnostics(equalBoundary).filter((item) => item.code === "SETUP_TIME_VIOLATION")).toEqual([]);
+  });
+
+  it("checks hold only after the capture edge and accepts an exact minimum interval", () => {
+    const source = canonicalFixture();
+    const template = source.signals[1]!;
+    const data = { ...template, id: "sig_hold_data" as SignalId, name: "DATA", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 4, value: 1 }, { start: 7, value: 0 }] };
+    const capture = { ...template, id: "sig_hold_capture" as SignalId, name: "CAPTURE", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 2, value: 1 }, { start: 5, value: 0 }, { start: 6, value: 1 }] };
+    const constraint: Constraint = { id: "constraint_hold", type: "hold", data: { dataSignalId: data.id, captureSignalId: capture.id, captureEdge: "rising", minCycles: 2 } };
+    const document = withSignals(source, [source.signals[0]!, data, capture], [constraint]);
+    expect(deriveTimingDiagnostics(document).filter((item) => item.objectId === constraint.id)).toEqual([
+      expect.objectContaining({ code: "HOLD_TIME_VIOLATION", entityId: data.id, sourceCycle: 6, value: 1, expected: ">= 2 cycles" }),
+    ]);
+  });
+
+  it("checks Setup against generated Clock capture edges in source-cycle time", () => {
+    const source = canonicalFixture();
+    const template = source.signals.find((signal) => signal.type === "clock")!;
+    const clock = { ...template, id: "sig_setup_clock" as SignalId, name: "CLK", generator: { start: 0, period: 2, duty: 0.5, phase: 0, initial: 0 as const, polarity: "positive" as const } };
+    const dataTemplate = source.signals.find((signal) => signal.type !== "clock" && signal.type !== "commentRow")!;
+    const data = { ...dataTemplate, id: "sig_setup_clock_data" as SignalId, name: "DATA", values: [{ start: 0, value: 0 }, { start: 1, value: 1 }] };
+    const constraint: Constraint = { id: "constraint_setup_clock", type: "setup", data: { dataSignalId: data.id, captureSignalId: clock.id, captureEdge: "rising", minCycles: 2 } };
+    const document = withSignals(source, [clock, data], [constraint]);
+    expect(deriveTimingDiagnostics(document).filter((item) => item.objectId === constraint.id)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "SETUP_TIME_VIOLATION", entityId: data.id, sourceCycle: 2, value: 1 }),
+    ]));
+  });
+
+  it("refreshes Setup findings when a referenced Data Signal changes", () => {
+    const source = canonicalFixture();
+    const template = source.signals[1]!;
+    const data = { id: "sig_setup_incremental_data" as SignalId, name: "DATA", type: "binary" as const, role: "internal" as const, source: { instancePath: [], signalName: "DATA" }, display: { name: "DATA" }, values: [{ start: 0, value: 0 }, { start: 1, value: 1 }] };
+    const capture = { id: "sig_setup_incremental_capture" as SignalId, name: "CAPTURE", type: "binary" as const, role: "input" as const, source: { instancePath: [], signalName: "CAPTURE" }, display: { name: "CAPTURE" }, values: [{ start: 0, value: 0 }, { start: 2, value: 1 }] };
+    const constraint: Constraint = { id: "constraint_setup_incremental", type: "setup", data: { dataSignalId: data.id, captureSignalId: capture.id, captureEdge: "rising", minCycles: 2 } };
+    const previous = withSignals(source, [source.signals[0]!, { ...template, ...data }, { ...template, ...capture }], [constraint]);
+    const previousDiagnostics = deriveTimingDiagnostics(previous);
+    expect(previousDiagnostics.some((item) => item.code === "SETUP_TIME_VIOLATION")).toBe(true);
+    const next = withSignals(previous, [previous.signals[0]!, { ...previous.signals[1]!, values: [{ start: 0, value: 0 }] }, previous.signals[2]!], [constraint]);
+    const incremental = deriveTimingDiagnosticsIfInputsChanged(previous, next, previousDiagnostics);
+    expect(incremental.diagnostics).toEqual(deriveTimingDiagnostics(next));
+    expect(incremental.diagnostics.some((item) => item.code === "SETUP_TIME_VIOLATION")).toBe(false);
+  });
+
   it("recomputes unknown-value diagnostics only for Signals whose semantic inputs changed", () => {
     const source = canonicalFixture();
     let unchangedValueVisits = 0;
@@ -306,7 +360,7 @@ describe("derived timing diagnostics", () => {
   });
 
   it("evaluates through a shared rule registry with stable semantic keys", () => {
-    expect(TIMING_DIAGNOSTIC_RULES.map((rule) => rule.id)).toEqual(["timing.unknown-value", "timing.handshake", "timing.latency-range", "timing.latency"]);
+    expect(TIMING_DIAGNOSTIC_RULES.map((rule) => rule.id)).toEqual(["timing.unknown-value", "timing.handshake", "timing.latency-range", "timing.latency", "timing.setup-hold"]);
     const source = canonicalFixture();
     const signal = { ...source.signals[1]!, values: [{ start: 1, value: "X" }] };
     const diagnostic = deriveTimingDiagnostics(withSignals(source, [source.signals[0]!, signal]))[0]!;
