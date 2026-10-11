@@ -230,6 +230,29 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
     await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
     await expect(surface).toHaveAttribute("data-editor-idle", "true");
   });
+
+  test(`paints a single LOW cell from its lower half at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    const surface = await openBinarySignal(page, viewport);
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+    await page.getByLabel("Zoom preset").selectOption("200");
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+    const tool = page.getByTestId("ribbon-waveform-pencil");
+    await tool.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByTestId("bottom-waveform-pencil")).toHaveAttribute("aria-pressed", "true");
+
+    // Cycle 3 is HIGH in the sample. A one-cell lower-half stroke makes
+    // only cycle 3 LOW and restores HIGH at its ending boundary.
+    const point = await cellPoint(page, 3, 0.8);
+    await page.mouse.move(point.x, point.y);
+    await page.mouse.down();
+    await page.mouse.up();
+    const table = page.getByTestId("signal-editor");
+    await expect(table.locator("[data-event-start='3']").getByLabel("Value 3")).toHaveValue("0");
+    await expect(table.locator("[data-event-start='4']").getByLabel("Value 4")).toHaveValue("1");
+    await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+    await expect(surface).toHaveAttribute("data-editor-idle", "true");
+  });
 }
 
 test("keeps source-cycle targeting correct after production zoom and horizontal scrollbar interaction", async ({ page }) => {
