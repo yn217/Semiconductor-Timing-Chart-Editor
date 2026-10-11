@@ -40,6 +40,19 @@ describe("parseVcdText", () => {
     expect(result).toMatchObject({ ok: true, value: { timescale: { magnitude: 1n, unit: "ns" }, changes: [{ code: "!", value: "1" }] } });
   });
 
+  it("yields to browser tasks while parsing a large single-chunk value stream", async () => {
+    const values = Array.from({ length: 4_096 }, (_, cycle) => `#${cycle} ${cycle % 2 ? "1!" : "0!"}`).join(" ");
+    let parsingFinished = false;
+    let browserTaskRanDuringParse = false;
+    const parsing = parseVcdText(chunks(`$timescale 1ns $end $scope module top $end $var wire 1 ! clk $end $upscope $end $enddefinitions $end ${values}`));
+    setTimeout(() => { browserTaskRanDuringParse = !parsingFinished; }, 0);
+    const result = await parsing;
+    parsingFinished = true;
+    expect(result).toMatchObject({ ok: true });
+    if (result.ok) expect(result.value.changes).toHaveLength(4_096);
+    expect(browserTaskRanDuringParse).toBe(true);
+  });
+
   it.each([
     ["missing timescale", "$scope module m $end $upscope $end $enddefinitions $end", "malformed"],
     ["unbalanced scope", "$timescale 1ns $end $scope module m $end $enddefinitions $end", "malformed"],

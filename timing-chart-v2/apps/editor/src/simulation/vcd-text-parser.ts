@@ -130,10 +130,31 @@ export async function parseVcdText(
         );
       });
     };
+    let tokensSinceYield = 0;
+    const yieldToBrowser = async (): Promise<void> => {
+      tokensSinceYield += 1;
+      if (tokensSinceYield < 1024) return;
+      tokensSinceYield = 0;
+      if (options.signal?.aborted) fail("aborted", "VCD parsing was aborted.");
+      const scheduler = (globalThis as typeof globalThis & { scheduler?: { yield?: () => Promise<void> } }).scheduler;
+      if (typeof scheduler?.yield === "function") {
+        await scheduler.yield();
+      } else if (typeof globalThis.MessageChannel === "function") {
+        await new Promise<void>((resolve) => {
+          const channel = new MessageChannel();
+          channel.port1.onmessage = () => { channel.port1.close(); channel.port2.close(); resolve(); };
+          channel.port2.postMessage(undefined);
+        });
+      } else {
+        await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 0));
+      }
+      if (options.signal?.aborted) fail("aborted", "VCD parsing was aborted.");
+    };
     const next = async (): Promise<string> => {
       if (options.signal?.aborted) fail("aborted", "VCD parsing was aborted.");
       const result = await readNext();
       if (result.done) fail("malformed", "Unexpected end of VCD input.");
+      await yieldToBrowser();
       return result.value;
     };
     const expectEnd = async (): Promise<void> => {
@@ -307,6 +328,7 @@ export async function parseVcdText(
         }
       }
       tokenResult = await readNext();
+      if (!tokenResult.done) await yieldToBrowser();
     }
     if (options.signal?.aborted) fail("aborted", "VCD parsing was aborted.");
     return { ok: true, value: { timescale, variables, changes } };
