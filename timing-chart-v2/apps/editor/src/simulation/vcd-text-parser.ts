@@ -80,6 +80,9 @@ async function* whitespaceTokens(chunks: AsyncIterable<string>, signal: AbortSig
         token = "";
       } else {
         token += character;
+        if (token.startsWith("#") && token.length > VCD_RESOURCE_BUDGET.timestampDigits + 1) {
+          fail("resource-limit", `VCD timestamp exceeds the ${VCD_RESOURCE_BUDGET.timestampDigits}-digit limit.`);
+        }
       }
     }
   }
@@ -96,6 +99,15 @@ function parseTimescale(parts: readonly string[], token?: string): VcdTimescale 
   const unit = match[2]!.toLowerCase() as VcdTimescale["unit"];
   if (!TIME_UNITS.has(unit)) fail("unsupported", "VCD timescale unit is unsupported.", token ?? compact);
   return { magnitude: BigInt(match[1]!), unit };
+}
+
+function parseTimestamp(token: string): bigint {
+  if (!/^#\d+$/.test(token)) fail("malformed", "VCD timestamp must be a non-negative integer.", token);
+  const digits = token.slice(1);
+  if (digits.length > VCD_RESOURCE_BUDGET.timestampDigits) {
+    fail("resource-limit", `VCD timestamp exceeds the ${VCD_RESOURCE_BUDGET.timestampDigits}-digit limit.`);
+  }
+  return BigInt(digits);
 }
 
 /** Parse VCD text incrementally. The returned arrays are bounded by the document resource budget. */
@@ -290,8 +302,7 @@ export async function parseVcdText(
       if (options.signal?.aborted) fail("aborted", "VCD parsing was aborted.");
       const token = tokenResult.value;
       if (token.startsWith("#")) {
-        if (!/^#\d+$/.test(token)) fail("malformed", "VCD timestamp must be a non-negative integer.", token);
-        const nextTimestamp = BigInt(token.slice(1));
+        const nextTimestamp = parseTimestamp(token);
         if (timestamp !== undefined && nextTimestamp < timestamp) fail("malformed", "VCD timestamps must be non-decreasing.", token);
         timestamp = nextTimestamp;
       } else if (token.toLowerCase() === "$dumpvars" || token.toLowerCase() === "$dumpall" || token.toLowerCase() === "$dumpon" || token.toLowerCase() === "$dumpoff") {
@@ -301,8 +312,7 @@ export async function parseVcdText(
           const dumpToken = await next();
           if (dumpToken === "$end") break;
           if (dumpToken.startsWith("#")) {
-            if (!/^#\d+$/.test(dumpToken)) fail("malformed", "VCD timestamp must be a non-negative integer.", dumpToken);
-            timestamp = BigInt(dumpToken.slice(1));
+            timestamp = parseTimestamp(dumpToken);
           } else {
             if (/^[bB][01xXzZ]+$/i.test(dumpToken)) {
               const codeToken = await next();

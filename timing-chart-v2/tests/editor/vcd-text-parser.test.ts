@@ -81,6 +81,12 @@ describe("parseVcdText", () => {
     await expect(parseVcdText(chunks(header(deepScope, 1, "")))).resolves.toMatchObject({ ok: false, error: { code: "resource-limit" } });
   });
 
+  it("rejects oversized decimal timestamps before BigInt conversion", async () => {
+    const hugeTimestamp = "9".repeat(129);
+    const source = `$timescale 1ns $end $scope module top $end $var wire 1 ! clk $end $upscope $end $enddefinitions $end #${hugeTimestamp} 1!`;
+    await expect(parseVcdText(chunks(source))).resolves.toMatchObject({ ok: false, error: { code: "resource-limit" } });
+  });
+
   it("honors an already-aborted signal", async () => {
     const controller = new AbortController();
     controller.abort();
