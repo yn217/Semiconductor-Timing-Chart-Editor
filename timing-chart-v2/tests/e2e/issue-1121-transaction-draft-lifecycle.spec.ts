@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 
 test("#1121 keeps Transaction Bottom drafts across tab and mode switches, and guards Save/New", async ({ page }) => {
   await page.setViewportSize({ width: 1672, height: 941 });
@@ -7,6 +8,10 @@ test("#1121 keeps Transaction Bottom drafts across tab and mode switches, and gu
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await page.getByRole("tab", { name: "Transaction", exact: true }).click();
   await page.locator('.transaction-list-row[data-transaction-row-id="demo_txn_read"] > button:not(.transaction-disclosure-slot)').click();
+
+  const saveDownload = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  await saveDownload;
 
   const name = page.getByLabel("Bottom Transaction name", { exact: true });
   await expect(name).toHaveValue("Read_0");
@@ -29,6 +34,20 @@ test("#1121 keeps Transaction Bottom drafts across tab and mode switches, and gu
 
   await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByTestId("operation-feedback")).toContainText("Apply or revert the unapplied Transaction Bottom edits before saving");
+  await expect(name).toHaveValue("Read_0 draft");
+
+  await page.getByRole("navigation", { name: "Ribbon tabs" }).getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Recent", exact: true }).click();
+  await expect(page.getByTestId("unsaved-file-dialog")).toBeVisible();
+  await expect(page.getByTestId("unsaved-file-dialog")).toContainText("There are unapplied Transaction edits");
+  await page.getByTestId("unsaved-cancel").click();
+  await expect(name).toHaveValue("Read_0 draft");
+
+  const replacement = generatePerformanceDocument({ signalCount: 2, cycleCount: 16, profile: "standard" });
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "replacement-1121.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(replacement)) });
+  await expect(page.getByTestId("unsaved-file-dialog")).toBeVisible();
+  await expect(page.getByTestId("unsaved-file-dialog")).toContainText("There are unapplied Transaction edits");
+  await page.getByTestId("unsaved-cancel").click();
   await expect(name).toHaveValue("Read_0 draft");
 
   await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).click();
