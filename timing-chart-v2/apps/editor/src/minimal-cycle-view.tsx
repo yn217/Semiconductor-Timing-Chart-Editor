@@ -22,6 +22,7 @@ import { useEditorActions } from "./application/use-editor-actions.js";
 import { useEditorDocumentFileEvents } from "./application/editor-document-file-events.js";
 import { useEditorTabTitle } from "./application/use-editor-tab-title.js";
 import { useEditorPresentationState } from "./application/use-editor-presentation-state.js";
+import { WaveformPencilContext, createWaveformPencilMode } from "./waveform-pencil-mode.js";
 import { useEditorResizeActions } from "./application/use-editor-resize-actions.js";
 import { useEditorWorkspaceActions } from "./application/use-editor-workspace-actions.js";
 import { EditorShellView } from "./editor-shell-view.js";
@@ -146,6 +147,7 @@ export function MinimalCycleView() {
   } = workspace;
   const { bottomMaxHeight, setBottomHeight, resetBottomHeight, ribbonProps: bottomRibbonProps } = useBottomPanelSizing(host, setRawBottomHeight, setBottomVisible, bottomVisible, bottomHeight, viewMode);
   const presentation = useEditorPresentationState({ hostRef: host, mode: viewMode, selection: selection.state, selectionRef: selection.refs.state, timelineRuntimeRef, initialMinimapEnabled: visualReference });
+  const waveformPencil = useMemo(createWaveformPencilMode, []);
   const {
     arrowPickStatus, setArrowPickStatus,
     gridEnabled, setGridEnabled, gridEnabledRef,
@@ -396,7 +398,7 @@ export function MinimalCycleView() {
     commandRegistry,
     executeBatch,
     dom: { host, viewport, ruler, gridLayer, viewportLower, rulerLower, hostLower, gridLayerLower, signalSplitRuntimeRef },
-    presentation: { getPinnedSignalIds, collapsedGroupIdsRef, applyCollapsedGroupsRef, forceUpperReprojectRef, reapplySelectionRef: presentation.reapplySelectionRef, lowerCanvasClickRef, timelineRuntimeRef, armArrowPick, snapTransactionCycle, transactionBoundaryX, transactionSourceWindow, refreshPlayhead, refreshRangeSelectionBand, publishStateRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, selectedAnnotationRef, scenarioDifferencesRef, simulationTraceRef: presentation.simulationTraceRef, gridEnabledRef, snapEnabledRef, treeFocusRowIdRef, suppressCanvasClickRef, menuOriginRef, transactionCyclesPerTcRef, groupStylePreviewRef },
+    presentation: { getPinnedSignalIds, collapsedGroupIdsRef, applyCollapsedGroupsRef, forceUpperReprojectRef, reapplySelectionRef: presentation.reapplySelectionRef, lowerCanvasClickRef, timelineRuntimeRef, armArrowPick, snapTransactionCycle, transactionBoundaryX, transactionSourceWindow, refreshPlayhead, refreshRangeSelectionBand, publishStateRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, selectedAnnotationRef, scenarioDifferencesRef, simulationTraceRef: presentation.simulationTraceRef, gridEnabledRef, snapEnabledRef, waveformPencil, treeFocusRowIdRef, suppressCanvasClickRef, menuOriginRef, transactionCyclesPerTcRef, groupStylePreviewRef },
     state: { setRuntimeDiagnostics, setProblem, setTreePresentationRevision, setTransactionPresentationRevision, setRangePresentationRevision, setPlayheadPresentationRevision, setTimelineRange, setRangeSelectionActive, setSelectedCycle, setBottomPinned, setPinnedBottomSelection, setPinnedSignalIds, setTreeFilter, setTreeTypeFilter, setTreeAddMenuOpen, setTreeMoreMenuOpen, setContextMenu, setArrowPickStatus, setRenameDialogOpen, setCollapsedGroups, resetCollapsedGroups, resetForDocument, toggleCollapsedGroup, closeContextMenu },
     viewMetricsOwner,
     signalSplitEnabled,
@@ -802,7 +804,7 @@ export function MinimalCycleView() {
     openFile: () => { pendingFileOriginRef.current = globalThis.document.activeElement instanceof HTMLElement ? globalThis.document.activeElement : null; fileInput.current?.click(); },
   });
   useEditorTabTitle(snapshot.document.document.title, history.dirty);
-  return <EditorShellView
+  return <WaveformPencilContext.Provider value={waveformPencil}><EditorShellView
     viewModel={{
       style: { "--gui-left-width": `${modeComposition.fixedLeftWidth ?? leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px`, "--gui-role-width": `${snapshot.document.layout.roleColumnWidth}px`, "--gui-signal-width": `${snapshot.document.layout.signalNameWidth}px`, "--gui-signal-align": snapshot.document.layout.signalNameAlign, "--gui-signal-split-upper-ratio": String(signalSplitRatio), "--transaction-tree-row-height": viewMode === "Transaction" ? "29px" : undefined } as React.CSSProperties,
       density, workspacePreset, inspectorVisible, bottomVisible, viewMode, rulerEnabled, minimapEnabled, signalTreeVisible,
@@ -877,5 +879,5 @@ export function MinimalCycleView() {
     </EditorDialogLayer>}
     status={shellStatus}
     feedback={<OperationFeedback error={problem} message={application.operationMessage} operationLabel={runtimeDiagnostics.find((item) => problem.includes(item.message))?.operationLabel} onShowProblems={() => { setBottomTab("Problems"); setBottomVisible(true); }} />}
-  />;
+  /></WaveformPencilContext.Provider>;
 }

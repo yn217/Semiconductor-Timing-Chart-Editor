@@ -19,6 +19,8 @@ import { attachEditorEventBindings } from "./interaction-controller.js";
 import { routeGlobalShortcut } from "./keyboard-shortcut-router.js";
 import { cancelActiveGesture, registerActiveGestureCancel } from "./active-gesture-cancellation.js";
 import { nextCommandId } from "../command-id.js";
+import { WaveformPencilInteractionOwner } from "./waveform-pencil-interaction-owner.js";
+import type { WaveformPencilMode } from "../waveform-pencil-mode.js";
 
 type Session = ReturnType<EditorApplicationOwner["runtime"]["session"]["current"]>;
 type SessionSnapshot = ReturnType<Session["getSnapshot"]>;
@@ -50,6 +52,7 @@ export interface TimelineSurfaceInteractionInput {
   readonly executeBatch: (commands: readonly SemanticCommand[]) => void;
   readonly commandRegistry: MutableRefObject<UiCommandRegistry>;
   readonly snapEnabledRef: MutableRefObject<boolean>;
+  readonly waveformPencil: WaveformPencilMode;
   readonly timelineRangeRef: MutableRefObject<TimelineRange>;
   readonly selectedCycleRef: MutableRefObject<number>;
   readonly selectedEdgeRef: MutableRefObject<unknown>;
@@ -108,7 +111,7 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     rendererHost, viewportElement, rulerElement, rulerViewportElement, renderer, timelineGeometry, documentEpoch,
     getSnapshot, timelineNavigation, timelineRuntime, getProjection, getTimelineOffset, getPendingArrow, clearPendingArrow,
     applyCanvasCycleSelection, onSelect, onTreeKeyDown, onScroll, onViewportKeyDown,
-    selection, execute, executeBatch, commandRegistry, snapEnabledRef, timelineRangeRef, selectedCycleRef, selectedEdgeRef,
+    selection, execute, executeBatch, commandRegistry, snapEnabledRef, waveformPencil: waveformPencilMode, timelineRangeRef, selectedCycleRef, selectedEdgeRef,
     lowerCanvasClickRef, menuOriginRef, suppressCanvasClickRef, setRangeSelectionActive, setRange, setSelectedCycle,
     setContextMenu, closeContextMenu, setArrowPickStatus, publishState, refreshRangePreview,
   } = input;
@@ -262,6 +265,19 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     },
     publishState,
   });
+  const waveformPencil = new WaveformPencilInteractionOwner({
+    rendererHost, viewportElement, documentEpoch, mode: waveformPencilMode,
+    getDocument: () => getSnapshot().document, getProjection, getTimelineOffset,
+    isTimeDomainPointerTarget,
+    cellAtX: (clientX) => { const left = timeOriginLeft(); return left === undefined ? undefined : timelineGeometry.cycleBoundaryAtScreenX(clientX, left - 0.01, false); },
+    boundaryScreenX: (cycle) => {
+      const left = timeOriginLeft();
+      const local = timelineGeometry.sourceBoundaryToLocalX(getSnapshot().document, cycle);
+      return left === undefined || local === undefined ? undefined : left + local * timelineGeometry.timeAxisMetrics.zoom;
+    },
+    waveOrigin: () => { const rect = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']")?.getBoundingClientRect(); return rect ? { left: rect.left, top: rect.top } : undefined; },
+    execute,
+  });
   const onGlobalKeyDown = (event: KeyboardEvent) => {
     const handled = routeGlobalShortcut(event, {
       isGestureActive: () => annotationInteraction.active,
@@ -305,6 +321,12 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     if (rendererHost.dataset.arrowPick) onSelect(event); else selectCanvasCycle(event);
   };
   const detach = attachEditorEventBindings([
+    // Waveform Pencil sees pointer input first (capture) and consumes only the strokes it owns.
+    { target: rendererHost, type: "pointerdown", listener: waveformPencil.onPointerDown as EventListener, options: { capture: true } },
+    { target: rendererHost, type: "pointermove", listener: waveformPencil.onPointerMove as EventListener, options: { capture: true } },
+    { target: rendererHost, type: "pointerup", listener: waveformPencil.onPointerUp as EventListener, options: { capture: true } },
+    { target: rendererHost, type: "pointercancel", listener: waveformPencil.cancel as EventListener, options: { capture: true } },
+    { target: rendererHost.ownerDocument, type: "keydown", listener: waveformPencil.onKeyDown as EventListener, options: { capture: true } },
     ...(() => { const tree = rendererHost.querySelector<HTMLElement>("[data-role='left-tree-rows']"); return tree ? [{ target: tree, type: "keydown", listener: onTreeKeyDown as EventListener }] : []; })(),
     { target: viewportElement, type: "scroll", listener: onScroll as EventListener, options: { passive: true, capture: true } },
     { target: viewportElement, type: "keydown", listener: onViewportKeyDown as EventListener },
@@ -343,8 +365,8 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     { target: rendererHost.ownerDocument, type: "keydown", listener: onGlobalKeyDown as EventListener },
   ]);
   return {
-    cancel: () => { rangeInteractions.cancel(); treeDrag.cancel(); annotationInteraction.cancel(); },
-    detach: () => { detach(); lowerCanvasClickRef.current = () => undefined; rangeInteractions.cancel(); treeDrag.cancel(); annotationInteraction.cancel(); syncAnnotationHint(); },
+    cancel: () => { rangeInteractions.cancel(); treeDrag.cancel(); annotationInteraction.cancel(); waveformPencil.cancel(); },
+    detach: () => { detach(); lowerCanvasClickRef.current = () => undefined; rangeInteractions.cancel(); treeDrag.cancel(); annotationInteraction.cancel(); waveformPencil.dispose(); syncAnnotationHint(); },
     consumeRulerClickSuppression: () => rangeInteractions.consumeRulerClickSuppression(),
   };
 }

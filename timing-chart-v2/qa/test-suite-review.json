@@ -18576,6 +18576,60 @@
       "decision": "KEEP",
       "reason": "Code review found Rename left the drawn Comment Row title stale.",
       "replacementTest": null
+    },
+    {
+      "file": "waveform-pencil.spec.ts",
+      "title": "Waveform Pencil draws HIGH/LOW per passed Cycle in one Undo step, with Ribbon and Bottom toggles in sync",
+      "domain": "waveform-pencil",
+      "originIssue": 1109,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Waveform Pencil draws HIGH/LOW on a Binary Signal by dragging, as one undoable stroke.",
+      "duplicateGroup": "waveform-pencil",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "New feature #1109.",
+      "replacementTest": null
+    },
+    {
+      "file": "waveform-pencil.spec.ts",
+      "title": "Waveform Pencil Esc cancels the stroke without a commit, then leaves drawing mode",
+      "domain": "waveform-pencil",
+      "originIssue": 1109,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Waveform Pencil draws HIGH/LOW on a Binary Signal by dragging, as one undoable stroke.",
+      "duplicateGroup": "waveform-pencil",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "New feature #1109.",
+      "replacementTest": null
+    },
+    {
+      "file": "waveform-pencil.spec.ts",
+      "title": "Waveform Pencil only draws on the Binary Signal it started on",
+      "domain": "waveform-pencil",
+      "originIssue": 1109,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Waveform Pencil draws HIGH/LOW on a Binary Signal by dragging, as one undoable stroke.",
+      "duplicateGroup": "waveform-pencil",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": [
+        "pr"
+      ],
+      "decision": "KEEP",
+      "reason": "New feature #1109.",
+      "replacementTest": null
     }
   ]
 }

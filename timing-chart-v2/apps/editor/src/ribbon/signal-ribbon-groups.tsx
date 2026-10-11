@@ -1,6 +1,7 @@
 import type { CanonicalDocument } from "@timing-chart-v2/schema";
 import type { EditorSurfaceCommandController } from "../application/editor-surface-command-controller.js";
 import type { RibbonGroupSpec } from "../ribbon-schema.js";
+import { WaveformPencilRibbonTools } from "../waveform-pencil-mode.js";
 
 export type SignalRibbonContext = Readonly<{
   document: CanonicalDocument;
@@ -21,6 +22,11 @@ export type SignalRibbonContext = Readonly<{
 export function buildSignalRibbonGroups(context: SignalRibbonContext): readonly RibbonGroupSpec[] {
   const { document, range, commands, compactCycleCount, canMoveUp, canMoveDown, onMoveUp, onMoveDown } = context;
   return [
+    {
+      id: "draw", majorGroup: "Draw", caption: "Draw", items: [
+        { kind: "custom", id: "waveform-pencil-tools", render: () => <WaveformPencilRibbonTools key="waveform-pencil-tools" /> },
+      ],
+    },
     {
       id: "timeline", majorGroup: "Time", caption: "Time", items: [
         { kind: "button", id: "row-up", icon: "i-up", label: "Up", ariaLabel: "Move selected row up", onClick: onMoveUp, disabled: !canMoveUp },

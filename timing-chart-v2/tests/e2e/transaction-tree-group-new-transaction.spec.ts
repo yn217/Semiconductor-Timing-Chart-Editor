@@ -17,7 +17,8 @@ test("Group row menu New Transaction creates the Transaction in that Group", asy
   const groupsBefore = new Set(await groupIds());
   await page.getByTestId("add-transaction-tree").click();
   await page.getByTestId("add-transaction-group-menu-item").click();
-  const groupName = "Group 4";
+  // Startup groups have custom names, so the lowest free "Group N" is Group 1.
+  const groupName = "Group 1";
   await expect(page.getByRole("button", { name: `More actions for ${groupName}` })).toBeVisible();
 
   const transactionIds = () => page.getByTestId("transaction-lanes").locator("[data-transaction-id]").evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-transaction-id")!));

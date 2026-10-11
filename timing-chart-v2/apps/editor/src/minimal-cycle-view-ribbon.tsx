@@ -153,7 +153,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, cyclesPerTc, on
   // Lane-specific commands, say) can be added later without re-threading
   // the ActiveContext plumbing again.
   const transactionRibbonGroups: readonly RibbonGroupSpec[] = [];
-  const homeGroups: readonly RibbonGroupSpec[] = composeRibbon({ common: commonRibbonGroups, bySignal: signalRibbonGroups, byTransaction: transactionRibbonGroups }, { viewMode, activeContext }, ["file", "edit", "timeline", "view", "transaction", "transaction-group", "transaction-time", "layout", "display"]);
+  const homeGroups: readonly RibbonGroupSpec[] = composeRibbon({ common: commonRibbonGroups, bySignal: signalRibbonGroups, byTransaction: transactionRibbonGroups }, { viewMode, activeContext }, ["file", "edit", "draw", "timeline", "view", "transaction", "transaction-group", "transaction-time", "layout", "display"]);
   // View tab visual-consistency fix: previously hand-written per-button
   // JSX with its own one-off sizing (tile-shaped toggle buttons, a fixed
   // 3-column grid, an unstyled native <select> that fell through to the

@@ -935,6 +935,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       executeBatch: (commands) => { executeBatch(nextCommandId("annotation_group_move"), commands); },
       commandRegistry,
       snapEnabledRef,
+      waveformPencil: input.presentation.waveformPencil,
       timelineRangeRef,
       selectedCycleRef,
       selectedEdgeRef,

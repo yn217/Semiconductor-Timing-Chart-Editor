@@ -80,3 +80,6 @@
 .desktop-workspace[data-workspace-owner="CycleWorkspace"] .surface-host [data-role="timing-chart-surface"] { box-sizing: content-box; padding-bottom: var(--cycle-cover); min-height: calc(var(--cycle-fill, 0px) - var(--cycle-cover)); }
 .desktop-workspace[data-workspace-owner="CycleWorkspace"] .surface-host [data-role="left-tree-rows"],
 .desktop-workspace[data-workspace-owner="CycleWorkspace"] .surface-host [data-role="frozen-label-rows"] { margin-bottom: calc(-1 * var(--cycle-cover)); }
+
+/* Waveform Pencil: the Cycle surface shows a drawing cursor while the tool is on. */
+[data-waveform-pencil="on"] { cursor: crosshair; }
