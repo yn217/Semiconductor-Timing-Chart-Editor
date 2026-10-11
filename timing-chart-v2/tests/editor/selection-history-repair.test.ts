@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AnnotationId, CanonicalDocument, GroupId, SpacerId, TransactionId, TransactionPhaseId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
-import { repairSelectionAgainstDocument } from "../../apps/editor/src/application/selection-history-repair.js";
+import { repairSelectionAgainstDocument, restoredAnnotationIds } from "../../apps/editor/src/application/selection-history-repair.js";
 import type { SelectionState } from "../../apps/editor/src/application/use-selection-owner.js";
 
 const emptySelection = (): SelectionState => ({
@@ -11,6 +11,15 @@ const emptySelection = (): SelectionState => ({
 });
 
 describe("History selection membership repair", () => {
+  it("identifies stable Annotation IDs restored by an Undo/Redo snapshot", () => {
+    const previous = canonicalFixture();
+    const restored = { id: "annotation_imported" as AnnotationId, label: "Imported", type: "text" as const, visible: true };
+
+    expect(restoredAnnotationIds(previous, { ...previous, annotations: [...previous.annotations, restored] })).toEqual([restored.id]);
+    expect(restoredAnnotationIds({ ...previous, annotations: [...previous.annotations, restored] }, previous)).toEqual([]);
+    expect(restoredAnnotationIds(previous, previous)).toEqual([]);
+  });
+
   it("prunes removed annotation, group, spacer, transaction and phase IDs while retaining the valid parent Transaction", () => {
     const base = canonicalFixture();
     const document: CanonicalDocument = {

@@ -1,4 +1,4 @@
-import type { CanonicalDocument } from "@timing-chart-v2/schema";
+import type { AnnotationId, CanonicalDocument } from "@timing-chart-v2/schema";
 import type { SelectionState } from "./use-selection-owner.js";
 
 function retainExisting<T>(selected: ReadonlySet<T>, existing: ReadonlySet<T>): ReadonlySet<T> {
@@ -80,4 +80,10 @@ export function repairSelectionAgainstDocument(selection: SelectionState, docume
     && sameSet(repaired.transactionIds, selection.transactionIds)
     && repaired.transactionPhaseId === selection.transactionPhaseId) return selection;
   return repaired;
+}
+
+/** Stable IDs restored by a History step, used to reselect entities whose transient selection was pruned while absent. */
+export function restoredAnnotationIds(previous: CanonicalDocument, next: CanonicalDocument): readonly AnnotationId[] {
+  const previousIds = new Set(previous.annotations.map((annotation) => annotation.id));
+  return next.annotations.filter((annotation) => !previousIds.has(annotation.id)).map((annotation) => annotation.id);
 }
