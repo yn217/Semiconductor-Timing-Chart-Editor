@@ -8,6 +8,8 @@ import type { LocalGeometryMap } from "@timing-chart-v2/geometry";
 import type { RenderProjection } from "@timing-chart-v2/projection";
 import type { TimeAxisMetrics } from "./timeline-geometry-owner.js";
 import { projectScenarioDifferenceOverlays } from "./scenario-difference-overlays.js";
+import { projectSimulationTraceOverlays } from "./simulation-trace-overlays.js";
+import type { SimulationTraceSnapshot } from "../simulation/simulation-trace.js";
 
 interface AnnotationViewportProjectionCache {
   readonly document: CanonicalDocument;
@@ -62,6 +64,10 @@ export function refreshRendererEdgeCounters(renderer: Pick<TimingChartRenderer, 
 
 export function refreshRendererScenarioDifferences(renderer: Pick<TimingChartRenderer, "updateScenarioDifferences">, differences: readonly ScenarioSignalDifference[], projection: RenderProjection, timeAxisMetrics: TimeAxisMetrics, viewport: DisplayTimeViewport): void {
   renderer.updateScenarioDifferences(projectScenarioDifferenceOverlays(differences, projection, timeAxisMetrics, viewport));
+}
+
+export function refreshRendererSimulationTraces(renderer: Pick<TimingChartRenderer, "updateSimulationTraces">, snapshot: SimulationTraceSnapshot | undefined, projection: RenderProjection, timeAxisMetrics: TimeAxisMetrics, viewport: DisplayTimeViewport, documentEpoch: number): void {
+  renderer.updateSimulationTraces(projectSimulationTraceOverlays(snapshot, projection, timeAxisMetrics, viewport, documentEpoch));
 }
 
 /** Update only existing, geometry-stable Annotation owners; return false when a full reconciliation is required. */

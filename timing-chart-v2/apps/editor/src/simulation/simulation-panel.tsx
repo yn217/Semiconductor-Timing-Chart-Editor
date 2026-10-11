@@ -4,10 +4,14 @@ import { compareAuthoredTransitions, createComparisonCheckpoint, type Transition
 import { importVcdTextFile } from "./vcd-file-import.js";
 import { mapVcdVariablesToSignals, type VcdSignalMapping } from "./signal-mapping.js";
 import type { ParsedVcdText, VcdValueChange } from "./vcd-text-parser.js";
+import { vcdTimestampToSourceCycles } from "@timing-chart-v2/projection";
+import type { SimulationTraceSnapshot } from "./simulation-trace.js";
 
 type SimulationPanelProps = Readonly<{
   document: CanonicalDocument;
   onNavigate: (path: string, problem?: DocumentProblem) => void;
+  documentEpoch: number;
+  onTraceChange: (snapshot: SimulationTraceSnapshot | undefined) => void;
 }>;
 
 function comparisonKindLabel(result: TransitionComparisonResult): string {
@@ -41,21 +45,23 @@ function* authoredTransitions(values: readonly { readonly start: number; readonl
   for (const value of values) yield { cycle: value.start, value: value.value };
 }
 
-export function SimulationPanel({ document, onNavigate }: SimulationPanelProps) {
+export function SimulationPanel({ document, onNavigate, documentEpoch, onTraceChange }: SimulationPanelProps) {
   const [parsed, setParsed] = useState<ParsedVcdText>();
   const [fileName, setFileName] = useState("");
   const [status, setStatus] = useState("Import a VCD text file to compare it with this document.");
   const [busy, setBusy] = useState(false);
   const [manualSignalByVariable, setManualSignalByVariable] = useState<Readonly<Record<number, string>>>({});
   const [results, setResults] = useState<readonly TransitionComparisonResult[]>();
+  const [overlaySignalId, setOverlaySignalId] = useState<SignalId>();
   const abortRef = useRef<AbortController | undefined>(undefined);
   const generationRef = useRef(0);
 
   useEffect(() => () => {
     generationRef.current += 1;
     abortRef.current?.abort();
-  }, []);
-  useEffect(() => { setResults(undefined); }, [document]);
+    onTraceChange(undefined);
+  }, [onTraceChange]);
+  useEffect(() => { setResults(undefined); setOverlaySignalId(undefined); onTraceChange(undefined); }, [documentEpoch, onTraceChange]);
 
   const mappingResult = useMemo(
     () => parsed ? mapVcdVariablesToSignals(document.signals, parsed.variables) : undefined,
@@ -76,6 +82,8 @@ export function SimulationPanel({ document, onNavigate }: SimulationPanelProps) 
     setBusy(true);
     setParsed(undefined);
     setResults(undefined);
+    setOverlaySignalId(undefined);
+    onTraceChange(undefined);
     setManualSignalByVariable({});
     setFileName(file.name);
     setStatus(`Reading ${file.name}…`);
@@ -97,6 +105,55 @@ export function SimulationPanel({ document, onNavigate }: SimulationPanelProps) 
     const manual = manualSignalByVariable[index];
     if (manual) return signalById.has(manual) ? manual as SignalId : undefined;
     return mapping.status === "matched" ? mapping.signalId : undefined;
+  };
+
+  const toggleTraceOverlay = async (mapping: VcdSignalMapping, index: number): Promise<void> => {
+    const signalId = selectedSignalId(mapping, index);
+    if (!parsed || !signalId || !document.timeline.physicalTimebase) return;
+    if (overlaySignalId === signalId) {
+      onTraceChange(undefined);
+      setOverlaySignalId(undefined);
+      return;
+    }
+    const signal = signalById.get(signalId);
+    if (!signal || signal.type === "clock") return;
+    const width = signal.type === "bus" ? signal.width ?? mapping.variable.width : 1;
+    if (width !== mapping.variable.width) return;
+
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const generation = ++generationRef.current;
+    const checkpoint = createComparisonCheckpoint(controller.signal);
+    setBusy(true);
+    setStatus(`Projecting ${signal.display.name} simulation trace…`);
+    try {
+      const events: SimulationTraceSnapshot["signal"]["events"][number][] = [];
+      for (const change of parsed.changes) {
+        const pause = checkpoint();
+        if (pause) await pause;
+        if (change.code !== mapping.variable.code) continue;
+        const cycle = vcdTimestampToSourceCycles(change.timestamp, parsed.timescale, document.timeline.physicalTimebase);
+        if (!cycle) continue;
+        const value = change.kind === "scalar"
+          ? change.value.toLowerCase()
+          : change.value.length <= width
+            ? change.value.toLowerCase().padStart(width, change.value[0]?.toLowerCase() === "x" || change.value[0]?.toLowerCase() === "z" ? change.value[0]!.toLowerCase() : "0")
+            : undefined;
+        if (value !== undefined && /^(?:[01xz]|[01xz]+)$/.test(value)) events.push({ cycle, value });
+      }
+      if (generation !== generationRef.current || controller.signal.aborted) return;
+      const snapshot: SimulationTraceSnapshot = { documentEpoch, signal: { signalId, signalName: signal.display.name, width, events } };
+      onTraceChange(snapshot);
+      setOverlaySignalId(signalId);
+      setStatus(`Showing session-only VCD trace for ${signal.display.name}. It does not change the document.`);
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError") && generation === generationRef.current) {
+        setStatus(`Trace projection failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    } finally {
+      if (generation === generationRef.current) setBusy(false);
+    }
   };
 
   const compare = async (): Promise<void> => {
@@ -208,14 +265,17 @@ export function SimulationPanel({ document, onNavigate }: SimulationPanelProps) 
       {duplicateMappingIds.length > 0 && <p role="alert" data-testid="simulation-duplicate-mapping">Each specification Signal can map to one VCD variable. Resolve duplicates: {duplicateMappingIds.join(", ")}</p>}
       <datalist id="simulation-signal-options">{mappableSignals.map((signal) => <option key={signal.id} value={signal.id} label={signal.display.name} />)}</datalist>
       <table>
-        <thead><tr><th>Simulation signal</th><th>Mapping</th></tr></thead>
+        <thead><tr><th>Simulation signal</th><th>Mapping</th><th>Timeline overlay</th></tr></thead>
         <tbody>{mappingResult.mappings.map((mapping, index) => {
           const selected = selectedSignalId(mapping, index) ?? "";
           const statusText = manualSignalByVariable[index] ? "Manual" : mapping.status;
+          const mappedSignal = selected ? signalById.get(selected) : undefined;
+          const overlayAllowed = Boolean(document.timeline.physicalTimebase && mappedSignal && mappedSignal.type !== "clock" && (mappedSignal.type !== "bus" || (mappedSignal.width ?? mapping.variable.width) === mapping.variable.width));
           return <tr key={`${mapping.variable.code}:${mapping.variable.hierarchicalName}:${index}`} data-vcd-mapping-status={statusText}>
             <td>{mapping.variable.hierarchicalName}</td>
             <td><input type="text" list="simulation-signal-options" aria-label={`Map ${mapping.variable.hierarchicalName} to specification signal`} value={selected} disabled={busy} onChange={(event) => {
               const value = event.currentTarget.value;
+              if (overlaySignalId === selected) { onTraceChange(undefined); setOverlaySignalId(undefined); }
               setManualSignalByVariable((current) => {
                 const next = { ...current };
                 if (value) next[index] = value;
@@ -224,6 +284,7 @@ export function SimulationPanel({ document, onNavigate }: SimulationPanelProps) 
               });
               setResults(undefined);
             }} placeholder={mapping.status === "matched" ? `Auto: ${mapping.signalId}` : "Unresolved — enter a Signal ID"} />{manualSignalByVariable[index] && !signalById.has(manualSignalByVariable[index]!) && <small role="status">Unknown Signal ID; mapping will not be compared.</small>}</td>
+            <td>{overlayAllowed && <button type="button" data-testid="simulation-trace-overlay-toggle" data-simulation-trace-signal-id={selected} aria-pressed={overlaySignalId === selected} disabled={busy} onClick={() => { void toggleTraceOverlay(mapping, index); }}>{overlaySignalId === selected ? "Clear trace" : "Overlay trace"}</button>}</td>
           </tr>;
         })}</tbody>
       </table>

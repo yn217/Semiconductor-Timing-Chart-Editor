@@ -515,7 +515,7 @@ export function useEditorSecondarySurfaces(
             <AIOperationPanel {...aiAssistantPanel} />
           </div>
           <div className="bottom-simulation-panel-host" hidden={workspace.bottomTab !== "Simulation"}>
-            <SimulationPanel key={input.documentEpoch} document={input.document} onNavigate={input.navigateProblem} />
+            <SimulationPanel key={input.documentEpoch} document={input.document} onNavigate={input.navigateProblem} onTraceChange={input.onSimulationTraceChange} documentEpoch={input.documentEpoch} />
           </div>
           <div className="bottom-transaction-panel-host" hidden={workspace.bottomTab !== "Transaction"}>
             {transactionEditor}

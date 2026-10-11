@@ -18,6 +18,8 @@
 .surface-host [data-role="annotation-overlay-surface"] { grid-column: 3; grid-row: 1; z-index: 12; pointer-events: none; }
 
 .surface-host [data-role="scenario-difference-overlay-surface"] { grid-column: 3; grid-row: 1; z-index: 11; pointer-events: none; }
+.surface-host [data-role="simulation-trace-overlay-surface"] { grid-column: 3; grid-row: 1; z-index: 12; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
+.surface-host [data-role="simulation-trace-overlay"] { opacity: .9; }
 
 .surface-host [data-role="scenario-difference-overlay"] { position: absolute; left: 0; top: 0; box-sizing: border-box; border: 1px solid #b45d00; background: color-mix(in srgb, #ffb02e 24%, transparent); pointer-events: none; }
 
