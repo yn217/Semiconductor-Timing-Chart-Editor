@@ -214,7 +214,7 @@ export function SimulationPanel({ document, onNavigate }: SimulationPanelProps) 
           const statusText = manualSignalByVariable[index] ? "Manual" : mapping.status;
           return <tr key={`${mapping.variable.code}:${mapping.variable.hierarchicalName}:${index}`} data-vcd-mapping-status={statusText}>
             <td>{mapping.variable.hierarchicalName}</td>
-            <td><input type="text" list="simulation-signal-options" aria-label={`Map ${mapping.variable.hierarchicalName} to specification signal`} value={selected} onChange={(event) => {
+            <td><input type="text" list="simulation-signal-options" aria-label={`Map ${mapping.variable.hierarchicalName} to specification signal`} value={selected} disabled={busy} onChange={(event) => {
               const value = event.currentTarget.value;
               setManualSignalByVariable((current) => {
                 const next = { ...current };
