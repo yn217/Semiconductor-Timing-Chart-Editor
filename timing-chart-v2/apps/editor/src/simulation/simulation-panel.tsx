@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CanonicalDocument, DocumentProblem, Signal, SignalId } from "@timing-chart-v2/schema";
-import { compareAuthoredTransitions, type TransitionComparisonResult } from "./transition-comparison.js";
+import { compareAuthoredTransitions, createComparisonCheckpoint, type TransitionComparisonResult } from "./transition-comparison.js";
 import { importVcdTextFile } from "./vcd-file-import.js";
 import { mapVcdVariablesToSignals, type VcdSignalMapping } from "./signal-mapping.js";
 import type { ParsedVcdText, VcdValueChange } from "./vcd-text-parser.js";
@@ -12,9 +12,18 @@ type SimulationPanelProps = Readonly<{
 
 function comparisonKindLabel(result: TransitionComparisonResult): string {
   if (result.equal) return "Match";
-  const counts = new Map<string, number>();
-  for (const difference of result.differences) counts.set(difference.kind, (counts.get(difference.kind) ?? 0) + 1);
-  return [...counts].map(([kind, count]) => `${kind}: ${count}`).join(", ");
+  return Object.entries(result.differenceCounts).filter(([, count]) => count > 0).map(([kind, count]) => `${kind}: ${count}`).join(", ");
+}
+
+function unsupportedResult(signalId: SignalId, detail: string, retain: boolean): TransitionComparisonResult {
+  const difference = { kind: "unsupported-value" as const, signalId, detail };
+  return {
+    signalId,
+    equal: false,
+    differences: retain ? [difference] : [],
+    totalDifferenceCount: 1,
+    differenceCounts: { "value-mismatch": 0, "timing-mismatch": 0, "missing-event": 0, "extra-event": 0, "unsupported-value": 1 },
+  };
 }
 
 function cycleNumber(cycle: { readonly numerator: bigint; readonly denominator: bigint } | undefined): number | undefined {
@@ -26,6 +35,10 @@ function cycleNumber(cycle: { readonly numerator: bigint; readonly denominator: 
 function exactCycleLabel(cycle: { readonly numerator: bigint; readonly denominator: bigint } | undefined): string {
   if (!cycle || cycle.denominator <= 0n) return "—";
   return cycle.denominator === 1n ? `${cycle.numerator} cycles` : `${cycle.numerator}/${cycle.denominator} cycles`;
+}
+
+function* authoredTransitions(values: readonly { readonly start: number; readonly value: string | number }[]): Generator<{ cycle: number; value: string | number }> {
+  for (const value of values) yield { cycle: value.start, value: value.value };
 }
 
 export function SimulationPanel({ document, onNavigate }: SimulationPanelProps) {
@@ -86,7 +99,7 @@ export function SimulationPanel({ document, onNavigate }: SimulationPanelProps) 
     return mapping.status === "matched" ? mapping.signalId : undefined;
   };
 
-  const compare = (): void => {
+  const compare = async (): Promise<void> => {
     if (!parsed || mappingResult?.status !== "ok") return;
     const targets = mappingResult.mappings.map((mapping, index) => selectedSignalId(mapping, index)).filter((signalId): signalId is SignalId => signalId !== undefined);
     if (new Set(targets).size !== targets.length) {
@@ -98,42 +111,71 @@ export function SimulationPanel({ document, onNavigate }: SimulationPanelProps) 
       setStatus("Set a Document physical reference frequency before comparing physical simulation time.");
       return;
     }
-    const changesByCode = new Map<string, VcdValueChange[]>();
-    for (const change of parsed.changes) {
-      const changes = changesByCode.get(change.code);
-      if (changes) changes.push(change);
-      else changesByCode.set(change.code, [change]);
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const generation = ++generationRef.current;
+    const isCurrent = () => generation === generationRef.current && !controller.signal.aborted;
+    const checkpoint = createComparisonCheckpoint(controller.signal);
+    setBusy(true);
+    setResults(undefined);
+    setStatus("Comparing simulation and specification…");
+    try {
+      const changesByCode = new Map<string, VcdValueChange[]>();
+      for (const change of parsed.changes) {
+        const pause = checkpoint();
+        if (pause) await pause;
+        const changes = changesByCode.get(change.code);
+        if (changes) changes.push(change);
+        else changesByCode.set(change.code, [change]);
+      }
+      const nextResults: TransitionComparisonResult[] = [];
+      let remainingDifferenceSamples = 100;
+      for (const [index, mapping] of mappingResult.mappings.entries()) {
+        const pause = checkpoint();
+        if (pause) await pause;
+        const signalId = selectedSignalId(mapping, index) as SignalId | undefined;
+        if (!signalId) continue;
+        const signal = signalById.get(signalId);
+        if (!signal || signal.type === "clock") {
+          const result = unsupportedResult(signalId, "This comparison slice supports authored Value Signals; Clock and Comment rows require a separate projection.", remainingDifferenceSamples > 0);
+          nextResults.push(result);
+          remainingDifferenceSamples = Math.max(0, remainingDifferenceSamples - result.differences.length);
+          continue;
+        }
+        const width = signal.type === "bus" ? signal.width ?? mapping.variable.width : 1;
+        if (width !== mapping.variable.width) {
+          const result = unsupportedResult(signalId, `Width mismatch: specification ${width}, simulation ${mapping.variable.width}.`, remainingDifferenceSamples > 0);
+          nextResults.push(result);
+          remainingDifferenceSamples = Math.max(0, remainingDifferenceSamples - result.differences.length);
+          continue;
+        }
+        const comparison = await compareAuthoredTransitions(
+          { signalId, vcdCode: mapping.variable.code },
+          authoredTransitions(signal.values),
+          changesByCode.get(mapping.variable.code) ?? [],
+          parsed.timescale,
+          timebase,
+          { width, ...(signal.type === "bus" && signal.displayFormat ? { displayFormat: signal.displayFormat } : {}) },
+          { signal: controller.signal, maxRetainedDifferences: remainingDifferenceSamples },
+        );
+        nextResults.push(comparison);
+        remainingDifferenceSamples = Math.max(0, remainingDifferenceSamples - comparison.differences.length);
+      }
+      if (!isCurrent()) return;
+      setResults(nextResults);
+      const differentCount = nextResults.filter((result) => !result.equal).length;
+      setStatus(nextResults.length === 0
+        ? "No signals are mapped. Resolve at least one simulation signal before comparing."
+        : differentCount === 0
+        ? `Compared ${nextResults.length.toLocaleString()} mapped signals: no differences.`
+        : `Compared ${nextResults.length.toLocaleString()} mapped signals: ${differentCount.toLocaleString()} signal(s) have differences.`);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      if (isCurrent()) setStatus(`Comparison failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      if (generation === generationRef.current) setBusy(false);
     }
-    const nextResults: TransitionComparisonResult[] = [];
-    mappingResult.mappings.forEach((mapping, index) => {
-      const signalId = selectedSignalId(mapping, index) as SignalId | undefined;
-      if (!signalId) return;
-      const signal = signalById.get(signalId);
-      if (!signal || signal.type === "clock") {
-        nextResults.push({ signalId, equal: false, differences: [{ kind: "unsupported-value", signalId, detail: "This comparison slice supports authored Value Signals; Clock and Comment rows require a separate projection." }] });
-        return;
-      }
-      const width = signal.type === "bus" ? signal.width ?? mapping.variable.width : 1;
-      if (width !== mapping.variable.width) {
-        nextResults.push({ signalId, equal: false, differences: [{ kind: "unsupported-value", signalId, detail: `Width mismatch: specification ${width}, simulation ${mapping.variable.width}.` }] });
-        return;
-      }
-      nextResults.push(compareAuthoredTransitions(
-        { signalId, vcdCode: mapping.variable.code },
-        signal.values.map(({ start, value }) => ({ cycle: start, value })),
-        changesByCode.get(mapping.variable.code) ?? [],
-        parsed.timescale,
-        timebase,
-        { width, ...(signal.type === "bus" && signal.displayFormat ? { displayFormat: signal.displayFormat } : {}) },
-      ));
-    });
-    setResults(nextResults);
-    const differentCount = nextResults.filter((result) => !result.equal).length;
-    setStatus(nextResults.length === 0
-      ? "No signals are mapped. Resolve at least one simulation signal before comparing."
-      : differentCount === 0
-      ? `Compared ${nextResults.length.toLocaleString()} mapped signals: no differences.`
-      : `Compared ${nextResults.length.toLocaleString()} mapped signals: ${differentCount.toLocaleString()} signal(s) have differences.`);
   };
 
   const unresolved = mappingResult?.status === "ok"
@@ -145,7 +187,14 @@ export function SimulationPanel({ document, onNavigate }: SimulationPanelProps) 
     if (signalId) selectedMappingCounts.set(signalId, (selectedMappingCounts.get(signalId) ?? 0) + 1);
   });
   const duplicateMappingIds = [...selectedMappingCounts].filter(([, count]) => count > 1).map(([signalId]) => signalId);
-  const displayedDifferences = results?.flatMap((result) => result.differences.map((difference) => ({ result, difference }))).slice(0, 100) ?? [];
+  const displayedDifferences: { result: TransitionComparisonResult; difference: TransitionComparisonResult["differences"][number] }[] = [];
+  for (const result of results ?? []) {
+    for (const difference of result.differences) {
+      if (displayedDifferences.length === 100) break;
+      displayedDifferences.push({ result, difference });
+    }
+    if (displayedDifferences.length === 100) break;
+  }
 
   return <section className="simulation-panel" data-testid="simulation-panel" aria-label="Simulation comparison">
     <header className="simulation-panel-header">
@@ -179,10 +228,16 @@ export function SimulationPanel({ document, onNavigate }: SimulationPanelProps) 
         })}</tbody>
       </table>
       {unresolved.length > 0 && <p role="note">{unresolved.length.toLocaleString()} signal mapping(s) must be resolved before those signals can be compared.</p>}
-      <button type="button" data-testid="simulation-compare" onClick={compare} disabled={busy || duplicateMappingIds.length > 0}>Compare mapped signals</button>
+      <button type="button" data-testid="simulation-compare" onClick={() => { void compare(); }} disabled={busy || duplicateMappingIds.length > 0}>Compare mapped signals</button>
+      {busy && <button type="button" data-testid="simulation-cancel-comparison" onClick={() => {
+        generationRef.current += 1;
+        abortRef.current?.abort();
+        setBusy(false);
+        setStatus("Comparison cancelled.");
+      }}>Cancel comparison</button>}
       {results && <section aria-label="Simulation comparison results" data-testid="simulation-results">
         <strong>{results.filter((item) => item.equal).length} matched · {results.filter((item) => !item.equal).length} different/unsupported</strong>
-        <ul>{results.filter((item) => !item.equal).map((result) => <li key={result.signalId}>{document.signals.find((signal) => signal.id === result.signalId)?.display.name ?? result.signalId}: {comparisonKindLabel(result)}</li>)}</ul>
+        <ul>{results.filter((item) => !item.equal).slice(0, 100).map((result) => <li key={result.signalId}>{document.signals.find((signal) => signal.id === result.signalId)?.display.name ?? result.signalId}: {comparisonKindLabel(result)}</li>)}</ul>
         <table><thead><tr><th>Signal</th><th>Finding</th><th>Specification cycle</th><th>Specification value</th><th>Simulation cycle</th><th>Simulation value</th><th>Action</th></tr></thead><tbody>
           {displayedDifferences.map(({ result, difference }, index) => {
             const signalIndex = document.signals.findIndex((signal) => signal.id === result.signalId);
@@ -204,7 +259,7 @@ export function SimulationPanel({ document, onNavigate }: SimulationPanelProps) 
             return <tr key={`${result.signalId}:${difference.kind}:${index}`} data-simulation-finding={difference.kind}><td>{signal?.display.name ?? result.signalId}</td><td>{difference.kind}</td><td>{exactCycleLabel(difference.authoredCycle)}</td><td>{difference.authoredValue ?? "—"}</td><td>{exactCycleLabel(difference.vcdCycle)}</td><td>{difference.vcdValue ?? "—"}</td><td><button type="button" onClick={() => onNavigate(problem.path, problem)}>Reveal</button></td></tr>;
           })}
         </tbody></table>
-        {results.reduce((sum, result) => sum + result.differences.length, 0) > displayedDifferences.length && <p>Showing first {displayedDifferences.length} findings.</p>}
+        {results.reduce((sum, result) => sum + result.totalDifferenceCount, 0) > displayedDifferences.length && <p>Showing first {displayedDifferences.length} findings.</p>}
       </section>}
     </>}
     {mappingResult?.status === "resource-limit" && <p role="alert">The signal mapping exceeds the document signal limit ({mappingResult.limit.toLocaleString()}).</p>}

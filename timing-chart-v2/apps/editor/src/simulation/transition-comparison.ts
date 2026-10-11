@@ -41,7 +41,11 @@ export type TransitionComparisonResult = Readonly<{
   signalId: string;
   equal: boolean;
   differences: readonly TransitionDifference[];
+  totalDifferenceCount: number;
+  differenceCounts: Readonly<Record<TransitionDifferenceKind, number>>;
 }>;
+
+export type TransitionComparisonOptions = Readonly<{ signal?: AbortSignal; maxRetainedDifferences?: number }>;
 
 type NormalizedEvent = Readonly<{ cycle: ExactSourceCycle; value: string }>;
 
@@ -130,17 +134,50 @@ function unsupported(
   detail: string,
   authoredCycle?: ExactSourceCycle,
   vcdCycle?: ExactSourceCycle,
+  retain = true,
 ): TransitionComparisonResult {
+  const difference: TransitionDifference = {
+    kind: "unsupported-value",
+    signalId,
+    detail,
+    ...(authoredCycle ? { authoredCycle } : {}),
+    ...(vcdCycle ? { vcdCycle } : {}),
+  };
   return {
     signalId,
     equal: false,
-    differences: [{
-      kind: "unsupported-value",
-      signalId,
-      detail,
-      ...(authoredCycle ? { authoredCycle } : {}),
-      ...(vcdCycle ? { vcdCycle } : {}),
-    }],
+    differences: retain ? [difference] : [],
+    totalDifferenceCount: 1,
+    differenceCounts: { "value-mismatch": 0, "timing-mismatch": 0, "missing-event": 0, "extra-event": 0, "unsupported-value": 1 },
+  };
+}
+
+function comparisonAbort(signal: AbortSignal): DOMException {
+  return signal.reason instanceof DOMException
+    ? signal.reason
+    : new DOMException("Simulation comparison was cancelled.", "AbortError");
+}
+
+export function createComparisonCheckpoint(signal?: AbortSignal): () => Promise<void> | undefined {
+  let operations = 0;
+  return () => {
+    if (signal?.aborted) throw comparisonAbort(signal);
+    operations += 1;
+    if (operations < 1024) return undefined;
+    operations = 0;
+    const scheduler = (globalThis as typeof globalThis & { scheduler?: { yield?: () => Promise<void> } }).scheduler;
+    const yielded = typeof scheduler?.yield === "function"
+      ? scheduler.yield()
+      : typeof globalThis.MessageChannel === "function"
+        ? new Promise<void>((resolve) => {
+          const channel = new MessageChannel();
+          channel.port1.onmessage = () => { channel.port1.close(); channel.port2.close(); resolve(); };
+          channel.port2.postMessage(undefined);
+        })
+        : new Promise<void>((resolve) => globalThis.setTimeout(resolve, 0));
+    return yielded.then(() => {
+      if (signal?.aborted) throw comparisonAbort(signal);
+    });
   };
 }
 
@@ -150,40 +187,50 @@ function unsupported(
  * Timing tolerance is exactly zero source cycles; rational coordinates are
  * compared without converting them to floating point.
  */
-export function compareAuthoredTransitions(
+export async function compareAuthoredTransitions(
   identity: MatchedSignalIdentity,
-  authored: readonly AuthoredTransition[],
+  authored: Iterable<AuthoredTransition>,
   vcdChanges: readonly VcdValueChange[],
   timescale: VcdTimescale,
   physicalTimebase: Pick<PhysicalTimebase, "referenceFrequencyHz"> | undefined,
   valueShape: Readonly<{ width?: number; displayFormat?: BusValueFormat }> = {},
-): TransitionComparisonResult {
+  options: TransitionComparisonOptions = {},
+): Promise<TransitionComparisonResult> {
+  const checkpoint = createComparisonCheckpoint(options.signal);
+  const requestedRetainedLimit = options.maxRetainedDifferences ?? 100;
+  const retainedLimit = Number.isFinite(requestedRetainedLimit)
+    ? Math.max(0, Math.min(100, Math.floor(requestedRetainedLimit)))
+    : 100;
   if (!identity.signalId || !identity.vcdCode) {
-    return unsupported(identity.signalId, "A stable canonical signal ID and matched VCD code are required.");
+    return unsupported(identity.signalId, "A stable canonical signal ID and matched VCD code are required.", undefined, undefined, retainedLimit > 0);
   }
   const width = valueShape.width ?? 1;
   if (!Number.isSafeInteger(width) || width < 1 || width > VCD_RESOURCE_BUDGET.variableWidthBits) {
-    return unsupported(identity.signalId, `Signal width must be between 1 and ${VCD_RESOURCE_BUDGET.variableWidthBits} bits.`);
+    return unsupported(identity.signalId, `Signal width must be between 1 and ${VCD_RESOURCE_BUDGET.variableWidthBits} bits.`, undefined, undefined, retainedLimit > 0);
   }
 
   const authoredEvents: NormalizedEvent[] = [];
   for (const transition of authored) {
+    const pause = checkpoint();
+    if (pause) await pause;
     if (!Number.isSafeInteger(transition.cycle) || transition.cycle < 0) {
-      return unsupported(identity.signalId, "Authored cycle must be a non-negative safe integer.");
+      return unsupported(identity.signalId, "Authored cycle must be a non-negative safe integer.", undefined, undefined, retainedLimit > 0);
     }
     const value = normalizeAuthoredValue(transition.value, width, valueShape.displayFormat);
     if (value === undefined) {
-      return unsupported(identity.signalId, "Authored transition value is not a supported four-state scalar.");
+      return unsupported(identity.signalId, "Authored transition value is not a supported four-state scalar.", undefined, undefined, retainedLimit > 0);
     }
     const cycle = { numerator: BigInt(transition.cycle), denominator: 1n };
     if (authoredEvents.length > 0 && compareExactSourceCycle(authoredEvents.at(-1)!.cycle, cycle) >= 0) {
-      return unsupported(identity.signalId, "Authored transitions must be strictly sorted by cycle.");
+      return unsupported(identity.signalId, "Authored transitions must be strictly sorted by cycle.", undefined, undefined, retainedLimit > 0);
     }
     authoredEvents.push({ cycle, value });
   }
 
   const vcdEvents: NormalizedEvent[] = [];
   for (const change of vcdChanges) {
+    const pause = checkpoint();
+    if (pause) await pause;
     if (change.code !== identity.vcdCode) continue;
     const cycle = vcdTimestampToSourceCycles(change.timestamp, timescale, physicalTimebase);
     const value = change.kind === "scalar"
@@ -192,24 +239,39 @@ export function compareAuthoredTransitions(
         ? change.value.padStart(width, change.value[0] === "x" || change.value[0] === "z" ? change.value[0] : "0")
         : undefined;
     if (!cycle || !validExactCycle(cycle) || value === undefined) {
-      return unsupported(identity.signalId, "Matched VCD change is not a supported scalar event or has an invalid time mapping.");
+      return unsupported(identity.signalId, "Matched VCD change is not a supported scalar event or has an invalid time mapping.", undefined, undefined, retainedLimit > 0);
     }
     if (vcdEvents.length > 0 && compareExactSourceCycle(vcdEvents.at(-1)!.cycle, cycle) > 0) {
-      return unsupported(identity.signalId, "Matched VCD changes must be sorted by timestamp.");
+      return unsupported(identity.signalId, "Matched VCD changes must be sorted by timestamp.", undefined, undefined, retainedLimit > 0);
     }
     vcdEvents.push({ cycle, value });
   }
 
   const differences: TransitionDifference[] = [];
+  const differenceCounts: Record<TransitionDifferenceKind, number> = {
+    "value-mismatch": 0,
+    "timing-mismatch": 0,
+    "missing-event": 0,
+    "extra-event": 0,
+    "unsupported-value": 0,
+  };
+  let totalDifferenceCount = 0;
+  const addDifference = (difference: TransitionDifference): void => {
+    totalDifferenceCount += 1;
+    differenceCounts[difference.kind] += 1;
+    if (differences.length < retainedLimit) differences.push(difference);
+  };
   let authoredIndex = 0;
   let vcdIndex = 0;
   while (authoredIndex < authoredEvents.length && vcdIndex < vcdEvents.length) {
+    const pause = checkpoint();
+    if (pause) await pause;
     const expected = authoredEvents[authoredIndex]!;
     const actual = vcdEvents[vcdIndex]!;
     const cycleOrder = compareExactSourceCycle(expected.cycle, actual.cycle);
     if (cycleOrder === 0) {
       if (expected.value !== actual.value) {
-        differences.push({
+        addDifference({
           kind: "value-mismatch",
           signalId: identity.signalId,
           authoredCycle: expected.cycle,
@@ -224,7 +286,7 @@ export function compareAuthoredTransitions(
     }
 
     if (expected.value === actual.value) {
-      differences.push({
+      addDifference({
         kind: "timing-mismatch",
         signalId: identity.signalId,
         authoredCycle: expected.cycle,
@@ -235,7 +297,7 @@ export function compareAuthoredTransitions(
       authoredIndex += 1;
       vcdIndex += 1;
     } else if (cycleOrder < 0) {
-      differences.push({
+      addDifference({
         kind: "missing-event",
         signalId: identity.signalId,
         authoredCycle: expected.cycle,
@@ -243,7 +305,7 @@ export function compareAuthoredTransitions(
       });
       authoredIndex += 1;
     } else {
-      differences.push({
+      addDifference({
         kind: "extra-event",
         signalId: identity.signalId,
         vcdCycle: actual.cycle,
@@ -254,13 +316,18 @@ export function compareAuthoredTransitions(
   }
 
   while (authoredIndex < authoredEvents.length) {
+    const pause = checkpoint();
+    if (pause) await pause;
     const event = authoredEvents[authoredIndex++]!;
-    differences.push({ kind: "missing-event", signalId: identity.signalId, authoredCycle: event.cycle, authoredValue: event.value });
+    addDifference({ kind: "missing-event", signalId: identity.signalId, authoredCycle: event.cycle, authoredValue: event.value });
   }
   while (vcdIndex < vcdEvents.length) {
+    const pause = checkpoint();
+    if (pause) await pause;
     const event = vcdEvents[vcdIndex++]!;
-    differences.push({ kind: "extra-event", signalId: identity.signalId, vcdCycle: event.cycle, vcdValue: event.value });
+    addDifference({ kind: "extra-event", signalId: identity.signalId, vcdCycle: event.cycle, vcdValue: event.value });
   }
 
-  return { signalId: identity.signalId, equal: differences.length === 0, differences };
+  if (options.signal?.aborted) throw comparisonAbort(options.signal);
+  return { signalId: identity.signalId, equal: totalDifferenceCount === 0, differences, totalDifferenceCount, differenceCounts };
 }
