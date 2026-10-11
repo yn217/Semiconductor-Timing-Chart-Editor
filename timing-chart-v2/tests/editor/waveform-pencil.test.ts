@@ -1,62 +1,68 @@
 import { describe, expect, it } from "vitest";
-import { beginWaveformPencilStroke, extendWaveformPencilStroke, finishWaveformPencilStroke } from "../../apps/editor/src/runtime/waveform-pencil.js";
+import { applyPencilStroke, pencilLevelAtY, pencilTrajectory, type PencilLevel } from "../../apps/editor/src/waveform-pencil.js";
+import { createWaveformPencilMode } from "../../apps/editor/src/waveform-pencil-mode.js";
 
-describe("Waveform Pencil stroke projection (#1109)", () => {
-  it("interpolates every crossed source cycle in either direction", () => {
-    const down = beginWaveformPencilStroke([{ id: "v0", start: 0, value: 0 }], 12, 2, 0.9)!;
-    const filled = extendWaveformPencilStroke(down, 7, 0.1);
-    expect([...filled.samples]).toEqual([[2, 0], [3, 0], [4, 0], [5, 1], [6, 1], [7, 1]]);
+const change = (start: number, value: number | string, id?: string) => ({ ...(id === undefined ? {} : { id }), start, value }) as never;
+const strokes = (entries: readonly (readonly [number, PencilLevel])[]) => new Map<number, PencilLevel>(entries);
+const view = (values: readonly { start: number; value: string | number }[] | undefined) => values?.map((item) => [item.start, item.value]);
 
-    const reverse = extendWaveformPencilStroke(filled, 3, 0.9);
-    expect([...reverse.samples]).toEqual([[2, 0], [3, 0], [4, 0], [5, 0], [6, 1], [7, 1]]);
+describe("Waveform Pencil mode availability", () => {
+  it("clears active mode and prevents reactivation outside Cycle view", () => {
+    const mode = createWaveformPencilMode();
+    mode.set(true);
+    expect(mode.get()).toBe(true);
+    mode.setAvailable(false);
+    expect(mode.get()).toBe(false);
+    expect(mode.getAvailable()).toBe(false);
+    mode.set(true);
+    expect(mode.get()).toBe(false);
+    mode.setAvailable(true);
+    mode.set(true);
+    expect(mode.get()).toBe(true);
   });
+});
 
-  it("uses the last revisit, preserves existing transition identity, and adds only sampled cycle points", () => {
-    const stroke = beginWaveformPencilStroke([
-      { id: "stable-zero", start: 0, value: 0 },
-      { id: "stable-four", start: 4, value: 1, comment: "keep metadata" },
-    ], 8, 2, 0.1)!;
-    const revisited = extendWaveformPencilStroke(extendWaveformPencilStroke(stroke, 5, 0.1), 4, 0.9);
-    expect(finishWaveformPencilStroke(revisited)).toEqual([
-      { id: "stable-zero", start: 0, value: 0 },
-      { start: 2, value: 1 },
-      { id: "stable-four", start: 4, value: 0, comment: "keep metadata" },
-      { start: 5, value: 1 },
-    ]);
+describe("Waveform Pencil level", () => {
+  it("draws HIGH in the upper half of the row and LOW in the lower half", () => {
+    expect(pencilLevelAtY(110, 100, 40)).toBe(1);
+    expect(pencilLevelAtY(119.9, 100, 40)).toBe(1);
+    expect(pencilLevelAtY(120, 100, 40)).toBe(0);
+    expect(pencilLevelAtY(139, 100, 40)).toBe(0);
+    expect(pencilLevelAtY(90, 100, 40)).toBe(1);
+    expect(pencilLevelAtY(300, 100, 40)).toBe(0);
   });
+});
 
-  it("restores unpainted canonical values after a painted cell and returns the original table for a no-op", () => {
-    const values = [{ id: "zero", start: 0, value: 0 }, { id: "five", start: 5, value: 1 }];
-    const noOp = beginWaveformPencilStroke(values, 8, 2, 0.9)!;
-    expect(finishWaveformPencilStroke(noOp)).toBe(values);
-
-    const changed = beginWaveformPencilStroke(values, 8, 2, 0.1)!;
-    expect(finishWaveformPencilStroke(changed)).toEqual([
-      values[0],
-      { start: 2, value: 1 },
-      { start: 3, value: 0 },
-      values[1],
-    ]);
+describe("Waveform Pencil trajectory", () => {
+  const level = (y: number): PencilLevel => y < 20 ? 1 : 0;
+  it("paints only the current cell while the pointer stays in it", () => {
+    expect(pencilTrajectory({ cell: 3, y: 5 }, { cell: 3, y: 30 }, level)).toEqual([[3, 0]]);
   });
-
-  it("does not discard an unpainted same-level transition or its stable metadata", () => {
-    const values = [
-      { id: "zero", start: 0, value: 0 },
-      { id: "note", start: 5, value: 0, comment: "unrelated note" },
-    ];
-    const stroke = beginWaveformPencilStroke(values, 8, 2, 0.1)!;
-    expect(finishWaveformPencilStroke(stroke)).toEqual([
-      values[0],
-      { start: 2, value: 1 },
-      { start: 3, value: 0 },
-      values[1],
-    ]);
+  it("fills skipped cells along the trajectory in both directions without repainting the start cell", () => {
+    expect(pencilTrajectory({ cell: 2, y: 5 }, { cell: 6, y: 35 }, level)).toEqual([[3, 1], [4, 0], [5, 0], [6, 0]]);
+    expect(pencilTrajectory({ cell: 6, y: 35 }, { cell: 3, y: 5 }, level)).toEqual([[5, 0], [4, 1], [3, 1]]);
   });
+});
 
-  it("does not start or extend outside canonical cycle bounds", () => {
-    expect(beginWaveformPencilStroke([{ start: 0, value: 0 }], 4, 4, 1)).toBeUndefined();
-    const stroke = beginWaveformPencilStroke([{ start: 0, value: 0 }], 4, 1, 0.9)!;
-    expect(extendWaveformPencilStroke(stroke, 4, 0.1)).toBe(stroke);
-    expect(finishWaveformPencilStroke(stroke)).toEqual([{ start: 0, value: 0 }]);
+describe("Waveform Pencil stroke", () => {
+  it("changes only the painted cells and pins the value after the stroke", () => {
+    const values = [change(0, 0, "a"), change(5, 1, "b")];
+    const next = applyPencilStroke(values, 10, strokes([[2, 1], [3, 1]]));
+    expect(view(next)).toEqual([[0, 0], [2, 1], [4, 0], [5, 1]]);
+    expect(next?.[0]).toMatchObject({ id: "a" });
+    expect(next?.find((item) => item.start === 5)).toMatchObject({ id: "b" });
+    expect(next?.find((item) => item.start === 2)?.id).toBeUndefined();
+  });
+  it("lets a later paint of the same cell win and keeps a one-cell glitch", () => {
+    const next = applyPencilStroke([change(0, 0)], 8, strokes([[3, 1], [3, 0], [4, 1]]));
+    expect(view(next)).toEqual([[0, 0], [4, 1], [5, 0]]);
+  });
+  it("folds redundant change points next to the stroke and returns undefined for an unchanged waveform", () => {
+    expect(view(applyPencilStroke([change(0, 0), change(2, 1), change(4, 0)], 8, strokes([[2, 0], [3, 0]])))).toEqual([[0, 0]]);
+    expect(applyPencilStroke([change(0, 0), change(2, 1)], 8, strokes([[3, 1], [0, 0]]))).toBeUndefined();
+  });
+  it("repaints back over an earlier stroke and keeps the last cell of the timeline valid", () => {
+    expect(view(applyPencilStroke([change(0, 0)], 4, strokes([[3, 1]])))).toEqual([[0, 0], [3, 1]]);
+    expect(view(applyPencilStroke([change(0, "0"), change(2, "1")], 6, strokes([[0, 1]])))).toEqual([[0, "1"], [1, "0"], [2, "1"]]);
   });
 });

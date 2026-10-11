@@ -1,6 +1,6 @@
 import type { RenderProjection, RowLayoutEntry } from "@timing-chart-v2/projection";
 import { createLeftTreeIcon, createRoleBadge } from "./tree-row-dom.js";
-import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnosticSummary, RendererDiagnostics, RendererRowIdentitySnapshot, ScenarioDifferenceOverlayPrimitive, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveMountBatchItem, WaveMountRequest, WavePrefetchRequest, WaveSignalId } from "./types.js";
+import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnosticSummary, RendererDiagnostics, RendererRowIdentitySnapshot, ScenarioDifferenceOverlayPrimitive, SimulationTraceOverlayPrimitive, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveMountBatchItem, WaveMountRequest, WavePrefetchRequest, WaveSignalId } from "./types.js";
 import { isWavePrefetchModeEligible, WavePrefetchLifecycle } from "./wave-prefetch-lifecycle.js";
 import { applyTextStyle, parseTextStyle, renderOverlay } from "./annotation-overlay-dom.js";
 import { groupBackgroundColor } from "./group-background.js";
@@ -8,6 +8,7 @@ import { syncGroupHeaderLayer } from "./group-header-dom.js";
 import { reconcileViewportWaveOwners } from "./viewport-wave-owner-projection.js";
 import { applySharedSymbolWaveformColor } from "./shared-symbol-waveform-style.js";
 import { signalPresentationLabel, signalTypeLabel } from "./signal-presentation-label.js";
+import { SimulationTraceOverlayDomOwner } from "./simulation-trace-overlay-dom.js";
 
 export function isWaveMountRequestFresh(request: Pick<WaveMountRequest, "documentEpoch" | "isFresh">, currentDocumentEpoch: number): boolean {
   return (request.documentEpoch === undefined || request.documentEpoch === currentDocumentEpoch) && (request.isFresh?.() ?? true);
@@ -63,6 +64,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   readonly #recentWaveSignalIds: WaveSignalId[] = [];
   readonly #overlayOwners = new Map<string, HTMLElement>();
   readonly #scenarioDifferenceOwners = new Map<string, HTMLElement>();
+  readonly #simulationTraceOverlayDomOwner = new SimulationTraceOverlayDomOwner();
   readonly #overlaySignatures = new Map<string, string>();
   readonly #edgeCounterOwners = new Map<string, HTMLElement>();
   readonly #dirtyWaves = new Set<WaveSignalId>();
@@ -127,6 +129,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     // it the horizontal scroll owner so the fixed columns are never inside a horizontal overflow box).
     const timelineViewport = element(host, "div", "timeline-viewport");
     for (const layer of [timing, waves, scenarioDifferences, overlays, interactive]) timelineViewport.append(layer);
+    this.#simulationTraceOverlayDomOwner.mountAfter(scenarioDifferences);
     root.append(left);
     if (frozen) root.append(frozen);
     root.append(timelineViewport);
@@ -616,6 +619,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     }
   }
 
+  updateSimulationTraces(primitives: readonly SimulationTraceOverlayPrimitive[]): void { this.#simulationTraceOverlayDomOwner.update(primitives); }
+
   patchOverlays(primitives: readonly AnnotationOverlayPrimitive[]): number {
     const layers = this.#layers;
     if (!layers) throw new Error("Timing chart renderer must be mounted before overlay update.");
@@ -708,6 +713,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#overlayOwners.clear();
     this.#overlaySignatures.clear();
     this.#scenarioDifferenceOwners.clear();
+    this.#simulationTraceOverlayDomOwner.clear();
     this.#edgeCounterOwners.clear();
     this.#rowY.clear();
     this.#canonicalSignalIdsSource = undefined;

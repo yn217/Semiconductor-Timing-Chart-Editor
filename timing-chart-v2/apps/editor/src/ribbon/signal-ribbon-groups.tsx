@@ -1,7 +1,7 @@
 import type { CanonicalDocument } from "@timing-chart-v2/schema";
 import type { EditorSurfaceCommandController } from "../application/editor-surface-command-controller.js";
 import type { RibbonGroupSpec } from "../ribbon-schema.js";
-import { DsRibbonToggleButton } from "../design-system.js";
+import { WaveformPencilRibbonTools } from "../waveform-pencil-mode.js";
 
 export type SignalRibbonContext = Readonly<{
   document: CanonicalDocument;
@@ -26,8 +26,8 @@ export function buildSignalRibbonGroups(context: SignalRibbonContext): readonly 
   const { document, range, commands, compactCycleCount, canMoveUp, canMoveDown, viewMode, onMoveUp, onMoveDown, waveformPencilEnabled, onToggleWaveformPencil } = context;
   return [
     {
-      id: "signal-editing", majorGroup: "Signal", caption: "Signal", items: [
-        { kind: "custom", id: "waveform-pencil", render: () => <DsRibbonToggleButton ariaLabel="Waveform Pencil" checked={waveformPencilEnabled} disabled={viewMode !== "Cycle"} dataTestId="waveform-pencil-ribbon" icon={<span aria-hidden="true">✎</span>} onClick={onToggleWaveformPencil} title="Draw HIGH/LOW directly on an editable Binary Signal by dragging; Clock, Bus, and Enum signals are not supported" size="medium">Pencil</DsRibbonToggleButton> },
+      id: "draw", majorGroup: "Draw", caption: "Draw", items: [
+        { kind: "custom", id: "waveform-pencil-tools", render: () => <WaveformPencilRibbonTools key="waveform-pencil-tools" /> },
       ],
     },
     {

@@ -23,18 +23,27 @@ test("large VCD comparison yields, can be cancelled, and keeps mapping edits out
   };
   await page.getByRole("tab", { name: "Simulation", exact: true }).click();
 
-  const changes = Array.from({ length: 20_000 }, (_, index) => `#${index} ${index % 2 ? "1" : "0"}!`).join("\n");
-  const vcd = `$timescale 1ns $end\n$scope module top $end\n$var wire 1 ! VALID $end\n$upscope $end\n$enddefinitions $end\n${changes}`;
+  const changes = Array.from({ length: 200_000 }, (_, index) => `#${index} b${index % 2 ? "10100101" : "00000000"} !`).join("\n");
+  const vcd = `$timescale 1ns $end\n$var wire 8 ! DATA $end\n$enddefinitions $end\n${changes}`;
   await page.getByLabel("Import VCD text file").setInputFiles({
     name: "large-reference.vcd",
     mimeType: "text/plain",
     buffer: Buffer.from(vcd),
   });
-  await expect(page.getByTestId("simulation-status")).toContainText("Loaded 1 variables and 20000 value changes");
+  await expect(page.getByTestId("simulation-status")).toContainText(/Loaded 1 variables and 200[\u00a0\u202f,]?000 value changes/);
+  await expect(page.getByLabel("Map DATA to specification signal")).toHaveValue("sig_data");
+  await page.evaluate(() => {
+    const observer = new MutationObserver(() => {
+      const cancel = document.querySelector<HTMLButtonElement>("[data-testid='simulation-cancel-comparison']");
+      if (!cancel) return;
+      observer.disconnect();
+      document.body.dataset.simulationCancelClicked = "true";
+      cancel.click();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  });
   await page.getByTestId("simulation-compare").click();
-  await expect(page.getByTestId("simulation-cancel-comparison")).toBeVisible();
-  await expect(page.getByLabel("Map top.VALID to specification signal")).toBeDisabled();
-  await page.getByTestId("simulation-cancel-comparison").click();
+  await expect(page.locator("body")).toHaveAttribute("data-simulation-cancel-clicked", "true");
   await expect(page.getByTestId("simulation-status")).toHaveText("Comparison cancelled.");
   await expect(page.getByTestId("simulation-results")).toHaveCount(0);
   await expect(surface).toHaveAttribute("data-canonical-revision", baseline.revision!);

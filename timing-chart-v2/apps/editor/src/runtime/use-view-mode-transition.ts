@@ -1,5 +1,6 @@
 import { useEffect, useRef, type MutableRefObject } from "react";
 import type { TimelineViewportRuntime } from "./timeline-viewport-runtime.js";
+import type { WaveformPencilMode } from "../waveform-pencil-mode.js";
 import { cancelActiveGesture } from "./active-gesture-cancellation.js";
 
 /**
@@ -17,12 +18,14 @@ export function useViewModeTransition(
   viewMode: string,
   forceUpperReprojectRef: MutableRefObject<() => void>,
   timelineRuntimeRef: MutableRefObject<TimelineViewportRuntime | null>,
+  waveformPencil: WaveformPencilMode,
 ): void {
   const mounted = useRef(false);
   useEffect(() => {
+    waveformPencil.setAvailable(viewMode === "Cycle");
     if (!mounted.current) { mounted.current = true; return; }
     cancelActiveGesture();
     forceUpperReprojectRef.current();
     timelineRuntimeRef.current?.refreshRuler();
-  }, [viewMode, forceUpperReprojectRef, timelineRuntimeRef]);
+  }, [viewMode, forceUpperReprojectRef, timelineRuntimeRef, waveformPencil]);
 }

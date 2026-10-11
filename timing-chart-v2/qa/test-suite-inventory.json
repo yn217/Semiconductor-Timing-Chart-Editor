@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T19:16:51.336Z",
+  "generatedAt": "2026-10-10T23:24:51.292Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 468,
-  "caseCount": 1406,
-  "reviewedCaseCount": 1348,
+  "specFileCount": 469,
+  "caseCount": 1409,
+  "reviewedCaseCount": 1351,
   "curatedProfileCounts": {
     "integration": 634,
     "nightly": 241,
     "performance": 73,
-    "pr": 498,
+    "pr": 501,
     "visual": 181
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -36397,6 +36397,87 @@
       "contractId": "wavedrom-definitions"
     },
     {
+      "file": "waveform-pencil.spec.ts",
+      "suitePath": [],
+      "line": 30,
+      "title": "Waveform Pencil draws HIGH/LOW per passed Cycle in one Undo step, with Ribbon and Bottom toggles in sync",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "waveform-pencil",
+      "originIssue": 1109,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Waveform Pencil draws HIGH/LOW on a Binary Signal by dragging, as one undoable stroke.",
+      "duplicateGroup": "waveform-pencil",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "New feature #1109.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "waveform-pencil",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "waveform-pencil.spec.ts",
+      "suitePath": [],
+      "line": 71,
+      "title": "Waveform Pencil Esc cancels the stroke without a commit, then leaves drawing mode",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "waveform-pencil",
+      "originIssue": 1109,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Waveform Pencil draws HIGH/LOW on a Binary Signal by dragging, as one undoable stroke.",
+      "duplicateGroup": "waveform-pencil",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "New feature #1109.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "waveform-pencil",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
+      "file": "waveform-pencil.spec.ts",
+      "suitePath": [],
+      "line": 92,
+      "title": "Waveform Pencil only draws on the Binary Signal it started on",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "waveform-pencil",
+      "originIssue": 1109,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": 5000,
+      "primaryContract": "Waveform Pencil draws HIGH/LOW on a Binary Signal by dragging, as one undoable stroke.",
+      "duplicateGroup": "waveform-pencil",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "New feature #1109.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "waveform-pencil",
+      "runtimeMeasurementScope": "CASE"
+    },
+    {
       "file": "workspace-mode-snapshot-review-fixes.spec.ts",
       "suitePath": [],
       "line": 40,
@@ -41564,6 +41645,15 @@
         "directDomMutation",
         "explicitWait"
       ],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "waveform-pencil.spec.ts",
+      "caseCount": 3,
+      "reviewedCaseCount": 3,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [],
       "semanticReviewStatus": "REVIEWED"
     },
     {

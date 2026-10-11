@@ -11,6 +11,7 @@ import type { EditorSurfaceCommandController } from "./application/editor-surfac
 import type { ContextMenuState } from "./workspace/use-dialog-menu-state.js";
 import type { AIBridgeStatus } from "./ai-bridge-client.js";
 import type { TransactionBottomDraftStore } from "./runtime/transaction-bottom-draft-store.js";
+import type { SimulationTraceSnapshot } from "./simulation/simulation-trace.js";
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 type Ref<T> = RefObject<T | null>;
@@ -26,6 +27,7 @@ export interface EditorSecondarySurfacesInput {
   readonly validationDiagnostics: readonly DocumentProblem[];
   readonly validationPending: boolean;
   readonly documentEpoch: number;
+  readonly onSimulationTraceChange: (snapshot: SimulationTraceSnapshot | undefined) => void;
   readonly projectionGeneration: number;
   readonly revision: number;
   readonly transactionPresentationRevision: number;

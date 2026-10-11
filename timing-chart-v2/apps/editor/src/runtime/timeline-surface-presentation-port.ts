@@ -3,6 +3,8 @@ import type { AnnotationId, GroupId, SignalGroupStyle, SignalId } from "@timing-
 import type { TimelineViewportRuntime } from "./timeline-viewport-runtime.js";
 import type { SelectedClockEdge } from "./edge-counter-projection.js";
 import type { ScenarioSignalDifference } from "@timing-chart-v2/schema";
+import type { SimulationTraceSnapshot } from "../simulation/simulation-trace.js";
+import type { WaveformPencilMode } from "../waveform-pencil-mode.js";
 
 type TimelineRange = Readonly<{ start: number; end: number }>;
 
@@ -28,13 +30,13 @@ export interface TimelineSurfacePresentationPort {
   readonly selectedEdgeRef: MutableRefObject<SelectedClockEdge | undefined>;
   readonly selectedAnnotationRef: MutableRefObject<AnnotationId | undefined>;
   readonly scenarioDifferencesRef: MutableRefObject<readonly ScenarioSignalDifference[]>;
+  readonly simulationTraceRef: MutableRefObject<SimulationTraceSnapshot | undefined>;
   readonly gridEnabledRef: MutableRefObject<boolean>;
   readonly snapEnabledRef: MutableRefObject<boolean>;
+  readonly waveformPencil: WaveformPencilMode;
   readonly treeFocusRowIdRef: MutableRefObject<string | undefined>;
   readonly suppressCanvasClickRef: MutableRefObject<boolean>;
   readonly menuOriginRef: MutableRefObject<HTMLElement | null>;
   readonly transactionCyclesPerTcRef: MutableRefObject<number>;
   readonly groupStylePreviewRef: MutableRefObject<(groupId: GroupId, style: SignalGroupStyle | undefined) => void>;
-  readonly waveformPencilEnabledRef: MutableRefObject<boolean>;
-  readonly setWaveformPencilEnabled: (enabled: boolean) => void;
 }
