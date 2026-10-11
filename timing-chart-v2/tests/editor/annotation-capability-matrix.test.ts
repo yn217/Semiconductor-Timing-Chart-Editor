@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { AnnotationType } from "@timing-chart-v2/schema";
+import { ANNOTATION_TYPES } from "@timing-chart-v2/schema";
 import { annotationCapabilityDisabledReason, annotationPresentationDefaults, hasAnnotationCapability } from "../../apps/editor/src/annotation-capability-matrix.js";
 
-const ALL_TYPES: readonly AnnotationType[] = ["text", "callout", "verticalLine", "range", "bracket", "highlight", "marker", "measurement", "arrow", "dependency", "timingRegion", "ghostTrace", "rectangle", "ellipse", "connector", "textbox"];
+const ALL_CAPABILITIES = ["stroke", "fill", "text", "labelOffset", "labelPlacement", "zOrder", "lock", "visible"] as const;
 
 describe("Annotation Capability Matrix (#378)", () => {
   it("declares stroke/fill only for the CSS-border/background-driven area and line shapes", () => {
@@ -29,13 +29,22 @@ describe("Annotation Capability Matrix (#378)", () => {
   });
 
   it("declares labelOffset/labelPlacement/zOrder/lock/visible/text universally applicable, matching the shared #171 machinery", () => {
-    for (const type of ALL_TYPES) {
+    for (const type of ANNOTATION_TYPES) {
       expect(hasAnnotationCapability(type, "labelOffset")).toBe(true);
       expect(hasAnnotationCapability(type, "labelPlacement")).toBe(true);
       expect(hasAnnotationCapability(type, "zOrder")).toBe(true);
       expect(hasAnnotationCapability(type, "lock")).toBe(true);
       expect(hasAnnotationCapability(type, "visible")).toBe(true);
       expect(hasAnnotationCapability(type, "text")).toBe(true);
+    }
+  });
+
+  it("provides an explicit enabled/disabled policy for every canonical annotation type and presentation capability", () => {
+    for (const type of ANNOTATION_TYPES) {
+      for (const capability of ALL_CAPABILITIES) {
+        const enabled = hasAnnotationCapability(type, capability);
+        expect(annotationCapabilityDisabledReason(type, capability) === undefined).toBe(enabled);
+      }
     }
   });
 
