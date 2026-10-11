@@ -231,8 +231,9 @@ export function useEditorSecondarySurfaces(
   />;
   const transactionEditor = (
     <TransactionEditor
-      key={`${input.documentEpoch}:${input.projectionGeneration}:${dialog.bottomResetToken}`}
+      key={`${input.documentEpoch}:${dialog.bottomResetToken}`}
       transaction={bottom.transaction}
+      draftStore={input.transactionDraftStore}
       selectedTransactionIds={bottomTransactionActionIds(bottom.transaction, selected.transactionIds, workspace.bottomPinned || !workspace.followSelection)}
       document={input.document}
       cyclesPerTc={workspace.cyclesPerTc}
@@ -464,8 +465,6 @@ export function useEditorSecondarySurfaces(
     signalEditor
   ) : workspace.bottomTab === "Annotation" ? (
     annotationEditor
-  ) : workspace.bottomTab === "Transaction" ? (
-    transactionEditor
   ) : workspace.bottomTab === "Phases" ? (
     <TransactionPhaseSummary transaction={bottom.transaction} transactions={input.document.transactions ?? []} commands={surfaceCommands} cyclesPerTc={workspace.cyclesPerTc} />
   ) : workspace.bottomTab === "Linked Signals" ? (
@@ -508,6 +507,7 @@ export function useEditorSecondarySurfaces(
       {...(workspace.bottomTab === "Annotation" ? { contentClassName: "bottom-content-annotation" } : {})}
       content={
         <>
+          {input.transactionDraftPending && <p className="inspector-note" role="status" data-testid="transaction-draft-lifecycle-warning">Unapplied Transaction edits are not saved. Return to the Transaction tab and Apply or Revert them before saving or replacing this document.</p>}
           {/* Keep the AI Bridge session and an external proposal alive while
               another Bottom tab is active. The session belongs to this
               Editor tab/document, not to the visibility of its panel. */}
@@ -516,6 +516,9 @@ export function useEditorSecondarySurfaces(
           </div>
           <div className="bottom-simulation-panel-host" hidden={workspace.bottomTab !== "Simulation"}>
             <SimulationPanel key={input.documentEpoch} document={input.document} onNavigate={input.navigateProblem} />
+          </div>
+          <div className="bottom-transaction-panel-host" hidden={workspace.bottomTab !== "Transaction"}>
+            {transactionEditor}
           </div>
           {activeBottomContent}
         </>

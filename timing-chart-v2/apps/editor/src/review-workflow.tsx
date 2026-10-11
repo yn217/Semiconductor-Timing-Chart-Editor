@@ -38,7 +38,7 @@ export function parseLatencyCycleBounds(minText: string, maxText: string): { rea
   return { ok: true, minimum, maximum };
 }
 
-export function ReviewWorkflow({ diagnostics, document, selectedSignalId, selectedGroupId, onNavigate, onShowProblems, onRefreshChecks, onToggleCheckCategory, onCreateLatencyConstraint, onDeleteConstraint, problemsIcon }: {
+export function ReviewWorkflow({ diagnostics, document, selectedSignalId, selectedGroupId, onNavigate, onShowProblems, onRefreshChecks, onToggleCheckCategory, onCreateLatencyConstraint, onCreateSetupHoldConstraint, onDeleteConstraint, problemsIcon }: {
   readonly diagnostics: readonly DocumentProblem[];
   readonly document: CanonicalDocument;
   readonly selectedSignalId: SignalId | undefined;
@@ -48,6 +48,7 @@ export function ReviewWorkflow({ diagnostics, document, selectedSignalId, select
   readonly onRefreshChecks: () => void;
   readonly onToggleCheckCategory?: (category: TimingDiagnosticCategory, enabled: boolean) => void;
   readonly onCreateLatencyConstraint?: (input: Readonly<{ triggerSignalId: SignalId; triggerEdge: "rising" | "falling"; responseSignalId: SignalId; responseEdge: "rising" | "falling"; minCycles: number; maxCycles: number }>) => boolean;
+  readonly onCreateSetupHoldConstraint?: (input: Readonly<{ kind: "setup" | "hold"; dataSignalId: SignalId; captureSignalId: SignalId; captureEdge: "rising" | "falling"; minCycles: number }>) => boolean;
   readonly onDeleteConstraint?: (constraintId: ConstraintId) => boolean;
   readonly problemsIcon?: ReactNode;
 }) {
@@ -62,8 +63,17 @@ export function ReviewWorkflow({ diagnostics, document, selectedSignalId, select
   const [responseEdge, setResponseEdge] = useState<"rising" | "falling">("rising");
   const [minCycles, setMinCycles] = useState("1");
   const [maxCycles, setMaxCycles] = useState("3");
+  const [setupHoldKind, setSetupHoldKind] = useState<"setup" | "hold">("setup");
+  const [dataSignalId, setDataSignalId] = useState<SignalId | "">("");
+  const [captureSignalId, setCaptureSignalId] = useState<SignalId | "">("");
+  const [captureEdge, setCaptureEdge] = useState<"rising" | "falling">("rising");
+  const [minimumInterval, setMinimumInterval] = useState("1");
   const [constraintStatus, setConstraintStatus] = useState("");
   const edgeSignals = useMemo(() => document.signals.filter((signal) => signal.type === "binary" || signal.type === "logic" || signal.type === "bus" || signal.type === "pulse"), [document.signals]);
+  const setupHoldDataSignals = useMemo(() => document.signals.filter((signal) => signal.type !== "clock" && signal.type !== "commentRow"), [document.signals]);
+  const captureSignals = useMemo(() => document.signals.filter((signal) => signal.type === "binary" || signal.type === "logic" || signal.type === "bus" || signal.type === "pulse" || signal.type === "clock"), [document.signals]);
+  const setupDataId = setupHoldDataSignals.some((signal) => signal.id === dataSignalId) ? dataSignalId : setupHoldDataSignals[0]?.id ?? "";
+  const setupCaptureId = captureSignals.some((signal) => signal.id === captureSignalId) ? captureSignalId : captureSignals.find((signal) => signal.id !== setupDataId)?.id ?? captureSignals[0]?.id ?? "";
   const triggerId = edgeSignals.some((signal) => signal.id === triggerSignalId) ? triggerSignalId : edgeSignals[0]?.id ?? "";
   const responseId = edgeSignals.some((signal) => signal.id === responseSignalId) ? responseSignalId : edgeSignals[1]?.id ?? edgeSignals[0]?.id ?? "";
   const keyedDiagnostics = useMemo(() => {
@@ -135,9 +145,23 @@ export function ReviewWorkflow({ diagnostics, document, selectedSignalId, select
         </label>;
       })}
     </fieldset>}
-    {onCreateLatencyConstraint && <details className="review-constraint-editor" data-testid="review-constraint-editor">
-      <summary>Latency constraints ({document.constraints.length})</summary>
-      <form onSubmit={(event) => {
+    {(onCreateLatencyConstraint || onCreateSetupHoldConstraint) && <details className="review-constraint-editor" data-testid="review-constraint-editor">
+      <summary>Timing constraints ({document.constraints.length})</summary>
+      {onCreateSetupHoldConstraint && <form data-testid="setup-hold-constraint-form" onSubmit={(event) => {
+        event.preventDefault();
+        const cycles = Number(minimumInterval);
+        if (!setupDataId || !setupCaptureId || setupDataId === setupCaptureId || minimumInterval.trim() === "" || !Number.isSafeInteger(cycles) || cycles < 0) { setConstraintStatus("Choose distinct Data and capture Signals and a non-negative integer cycle interval."); return; }
+        const created = onCreateSetupHoldConstraint({ kind: setupHoldKind, dataSignalId: setupDataId, captureSignalId: setupCaptureId, captureEdge, minCycles: cycles });
+        setConstraintStatus(created ? `${setupHoldKind === "setup" ? "Setup" : "Hold"} constraint added.` : "Constraint was rejected; review the Problems panel.");
+      }}>
+        <label>Constraint kind<select aria-label="Setup/Hold constraint kind" value={setupHoldKind} onChange={(event) => setSetupHoldKind(event.target.value as typeof setupHoldKind)}><option value="setup">Setup</option><option value="hold">Hold</option></select></label>
+        <label>Data Signal<select aria-label="Setup/Hold Data Signal" value={setupDataId} onChange={(event) => setDataSignalId(event.target.value as SignalId)} required>{setupHoldDataSignals.map((signal) => <option key={signal.id} value={signal.id}>{signal.display.name}</option>)}</select></label>
+        <label>Capture Clock/Signal<select aria-label="Setup/Hold capture Clock/Signal" value={setupCaptureId} onChange={(event) => setCaptureSignalId(event.target.value as SignalId)} required>{captureSignals.map((signal) => <option key={signal.id} value={signal.id}>{signal.display.name}</option>)}</select></label>
+        <label>Capture edge<select aria-label="Setup/Hold capture edge" value={captureEdge} onChange={(event) => setCaptureEdge(event.target.value as typeof captureEdge)}><option value="rising">Rising</option><option value="falling">Falling</option></select></label>
+        <label>Minimum cycles<input aria-label="Setup/Hold minimum cycles" type="number" min="0" step="1" value={minimumInterval} onChange={(event) => setMinimumInterval(event.target.value)} required /></label>
+        <button type="submit" disabled={setupHoldDataSignals.length === 0 || captureSignals.length === 0}>Add {setupHoldKind} constraint</button>
+      </form>}
+      {onCreateLatencyConstraint && <form onSubmit={(event) => {
         event.preventDefault();
         if (!triggerId || !responseId) { setConstraintStatus("Choose Signals for the trigger and response."); return; }
         const bounds = parseLatencyCycleBounds(minCycles, maxCycles);
@@ -152,7 +176,7 @@ export function ReviewWorkflow({ diagnostics, document, selectedSignalId, select
         <label>Minimum cycles<input aria-label="Constraint minimum cycles" type="number" min="0" step="1" value={minCycles} onChange={(event) => setMinCycles(event.target.value)} required /></label>
         <label>Maximum cycles<input aria-label="Constraint maximum cycles" type="number" min="0" step="1" value={maxCycles} onChange={(event) => setMaxCycles(event.target.value)} required /></label>
         <button type="submit" disabled={edgeSignals.length === 0}>Add latency constraint</button>
-      </form>
+      </form>}
       {document.constraints.length > 0 && <ul aria-label="Timing constraints">{document.constraints.map((constraint) => <li key={constraint.id} data-constraint-id={constraint.id}><code>{constraint.type}</code> <span>{constraint.id}</span>{onDeleteConstraint && <button type="button" aria-label={`Delete constraint ${constraint.id}`} onClick={() => setConstraintStatus(onDeleteConstraint(constraint.id) ? "Constraint deleted." : "Constraint could not be deleted.")}>Delete</button>}</li>)}</ul>}
       {constraintStatus && <output role="status" data-testid="constraint-status">{constraintStatus}</output>}
     </details>}

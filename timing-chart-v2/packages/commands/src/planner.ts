@@ -880,6 +880,25 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       const constraint: Constraint = { id: command.constraintId, type: "latency", data: { triggerSignalId: command.triggerSignalId, triggerEdge: command.triggerEdge, responseSignalId: command.responseSignalId, responseEdge: command.responseEdge, minCycles: command.minCycles, maxCycles: command.maxCycles } };
       return { ok: true, document: { ...document, constraints: [...document.constraints, constraint] }, changeSet: {}, inverseChangeSet: {} };
     }
+    case "constraint.createSetupHold": {
+      if (!isStableId(command.constraintId)) return fail("invalid", "INVALID_STABLE_ID", "$.constraintId", "Constraint ID must be stable.");
+      if (canonicalEntityIds(document).has(command.constraintId)) return fail("invalid", "DUPLICATE_ID", "$.constraintId", `Constraint ID '${command.constraintId}' already exists.`);
+      const dataSignal = document.signals.find((signal) => signal.id === command.dataSignalId);
+      const captureSignal = document.signals.find((signal) => signal.id === command.captureSignalId);
+      const validDataSignal = dataSignal !== undefined && dataSignal.type !== "clock" && dataSignal.type !== "commentRow";
+      const validCaptureSignal = captureSignal !== undefined && (captureSignal.type === "binary" || captureSignal.type === "logic" || captureSignal.type === "bus" || captureSignal.type === "pulse" || captureSignal.type === "clock");
+      if ((command.kind !== "setup" && command.kind !== "hold") || !validDataSignal || !validCaptureSignal || command.dataSignalId === command.captureSignalId
+        || (command.captureEdge !== "rising" && command.captureEdge !== "falling")
+        || !Number.isSafeInteger(command.minCycles) || command.minCycles < 0) {
+        return fail("invalid", "INVALID_SETUP_HOLD_CONSTRAINT", "$.constraint", "Setup/Hold requires distinct Data and edge-capable capture Signals (including Clock), a rising/falling capture edge, and a non-negative safe-integer minimum interval.");
+      }
+      const constraint: Constraint = {
+        id: command.constraintId,
+        type: command.kind,
+        data: { dataSignalId: command.dataSignalId, captureSignalId: command.captureSignalId, captureEdge: command.captureEdge, minCycles: command.minCycles },
+      };
+      return { ok: true, document: { ...document, constraints: [...document.constraints, constraint] }, changeSet: {}, inverseChangeSet: {} };
+    }
     case "constraint.delete": {
       if (!document.constraints.some((constraint) => constraint.id === command.constraintId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.constraintId", `Constraint '${command.constraintId}' does not exist.`);
       return { ok: true, document: { ...document, constraints: document.constraints.filter((constraint) => constraint.id !== command.constraintId) }, changeSet: {}, inverseChangeSet: {} };
