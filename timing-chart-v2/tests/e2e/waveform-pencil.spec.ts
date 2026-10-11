@@ -303,6 +303,32 @@ test("Pencil only captures primary-button input and leaves other pointer buttons
   await expect(page.getByTestId("waveform-pencil-ribbon")).toHaveAttribute("aria-pressed", "true");
 });
 
+test("existing Annotation selection and Cursor controls remain usable while Pencil is enabled", async ({ page }) => {
+  const surface = await openBinarySignal(page);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByLabel("Annotation type").selectOption("text");
+  await page.getByRole("button", { name: "Add annotation" }).click();
+  const annotation = surface.locator("[data-role='annotation-owner']").first();
+  await expect(annotation).toBeVisible();
+  const annotationId = await annotation.getAttribute("data-annotation-id");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  const history = await page.getByTestId("history-status").innerText();
+  const revision = await surface.getAttribute("data-canonical-revision");
+  await page.getByTestId("waveform-pencil-ribbon").click();
+
+  await annotation.locator("[data-role='annotation-label']").click({ force: true });
+  await expect(page.getByTestId("annotation-editor")).toBeVisible();
+  await expect(page.getByTestId("annotation-editor")).toHaveAttribute("data-annotation-id", annotationId!);
+  await expect(page.locator("[data-role='waveform-pencil-preview']")).toHaveCount(0);
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("cursor-set-a").click();
+  await expect(page.getByTestId("cursor-status")).toContainText("A 2");
+  await expect(page.locator("[data-role='cursor-line'][data-cursor='a']").first()).toHaveAttribute("data-cycle", "2");
+  await expect(surface).toHaveAttribute("data-canonical-revision", revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(history);
+});
+
 test("document replacement cancels an in-flight stroke before it can commit", async ({ page }) => {
   const surface = await openBinarySignal(page);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
