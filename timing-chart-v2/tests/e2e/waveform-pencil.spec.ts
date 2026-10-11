@@ -41,6 +41,13 @@ async function visibleCellCycle(page: Page, minimumCycle = 3) {
   return pair.cycle;
 }
 
+async function eventValues(page: Page) {
+  return page.getByTestId("signal-editor").locator("[data-event-start]").evaluateAll((rows) => rows.map((row) => ({
+    start: Number((row as HTMLElement).dataset.eventStart),
+    value: row.querySelector<HTMLInputElement>('[aria-label^="Value "]')?.value,
+  })));
+}
+
 async function drag(page: Page, from: { x: number; y: number }, to: { x: number; y: number }) {
   await page.mouse.move(from.x, from.y);
   await page.mouse.down();
@@ -294,6 +301,39 @@ test("draws the waveform owner stable ID when Bottom Follow Selection is off and
   const document = JSON.parse(await readFile(path!, "utf8")) as { signals: Array<{ id: string; values: Array<{ start: number; value: number }> }> };
   expect(document.signals.find((signal) => signal.id === signalId)?.values.map(({ start, value }) => [start, value])).toEqual([[0, 0], [2, 1], [4, 0], [5, 1]]);
   expect(document.signals.find((signal) => signal.id === "sig_cycle_request")?.values.map(({ start, value }) => [start, value])).toEqual([[0, 0], [3, 1], [7, 0]]);
+});
+
+test("keeps a stroke on its starting Signal when the pointer crosses another waveform row", async ({ page }) => {
+  const surface = await openBinarySignal(page);
+  const otherSignalId = "sig_cycle_request";
+  await expect(page.locator(".editor-selection")).toContainText("RESET_N");
+  await surface.locator(`[data-role='frozen-row'][data-row-id='${otherSignalId}']`).click();
+  await expect(page.locator(".editor-selection")).toContainText("REQUEST");
+  const otherValuesBefore = await eventValues(page);
+  await surface.locator(`[data-role='frozen-row'][data-row-id='${signalId}']`).click();
+  await expect(page.locator(".editor-selection")).toContainText("RESET_N");
+  await page.getByTestId("waveform-pencil-ribbon").click();
+
+  const from = await cellPoint(page, 4, 0.2, signalId);
+  const toOnOtherRow = await cellPoint(page, 8, 0.5, otherSignalId);
+  expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-role='wave-owner'][data-signal-id]")?.dataset.signalId, from)).toBe(signalId);
+  expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-role='wave-owner'][data-signal-id]")?.dataset.signalId, toOnOtherRow)).toBe(otherSignalId);
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  // One real pointermove skips multiple Cycle cells and crosses into a
+  // different Signal row. Pointer capture + the starting stable ID must
+  // keep the stroke on RESET_N, with Y clamped to that row's lower edge.
+  await page.mouse.move(toOnOtherRow.x, toOnOtherRow.y, { steps: 1 });
+  await page.mouse.up();
+
+  const targetTable = page.getByTestId("signal-editor");
+  await expect(targetTable.locator("[data-event-start='6']").getByLabel("Value 6")).toHaveValue("0");
+  await expect(targetTable.locator("[data-event-start='9']").getByLabel("Value 9")).toHaveValue("1");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+
+  await surface.locator(`[data-role='frozen-row'][data-row-id='${otherSignalId}']`).click();
+  await expect(page.locator(".editor-selection")).toContainText("REQUEST");
+  expect(await eventValues(page)).toEqual(otherValuesBefore);
 });
 
 test("pointer cancellation discards the stroke without changing canonical values or history", async ({ page }) => {
