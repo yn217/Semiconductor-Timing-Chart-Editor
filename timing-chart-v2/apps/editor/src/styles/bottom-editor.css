@@ -43,6 +43,8 @@
 .bottom-content-annotation { display: flex; flex-direction: column; overflow: hidden; }
 .bottom-ai-panel-host { display: none; }
 .bottom-ai-panel-host:not([hidden]) { display: contents; }
+.bottom-simulation-panel-host { display: none; }
+.bottom-simulation-panel-host:not([hidden]) { display: contents; }
 
 .bottom-content > .signal-editor { min-height: 100%; display: block; }
 .bottom-content .editor-tabbar { height: 37px; }

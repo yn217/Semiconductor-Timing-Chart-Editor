@@ -55,6 +55,7 @@ import {
 import { InspectorPanel } from "./panels/inspector-panel.js";
 import { LegendView } from "./legend-view.js";
 import { ProblemsPanel } from "./problems-panel.js";
+import { SimulationPanel } from "./simulation/simulation-panel.js";
 import {
   type ActiveContext,
   useWorkspaceUiState,
@@ -512,6 +513,9 @@ export function useEditorSecondarySurfaces(
               Editor tab/document, not to the visibility of its panel. */}
           <div className="bottom-ai-panel-host" hidden={workspace.bottomTab !== "AI"}>
             <AIOperationPanel {...aiAssistantPanel} />
+          </div>
+          <div className="bottom-simulation-panel-host" hidden={workspace.bottomTab !== "Simulation"}>
+            <SimulationPanel key={input.documentEpoch} document={input.document} onNavigate={input.navigateProblem} />
           </div>
           {activeBottomContent}
         </>

@@ -80,4 +80,16 @@ describe("compareAuthoredTransitions", () => {
     );
     expect(differentZ.differences[0]?.kind).toBe("value-mismatch");
   });
+
+  it("matches canonical hexadecimal bus values against equal-width VCD bits", () => {
+    const result = compareAuthoredTransitions(
+      { signalId: "signal-data", vcdCode: "!" },
+      [{ cycle: 0, value: "00" }, { cycle: 4, value: "A5" }],
+      [vectorChange(0n, "00000000"), vectorChange(4n, "10100101")],
+      ns,
+      timebase,
+      { width: 8, displayFormat: "hex" },
+    );
+    expect(result).toMatchObject({ equal: true, differences: [] });
+  });
 });
