@@ -2,6 +2,19 @@ import { describe, expect, it } from "vitest";
 import { pruneExternalSelection, reconcileExternalDraft, reconcileExternalDraftFields } from "../apps/editor/src/runtime/external-draft-reconciliation.js";
 
 describe("external draft reconciliation", () => {
+  it("preserves Bottom Transaction name while accepting Inspector Description", () => {
+    const base = { name: "Read_0", description: "original", start: 10, end: 60 };
+    const draft = { ...base, name: "Bottom draft" };
+    const latest = { ...base, description: "Inspector description" };
+    const result = reconcileExternalDraftFields(base, draft, latest);
+    expect(result.value).toEqual({ ...latest, name: "Bottom draft" });
+    expect(result.base).toEqual(latest);
+    expect(result.conflicts).toEqual([]);
+    const conflict = reconcileExternalDraftFields(result.base, result.value, { ...latest, name: "Inspector name" });
+    expect(conflict.value.name).toBe("Bottom draft");
+    expect(conflict.conflicts).toEqual(["name"]);
+    expect(base.name).toBe("Read_0");
+  });
   const equal = (left: { value: string }, right: { value: string }) => left.value === right.value;
 
   it("rebases a clean draft to a newer Canonical value", () => {
