@@ -58,4 +58,15 @@ test("imports a session-only VCD, compares by exact mapping and reveals zero-tol
   await expect(surface).toHaveAttribute("data-canonical-revision", baseline.revision!);
   await expect(page.getByTestId("history-status")).toHaveText(baseline.history);
   await expect(page.getByTestId("dirty-status")).toHaveText(baseline.dirty);
+
+  // Comparison state is session-only and must be discarded by the production
+  // document replacement path, not serialized into the authored .tcd.
+  const replacementDocument = { ...document, document: { ...document.document, title: "Replacement specification" } };
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({
+    name: "replacement.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(replacementDocument)),
+  });
+  await expect.poll(() => page.title()).toContain("Replacement specification");
+  await page.getByRole("tab", { name: "Simulation", exact: true }).click();
+  await expect(page.getByTestId("simulation-status")).toHaveText("Import a VCD text file to compare it with this document.");
+  await expect(page.locator("[data-vcd-mapping-status]")).toHaveCount(0);
 });
