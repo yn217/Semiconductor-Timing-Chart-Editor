@@ -29,6 +29,17 @@ export function displayBoundaryForSource(mapping: DisplayTimeMapping, sourceCycl
   return mapping.displayBoundaryAtOrAfterSource(sourceCycle);
 }
 
+/** Resolve a fold's representative marker onto a boundary that remains visible
+ * even when the fold itself is nested inside another collapsed group. */
+export function visibleFoldAnchor(mapping: DisplayTimeMapping, start: number, end: number): { readonly sourceCycle: number; readonly displayCycle: number } | undefined {
+  const nextDisplay = mapping.displayBoundaryAtOrAfterSource(end);
+  const nextSource = nextDisplay < mapping.displayCycleCount ? mapping.displayToSource(nextDisplay) : undefined;
+  if (nextSource !== undefined) return { sourceCycle: nextSource, displayCycle: nextDisplay };
+  const previousDisplay = mapping.displayBoundaryAtOrAfterSource(start) - 1;
+  const previousSource = previousDisplay >= 0 ? mapping.displayToSource(previousDisplay) : undefined;
+  return previousSource === undefined ? undefined : { sourceCycle: previousSource, displayCycle: previousDisplay };
+}
+
 /** Converts an explicitly source-domain bounded request into the display-domain
  * interval consumed by WaveDrom. The source interval remains authoritative for
  * geometry rebasing and is never silently interpreted as display indices. */
