@@ -570,15 +570,40 @@ test("large full-span waveform stroke updates only its preview, not mounted Wave
 
   const signalId = "sig_perf_1";
   await surface.locator(`[data-role='frozen-row'][data-row-id='${signalId}']`).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByLabel("Zoom preset").selectOption("200");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await expect(surface).toHaveAttribute("data-editor-idle", "true");
   await page.getByTestId("ribbon-waveform-pencil").click();
+  const scrollbar = page.getByTestId("timeline-hscroll");
+  await expect(scrollbar).toBeVisible();
+  await expect.poll(() => scrollbar.evaluate((element: HTMLElement) => element.scrollWidth)).toBeGreaterThan(await scrollbar.evaluate((element: HTMLElement) => element.clientWidth));
+  const track = (await scrollbar.boundingBox())!;
+  const { beforeScroll, thumbWidth } = await scrollbar.evaluate((element: HTMLElement) => ({
+    beforeScroll: element.scrollLeft,
+    thumbWidth: element.clientWidth * element.clientWidth / element.scrollWidth,
+  }));
+  expect(beforeScroll).toBe(0);
+  await page.mouse.move(track.x + Math.max(12, thumbWidth / 2), track.y + track.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(track.x + track.width - Math.max(12, thumbWidth / 2), track.y + track.height / 2, { steps: 4 });
+  await page.mouse.up();
+  await page.mouse.move(track.x + track.width / 2, track.y + track.height / 2);
+  for (let pageIndex = 0; pageIndex < 8; pageIndex += 1) await page.mouse.wheel(6000, 0);
+  await expect.poll(() => scrollbar.evaluate((element: HTMLElement) => element.scrollLeft)).toBeGreaterThan(beforeScroll);
+  await expect(surface).toHaveAttribute("data-editor-idle", "true");
+  const targetCycle = await visibleCellCycle(page, 490);
+  expect(targetCycle).toBeLessThan(499);
+  await expect(owners).toHaveCount(100);
   const baselineHistory = await page.getByTestId("history-status").innerText();
   const baselineDirty = await page.getByTestId("dirty-status").innerText();
   const baselineRevision = await surface.getAttribute("data-canonical-revision");
-  const from = await cellPoint(page, 4, 0.2, signalId);
-  const middle = await cellPoint(page, 6, 0.8, signalId);
-  const to = await cellPoint(page, 8, 0.2, signalId);
+  const from = await cellPoint(page, targetCycle, 0.8, signalId);
+  const to = await cellPoint(page, targetCycle + 1, 0.2, signalId);
+  await expect(page.locator("[data-role='wave-owner'][data-wave-state='ready']")).toHaveCount(100);
   const mountedSvgCount = await owners.locator(":scope > svg").count();
   expect(mountedSvgCount).toBe(100);
+  await page.mouse.move(from.x, from.y);
   const gestureStarted = await page.evaluate(() => {
     const target = window as typeof window & { __wavePencilDomSnapshot?: { waveSvgs: Element[]; waveChildren: Array<readonly Node[]>; rows: Element[] } };
     const waveSvgs = [...document.querySelectorAll("[data-role='wave-owner'] > svg")];
@@ -590,10 +615,8 @@ test("large full-span waveform stroke updates only its preview, not mounted Wave
     performance.mark("pencil:gesture-start");
     return performance.now();
   });
-  await page.mouse.move(from.x, from.y);
   await page.mouse.down();
   await expect(page.locator("[data-testid='waveform-pencil-preview']")).toHaveCount(1);
-  await page.mouse.move(middle.x, middle.y, { steps: 2 });
   await page.mouse.move(to.x, to.y, { steps: 2 });
   const during = await page.evaluate(() => {
     const target = window as typeof window & { __wavePencilDomSnapshot?: { waveSvgs: Element[]; waveChildren: Array<readonly Node[]>; rows: Element[] } };
@@ -620,6 +643,9 @@ test("large full-span waveform stroke updates only its preview, not mounted Wave
   await page.mouse.up();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(page.locator("[data-testid='waveform-pencil-preview']")).toHaveCount(0);
+  const table = page.getByTestId("signal-editor");
+  await expect(table.locator(`[data-event-start='${targetCycle}']`).getByLabel(`Value ${targetCycle}`)).toHaveValue("0");
+  await expect(table.locator(`[data-event-start='${targetCycle + 1}']`).getByLabel(`Value ${targetCycle + 1}`)).toHaveValue("1");
   await page.waitForTimeout(100);
   const longTasks = await page.evaluate((started) => ((window as typeof window & { __wavePencilLongTasks?: Array<{ startTime: number; duration: number; attribution: string[] }> }).__wavePencilLongTasks ?? []).filter((task) => task.startTime >= started), gestureStarted);
   if (longTasks.some((task) => task.duration >= 50 && task.startTime < beforeUp)) console.log("pencil-large-longtasks-during-stroke", longTasks);
