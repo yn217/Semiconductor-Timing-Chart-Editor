@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 import { startInCycleMode } from "./cycle-startup.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
@@ -100,6 +101,39 @@ test("surfaces a V1->V2 migration warning after opening a legacy document", asyn
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
   await expect(page.getByTestId("problems-panel")).toContainText("MIGRATED_V1_TO_V2");
+
+  const migratedSignal = host.locator("[data-role='wave-owner'][data-signal-id='sig_clk']");
+  await expect(migratedSignal).toHaveCount(1);
+  const savePromise = page.waitForEvent("download");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await savePromise).path();
+  expect(savedPath).toBeTruthy();
+
+  const migratedV2 = JSON.parse(await readFile(savedPath!, "utf8")) as {
+    formatVersion: number;
+    document: { title: string };
+    timeline: { cycleCount: number; referenceClock?: string };
+    signals: Array<{ id: string; type: string; name: string; generator?: { period: number } }>;
+  };
+  expect(migratedV2.formatVersion).toBe(2);
+  expect(migratedV2.document.title).toBe("V1 Doc");
+  expect(migratedV2.timeline.cycleCount).toBe(10);
+  expect(migratedV2.timeline.referenceClock).toBe("sig_clk");
+  expect(migratedV2.signals).toContainEqual(expect.objectContaining({
+    id: "sig_clk",
+    type: "clock",
+    name: "CLK",
+    generator: expect.objectContaining({ period: 2 }),
+  }));
+
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(host.locator("[data-role='wave-owner'][data-signal-id='sig_clk']")).toHaveCount(1);
+  await expect(page.locator(".app-titlebar h1")).toHaveText("V1 Doc");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
+  await expect(page.getByTestId("problems-panel")).not.toContainText("MIGRATED_V1_TO_V2");
 
   // opening a fresh document afterward clears the stale migration warning.
   const doc2 = {
