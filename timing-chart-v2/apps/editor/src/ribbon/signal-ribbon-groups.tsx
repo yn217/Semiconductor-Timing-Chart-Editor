@@ -27,7 +27,7 @@ export function buildSignalRibbonGroups(context: SignalRibbonContext): readonly 
   return [
     {
       id: "signal-editing", majorGroup: "Signal", caption: "Signal", items: [
-        { kind: "custom", id: "waveform-pencil", render: () => <DsRibbonToggleButton ariaLabel="Waveform Pencil" checked={waveformPencilEnabled} disabled={viewMode !== "Cycle"} dataTestId="waveform-pencil-ribbon" icon={<span aria-hidden="true">✎</span>} onClick={onToggleWaveformPencil} title="Draw HIGH/LOW directly on a Binary Signal by dragging; Cycle view only" size="medium">Pencil</DsRibbonToggleButton> },
+        { kind: "custom", id: "waveform-pencil", render: () => <DsRibbonToggleButton ariaLabel="Waveform Pencil" checked={waveformPencilEnabled} disabled={viewMode !== "Cycle"} dataTestId="waveform-pencil-ribbon" icon={<span aria-hidden="true">✎</span>} onClick={onToggleWaveformPencil} title="Draw HIGH/LOW directly on an editable Binary Signal by dragging; Clock, Bus, and Enum signals are not supported" size="medium">Pencil</DsRibbonToggleButton> },
       ],
     },
     {

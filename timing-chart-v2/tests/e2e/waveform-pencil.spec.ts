@@ -1,6 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { generatePerformanceDocument } from "@timing-chart-v2/testing";
+import { scenarioModelFromV2, serializeScenarioDocumentModel } from "@timing-chart-v2/schema";
 import { startInCycleSample } from "./cycle-startup.js";
 import { openBottomSettings } from "./bottom-settings.js";
 
@@ -55,6 +57,7 @@ test("draws a freehand Binary stroke as one semantic edit and round-trips throug
   await expect(page.getByRole("tooltip", { name: /Draw HIGH\/LOW directly on a Binary Signal/ })).toBeVisible();
   await bottomTool.focus();
   await expect(page.getByRole("tooltip", { name: /Draw HIGH\/LOW directly on a Binary Signal/ })).toBeVisible();
+  await expect(ribbonTool).toHaveAttribute("title", /Binary Signal.*Clock, Bus, and Enum signals are not supported/);
   expect((await bottomTool.boundingBox())?.width).toBe(29);
   expect((await bottomTool.boundingBox())?.height).toBe(29);
 
@@ -323,6 +326,45 @@ test("document replacement cancels an in-flight stroke before it can commit", as
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await page.getByTestId("cycle-surface").locator(`[data-role='frozen-row'][data-row-id='${signalId}']`).click();
   await expect(page.getByTestId("signal-editor").locator("[data-event-start='5']")).toHaveCount(0);
+});
+
+test("Scenario switch cancels an in-flight stroke as view-only state", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  const model = scenarioModelFromV2(generatePerformanceDocument({ signalCount: 4, cycleCount: 24, profile: "standard" }));
+  const base = model.scenarios[0]!;
+  const target = model.signalDefinitions.find((signal) => signal.type === "binary")!;
+  const alternate = {
+    ...base,
+    id: "scenario_pencil_alt" as typeof base.id,
+    name: "Pencil Alternate",
+    signalStates: { ...base.signalStates, [target.id]: { kind: "values" as const, values: [{ start: 0, value: 0 }, { start: 3, value: 1 }] } },
+  };
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({
+    name: "waveform-pencil-scenario.tcd",
+    mimeType: "application/json",
+    buffer: Buffer.from(serializeScenarioDocumentModel({ ...model, scenarios: [base, alternate] })),
+  });
+  const surface = page.getByTestId("cycle-surface");
+  await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
+  await surface.locator(`[data-role='frozen-row'][data-row-id='${target.id}']`).click();
+  await page.getByTestId("waveform-pencil-ribbon").click();
+  const from = await cellPoint(page, 4, 0.2, target.id);
+  const to = await cellPoint(page, 6, 0.8, target.id);
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(to.x, to.y, { steps: 2 });
+  await expect(page.locator("[data-role='waveform-pencil-preview']")).toHaveCount(1);
+
+  const revision = await surface.getAttribute("data-canonical-revision");
+  const history = await page.getByTestId("history-status").innerText();
+  const dirty = await page.getByTestId("dirty-status").innerText();
+  await page.getByTestId("active-scenario").selectOption(alternate.id);
+  await expect(page.locator("[data-role='waveform-pencil-preview']")).toHaveCount(0);
+  await page.mouse.up();
+  await expect(surface).toHaveAttribute("data-canonical-revision", revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(history);
+  await expect(page.getByTestId("dirty-status")).toHaveText(dirty);
 });
 
 test("large full-span waveform stroke updates only its preview, not mounted WaveDrom owners", async ({ page }) => {
