@@ -37,6 +37,7 @@ test("Setup constraint is created through Review, produces navigable Problem, an
   await expect(problem).toBeVisible();
   await problem.click();
   await expect(page.getByTestId("cycle-status")).toHaveText("Source cycle 2");
+  await expect(page.getByTestId("selection-status")).toContainText("DATA");
   const downloadEvent = page.waitForEvent("download");
   await page.getByRole("button", { name: "Home", exact: true }).click();
   await page.getByRole("button", { name: "Save", exact: true }).click();
