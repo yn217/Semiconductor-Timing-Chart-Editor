@@ -15,6 +15,9 @@ type Setter<T> = Dispatch<SetStateAction<T>>;
 type Ref<T> = RefObject<T | null>;
 
 export interface EditorSecondarySurfacesInput {
+  readonly waveformPencilEnabled: boolean;
+  readonly waveformPencilAvailable: boolean;
+  readonly onToggleWaveformPencil: () => void;
   readonly scenario: Readonly<{ model: ScenarioDocumentModel | undefined; activeScenarioId: ScenarioId | undefined; generateHandshakeScenarios: (scenarioId: ScenarioId, selectedKeys: readonly string[]) => readonly ScenarioId[] }>;
   readonly setBottomVisible: (visible: boolean) => void;
   readonly document: CanonicalDocument;

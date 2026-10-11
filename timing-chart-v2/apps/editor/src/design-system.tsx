@@ -20,8 +20,8 @@ export function DsRibbonSplitButton({ ariaLabel, children, className, dataTestId
   </span>;
 }
 
-export function DsRibbonToggleButton({ ariaLabel, checked, children, className, dataTestId, icon, onClick, size = "large", title }: { readonly ariaLabel?: string; readonly checked: boolean; readonly children: ReactNode; readonly className?: ClassName; readonly dataTestId?: string; readonly icon: ReactNode; readonly onClick: () => void; readonly size?: RibbonSizeClass; readonly title?: string | undefined }) {
-  return <button type="button" className={`ds-control ds-ribbon-button ds-ribbon-toggle-button ds-ribbon-button--${size}${className ? ` ${className}` : ""}`} aria-label={ariaLabel} aria-pressed={checked} data-ribbon-size={size} data-testid={dataTestId} title={title} onClick={onClick}><DsIconBox>{icon}</DsIconBox><span className="ds-ribbon-label">{children}</span></button>;
+export function DsRibbonToggleButton({ ariaLabel, checked, children, className, dataTestId, disabled, icon, onClick, size = "large", title }: { readonly ariaLabel?: string; readonly checked: boolean; readonly children: ReactNode; readonly className?: ClassName; readonly dataTestId?: string; readonly disabled?: boolean; readonly icon: ReactNode; readonly onClick: () => void; readonly size?: RibbonSizeClass; readonly title?: string | undefined }) {
+  return <button type="button" className={`ds-control ds-ribbon-button ds-ribbon-toggle-button ds-ribbon-button--${size}${className ? ` ${className}` : ""}`} aria-label={ariaLabel} aria-pressed={checked} data-ribbon-size={size} data-testid={dataTestId} disabled={disabled} title={title} onClick={onClick}><DsIconBox>{icon}</DsIconBox><span className="ds-ribbon-label">{children}</span></button>;
 }
 
 export function DsRibbonSelect({ ariaLabel, children, className, dataTestId, onChange, size = "medium", value }: { readonly ariaLabel: string; readonly children: ReactNode; readonly className?: ClassName; readonly dataTestId?: string | undefined; readonly onChange: (event: ChangeEvent<HTMLSelectElement>) => void; readonly size?: RibbonSizeClass; readonly value: string }) {

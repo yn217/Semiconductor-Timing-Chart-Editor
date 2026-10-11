@@ -1,5 +1,6 @@
 import { useEffect, useRef, type MutableRefObject } from "react";
 import type { TimelineViewportRuntime } from "./timeline-viewport-runtime.js";
+import { cancelActiveGesture } from "./active-gesture-cancellation.js";
 
 /**
  * The single owner of what must happen when the View Mode changes.
@@ -20,6 +21,7 @@ export function useViewModeTransition(
   const mounted = useRef(false);
   useEffect(() => {
     if (!mounted.current) { mounted.current = true; return; }
+    cancelActiveGesture();
     forceUpperReprojectRef.current();
     timelineRuntimeRef.current?.refreshRuler();
   }, [viewMode, forceUpperReprojectRef, timelineRuntimeRef]);

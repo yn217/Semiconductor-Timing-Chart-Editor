@@ -35,4 +35,6 @@ export interface TimelineSurfacePresentationPort {
   readonly menuOriginRef: MutableRefObject<HTMLElement | null>;
   readonly transactionCyclesPerTcRef: MutableRefObject<number>;
   readonly groupStylePreviewRef: MutableRefObject<(groupId: GroupId, style: SignalGroupStyle | undefined) => void>;
+  readonly waveformPencilEnabledRef: MutableRefObject<boolean>;
+  readonly setWaveformPencilEnabled: (enabled: boolean) => void;
 }

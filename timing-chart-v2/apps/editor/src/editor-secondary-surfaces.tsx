@@ -160,6 +160,9 @@ export function useEditorSecondarySurfaces(
     <SignalEditor
       key={`${input.documentEpoch}:${input.projectionGeneration}:${bottom.signal?.id ?? "none"}:${dialog.bottomResetToken}`}
       signal={bottom.signal}
+      waveformPencilEnabled={input.waveformPencilEnabled}
+      waveformPencilAvailable={input.waveformPencilAvailable}
+      onToggleWaveformPencil={input.onToggleWaveformPencil}
       documentEpoch={input.documentEpoch}
       projectionGeneration={input.projectionGeneration}
       revision={input.revision}

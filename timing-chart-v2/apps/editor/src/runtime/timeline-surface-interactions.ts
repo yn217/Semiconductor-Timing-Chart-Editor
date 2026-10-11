@@ -19,10 +19,12 @@ import { attachEditorEventBindings } from "./interaction-controller.js";
 import { routeGlobalShortcut } from "./keyboard-shortcut-router.js";
 import { cancelActiveGesture, registerActiveGestureCancel } from "./active-gesture-cancellation.js";
 import { nextCommandId } from "../command-id.js";
+import { beginWaveformPencilStroke, extendWaveformPencilStroke, finishWaveformPencilStroke, type BinaryLevel, type WaveformPencilStroke } from "./waveform-pencil.js";
 
 type Session = ReturnType<EditorApplicationOwner["runtime"]["session"]["current"]>;
 type SessionSnapshot = ReturnType<Session["getSnapshot"]>;
 type TimelineRange = Readonly<{ start: number; end: number }>;
+type ActivePencilStroke = { pointerId: number; signalId: SignalId; epoch: number; revision: number; owner: HTMLElement; stroke: WaveformPencilStroke; releaseCancel: () => void };
 
 export interface TimelineSurfaceInteractionInput {
   readonly rendererHost: HTMLElement;
@@ -50,6 +52,9 @@ export interface TimelineSurfaceInteractionInput {
   readonly executeBatch: (commands: readonly SemanticCommand[]) => void;
   readonly commandRegistry: MutableRefObject<UiCommandRegistry>;
   readonly snapEnabledRef: MutableRefObject<boolean>;
+  readonly waveformPencilEnabledRef: MutableRefObject<boolean>;
+  readonly setWaveformPencilEnabled: (enabled: boolean) => void;
+  readonly getViewMode: () => "Cycle" | "Transaction" | "Split";
   readonly timelineRangeRef: MutableRefObject<TimelineRange>;
   readonly selectedCycleRef: MutableRefObject<number>;
   readonly selectedEdgeRef: MutableRefObject<unknown>;
@@ -109,6 +114,7 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     getSnapshot, timelineNavigation, timelineRuntime, getProjection, getTimelineOffset, getPendingArrow, clearPendingArrow,
     applyCanvasCycleSelection, onSelect, onTreeKeyDown, onScroll, onViewportKeyDown,
     selection, execute, executeBatch, commandRegistry, snapEnabledRef, timelineRangeRef, selectedCycleRef, selectedEdgeRef,
+    waveformPencilEnabledRef, setWaveformPencilEnabled, getViewMode,
     lowerCanvasClickRef, menuOriginRef, suppressCanvasClickRef, setRangeSelectionActive, setRange, setSelectedCycle,
     setContextMenu, closeContextMenu, setArrowPickStatus, publishState, refreshRangePreview,
   } = input;
@@ -131,6 +137,118 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
   const cycleBoundaryAtX = (clientX: number): number | undefined => {
     const left = timeOriginLeft();
     return left === undefined ? undefined : timelineGeometry.cycleBoundaryAtScreenX(clientX, left, snapEnabledRef.current);
+  };
+  let activePencilStroke: ActivePencilStroke | undefined;
+  const pencilRowPositionAtY = (event: PointerEvent, owner: HTMLElement): number => {
+    const rect = owner.getBoundingClientRect();
+    return rect.height > 0 ? Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height)) : 0.5;
+  };
+  const cancelPencilStroke = () => {
+    const active = activePencilStroke;
+    activePencilStroke = undefined;
+    if (!active) return;
+    active.releaseCancel();
+    if (active.owner.hasPointerCapture(active.pointerId)) active.owner.releasePointerCapture(active.pointerId);
+    rendererHost.querySelector("[data-role='stable-waveform-surface']")?.querySelector(`[data-role='waveform-pencil-preview'][data-signal-id='${CSS.escape(active.signalId)}']`)?.remove();
+  };
+  const drawPencilPreview = (active: ActivePencilStroke) => {
+    const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
+    if (!waveLayer) return;
+    const ownerLeft = Number.parseFloat(active.owner.style.left) || 0;
+    const width = active.owner.clientWidth;
+    const height = active.owner.clientHeight;
+    if (width <= 0 || height <= 0) return;
+    let preview = waveLayer.querySelector<SVGSVGElement>(`[data-role='waveform-pencil-preview'][data-signal-id='${CSS.escape(active.signalId)}']`);
+    if (!preview) {
+      preview = rendererHost.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "svg");
+      preview.dataset.role = "waveform-pencil-preview";
+      preview.dataset.signalId = active.signalId;
+      preview.setAttribute("aria-hidden", "true");
+      const ownerTop = Number.parseFloat(active.owner.style.top) || 0;
+      preview.style.cssText = `position:absolute;left:${ownerLeft}px;top:${ownerTop}px;width:${width}px;height:${height}px;transform:${active.owner.style.transform};overflow:visible;pointer-events:none;z-index:4`;
+      const path = rendererHost.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.dataset.role = "waveform-pencil-preview-path";
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke", "#d34a1f");
+      path.setAttribute("stroke-width", "2");
+      preview.append(path);
+      waveLayer.append(preview);
+    }
+    preview.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    const samples = [...active.stroke.samples.entries()].sort(([left], [right]) => left - right);
+    let pathData = "";
+    let previousCycle: number | undefined;
+    let previousLevel: BinaryLevel | undefined;
+    for (const [cycle, level] of samples) {
+      const x0 = timelineGeometry.sourceBoundaryToLocalX(getSnapshot().document, cycle);
+      const x1 = timelineGeometry.sourceBoundaryToLocalX(getSnapshot().document, Math.min(cycle + 1, active.stroke.cycleCount));
+      if (x0 === undefined || x1 === undefined) continue;
+      const startX = x0 - ownerLeft;
+      const endX = x1 - ownerLeft;
+      const y = level === 1 ? height * 0.27 : height * 0.73;
+      if (previousCycle === cycle - 1 && previousLevel !== undefined) {
+        const previousY = previousLevel === 1 ? height * 0.27 : height * 0.73;
+        pathData += ` L${startX},${previousY} L${startX},${y} L${endX},${y}`;
+      } else pathData += ` M${startX},${y} L${endX},${y}`;
+      previousCycle = cycle;
+      previousLevel = level;
+    }
+    const path = preview.querySelector<SVGPathElement>("path[data-role='waveform-pencil-preview-path']");
+    path?.setAttribute("d", pathData);
+  };
+  const pencilPointerDown = (event: PointerEvent) => {
+    if (!waveformPencilEnabledRef.current || getViewMode() !== "Cycle" || activePencilStroke) return;
+    const target = event.target instanceof Element ? event.target : undefined;
+    if (!target || target.closest("text, [data-role='annotation-owner'], [data-role='interactive-overlay-surface']")) return;
+    const owner = target.closest<HTMLElement>("[data-role='wave-owner'][data-signal-id]");
+    const signalId = owner?.dataset.signalId as SignalId | undefined;
+    const signal = signalId === undefined ? undefined : getSnapshot().document.signals.find((candidate) => candidate.id === signalId);
+    if (!owner || !signalId || !signal || signal.type !== "binary") return;
+    const origin = timeOriginLeft();
+    const cycle = origin === undefined ? undefined : timelineGeometry.cycleBoundaryAtScreenX(event.clientX, origin, false);
+    if (cycle === undefined || cycle >= getSnapshot().document.timeline.cycleCount) return;
+    const stroke = beginWaveformPencilStroke(signal.values, getSnapshot().document.timeline.cycleCount, cycle, pencilRowPositionAtY(event, owner));
+    if (!stroke) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    owner.setPointerCapture(event.pointerId);
+    const active: ActivePencilStroke = { pointerId: event.pointerId, signalId, epoch: documentEpoch.current(), revision: getSnapshot().revision, owner, stroke, releaseCancel: () => {} };
+    active.releaseCancel = registerActiveGestureCancel(cancelPencilStroke, "Draw Binary waveform - drag; Esc cancels");
+    activePencilStroke = active;
+    drawPencilPreview(active);
+  };
+  const pencilPointerMove = (event: PointerEvent) => {
+    const active = activePencilStroke;
+    if (!active || active.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const document = getSnapshot().document;
+    const signal = document.signals.find((candidate) => candidate.id === active.signalId);
+    if (!waveformPencilEnabledRef.current || active.epoch !== documentEpoch.current() || active.revision !== getSnapshot().revision || getViewMode() !== "Cycle" || signal?.type !== "binary") { cancelPencilStroke(); return; }
+    const origin = timeOriginLeft();
+    const cycle = origin === undefined ? undefined : timelineGeometry.cycleBoundaryAtScreenX(event.clientX, origin, false);
+    if (cycle === undefined || cycle >= document.timeline.cycleCount) return;
+    active.stroke = extendWaveformPencilStroke(active.stroke, cycle, pencilRowPositionAtY(event, active.owner));
+    drawPencilPreview(active);
+  };
+  const pencilPointerUp = (event: PointerEvent) => {
+    const active = activePencilStroke;
+    if (!active || active.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const document = getSnapshot().document;
+    const signal = document.signals.find((candidate) => candidate.id === active.signalId);
+    const origin = timeOriginLeft();
+    const finalCycle = origin === undefined ? undefined : timelineGeometry.cycleBoundaryAtScreenX(event.clientX, origin, false);
+    const sameRevision = active.revision === getSnapshot().revision;
+    if (finalCycle !== undefined && finalCycle < document.timeline.cycleCount && active.epoch === documentEpoch.current() && sameRevision && waveformPencilEnabledRef.current && getViewMode() === "Cycle" && signal?.type === "binary") {
+      active.stroke = extendWaveformPencilStroke(active.stroke, finalCycle, pencilRowPositionAtY(event, active.owner));
+    }
+    const sameEpoch = waveformPencilEnabledRef.current && active.epoch === documentEpoch.current() && sameRevision && getViewMode() === "Cycle";
+    const values = signal?.type === "binary" && sameEpoch ? finishWaveformPencilStroke(active.stroke) : undefined;
+    cancelPencilStroke();
+    suppressCanvasClickRef.current = true;
+    if (signal?.type === "binary" && values && values !== signal.values) execute({ id: nextCommandId("waveform_pencil_stroke"), type: "signal.replaceValues", signalId: active.signalId, values });
   };
   /** The ruler cell [start, end) containing the pointer: deterministic floor, never snapped to the nearest tick or glyph. */
   const rulerCellAtX = (clientX: number): number | undefined => {
@@ -264,11 +382,16 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
   });
   const onGlobalKeyDown = (event: KeyboardEvent) => {
     const handled = routeGlobalShortcut(event, {
-      isGestureActive: () => annotationInteraction.active,
+      isGestureActive: () => annotationInteraction.active || activePencilStroke !== undefined,
       execute: (name) => commandRegistry.current.execute(name),
       cancel: () => {
+        const cancelPencilMode = activePencilStroke !== undefined;
         closeContextMenu();
         cancelActiveGesture();
+        if (cancelPencilMode) {
+          setWaveformPencilEnabled(false);
+          rendererHost.dataset.waveformPencil = "false";
+        }
         annotationInteraction.cancel();
         clearPendingArrow();
         setArrowPickStatus("idle");
@@ -305,6 +428,10 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     if (rendererHost.dataset.arrowPick) onSelect(event); else selectCanvasCycle(event);
   };
   const detach = attachEditorEventBindings([
+    { target: rendererHost, type: "pointerdown", listener: pencilPointerDown as EventListener },
+    { target: rendererHost, type: "pointermove", listener: pencilPointerMove as EventListener },
+    { target: rendererHost, type: "pointerup", listener: pencilPointerUp as EventListener },
+    { target: rendererHost, type: "pointercancel", listener: cancelPencilStroke as EventListener },
     ...(() => { const tree = rendererHost.querySelector<HTMLElement>("[data-role='left-tree-rows']"); return tree ? [{ target: tree, type: "keydown", listener: onTreeKeyDown as EventListener }] : []; })(),
     { target: viewportElement, type: "scroll", listener: onScroll as EventListener, options: { passive: true, capture: true } },
     { target: viewportElement, type: "keydown", listener: onViewportKeyDown as EventListener },
@@ -343,8 +470,8 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     { target: rendererHost.ownerDocument, type: "keydown", listener: onGlobalKeyDown as EventListener },
   ]);
   return {
-    cancel: () => { rangeInteractions.cancel(); treeDrag.cancel(); annotationInteraction.cancel(); },
-    detach: () => { detach(); lowerCanvasClickRef.current = () => undefined; rangeInteractions.cancel(); treeDrag.cancel(); annotationInteraction.cancel(); syncAnnotationHint(); },
+    cancel: () => { cancelPencilStroke(); rangeInteractions.cancel(); treeDrag.cancel(); annotationInteraction.cancel(); },
+    detach: () => { detach(); lowerCanvasClickRef.current = () => undefined; cancelPencilStroke(); rangeInteractions.cancel(); treeDrag.cancel(); annotationInteraction.cancel(); syncAnnotationHint(); },
     consumeRulerClickSuppression: () => rangeInteractions.consumeRulerClickSuppression(),
   };
 }

@@ -7,7 +7,7 @@ import { EventTable } from "../event-table.js";
 import { SignalGeneratorEditor } from "../signal-generator-editor.js";
 import { type SignalEditorProps } from "../timeline-toolbar.js";
 
-export function SignalEditor({ signal, documentEpoch, projectionGeneration, revision, cycleCount, bookmarks, enumDefinitions, history, groups, problem, onUndo, onRedo, onVisibility, onDelete, onDuplicate, onDropToGroup, onCancel, onClockPreview, clockCommands, signalCommands, onImportDiagnostic }: SignalEditorProps) {
+export function SignalEditor({ signal, documentEpoch, projectionGeneration, revision, cycleCount, bookmarks, enumDefinitions, history, groups, problem, onUndo, onRedo, onVisibility, onDelete, onDuplicate, onDropToGroup, onCancel, onClockPreview, clockCommands, signalCommands, onImportDiagnostic, waveformPencilEnabled, waveformPencilAvailable, onToggleWaveformPencil }: SignalEditorProps) {
   // #402: the Signal's *current* Group, derived from the live document
   // every render (never cached) -- the single source of truth for both
   // the "current group" check-state and the safe fallback below.
@@ -79,7 +79,7 @@ export function SignalEditor({ signal, documentEpoch, projectionGeneration, revi
         // to canonical type `binary` ("Signal") only, matching #400's own
         // scope; every other value-signal type keeps using the Event
         // Table alone exactly as before.
-        : <EventTable signal={signal} documentEpoch={documentEpoch} projectionGeneration={projectionGeneration} revision={revision} onImportDiagnostic={onImportDiagnostic} cycleCount={cycleCount} enumDefinitions={enumDefinitions} commands={signalCommands} generatorSlot={signal.type === "binary" ? <SignalGeneratorEditor signal={signal} cycleCount={cycleCount} commands={signalCommands} /> : undefined} />}
+        : <EventTable signal={signal} documentEpoch={documentEpoch} projectionGeneration={projectionGeneration} revision={revision} onImportDiagnostic={(message) => onImportDiagnostic(message)} cycleCount={cycleCount} enumDefinitions={enumDefinitions} commands={signalCommands} pencilControl={signal.type === "binary" ? <button type="button" className="waveform-pencil-bottom" data-testid="waveform-pencil-bottom" aria-label="Waveform Pencil" aria-describedby="waveform-pencil-bottom-tooltip" aria-pressed={waveformPencilEnabled} disabled={!waveformPencilAvailable} onClick={onToggleWaveformPencil}><span aria-hidden="true">✎</span><span id="waveform-pencil-bottom-tooltip" className="waveform-pencil-tooltip" role="tooltip">Waveform Pencil — Draw HIGH/LOW directly on a Binary Signal by dragging; Cycle view only</span></button> : undefined} generatorSlot={signal.type === "binary" ? <SignalGeneratorEditor signal={signal} cycleCount={cycleCount} commands={signalCommands} /> : undefined} />}
     </>}
   </section>;
 }

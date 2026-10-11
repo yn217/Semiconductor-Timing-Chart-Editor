@@ -14,6 +14,9 @@
 
 .surface-host [data-role="wave-owner"] { width: var(--wave-width, 640px); pointer-events: none; contain: layout style paint; }
 
+.surface-host[data-waveform-pencil="true"] [data-role="wave-owner"] { pointer-events: auto; cursor: crosshair; }
+.surface-host [data-role="waveform-pencil-preview"] { contain: strict; }
+
 .surface-host [data-role="wave-owner"] svg { display: block; overflow: visible; }
 
 .surface-host [data-role="wave-owner"][data-wave-error]::after { position: absolute; inset: 4px auto 4px 6px; display: flex; align-items: center; max-width: min(240px, calc(100% - 12px)); overflow: hidden; padding: 0 8px; border: 1px solid #d6a04a; border-radius: 3px; background: #fff8e8; color: #704b12; content: "Waveform unavailable"; font: 11px/1.2 system-ui, sans-serif; text-overflow: ellipsis; white-space: nowrap; }

@@ -1,6 +1,7 @@
 import type { CanonicalDocument } from "@timing-chart-v2/schema";
 import type { EditorSurfaceCommandController } from "../application/editor-surface-command-controller.js";
 import type { RibbonGroupSpec } from "../ribbon-schema.js";
+import { DsRibbonToggleButton } from "../design-system.js";
 
 export type SignalRibbonContext = Readonly<{
   document: CanonicalDocument;
@@ -9,8 +10,11 @@ export type SignalRibbonContext = Readonly<{
   compactCycleCount: number;
   canMoveUp: boolean;
   canMoveDown: boolean;
+  viewMode: "Cycle" | "Transaction" | "Split";
   onMoveUp: () => void;
   onMoveDown: () => void;
+  waveformPencilEnabled: boolean;
+  onToggleWaveformPencil: () => void;
 }>;
 
 /**
@@ -19,8 +23,13 @@ export type SignalRibbonContext = Readonly<{
  * merges them by ActiveContext.
  */
 export function buildSignalRibbonGroups(context: SignalRibbonContext): readonly RibbonGroupSpec[] {
-  const { document, range, commands, compactCycleCount, canMoveUp, canMoveDown, onMoveUp, onMoveDown } = context;
+  const { document, range, commands, compactCycleCount, canMoveUp, canMoveDown, viewMode, onMoveUp, onMoveDown, waveformPencilEnabled, onToggleWaveformPencil } = context;
   return [
+    {
+      id: "signal-editing", majorGroup: "Signal", caption: "Signal", items: [
+        { kind: "custom", id: "waveform-pencil", render: () => <DsRibbonToggleButton ariaLabel="Waveform Pencil" checked={waveformPencilEnabled} disabled={viewMode !== "Cycle"} dataTestId="waveform-pencil-ribbon" icon={<span aria-hidden="true">✎</span>} onClick={onToggleWaveformPencil} title="Draw HIGH/LOW directly on a Binary Signal by dragging; Cycle view only" size="medium">Pencil</DsRibbonToggleButton> },
+      ],
+    },
     {
       id: "timeline", majorGroup: "Time", caption: "Time", items: [
         { kind: "button", id: "row-up", icon: "i-up", label: "Up", ariaLabel: "Move selected row up", onClick: onMoveUp, disabled: !canMoveUp },

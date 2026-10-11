@@ -278,7 +278,7 @@ export function MinimalCycleView() {
   const bulkRegistrationDialogRef = useRef<HTMLElement>(null);
   const unsavedFileDialogRef = useRef<HTMLElement>(null);
   const compatibilityDialogRef = useRef<HTMLElement>(null);
-  const timelinePresentation = useTimelinePresentationState({ visualReference });
+  const timelinePresentation = useTimelinePresentationState({ visualReference, viewMode, hostRef: host, documentEpoch, activeScenarioId, revision: snapshot.revision });
   const {
     collapsedGroupIds,
     treePresentationRevision,
@@ -399,7 +399,7 @@ export function MinimalCycleView() {
     commandRegistry,
     executeBatch,
     dom: { host, viewport, ruler, gridLayer, viewportLower, rulerLower, hostLower, gridLayerLower, signalSplitRuntimeRef },
-    presentation: { getPinnedSignalIds, collapsedGroupIdsRef, applyCollapsedGroupsRef, forceUpperReprojectRef, reapplySelectionRef: presentation.reapplySelectionRef, lowerCanvasClickRef, timelineRuntimeRef, armArrowPick, snapTransactionCycle, transactionBoundaryX, transactionSourceWindow, refreshPlayhead, refreshRangeSelectionBand, publishStateRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, selectedAnnotationRef, scenarioDifferencesRef, gridEnabledRef, snapEnabledRef, treeFocusRowIdRef, suppressCanvasClickRef, menuOriginRef, transactionCyclesPerTcRef, groupStylePreviewRef },
+    presentation: { getPinnedSignalIds, collapsedGroupIdsRef, applyCollapsedGroupsRef, forceUpperReprojectRef, reapplySelectionRef: presentation.reapplySelectionRef, lowerCanvasClickRef, timelineRuntimeRef, armArrowPick, snapTransactionCycle, transactionBoundaryX, transactionSourceWindow, refreshPlayhead, refreshRangeSelectionBand, publishStateRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, selectedAnnotationRef, scenarioDifferencesRef, gridEnabledRef, snapEnabledRef, treeFocusRowIdRef, suppressCanvasClickRef, menuOriginRef, transactionCyclesPerTcRef, groupStylePreviewRef, ...timelinePresentation.waveformPencilTool.interactionPresentationProps },
     state: { setRuntimeDiagnostics, setProblem, setTreePresentationRevision, setTransactionPresentationRevision, setRangePresentationRevision, setPlayheadPresentationRevision, setTimelineRange, setRangeSelectionActive, setSelectedCycle, setBottomPinned, setPinnedBottomSelection, setPinnedSignalIds, setTreeFilter, setTreeTypeFilter, setTreeAddMenuOpen, setTreeMoreMenuOpen, setContextMenu, setArrowPickStatus, setRenameDialogOpen, setCollapsedGroups, resetCollapsedGroups, resetForDocument, toggleCollapsedGroup, closeContextMenu },
     viewMetricsOwner,
     signalSplitEnabled,
@@ -564,7 +564,7 @@ export function MinimalCycleView() {
     closeTreeMoreMenu,
   });
   const secondarySurfaces = useEditorSecondarySurfaces({
-    scenario: { model: scenarioModel, activeScenarioId, generateHandshakeScenarios: application.generateHandshakeScenarios }, document: snapshot.document,
+    ...timelinePresentation.waveformPencilTool.secondarySurfaceProps, scenario: { model: scenarioModel, activeScenarioId, generateHandshakeScenarios: application.generateHandshakeScenarios }, document: snapshot.document,
     changeSet: lastChangeSet,
     validationDiagnostics,
     validationPending,
@@ -650,8 +650,7 @@ export function MinimalCycleView() {
       showGroupBackground,
       signalTreeVisible,
       inspectorVisible,
-      ...bottomRibbonProps,
-      arrowPickStatus,
+      ...bottomRibbonProps, ...timelinePresentation.waveformPencilTool.ribbonProps, arrowPickStatus,
       selectedSignalId: annotationTargetSignalId,
       selectedInsertionSignalId: selectedSignal?.id,
       selectedGroupId: selectedGroup?.id,
