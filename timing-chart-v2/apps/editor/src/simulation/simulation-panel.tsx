@@ -17,10 +17,15 @@ function comparisonKindLabel(result: TransitionComparisonResult): string {
   return [...counts].map(([kind, count]) => `${kind}: ${count}`).join(", ");
 }
 
-function cycleNumber(numerator: bigint | undefined, denominator: bigint | undefined): number | undefined {
-  if (numerator === undefined || denominator === undefined || denominator <= 0n) return undefined;
-  const value = Number(numerator) / Number(denominator);
+function cycleNumber(cycle: { readonly numerator: bigint; readonly denominator: bigint } | undefined): number | undefined {
+  if (!cycle || cycle.denominator <= 0n) return undefined;
+  const value = Number(cycle.numerator) / Number(cycle.denominator);
   return Number.isFinite(value) ? value : undefined;
+}
+
+function exactCycleLabel(cycle: { readonly numerator: bigint; readonly denominator: bigint } | undefined): string {
+  if (!cycle || cycle.denominator <= 0n) return "—";
+  return cycle.denominator === 1n ? `${cycle.numerator} cycles` : `${cycle.numerator}/${cycle.denominator} cycles`;
 }
 
 export function SimulationPanel({ document, onNavigate }: SimulationPanelProps) {
@@ -178,16 +183,16 @@ export function SimulationPanel({ document, onNavigate }: SimulationPanelProps) 
       {results && <section aria-label="Simulation comparison results" data-testid="simulation-results">
         <strong>{results.filter((item) => item.equal).length} matched · {results.filter((item) => !item.equal).length} different/unsupported</strong>
         <ul>{results.filter((item) => !item.equal).map((result) => <li key={result.signalId}>{document.signals.find((signal) => signal.id === result.signalId)?.display.name ?? result.signalId}: {comparisonKindLabel(result)}</li>)}</ul>
-        <table><thead><tr><th>Signal</th><th>Finding</th><th>Cycle</th><th>Action</th></tr></thead><tbody>
+        <table><thead><tr><th>Signal</th><th>Finding</th><th>Specification cycle</th><th>Specification value</th><th>Simulation cycle</th><th>Simulation value</th><th>Action</th></tr></thead><tbody>
           {displayedDifferences.map(({ result, difference }, index) => {
             const signalIndex = document.signals.findIndex((signal) => signal.id === result.signalId);
             const exactCycle = difference.authoredCycle ?? difference.vcdCycle;
-            const cycle = cycleNumber(exactCycle?.numerator, exactCycle?.denominator);
+            const cycle = cycleNumber(exactCycle);
             const signal = document.signals[signalIndex];
             const problem: DocumentProblem = {
               code: `SIMULATION_${difference.kind.toUpperCase().replaceAll("-", "_")}`,
               path: signalIndex >= 0 ? `$.signals[${signalIndex}]` : "$.timeline",
-              message: difference.detail ?? `${difference.kind}: specification ${difference.authoredValue ?? "—"} at ${cycleNumber(difference.authoredCycle?.numerator, difference.authoredCycle?.denominator) ?? "—"}; simulation ${difference.vcdValue ?? "—"} at ${cycleNumber(difference.vcdCycle?.numerator, difference.vcdCycle?.denominator) ?? "—"}.`,
+              message: difference.detail ?? `${difference.kind}: specification ${difference.authoredValue ?? "—"} at ${exactCycleLabel(difference.authoredCycle)}; simulation ${difference.vcdValue ?? "—"} at ${exactCycleLabel(difference.vcdCycle)}.`,
               ...(signal ? { objectId: signal.id, objectType: "signal", objectLabel: signal.display.name } : {}),
               ...(cycle !== undefined ? { sourceCycle: cycle } : {}),
               severity: "warning",
@@ -196,7 +201,7 @@ export function SimulationPanel({ document, onNavigate }: SimulationPanelProps) 
               stage: "validate",
               recommendation: "Review the simulation waveform and authored transition at this stable Signal and source time.",
             };
-            return <tr key={`${result.signalId}:${difference.kind}:${index}`}><td>{signal?.display.name ?? result.signalId}</td><td>{difference.kind}</td><td>{cycle ?? "—"}</td><td><button type="button" onClick={() => onNavigate(problem.path, problem)}>Reveal</button></td></tr>;
+            return <tr key={`${result.signalId}:${difference.kind}:${index}`} data-simulation-finding={difference.kind}><td>{signal?.display.name ?? result.signalId}</td><td>{difference.kind}</td><td>{exactCycleLabel(difference.authoredCycle)}</td><td>{difference.authoredValue ?? "—"}</td><td>{exactCycleLabel(difference.vcdCycle)}</td><td>{difference.vcdValue ?? "—"}</td><td><button type="button" onClick={() => onNavigate(problem.path, problem)}>Reveal</button></td></tr>;
           })}
         </tbody></table>
         {results.reduce((sum, result) => sum + result.differences.length, 0) > displayedDifferences.length && <p>Showing first {displayedDifferences.length} findings.</p>}

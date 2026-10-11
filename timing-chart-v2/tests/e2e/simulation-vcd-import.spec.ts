@@ -48,6 +48,11 @@ test("imports a session-only VCD, compares by exact mapping and reveals zero-tol
   await expect(page.getByTestId("simulation-status")).toContainText("Loaded 1 variables and 2 value changes");
   await page.getByTestId("simulation-compare").click();
   await expect(page.getByTestId("simulation-results")).toContainText("timing-mismatch");
+  const timingFinding = page.locator("[data-simulation-finding='timing-mismatch']");
+  await expect(timingFinding.locator("td").nth(2)).toHaveText("4 cycles");
+  await expect(timingFinding.locator("td").nth(3)).toHaveText("10100101");
+  await expect(timingFinding.locator("td").nth(4)).toHaveText("5 cycles");
+  await expect(timingFinding.locator("td").nth(5)).toHaveText("10100101");
   await page.getByRole("button", { name: "Reveal", exact: true }).click();
   await expect(page.getByTestId("selection-status")).toHaveText("DATA");
   await expect(surface).toHaveAttribute("data-canonical-revision", baseline.revision!);
