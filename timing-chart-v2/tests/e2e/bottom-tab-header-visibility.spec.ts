@@ -23,7 +23,7 @@ test("keeps every configured Bottom tab header visible and switchable", async ({
 
   const tabList = page.getByTestId("bottom-tabs");
   const tabs = tabList.locator("[data-bottom-tab]");
-  const expectedTabs = ["Signal", "Annotation", "Bookmarks", "AI", "Problems", "JSON"];
+  const expectedTabs = ["Signal", "Annotation", "Bookmarks", "Simulation", "AI", "Problems", "JSON"];
   await expect(tabs).toHaveCount(expectedTabs.length);
   await expect(tabs.evaluateAll((items) => items.map((item) => (item as HTMLElement).dataset.bottomTab))).resolves.toEqual(expectedTabs);
   await expect(tabList).toHaveAttribute("role", "tablist");

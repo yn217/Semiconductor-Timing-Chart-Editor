@@ -4,7 +4,7 @@ import { cachedTimeGroupHierarchy, type CanonicalDocument, type SignalId } from 
 import { timeGroupOutlineHeight, type DisplayTimeMapping } from "@timing-chart-v2/projection";
 import type { TimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { presentationCycles } from "../presentation-cycles.js";
-import { displayBoundaryForGeometryKey, displayWindowForSource, sourceBoundaryGeometryPoint } from "./display-boundary.js";
+import { displayBoundaryForGeometryKey, displayWindowForSource, sourceBoundaryGeometryPoint, visibleFoldAnchor } from "./display-boundary.js";
 
 export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, mapping: DisplayTimeMapping, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock", minimumWidth = 0, viewportElement?: HTMLElement, referenceViewBoxWidth?: number, tcScale = 1): Readonly<{ scale: number; targetWidth: number; waveOriginPx: number }> {
   element.dataset.axisMode = axisMode;
@@ -212,8 +212,9 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     const displayCycle = displayCycleByBookmarkId.get(bookmark.id);
     const containingFold = displayCycle === undefined ? mapping.collapsedGroupAtSource(bookmark.start) : undefined;
     if (containingFold !== undefined && hiddenBookmarksByFold.get(containingFold.id)?.bookmarkId !== bookmark.id) continue;
-    const anchorCycle = containingFold === undefined ? displayCycle : (containingFold.end < document.timeline.cycleCount ? containingFold.end : Math.max(0, containingFold.start - 1));
-    const anchorDisplay = anchorCycle === undefined ? undefined : mapping.sourceToDisplay(anchorCycle);
+    const hiddenAnchor = containingFold === undefined ? undefined : visibleFoldAnchor(mapping, containingFold.start, containingFold.end);
+    const anchorCycle = containingFold === undefined ? displayCycle === undefined ? undefined : mapping.displayToSource(displayCycle) : hiddenAnchor?.sourceCycle;
+    const anchorDisplay = containingFold === undefined ? displayCycle : hiddenAnchor?.displayCycle;
     if (anchorCycle === undefined || anchorDisplay === undefined) continue;
     const point = sourceBoundaryGeometryPoint(geometry, axisOwnerSignalId, anchorCycle, anchorDisplay);
     if (!point) continue;
@@ -241,8 +242,9 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     overlays.push(marker);
   }
   for (const group of document.timeGroups.filter((item) => item.presentation?.collapsed)) {
-    const anchorCycle = group.end < document.timeline.cycleCount ? group.end : (group.start > 0 ? group.start - 1 : undefined);
-    const anchorDisplay = anchorCycle === undefined ? undefined : mapping.sourceToDisplay(anchorCycle);
+    const anchor = visibleFoldAnchor(mapping, group.start, group.end);
+    const anchorCycle = anchor?.sourceCycle;
+    const anchorDisplay = anchor?.displayCycle;
     if (anchorCycle === undefined || anchorDisplay === undefined) continue;
     const point = sourceBoundaryGeometryPoint(geometry, axisOwnerSignalId, anchorCycle, anchorDisplay);
     if (!point) continue;

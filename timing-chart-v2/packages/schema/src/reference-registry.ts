@@ -23,6 +23,8 @@ export type CanonicalReferenceKind =
   | "constraint.latencyRangeAcknowledge"
   | "constraint.latencyTrigger"
   | "constraint.latencyResponse"
+  | "constraint.setupHoldData"
+  | "constraint.setupHoldCapture"
   | "labelAnchor.ownerTimeGroup"
   | "signalGroup.row"
   | "spacer.ownerGroup";
@@ -32,7 +34,7 @@ export const CANONICAL_REFERENCE_KINDS = Object.freeze([
   "annotation.anchor", "annotation.ghostTraceSource", "annotation.markerSpanStart", "annotation.markerSpanEnd",
   "transaction.linkedSignal", "transaction.group", "annotationGroup.member", "timeGroup.resumeLabelAnchor",
   "constraint.handshakeRequest", "constraint.handshakeAcknowledge", "constraint.handshakeStableSignal", "constraint.handshakeReset",
-  "constraint.latencyRangeRequest", "constraint.latencyRangeAcknowledge", "constraint.latencyTrigger", "constraint.latencyResponse",
+  "constraint.latencyRangeRequest", "constraint.latencyRangeAcknowledge", "constraint.latencyTrigger", "constraint.latencyResponse", "constraint.setupHoldData", "constraint.setupHoldCapture",
   "labelAnchor.ownerTimeGroup", "signalGroup.row", "spacer.ownerGroup",
 ] as const satisfies readonly CanonicalReferenceKind[]);
 
@@ -124,6 +126,10 @@ export function constraintReferences(constraints: CanonicalDocument["constraints
       case "latency":
         push("constraint.latencyTrigger", scalar(["triggerSignalId"]));
         push("constraint.latencyResponse", scalar(["responseSignalId"]));
+        break;
+      case "setup": case "hold":
+        push("constraint.setupHoldData", scalar(["dataSignalId"]));
+        push("constraint.setupHoldCapture", scalar(["captureSignalId"]));
         break;
     }
   });

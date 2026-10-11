@@ -49,6 +49,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "document.updateLayout"; layout: Layout }>
   | Readonly<{ id: CommandId; type: "document.updateCheckSettings"; checkSettings: CheckSettings }>
   | Readonly<{ id: CommandId; type: "constraint.createLatency"; constraintId: ConstraintId; triggerSignalId: SignalId; triggerEdge: "rising" | "falling"; responseSignalId: SignalId; responseEdge: "rising" | "falling"; minCycles: number; maxCycles: number }>
+  | Readonly<{ id: CommandId; type: "constraint.createSetupHold"; constraintId: ConstraintId; kind: "setup" | "hold"; dataSignalId: SignalId; captureSignalId: SignalId; captureEdge: "rising" | "falling"; minCycles: number }>
   | Readonly<{ id: CommandId; type: "constraint.delete"; constraintId: ConstraintId }>
   | Readonly<{ id: CommandId; type: "legend.update"; legend: CanonicalDocument["legend"] }>
   | Readonly<{ id: CommandId; type: "enum.create"; definition: EnumDefinition }>

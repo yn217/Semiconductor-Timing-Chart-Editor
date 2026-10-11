@@ -77,6 +77,7 @@ export interface LegendCommandActions {
   readonly updateLegend: (legend: CanonicalDocument["legend"]) => CommandResult;
   readonly updateCheckSettings: (checkSettings: CheckSettings) => CommandResult;
   readonly createLatencyConstraint: (constraintId: ConstraintId, triggerSignalId: SignalId, triggerEdge: "rising" | "falling", responseSignalId: SignalId, responseEdge: "rising" | "falling", minCycles: number, maxCycles: number) => CommandResult;
+  readonly createSetupHoldConstraint: (constraintId: ConstraintId, kind: "setup" | "hold", dataSignalId: SignalId, captureSignalId: SignalId, captureEdge: "rising" | "falling", minCycles: number) => CommandResult;
   readonly deleteConstraint: (constraintId: ConstraintId) => CommandResult;
 }
 
@@ -214,6 +215,7 @@ export function createEditorSurfaceCommandController(input: {
     updateLegend: (legend) => dispatch<"legend.update">("legend_update", { type: "legend.update", legend }),
     updateCheckSettings: (checkSettings) => dispatch<"document.updateCheckSettings">("check_settings_update", { type: "document.updateCheckSettings", checkSettings }),
     createLatencyConstraint: (constraintId, triggerSignalId, triggerEdge, responseSignalId, responseEdge, minCycles, maxCycles) => dispatch<"constraint.createLatency">("constraint_create_latency", { type: "constraint.createLatency", constraintId, triggerSignalId, triggerEdge, responseSignalId, responseEdge, minCycles, maxCycles }),
+    createSetupHoldConstraint: (constraintId, kind, dataSignalId, captureSignalId, captureEdge, minCycles) => dispatch<"constraint.createSetupHold">("constraint_create_setup_hold", { type: "constraint.createSetupHold", constraintId, kind, dataSignalId, captureSignalId, captureEdge, minCycles }),
     deleteConstraint: (constraintId) => dispatch<"constraint.delete">("constraint_delete", { type: "constraint.delete", constraintId }),
     createSignal: (signal, targetGroupId, index) => dispatch<"signal.create">("insert_signal", { type: "signal.create", signal, targetGroupId, index }),
     createCommentRow: (commentRow, targetGroupId, index) => dispatch<"commentRow.create">("insert_comment_row", { type: "commentRow.create", commentRow, targetGroupId, index }),
