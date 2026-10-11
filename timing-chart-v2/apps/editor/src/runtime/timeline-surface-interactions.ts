@@ -197,7 +197,7 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     path?.setAttribute("d", pathData);
   };
   const pencilPointerDown = (event: PointerEvent) => {
-    if (!waveformPencilEnabledRef.current || getViewMode() !== "Cycle" || activePencilStroke) return;
+    if (event.button !== 0 || !waveformPencilEnabledRef.current || getViewMode() !== "Cycle" || activePencilStroke) return;
     const target = event.target instanceof Element ? event.target : undefined;
     if (!target || target.closest("text, [data-role='annotation-owner'], [data-role='interactive-overlay-surface']")) return;
     const owner = target.closest<HTMLElement>("[data-role='wave-owner'][data-signal-id]");
