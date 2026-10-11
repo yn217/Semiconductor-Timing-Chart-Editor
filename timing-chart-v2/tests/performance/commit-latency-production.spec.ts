@@ -314,12 +314,10 @@ test("production 100x500 Signal selection and Annotation pointermove stay within
     const row = host.locator(selector);
     await expect(row).toBeVisible();
     const id = await armFrameInteraction(page, "click", selector);
+    const samplePromise = waitForFrameInteraction(page, id);
     await row.click();
     await expect(row).toHaveAttribute("data-selected", "true");
-    await expect.poll(() => readFrameInteraction(page, id)).toBeTruthy();
-    const measured = await readFrameInteraction(page, id);
-    if (!measured) throw new Error(`Signal selection frame sample ${id} did not complete`);
-    selectionSamples.push(measured);
+    selectionSamples.push(await samplePromise);
   }
 
   const ribbonSamples: FrameInteractionSample[] = [];
@@ -327,11 +325,9 @@ test("production 100x500 Signal selection and Annotation pointermove stay within
     const tabName = index % 2 === 0 ? "View" : "Home";
     const selector = `.ribbon-tabs > button[aria-label='${tabName}']`;
     const id = await armFrameInteraction(page, "click", selector);
+    const samplePromise = waitForFrameInteraction(page, id);
     await page.locator(selector).click();
-    await expect.poll(() => readFrameInteraction(page, id)).toBeTruthy();
-    const measured = await readFrameInteraction(page, id);
-    if (!measured) throw new Error(`Ribbon switch frame sample ${id} did not complete`);
-    ribbonSamples.push(measured);
+    ribbonSamples.push(await samplePromise);
   }
 
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
@@ -340,11 +336,9 @@ test("production 100x500 Signal selection and Annotation pointermove stay within
     const command = index % 2 === 0 ? "zoom-in" : "zoom-out";
     const selector = `[aria-label='${command === "zoom-in" ? "Zoom In" : "Zoom Out"}']`;
     const id = await armFrameInteraction(page, "click", selector);
+    const samplePromise = waitForFrameInteraction(page, id);
     await page.locator(selector).click();
-    await expect.poll(() => readFrameInteraction(page, id)).toBeTruthy();
-    const measured = await readFrameInteraction(page, id);
-    if (!measured) throw new Error(`Zoom frame sample ${id} did not complete`);
-    zoomSamples.push(measured);
+    zoomSamples.push(await samplePromise);
   }
 
   const viewport = page.getByTestId("cycle-viewport");
@@ -355,10 +349,9 @@ test("production 100x500 Signal selection and Annotation pointermove stay within
   for (let index = 0; index < 10; index += 1) {
     const beforeScrollTop = await viewport.evaluate((element) => element.scrollTop);
     const id = await armFrameInteraction(page, "wheel", "[data-testid='cycle-viewport']");
+    const samplePromise = waitForFrameInteraction(page, id);
     await page.mouse.wheel(0, 80);
-    await expect.poll(() => readFrameInteraction(page, id)).toBeTruthy();
-    const measured = await readFrameInteraction(page, id);
-    if (!measured) throw new Error(`Vertical scroll frame sample ${id} did not complete`);
+    const measured = await samplePromise;
     await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(beforeScrollTop);
     scrollSamples.push(measured);
   }
@@ -378,11 +371,9 @@ test("production 100x500 Signal selection and Annotation pointermove stay within
   const pointerSamples: FrameInteractionSample[] = [];
   for (let offset = 1; offset <= 10; offset += 1) {
     const id = await armFrameInteraction(page, "pointermove", "[data-role='annotation-owner']");
+    const samplePromise = waitForFrameInteraction(page, id);
     await page.mouse.move(box!.x + 2 + offset, box!.y + 2);
-    await expect.poll(() => readFrameInteraction(page, id)).toBeTruthy();
-    const measured = await readFrameInteraction(page, id);
-    if (!measured) throw new Error(`Annotation pointermove frame sample ${id} did not complete`);
-    pointerSamples.push(measured);
+    pointerSamples.push(await samplePromise);
   }
   await annotation.dispatchEvent("pointercancel");
   await page.mouse.up();
