@@ -3,7 +3,7 @@ import { startTransition, useCallback, useEffect, useMemo, useRef } from "react"
 import type { RefObject } from "react";
 import type { CommandResult } from "@timing-chart-v2/commands";
 import { type Point } from "@timing-chart-v2/geometry";
-import { quickValueLiteral, quickValueOptions, scenarioModelFromV2, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type GroupId, type ScenarioId, type ScenarioSignalDifference, type Signal,type SignalId, type TransactionGroup, type TransactionId } from "@timing-chart-v2/schema";
+import { quickValueLiteral, quickValueOptions, scenarioModelFromV2, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type GroupId, type ScenarioId, type ScenarioSignalDifference, type SignalId, type TransactionGroup, type TransactionId } from "@timing-chart-v2/schema";
 import { ViewMetricsOwner } from "./runtime/view-metrics.js";
 import { ExportDialog } from "./export-dialog.js";
 import { nextCommandId } from "./command-id.js";
@@ -17,6 +17,7 @@ import { SaveAsDialog } from "./save-as-dialog.js";
 import { DocumentProperties } from "./document-properties.js";
 import { cursorStatusReadout } from "./cursor-status-readout.js";
 import { useDocumentEntityIndexes } from "./application/use-document-entity-indexes.js";
+import { deriveSelectionTargetProjection } from "./application/selection-target-projection.js";
 import { useEditorCommandRouter } from "./application/use-editor-command-router.js";
 import { useEditorActions } from "./application/use-editor-actions.js";
 import { useEditorDocumentFileEvents } from "./application/editor-document-file-events.js";
@@ -317,33 +318,8 @@ export function MinimalCycleView() {
   // linearly rescan every signal during each zoom render.
   const { signalById, groupById, annotationById, transactionById, bookmarkById } = useDocumentEntityIndexes(snapshot.document);
   const selectedBookmarkIdRef = useRef<BookmarkId | undefined>(undefined);
-  const referenceClockSignal = useMemo(() => {
-    const referenceClockId = snapshot.document.timeline.referenceClock;
-    return referenceClockId === undefined ? undefined : signalById.get(referenceClockId);
-  }, [signalById, snapshot.document.timeline.referenceClock]);
-  const selectedSignal = selectedId === undefined ? undefined : signalById.get(selectedId);
-  const selectedAnnotationTarget = selectedAnnotationId === undefined ? undefined : annotationById.get(selectedAnnotationId);
-  const annotationTargetSignalId = useMemo(() => {
-    // A new Annotation is saved on this Signal, and only visible rows are drawn, so a hidden Signal (display.visible === false)
-    // is never a target: fall through exactly as if nothing were selected.
-    const isTargetable = (signal: Signal | undefined): signal is Signal => signal !== undefined && signal.type !== "commentRow" && signal.display.visible !== false;
-    if (selectedSignal && isTargetable(selectedSignal)) return selectedSignal.id;
-    const annotationSignalId = selectedAnnotationTarget?.anchor?.signalId ?? selectedAnnotationTarget?.start?.signalId ?? selectedAnnotationTarget?.from?.signalId;
-    const annotationSignal = annotationSignalId === undefined ? undefined : signalById.get(annotationSignalId);
-    if (isTargetable(annotationSignal)) return annotationSignal.id;
-    if (isTargetable(referenceClockSignal)) return referenceClockSignal.id;
-    return snapshot.document.signals.find(isTargetable)?.id;
-  }, [annotationById, referenceClockSignal, selectedAnnotationTarget, selectedSignal, signalById, snapshot.document]);
-  // The Signal the selection context refers to (AI context, Ribbon): unlike annotationTargetSignalId it keeps a hidden Signal,
-  // so the AI scope checks can see and refuse edits to a hidden selection.
-  const contextSignalId = useMemo(() => {
-    const usable = (signal: Signal | undefined): signal is Signal => signal !== undefined && signal.type !== "commentRow";
-    if (usable(selectedSignal)) return selectedSignal.id;
-    const annotationSignalId = selectedAnnotationTarget?.anchor?.signalId ?? selectedAnnotationTarget?.start?.signalId ?? selectedAnnotationTarget?.from?.signalId;
-    if (annotationSignalId && signalById.get(annotationSignalId)?.type !== "commentRow") return annotationSignalId;
-    if (usable(referenceClockSignal)) return referenceClockSignal.id;
-    return snapshot.document.signals.find(usable)?.id;
-  }, [referenceClockSignal, selectedAnnotationTarget, selectedSignal, signalById, snapshot.document]);
+  const { selectedSignal, selectedAnnotationTarget, referenceClockSignal, annotationTargetSignalId, contextSignalId } =
+    deriveSelectionTargetProjection({ document: snapshot.document, signalById, annotationById, selectedSignalId: selectedId, selectedAnnotationId });
   const selectedGroup = selectedGroupId === undefined ? undefined : groupById.get(selectedGroupId);
   const selectedSpacer = selectedSpacerRef.current === undefined ? undefined : selectedGroup?.spacers?.find((spacer) => spacer.id === selectedSpacerRef.current);
   const selectedAnnotation = selectedAnnotationId === undefined ? undefined : annotationById.get(selectedAnnotationId);
