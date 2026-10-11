@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CanonicalDocument, DocumentProblem, SignalId } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, DocumentProblem, Signal, SignalId } from "@timing-chart-v2/schema";
 import { compareAuthoredTransitions, type TransitionComparisonResult } from "./transition-comparison.js";
 import { importVcdTextFile } from "./vcd-file-import.js";
 import { mapVcdVariablesToSignals, type VcdSignalMapping } from "./signal-mapping.js";
@@ -47,6 +47,7 @@ export function SimulationPanel({ document, onNavigate }: SimulationPanelProps) 
     () => document.signals.filter((signal) => signal.type !== "commentRow"),
     [document.signals],
   );
+  const signalById = useMemo(() => new Map<string, Exclude<Signal, { type: "commentRow" }>>(mappableSignals.map((signal) => [signal.id, signal as Exclude<Signal, { type: "commentRow" }>])), [mappableSignals]);
 
   const importFile = async (file: File | undefined): Promise<void> => {
     if (!file) return;
@@ -74,14 +75,19 @@ export function SimulationPanel({ document, onNavigate }: SimulationPanelProps) 
     }
   };
 
-  const selectedSignalId = (mapping: VcdSignalMapping, index: number): string | undefined => {
+  const selectedSignalId = (mapping: VcdSignalMapping, index: number): SignalId | undefined => {
     const manual = manualSignalByVariable[index];
-    if (manual && document.signals.some((signal) => signal.id === manual && signal.type !== "commentRow")) return manual;
+    if (manual) return signalById.has(manual) ? manual as SignalId : undefined;
     return mapping.status === "matched" ? mapping.signalId : undefined;
   };
 
   const compare = (): void => {
     if (!parsed || mappingResult?.status !== "ok") return;
+    const targets = mappingResult.mappings.map((mapping, index) => selectedSignalId(mapping, index)).filter((signalId): signalId is SignalId => signalId !== undefined);
+    if (new Set(targets).size !== targets.length) {
+      setStatus("Each specification Signal can map to one VCD variable. Resolve duplicate mappings before comparing.");
+      return;
+    }
     const timebase = document.timeline.physicalTimebase;
     if (!timebase) {
       setStatus("Set a Document physical reference frequency before comparing physical simulation time.");
@@ -97,8 +103,8 @@ export function SimulationPanel({ document, onNavigate }: SimulationPanelProps) 
     mappingResult.mappings.forEach((mapping, index) => {
       const signalId = selectedSignalId(mapping, index) as SignalId | undefined;
       if (!signalId) return;
-      const signal = document.signals.find((candidate) => candidate.id === signalId);
-      if (!signal || signal.type === "commentRow" || signal.type === "clock") {
+      const signal = signalById.get(signalId);
+      if (!signal || signal.type === "clock") {
         nextResults.push({ signalId, equal: false, differences: [{ kind: "unsupported-value", signalId, detail: "This comparison slice supports authored Value Signals; Clock and Comment rows require a separate projection." }] });
         return;
       }
@@ -128,6 +134,12 @@ export function SimulationPanel({ document, onNavigate }: SimulationPanelProps) 
   const unresolved = mappingResult?.status === "ok"
     ? mappingResult.mappings.filter((mapping, index) => !selectedSignalId(mapping, index))
     : [];
+  const selectedMappingCounts = new Map<string, number>();
+  if (mappingResult?.status === "ok") mappingResult.mappings.forEach((mapping, index) => {
+    const signalId = selectedSignalId(mapping, index);
+    if (signalId) selectedMappingCounts.set(signalId, (selectedMappingCounts.get(signalId) ?? 0) + 1);
+  });
+  const duplicateMappingIds = [...selectedMappingCounts].filter(([, count]) => count > 1).map(([signalId]) => signalId);
   const displayedDifferences = results?.flatMap((result) => result.differences.map((difference) => ({ result, difference }))).slice(0, 100) ?? [];
 
   return <section className="simulation-panel" data-testid="simulation-panel" aria-label="Simulation comparison">
@@ -139,6 +151,8 @@ export function SimulationPanel({ document, onNavigate }: SimulationPanelProps) 
     <p role="status" data-testid="simulation-status">{status}</p>
     {parsed && mappingResult?.status === "ok" && <>
       <p>Exact mapping uses source hierarchy when present and exact signal names otherwise. Ambiguous mappings require an explicit selection.</p>
+      {duplicateMappingIds.length > 0 && <p role="alert" data-testid="simulation-duplicate-mapping">Each specification Signal can map to one VCD variable. Resolve duplicates: {duplicateMappingIds.join(", ")}</p>}
+      <datalist id="simulation-signal-options">{mappableSignals.map((signal) => <option key={signal.id} value={signal.id} label={signal.display.name} />)}</datalist>
       <table>
         <thead><tr><th>Simulation signal</th><th>Mapping</th></tr></thead>
         <tbody>{mappingResult.mappings.map((mapping, index) => {
@@ -146,7 +160,7 @@ export function SimulationPanel({ document, onNavigate }: SimulationPanelProps) 
           const statusText = manualSignalByVariable[index] ? "Manual" : mapping.status;
           return <tr key={`${mapping.variable.code}:${mapping.variable.hierarchicalName}:${index}`} data-vcd-mapping-status={statusText}>
             <td>{mapping.variable.hierarchicalName}</td>
-            <td><select aria-label={`Map ${mapping.variable.hierarchicalName} to specification signal`} value={selected} onChange={(event) => {
+            <td><input type="text" list="simulation-signal-options" aria-label={`Map ${mapping.variable.hierarchicalName} to specification signal`} value={selected} onChange={(event) => {
               const value = event.currentTarget.value;
               setManualSignalByVariable((current) => {
                 const next = { ...current };
@@ -155,15 +169,12 @@ export function SimulationPanel({ document, onNavigate }: SimulationPanelProps) 
                 return next;
               });
               setResults(undefined);
-            }}>
-              <option value="">{mapping.status === "matched" ? `Auto: ${mapping.signalId}` : `Unresolved (${mapping.status})`}</option>
-              {mappableSignals.map((signal) => <option key={signal.id} value={signal.id}>{signal.display.name} · {signal.id}</option>)}
-            </select></td>
+            }} placeholder={mapping.status === "matched" ? `Auto: ${mapping.signalId}` : "Unresolved — enter a Signal ID"} />{manualSignalByVariable[index] && !signalById.has(manualSignalByVariable[index]!) && <small role="status">Unknown Signal ID; mapping will not be compared.</small>}</td>
           </tr>;
         })}</tbody>
       </table>
       {unresolved.length > 0 && <p role="note">{unresolved.length.toLocaleString()} signal mapping(s) must be resolved before those signals can be compared.</p>}
-      <button type="button" data-testid="simulation-compare" onClick={compare} disabled={busy}>Compare mapped signals</button>
+      <button type="button" data-testid="simulation-compare" onClick={compare} disabled={busy || duplicateMappingIds.length > 0}>Compare mapped signals</button>
       {results && <section aria-label="Simulation comparison results" data-testid="simulation-results">
         <strong>{results.filter((item) => item.equal).length} matched · {results.filter((item) => !item.equal).length} different/unsupported</strong>
         <ul>{results.filter((item) => !item.equal).map((result) => <li key={result.signalId}>{document.signals.find((signal) => signal.id === result.signalId)?.display.name ?? result.signalId}: {comparisonKindLabel(result)}</li>)}</ul>

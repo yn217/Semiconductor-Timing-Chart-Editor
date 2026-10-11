@@ -60,6 +60,14 @@ describe("parseVcdText", () => {
     await expect(parseVcdText(chunks(valid), { maxChanges: 1 })).resolves.toMatchObject({ ok: false, error: { code: "resource-limit" } });
   });
 
+  it("rejects width, expanded-value and hierarchy-depth resource amplification", async () => {
+    const header = (scope: string, width: number, change = "#0 0!") => `$timescale 1ns $end ${scope}$var wire ${width} ! q $end ${"$upscope $end ".repeat(scope.split("$scope").length - 1)}$enddefinitions $end ${change}`;
+    await expect(parseVcdText(chunks(header("$scope module m $end ", 1_000_001, "")))).resolves.toMatchObject({ ok: false, error: { code: "resource-limit" } });
+    await expect(parseVcdText(chunks(header("$scope module m $end ", 4, "#0 b0 !")), { maxExpandedValueBits: 3 })).resolves.toMatchObject({ ok: false, error: { code: "resource-limit" } });
+    const deepScope = `${"$scope module m $end ".repeat(129)}`;
+    await expect(parseVcdText(chunks(header(deepScope, 1, "")))).resolves.toMatchObject({ ok: false, error: { code: "resource-limit" } });
+  });
+
   it("honors an already-aborted signal", async () => {
     const controller = new AbortController();
     controller.abort();

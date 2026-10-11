@@ -7,6 +7,7 @@ import {
 import type { PhysicalTimebase } from "@timing-chart-v2/schema";
 import { parseBusValue, type BusValueFormat } from "@timing-chart-v2/schema";
 import type { VcdValueChange } from "./vcd-text-parser.js";
+import { VCD_RESOURCE_BUDGET } from "./vcd-resource-budget.js";
 
 /** Stable canonical identity paired with the exact VCD variable code. */
 export type MatchedSignalIdentity = Readonly<{
@@ -160,13 +161,16 @@ export function compareAuthoredTransitions(
   if (!identity.signalId || !identity.vcdCode) {
     return unsupported(identity.signalId, "A stable canonical signal ID and matched VCD code are required.");
   }
+  const width = valueShape.width ?? 1;
+  if (!Number.isSafeInteger(width) || width < 1 || width > VCD_RESOURCE_BUDGET.variableWidthBits) {
+    return unsupported(identity.signalId, `Signal width must be between 1 and ${VCD_RESOURCE_BUDGET.variableWidthBits} bits.`);
+  }
 
   const authoredEvents: NormalizedEvent[] = [];
   for (const transition of authored) {
     if (!Number.isSafeInteger(transition.cycle) || transition.cycle < 0) {
       return unsupported(identity.signalId, "Authored cycle must be a non-negative safe integer.");
     }
-    const width = valueShape.width ?? 1;
     const value = normalizeAuthoredValue(transition.value, width, valueShape.displayFormat);
     if (value === undefined) {
       return unsupported(identity.signalId, "Authored transition value is not a supported four-state scalar.");
@@ -182,7 +186,6 @@ export function compareAuthoredTransitions(
   for (const change of vcdChanges) {
     if (change.code !== identity.vcdCode) continue;
     const cycle = vcdTimestampToSourceCycles(change.timestamp, timescale, physicalTimebase);
-    const width = valueShape.width ?? 1;
     const value = change.kind === "scalar"
       ? (width === 1 ? normalizeScalar(change.value) : undefined)
       : change.value.length <= width

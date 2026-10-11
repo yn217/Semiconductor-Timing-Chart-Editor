@@ -1,5 +1,6 @@
 import { DOCUMENT_RESOURCE_BUDGET } from "@timing-chart-v2/schema";
 import type { VcdTimescale } from "@timing-chart-v2/projection";
+import { VCD_RESOURCE_BUDGET } from "./vcd-resource-budget.js";
 
 export type VcdVariable = Readonly<{
   code: string;
@@ -32,11 +33,13 @@ export type VcdTextParserOptions = Readonly<{
   maxInputBytes?: number;
   maxChanges?: number;
   maxVariables?: number;
+  maxExpandedValueBits?: number;
 }>;
 
 const DEFAULT_MAX_INPUT_BYTES = DOCUMENT_RESOURCE_BUDGET.openFileBytes;
 const DEFAULT_MAX_VARIABLES = DOCUMENT_RESOURCE_BUDGET.signalCount;
 const DEFAULT_MAX_CHANGES = DOCUMENT_RESOURCE_BUDGET.valueChangeCount;
+const DEFAULT_MAX_EXPANDED_VALUE_BITS = VCD_RESOURCE_BUDGET.expandedValueBits;
 const TIME_UNITS = new Set<VcdTimescale["unit"]>(["s", "ms", "us", "ns", "ps", "fs"]);
 
 class ParseFailure extends Error {
@@ -104,6 +107,7 @@ export async function parseVcdText(
     const maxBytes = positiveLimit(options.maxInputBytes, DEFAULT_MAX_INPUT_BYTES, "maxInputBytes");
     const maxVariables = positiveLimit(options.maxVariables, DEFAULT_MAX_VARIABLES, "maxVariables");
     const maxChanges = positiveLimit(options.maxChanges, DEFAULT_MAX_CHANGES, "maxChanges");
+    const maxExpandedValueBits = positiveLimit(options.maxExpandedValueBits, DEFAULT_MAX_EXPANDED_VALUE_BITS, "maxExpandedValueBits");
     const iterator = whitespaceTokens(chunks, options.signal, maxBytes)[Symbol.asyncIterator]();
     const readNext = async (): Promise<IteratorResult<string>> => {
       if (!options.signal) return iterator.next();
@@ -147,6 +151,7 @@ export async function parseVcdText(
     let inDefinitions = true;
     let timestamp: bigint | undefined;
     const changes: VcdValueChange[] = [];
+    let expandedValueBits = 0n;
 
     const addChange = (first: string, currentTimestamp: bigint, separatedCode?: string): void => {
       let kind: VcdValueChange["kind"];
@@ -178,8 +183,11 @@ export async function parseVcdText(
       if (kind === "vector" && variableByCode.get(code)!.every((variable) => value.length > variable.width)) {
         fail("malformed", "Vector value change exceeds the declared variable width.", code);
       }
+      const expandedWidth = variableByCode.get(code)!.reduce((total, variable) => total + BigInt(variable.width), 0n);
+      if (expandedValueBits + expandedWidth > BigInt(maxExpandedValueBits)) fail("resource-limit", `Expanded VCD values exceed the ${maxExpandedValueBits}-bit limit.`, code);
       if (changes.length >= maxChanges) fail("resource-limit", `VCD changes exceed the ${maxChanges}-change limit.`);
       changes.push({ timestamp: currentTimestamp, code, kind, value });
+      expandedValueBits += expandedWidth;
     };
 
     while (inDefinitions) {
@@ -191,6 +199,7 @@ export async function parseVcdText(
           if (!["module", "task", "function", "begin", "fork"].includes(scopeType.toLowerCase())) {
             fail("unsupported", "Unsupported VCD scope type.", scopeType);
           }
+          if (scopes.length >= VCD_RESOURCE_BUDGET.scopeDepth) fail("resource-limit", `VCD scope depth exceeds the ${VCD_RESOURCE_BUDGET.scopeDepth}-level limit.`);
           scopes.push(await next());
           await expectEnd();
           break;
@@ -206,6 +215,7 @@ export async function parseVcdText(
           if (!/^\d+$/.test(widthToken)) fail("malformed", "VCD variable width must be a positive integer.", widthToken);
           const width = Number(widthToken);
           if (!Number.isSafeInteger(width) || width < 1) fail("malformed", "VCD variable width must be a positive safe integer.", widthToken);
+          if (width > VCD_RESOURCE_BUDGET.variableWidthBits) fail("resource-limit", `VCD variable width exceeds the ${VCD_RESOURCE_BUDGET.variableWidthBits}-bit limit.`, widthToken);
           const code = await next();
           const reference = await next();
           const trailing: string[] = [];

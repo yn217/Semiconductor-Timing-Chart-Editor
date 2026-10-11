@@ -81,6 +81,18 @@ describe("compareAuthoredTransitions", () => {
     expect(differentZ.differences[0]?.kind).toBe("value-mismatch");
   });
 
+  it("rejects canonical widths above the VCD comparison expansion budget", () => {
+    const result = compareAuthoredTransitions(
+      { signalId: "signal-bus", vcdCode: "!" },
+      [{ cycle: 0, value: 0 }],
+      [vectorChange(0n, "0")],
+      ns,
+      timebase,
+      { width: Number.MAX_SAFE_INTEGER },
+    );
+    expect(result.differences[0]).toMatchObject({ kind: "unsupported-value", detail: expect.stringContaining("width") });
+  });
+
   it("matches canonical hexadecimal bus values against equal-width VCD bits", () => {
     const result = compareAuthoredTransitions(
       { signalId: "signal-data", vcdCode: "!" },
