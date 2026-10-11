@@ -74,7 +74,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     };
     const topBefore = (await readLayout(page)).top;
 
-    for (const tabName of ["Signal", "Annotation", "Bookmarks", "AI", "Problems", "JSON"]) {
+    for (const tabName of ["Signal", "Annotation", "Bookmarks", "Simulation", "AI", "Problems", "JSON"]) {
       await page.getByTestId("bottom-tabs").locator(`[data-bottom-tab='${tabName}']`).click();
       await expect(page.locator("#bottom-context-content")).toBeVisible();
       expectBottomShell(await readLayout(page));

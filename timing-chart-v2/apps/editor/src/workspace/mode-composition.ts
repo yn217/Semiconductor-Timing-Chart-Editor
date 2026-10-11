@@ -1,6 +1,6 @@
 import type { ViewMode } from "./use-workspace-ui-state.js";
 
-export type BottomTabName = "Signal" | "Annotation" | "Transaction" | "Phases" | "Linked Signals" | "Bookmarks" | "AI" | "Problems" | "JSON";
+export type BottomTabName = "Signal" | "Annotation" | "Transaction" | "Phases" | "Linked Signals" | "Bookmarks" | "Simulation" | "AI" | "Problems" | "JSON";
 
 /**
  * Per-mode composition contract (#615): everything a ViewMode decides about the workspace chrome, in one
@@ -22,7 +22,7 @@ export type ModeComposition = Readonly<{
   hasFrozenPaneResizer: boolean;
 }>;
 
-const COMMON_TAIL: readonly BottomTabName[] = ["Bookmarks", "AI", "Problems", "JSON"];
+const COMMON_TAIL: readonly BottomTabName[] = ["Bookmarks", "Simulation", "AI", "Problems", "JSON"];
 
 const COMPOSITIONS: Readonly<Record<ViewMode, ModeComposition>> = {
   Cycle: { bottomTabs: ["Signal", "Annotation", ...COMMON_TAIL], fixedLeftWidth: undefined, persistsAsDefault: true, leftRail: "signals", headerPlacement: "panel", hasLeftPaneResizer: true, hasFrozenPaneResizer: true },

@@ -7,7 +7,7 @@ import { composeMode } from "./mode-composition.js";
 export type DensityMode = "compact" | "comfortable";
 export type WorkspacePreset = "waveform" | "edit" | "review" | "transaction";
 export type TreeTypeFilter = "all" | "input" | "output" | "wire" | "comment";
-export type BottomTab = "Signal" | "Annotation" | "Transaction" | "Phases" | "Linked Signals" | "Bookmarks" | "AI" | "Problems" | "JSON";
+export type BottomTab = "Signal" | "Annotation" | "Transaction" | "Phases" | "Linked Signals" | "Bookmarks" | "Simulation" | "AI" | "Problems" | "JSON";
 export type ViewMode = "Cycle" | "Transaction" | "Split";
 export type TransactionTreeFilterMode = "all" | "grouped" | "ungrouped" | "phases" | "linked" | "visible" | "hidden" | "no-phases";
 
