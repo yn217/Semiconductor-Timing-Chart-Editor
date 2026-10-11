@@ -10,6 +10,7 @@ import type { TransactionTreeFilterMode, ActiveContext, BottomTab, TreeTypeFilte
 import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
 import type { ContextMenuState } from "./workspace/use-dialog-menu-state.js";
 import type { AIBridgeStatus } from "./ai-bridge-client.js";
+import type { TransactionBottomDraftStore } from "./runtime/transaction-bottom-draft-store.js";
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 type Ref<T> = RefObject<T | null>;
@@ -25,6 +26,8 @@ export interface EditorSecondarySurfacesInput {
   readonly projectionGeneration: number;
   readonly revision: number;
   readonly transactionPresentationRevision: number;
+  readonly transactionDraftStore: TransactionBottomDraftStore;
+  readonly transactionDraftPending: boolean;
   readonly history: HistoryState;
   readonly problem: string;
   readonly diagnostics: readonly DocumentProblem[];
