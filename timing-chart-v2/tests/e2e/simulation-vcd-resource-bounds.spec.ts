@@ -22,5 +22,7 @@ test("VCD resource bounds reject amplification and render one shared manual mapp
   await page.getByLabel("Map EXTRA to specification signal").fill("sig_data");
   await expect(page.getByTestId("simulation-duplicate-mapping")).toBeVisible();
   await expect(page.getByTestId("simulation-compare")).toBeDisabled();
+  await page.getByLabel("Map EXTRA to specification signal").fill("sig_clk");
+  await expect(page.getByTestId("simulation-duplicate-mapping")).toHaveCount(0);
   await expect(page.getByTestId("simulation-compare")).toBeEnabled();
 });
