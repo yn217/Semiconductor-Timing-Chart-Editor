@@ -15,6 +15,32 @@ const denseMove = (changes: readonly SignalValueChange[], cycleCount: number, st
 const lcg = (seed: number) => { let state = seed >>> 0; return (limit: number) => { state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state % limit; }; };
 
 describe("sparse range transforms equal the dense reference", () => {
+  it("keeps original Transition IDs when a range is duplicated before its source", () => {
+    const base = structuredClone(canonicalFixture()) as CanonicalDocument;
+    const index = base.signals.findIndex((signal) => signal.type === "bus");
+    const signal = base.signals[index]!;
+    if (signal.type !== "bus") throw new Error("fixture needs a bus signal");
+    const values: SignalValueChange[] = [
+      { id: "original_zero", start: 0, value: "0x01" },
+      { id: "original_three", start: 3, value: "0x02" },
+      { id: "original_five", start: 5, value: "0x03" },
+    ];
+    base.signals[index] = { ...signal, values };
+    const session = new CommandHistorySession(base);
+    expect(session.execute({ id: "duplicate_ids" as CommandId, type: "timeline.duplicateRange", start: 3, end: 5, at: 1 }).ok).toBe(true);
+    const result = () => (session.getSnapshot().document.signals[index] as typeof signal).values;
+    const duplicated = structuredClone(result());
+    expect(duplicated.find((change) => change.start === 1)?.id).not.toBe("original_three");
+    expect(duplicated.find((change) => change.start === 3)?.id).not.toBe("original_zero");
+    expect(duplicated.find((change) => change.start === 5)?.id).toBe("original_three");
+    expect(duplicated.find((change) => change.start === 7)?.id).toBe("original_five");
+    expect(new Set(duplicated.map((change) => change.id)).size).toBe(duplicated.length);
+    session.undo();
+    expect(result()).toEqual(values);
+    session.redo();
+    expect(result()).toEqual(duplicated);
+  });
+
   it("random duplicate/move ranges on a random sparse Signal", () => {
     const rand = lcg(855);
     let compared = 0;
