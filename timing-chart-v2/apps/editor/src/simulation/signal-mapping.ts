@@ -67,7 +67,13 @@ export function mapVcdVariablesToSignals(
     const exactCandidates = hasHierarchy
       ? byHierarchy.get(hierarchyKey(variable.scope, variable.reference)) ?? []
       : byName.get(name) ?? [];
-    const fallbackCandidates = hasHierarchy ? byIncompleteName.get(name) ?? [] : [];
+    // A complete exact hierarchy match is authoritative. Incomplete-name
+    // candidates are a fallback only when no canonical signal has that full
+    // hierarchy; otherwise an unrelated flat signal with the same name must
+    // not turn an exact match into a false ambiguity.
+    const fallbackCandidates = hasHierarchy && exactCandidates.length === 0
+      ? byIncompleteName.get(name) ?? []
+      : [];
     const candidateCount = exactCandidates.length + fallbackCandidates.length;
     candidateCountByVariable.push(candidateCount);
     uniqueCandidateByVariable.push(candidateCount === 1 ? (exactCandidates[0] ?? fallbackCandidates[0]) : undefined);

@@ -32,6 +32,14 @@ describe("mapVcdVariablesToSignals", () => {
     ]);
   });
 
+  it("prefers an exact complete hierarchy match over same-name incomplete candidates", () => {
+    const result = mapVcdVariablesToSignals(
+      [signal("exact", "ready", ["top", "cpu"]), signal("flat", "ready", [])],
+      [variable("ready", ["top", "cpu"])],
+    );
+    expect(result).toMatchObject({ status: "ok", mappings: [{ status: "matched", signalId: "exact" }] });
+  });
+
   it("leaves duplicate canonical and duplicate VCD candidates unresolved", () => {
     const result = mapVcdVariablesToSignals(
       [signal("a", "ready", ["top", "a"]), signal("b", "ready", ["top", "a"]), signal("c", "shared", [])],
