@@ -278,7 +278,7 @@ export function MinimalCycleView() {
   const bulkRegistrationDialogRef = useRef<HTMLElement>(null);
   const unsavedFileDialogRef = useRef<HTMLElement>(null);
   const compatibilityDialogRef = useRef<HTMLElement>(null);
-  const timelinePresentation = useTimelinePresentationState({ visualReference });
+  const timelinePresentation = useTimelinePresentationState({ visualReference, viewMode, hostRef: host, documentEpoch, activeScenarioId, revision: snapshot.revision });
   const {
     collapsedGroupIds,
     treePresentationRevision,
@@ -381,7 +381,7 @@ export function MinimalCycleView() {
     signalSplitRatio,
     viewMode,
   });
-  useViewModeTransition(viewMode, forceUpperReprojectRef, timelineRuntimeRef);
+  useViewModeTransition(viewMode, forceUpperReprojectRef, timelineRuntimeRef, waveformPencil);
   useOverlayPresentationRefresh({
     refreshPlayhead, refreshRangeSelectionBand, host, selectedCycle, playheadPresentationRevision, rangePresentationRevision,
     timelineRange, rangeSelectionActive, zoom, leftPaneWidth, frozenPaneWidth, inspectorWidth, selectedTransactionId,
@@ -539,7 +539,7 @@ export function MinimalCycleView() {
     closeTreeMoreMenu,
   });
   const secondarySurfaces = useEditorSecondarySurfaces({
-    scenario: { model: scenarioModel, activeScenarioId, generateHandshakeScenarios: application.generateHandshakeScenarios }, document: snapshot.document,
+    ...timelinePresentation.waveformPencilTool.secondarySurfaceProps, scenario: { model: scenarioModel, activeScenarioId, generateHandshakeScenarios: application.generateHandshakeScenarios }, document: snapshot.document,
     changeSet: lastChangeSet,
     validationDiagnostics,
     validationPending,
@@ -627,8 +627,7 @@ export function MinimalCycleView() {
       showGroupBackground,
       signalTreeVisible,
       inspectorVisible,
-      ...bottomRibbonProps,
-      arrowPickStatus,
+      ...bottomRibbonProps, ...timelinePresentation.waveformPencilTool.ribbonProps, arrowPickStatus,
       selectedSignalId: annotationTargetSignalId,
       selectedInsertionSignalId: selectedSignal?.id,
       selectedGroupId: selectedGroup?.id,

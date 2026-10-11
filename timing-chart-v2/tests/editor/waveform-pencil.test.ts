@@ -1,9 +1,26 @@
 import { describe, expect, it } from "vitest";
 import { applyPencilStroke, pencilLevelAtY, pencilTrajectory, type PencilLevel } from "../../apps/editor/src/waveform-pencil.js";
+import { createWaveformPencilMode } from "../../apps/editor/src/waveform-pencil-mode.js";
 
 const change = (start: number, value: number | string, id?: string) => ({ ...(id === undefined ? {} : { id }), start, value }) as never;
 const strokes = (entries: readonly (readonly [number, PencilLevel])[]) => new Map<number, PencilLevel>(entries);
 const view = (values: readonly { start: number; value: string | number }[] | undefined) => values?.map((item) => [item.start, item.value]);
+
+describe("Waveform Pencil mode availability", () => {
+  it("clears active mode and prevents reactivation outside Cycle view", () => {
+    const mode = createWaveformPencilMode();
+    mode.set(true);
+    expect(mode.get()).toBe(true);
+    mode.setAvailable(false);
+    expect(mode.get()).toBe(false);
+    expect(mode.getAvailable()).toBe(false);
+    mode.set(true);
+    expect(mode.get()).toBe(false);
+    mode.setAvailable(true);
+    mode.set(true);
+    expect(mode.get()).toBe(true);
+  });
+});
 
 describe("Waveform Pencil level", () => {
   it("draws HIGH in the upper half of the row and LOW in the lower half", () => {

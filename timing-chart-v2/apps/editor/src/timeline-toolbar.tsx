@@ -194,4 +194,7 @@ export interface SignalEditorProps {
   readonly clockCommands: Pick<SignalEditorCommandActions, "updateClockGenerator" | "updateEdgeCounter">;
   readonly signalCommands: SignalEditorCommandActions;
   readonly onImportDiagnostic: (message: string) => void;
+  readonly waveformPencilEnabled: boolean;
+  readonly waveformPencilAvailable: boolean;
+  readonly onToggleWaveformPencil: () => void;
 }

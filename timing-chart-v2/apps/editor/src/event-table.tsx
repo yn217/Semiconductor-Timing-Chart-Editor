@@ -47,7 +47,7 @@ function transitionDraftAt(signal: ValueSignal, cycle: number): { readonly value
   return { value: String(existing.value), comment: existing.comment ?? "", format: existing.displayFormat ?? "" };
 }
 
-export function EventTable({ signal, documentEpoch, projectionGeneration, revision, onImportDiagnostic, cycleCount, enumDefinitions, commands, generatorSlot }: { readonly signal: ValueSignal; readonly documentEpoch: number; readonly projectionGeneration: number; readonly revision: number; readonly onImportDiagnostic: (message: string) => void; readonly cycleCount: number; readonly enumDefinitions?: CanonicalDocument["enumDefinitions"]; readonly commands: Pick<SignalEditorCommandActions, "replaceValues" | "updateValue" | "replaceValue" | "removeValue">; readonly generatorSlot?: ReactNode }) {
+export function EventTable({ signal, documentEpoch, projectionGeneration, revision, onImportDiagnostic, cycleCount, enumDefinitions, commands, generatorSlot, pencilControl }: { readonly signal: ValueSignal; readonly documentEpoch: number; readonly projectionGeneration: number; readonly revision: number; readonly onImportDiagnostic: (message: string) => void; readonly cycleCount: number; readonly enumDefinitions?: CanonicalDocument["enumDefinitions"]; readonly commands: Pick<SignalEditorCommandActions, "replaceValues" | "updateValue" | "replaceValue" | "removeValue">; readonly generatorSlot?: ReactNode; readonly pencilControl?: ReactNode }) {
   const [start, setStart] = useState(0);
   const initialDraft = transitionDraftAt(signal, 0);
   const [value, setValue] = useState(initialDraft?.value ?? defaultEventValue(signal));
@@ -315,6 +315,7 @@ export function EventTable({ signal, documentEpoch, projectionGeneration, revisi
             fuller root-cause note; the same bug pattern applied here too. */}
         <div className="transition-form-row">
           <label className="field-inline transition-field-start"><span>Start (cycle)</span><input aria-label="New event start" type="number" min="0" max={cycleCount - 1} step="1" value={start} onChange={(event) => selectStart(Number(event.target.value))} /></label>
+          {pencilControl}
           {/* Value Editor Policy pass: this Value field is no longer
               unconditionally free text -- `ValueEditorControl` (shared
               with a Transition row's own inline editor) resolves the

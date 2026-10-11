@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { CommandHistorySession } from "@timing-chart-v2/history";
 import { DOCUMENT_RESOURCE_BUDGET, type AnnotationId, type CommandId, type GroupId, type Signal, type SignalId, type TransactionId } from "@timing-chart-v2/schema";
 import { deterministicMockAIProposalProvider } from "../../apps/editor/src/ai-proposal-provider.js";
+import { buildCommandRejectionDiagnostics } from "../../apps/editor/src/command-diagnostics.js";
+import { applyPencilStroke } from "../../apps/editor/src/waveform-pencil.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 const commandId = (value: string) => value as CommandId;
@@ -67,10 +69,27 @@ describe("resource budget entity boundaries", () => {
     expect(accepted).toMatchObject({ ok: true });
     const atLimit = session.getSnapshot();
     const beforeHistory = session.historyState();
-    const rejected = session.execute({ id: commandId("budget_value_overflow"), type: "signal.replaceValues", signalId: "budget_target" as SignalId, values: [{ start: 0, value: 0 }, { start: 1, value: 1 }, { start: 2, value: 0 }] });
+    const target = atLimit.document.signals.find((signal) => signal.id === "budget_target");
+    if (!target || target.type !== "binary") throw new Error("Expected the binary Pencil target signal.");
+    const pencilValues = applyPencilStroke(target.values, document.timeline.cycleCount, new Map([[1, 1], [2, 0]]));
+    expect(pencilValues?.map(({ start, value }) => [start, value])).toEqual([[0, 0], [1, 1], [2, 0], [3, 1]]);
+    const command = { id: commandId("budget_value_overflow"), type: "signal.replaceValues" as const, signalId: target.id, values: pencilValues! };
+    const rejected = session.execute(command);
     expect(rejected).toMatchObject({ ok: false, reason: "invalid", problems: [expect.objectContaining({ code: "RESOURCE_LIMIT_EXCEEDED", path: "$.signals[*].values|$.signals[*].enable" })] });
+    expect(buildCommandRejectionDiagnostics({ result: rejected as Extract<typeof rejected, { ok: false }>, operation: command.type, commandId: command.id, target: { objectType: "signal", objectId: target.id } })).toEqual([
+      expect.objectContaining({
+        message: expect.stringMatching(/signal\.replaceValues rejected \(invalid\).*valueChanges.*1,000,002.*1,000,000/i),
+        operation: "signal.replaceValues",
+        commandId: command.id,
+        objectType: "signal",
+        objectId: target.id,
+        severity: "error",
+        source: "command",
+        stage: "commit",
+      }),
+    ]);
     expect(session.getSnapshot()).toBe(atLimit);
-    expect(session.historyState()).toEqual({ ...beforeHistory, dirty: true });
+    expect(session.historyState()).toEqual(beforeHistory);
     expect(session.undo().ok).toBe(true);
     expect(session.redo().ok).toBe(true);
     expect(session.getSnapshot().document.signals.find((signal) => signal.id === "budget_target")?.values).toHaveLength(2);
