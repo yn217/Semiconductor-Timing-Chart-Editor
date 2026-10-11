@@ -79,6 +79,7 @@ export function clampTimelineZoom(zoom: number): number {
 export function createTimelineViewportRuntime(context: TimelineViewportRuntimeContext): TimelineViewportRuntime {
   let attached = false;
   let disposed = false;
+  let navigationGeneration = 0;
   let documentEpoch = context.document.getDocumentEpoch();
   let resizeObserver: ResizeObserver | undefined;
   let zoomPresentationApplied = false;
@@ -115,9 +116,9 @@ export function createTimelineViewportRuntime(context: TimelineViewportRuntimeCo
         resizeObserver.observe(viewport);
       }
     },
-    detach: () => { resizeObserver?.disconnect(); resizeObserver = undefined; attached = false; },
-    dispose: () => { resizeObserver?.disconnect(); resizeObserver = undefined; attached = false; disposed = true; },
-    onDocumentEpochChanged: (epoch) => { assertActive(); documentEpoch = epoch; },
+    detach: () => { navigationGeneration += 1; resizeObserver?.disconnect(); resizeObserver = undefined; attached = false; },
+    dispose: () => { navigationGeneration += 1; resizeObserver?.disconnect(); resizeObserver = undefined; attached = false; disposed = true; },
+    onDocumentEpochChanged: (epoch) => { assertActive(); navigationGeneration += 1; documentEpoch = epoch; },
     zoomIn: () => { assertActive(); if (!attached) return; context.viewport.setZoom(clampTimelineZoom(context.viewport.getZoom() + 0.1)); render("zoom-in"); },
     zoomOut: () => { assertActive(); if (!attached) return; context.viewport.setZoom(clampTimelineZoom(context.viewport.getZoom() - 0.1)); render("zoom-out"); },
     setZoom: (zoom) => {
@@ -161,12 +162,14 @@ export function createTimelineViewportRuntime(context: TimelineViewportRuntimeCo
     navigateToCycle: (cycle) => {
       assertActive();
       if (!attached) return;
+      const requestGeneration = ++navigationGeneration;
       const requestEpoch = documentEpoch;
       const document = context.document.getSnapshot();
       let retries = 0;
       const maxRetries = 8;
       const isRequestCurrent = () => attached
         && !disposed
+        && navigationGeneration === requestGeneration
         && documentEpoch === requestEpoch
         && context.lifecycle.isCurrentEpoch(requestEpoch);
       const move = () => {
