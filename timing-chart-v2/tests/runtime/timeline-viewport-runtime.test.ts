@@ -87,6 +87,26 @@ describe("TimelineViewportRuntime", () => {
     expect(runtimeContext.geometry.clearRequestedSourceCycle).not.toHaveBeenCalled();
   });
 
+  it("does not let an older cycle reveal overwrite a newer reveal in the same document", async () => {
+    let resolveFirstIdle!: () => void;
+    const runtimeContext = context();
+    runtimeContext.viewport.getMetrics = () => ({ width: 100, leftInset: 0 });
+    runtimeContext.geometry.sourceBoundaryToLocalX = (_document, cycle) => cycle === 10 ? undefined : cycle * 10;
+    runtimeContext.render.waitForRendererIdle = () => new Promise<void>((resolve) => { resolveFirstIdle = resolve; });
+    const runtime = createTimelineViewportRuntime(runtimeContext);
+    runtime.attach();
+
+    runtime.navigateToCycle(10);
+    runtime.navigateToCycle(20);
+    expect(runtimeContext.viewport.getScrollState().left).toBe(165);
+
+    runtimeContext.geometry.sourceBoundaryToLocalX = (_document, cycle) => cycle * 10;
+    resolveFirstIdle();
+    await Promise.resolve();
+
+    expect(runtimeContext.viewport.getScrollState().left).toBe(165);
+  });
+
   it("uses the shared TimeAxisMetrics zoom for bookmark navigation", () => {
     const runtimeContext = context();
     runtimeContext.geometry.sourceBoundaryToLocalX = (_document, cycle) => cycle * 30;
