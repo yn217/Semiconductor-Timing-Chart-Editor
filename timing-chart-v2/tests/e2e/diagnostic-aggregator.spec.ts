@@ -41,10 +41,23 @@ test("surfaces an Open failure in the Problems panel", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const before = {
+    title: await page.locator(".app-titlebar h1").textContent(),
+    revision: await host.getAttribute("data-canonical-revision"),
+    history: await host.getAttribute("data-history-depth"),
+    signalIds: await host.locator("[data-role='wave-owner'][data-signal-id]").evaluateAll((owners) => owners.map((owner) => owner.getAttribute("data-signal-id"))),
+  };
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "bad.tcd", mimeType: "application/json", buffer: Buffer.from("{ not json") });
   await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
   await expect(page.getByTestId("problems-panel")).toContainText("JSON_SYNTAX");
   await expect(page.getByTestId("problems-panel")).toContainText("$@");
+  // A rejected file must report the parse failure without replacing the
+  // currently open document or changing its semantic/history state.
+  await expect(page.locator(".app-titlebar h1")).toHaveText(before.title!);
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(host).toHaveAttribute("data-history-depth", before.history!);
+  expect(await host.locator("[data-role='wave-owner'][data-signal-id]").evaluateAll((owners) => owners.map((owner) => owner.getAttribute("data-signal-id")))).toEqual(before.signalIds);
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
 });
 
 test("rejects an unsupported clock phase on Open before rendering and keeps the current rows intact", async ({ page }) => {
