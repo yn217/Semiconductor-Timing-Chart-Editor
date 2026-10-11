@@ -146,7 +146,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, cyclesPerTc, on
     ...buildCommonRibbonGroups({ document, history, viewMode, activeContext, commands, clipboardStatus, clipboardAvailable, hasSelectedClipboard, hasDeletableSelection, hasSelectableSignals, gridEnabled, snapEnabled, rulerEnabled, minimapEnabled, onNew, onOpen, onSave, onSaveAs, onUndo, onRedo, onCut, onCopy, onPaste, onDelete, onDuplicate, onSelectAll, onZoom, onSetZoom, onFitAll, onFitSelection, onToggleGrid, onToggleSnap, onToggleRuler, onToggleMinimap }),
     ...buildTransactionRibbonGroups({ document, range, commands, selectedTransactionId, selectedTransaction, onTransactionCreated, viewMode, activeContext, cyclesPerTc, onCyclesPerTcChange }),
   ];
-  const signalRibbonGroups: readonly RibbonGroupSpec[] = buildSignalRibbonGroups({ document, range, commands, compactCycleCount, canMoveUp, canMoveDown, onMoveUp, onMoveDown });
+  const signalRibbonGroups: readonly RibbonGroupSpec[] = buildSignalRibbonGroups({ document, range, commands, compactCycleCount, canMoveUp, canMoveDown, viewMode, onMoveUp, onMoveDown });
   // Transaction group now lives in commonRibbonGroups (see the scoped-
   // decision comment above) -- no Transaction-only group exists yet, but
   // the bucket stays wired through composeRibbon so a real one (Phase/

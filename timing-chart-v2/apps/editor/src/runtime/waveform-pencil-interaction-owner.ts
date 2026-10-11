@@ -146,7 +146,7 @@ export class WaveformPencilInteractionOwner {
   /** Esc: cancel an active stroke, otherwise leave drawing mode for Select. Returns true when the key was consumed by a stroke. */
   onKeyDown = (event: KeyboardEvent): void => {
     if (event.key !== "Escape" || event.defaultPrevented) return;
-    if (this.#stroke) { event.stopImmediatePropagation(); event.preventDefault(); this.cancel(); return; }
+    if (this.#stroke) { event.stopImmediatePropagation(); event.preventDefault(); this.cancel(); this.context.mode.set(false); return; }
     const target = event.target instanceof Element ? event.target : null;
     if (target?.closest("input, textarea, select, [contenteditable='true'], [role='dialog'], [role='menu']")) return;
     if (this.context.mode.get()) this.context.mode.set(false);

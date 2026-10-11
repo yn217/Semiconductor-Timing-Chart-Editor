@@ -404,6 +404,11 @@
 .transition-form-row .transition-field-start { flex: 0 0 auto; }
 /* #761: the caption keeps its natural width; the numeric input gets a readable 76px (>=64px) so 3-5 digit cycles fit. */
 .transition-form-row .transition-field-start > input { flex: 0 0 76px; width: 76px; min-width: 64px; }
+.waveform-pencil-bottom { position: relative; display: inline-grid; flex: 0 0 29px; align-self: center; width: 29px; height: 29px; padding: 0; place-items: center; border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; font-size: 17px; line-height: 1; cursor: pointer; }
+.waveform-pencil-bottom[aria-pressed="true"] { border-color: #2c78bb; background: #e4f1ff; color: #145d9e; box-shadow: inset 0 0 0 1px #2c78bb; }
+.waveform-pencil-bottom:focus-visible { outline: 2px solid #1675ca; outline-offset: 2px; }
+.waveform-pencil-tooltip { position: absolute; z-index: 30; left: 50%; bottom: calc(100% + 5px); display: none; width: max-content; max-width: min(320px, 75vw); padding: 5px 8px; border: 1px solid #66758a; border-radius: 3px; background: #263548; color: white; font: 11px/1.3 "Segoe UI", sans-serif; text-align: left; white-space: normal; transform: translateX(-50%); pointer-events: none; }
+.waveform-pencil-bottom:hover .waveform-pencil-tooltip, .waveform-pencil-bottom:focus-visible .waveform-pencil-tooltip { display: block; }
 .transition-form-row .transition-field-value { flex: 0 1 120px; }
 .transition-form-row .transition-field-comment { flex: 2 1 auto; }
 .transition-form-actions { display: flex; gap: 6px; margin-top: 0; }
@@ -610,13 +615,6 @@
 .bottom-settings-button { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; min-width: 28px; padding: 0; border: 1px solid #c3ceda; border-radius: 3px; background: #fff; color: #405c78; cursor: pointer; }
 .bottom-settings-button svg { width: 17px; height: 17px; flex: 0 0 17px; }
 .bottom-settings-button[aria-expanded="true"] { border-color: #3b82d0; background: #eef6ff; }
-.bottom-tabs > .bottom-waveform-pencil-anchor { position: relative; display: inline-flex; flex: 0 0 auto; align-items: center; align-self: center; margin-left: auto; margin-right: 6px; }
-.bottom-tabs .bottom-waveform-pencil { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; min-width: 28px; padding: 0; border: 1px solid #c3ceda; border-radius: 3px; background: #fff; color: #405c78; cursor: pointer; }
-.bottom-tabs .bottom-waveform-pencil svg { width: 17px; height: 17px; flex: 0 0 17px; }
-.bottom-tabs .bottom-waveform-pencil.active, .bottom-tabs .bottom-waveform-pencil[aria-pressed="true"] { border-color: #3b82d0; background: #dbeafe; color: #086fd2; }
-.bottom-waveform-pencil-tip { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; display: none; width: max-content; max-width: 260px; padding: 5px 8px; border: 1px solid #94a3b8; border-radius: 3px; background: #1e293b; color: #fff; font-size: 12px; line-height: 1.35; pointer-events: none; }
-.bottom-waveform-pencil-anchor:hover .bottom-waveform-pencil-tip, .bottom-waveform-pencil-anchor:focus-within .bottom-waveform-pencil-tip { display: block; }
-.bottom-tabs > .bottom-waveform-pencil-anchor + .bottom-settings-anchor { flex: 0 0 auto; margin-left: 0; }
 .bottom-settings-popover { position: absolute; z-index: 40; top: 30px; right: 0; display: flex; flex-direction: column; gap: 8px; width: min(320px, calc(100vw - 24px)); padding: 12px; border: 1px solid #b8c7d8; border-radius: 3px; background: #fff; color: #25384f; box-shadow: 0 4px 12px rgb(30 55 80 / 18%); }
 .bottom-settings-popover[hidden] { display: none; }
 .bottom-settings-popover > strong { font-size: 12px; }

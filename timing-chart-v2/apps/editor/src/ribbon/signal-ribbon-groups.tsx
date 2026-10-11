@@ -10,6 +10,7 @@ export type SignalRibbonContext = Readonly<{
   compactCycleCount: number;
   canMoveUp: boolean;
   canMoveDown: boolean;
+  viewMode: "Cycle" | "Transaction" | "Split";
   onMoveUp: () => void;
   onMoveDown: () => void;
 }>;
@@ -20,7 +21,7 @@ export type SignalRibbonContext = Readonly<{
  * merges them by ActiveContext.
  */
 export function buildSignalRibbonGroups(context: SignalRibbonContext): readonly RibbonGroupSpec[] {
-  const { document, range, commands, compactCycleCount, canMoveUp, canMoveDown, onMoveUp, onMoveDown } = context;
+  const { document, range, commands, compactCycleCount, canMoveUp, canMoveDown, viewMode, onMoveUp, onMoveDown } = context;
   return [
     {
       id: "draw", majorGroup: "Draw", caption: "Draw", items: [

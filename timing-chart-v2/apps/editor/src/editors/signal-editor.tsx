@@ -6,6 +6,7 @@ import { CommentRowEditor } from "../comment-row-editor.js";
 import { EventTable } from "../event-table.js";
 import { SignalGeneratorEditor } from "../signal-generator-editor.js";
 import { type SignalEditorProps } from "../timeline-toolbar.js";
+import { BottomWaveformPencilButton } from "../waveform-pencil-mode.js";
 
 export function SignalEditor({ signal, documentEpoch, projectionGeneration, revision, cycleCount, bookmarks, enumDefinitions, history, groups, problem, onUndo, onRedo, onVisibility, onDelete, onDuplicate, onDropToGroup, onCancel, onClockPreview, clockCommands, signalCommands, onImportDiagnostic }: SignalEditorProps) {
   // #402: the Signal's *current* Group, derived from the live document
@@ -79,7 +80,7 @@ export function SignalEditor({ signal, documentEpoch, projectionGeneration, revi
         // to canonical type `binary` ("Signal") only, matching #400's own
         // scope; every other value-signal type keeps using the Event
         // Table alone exactly as before.
-        : <EventTable signal={signal} documentEpoch={documentEpoch} projectionGeneration={projectionGeneration} revision={revision} onImportDiagnostic={onImportDiagnostic} cycleCount={cycleCount} enumDefinitions={enumDefinitions} commands={signalCommands} generatorSlot={signal.type === "binary" ? <SignalGeneratorEditor signal={signal} cycleCount={cycleCount} commands={signalCommands} /> : undefined} />}
+        : <EventTable signal={signal} documentEpoch={documentEpoch} projectionGeneration={projectionGeneration} revision={revision} onImportDiagnostic={(message) => onImportDiagnostic(message)} cycleCount={cycleCount} enumDefinitions={enumDefinitions} commands={signalCommands} pencilControl={signal.type === "binary" ? <BottomWaveformPencilButton /> : undefined} generatorSlot={signal.type === "binary" ? <SignalGeneratorEditor signal={signal} cycleCount={cycleCount} commands={signalCommands} /> : undefined} />}
     </>}
   </section>;
 }
