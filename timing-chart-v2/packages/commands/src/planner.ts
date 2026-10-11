@@ -637,35 +637,37 @@ function busValueWidthProblem(change: SignalValueChange, format: BusValueFormat 
 
 /** Sparse equivalent of the old dense per-cycle rebuild (#855): the output is described as source intervals placed at output offsets;
  * the state only changes at an interval start or at a source change point inside it, so only those breakpoints are visited. */
-type RangeSegment = Readonly<{ from: number; to: number; outputStart: number }>;
+type RangeSegment = Readonly<{ from: number; to: number; outputStart: number; copied?: boolean }>;
 function sparseChangesFromSegments(changes: readonly SignalValueChange[], segments: readonly RangeSegment[]): SignalValueChange[] {
   const result: SignalValueChange[] = [];
   let previous: SignalValueChange | undefined;
-  // A change copied into the output (range duplicate / move) keeps its ID the first time; each further copy gets a derived unique one.
+  // Only the original transition boundary keeps its ID; copies and resumed interval states get new identities.
   const usedIds = new Set<string>();
   const reservedIds = new Set(changes.flatMap((change) => change.id ? [change.id] : []));
-  const idFor = (state: SignalValueChange): { readonly id: string } | Record<string, never> => {
+  const idFor = (state: SignalValueChange, originalBoundary: boolean): { readonly id: string } | Record<string, never> => {
     if (state.id === undefined) return {};
     let id = state.id;
-    let copy = 0;
+    let copy = originalBoundary ? 0 : 1;
+    if (copy > 0) id = `${state.id}_c${copy}`;
     while (usedIds.has(id) || (copy > 0 && reservedIds.has(id))) { copy += 1; id = `${state.id}_c${copy}`; }
     usedIds.add(id);
     return { id };
   };
-  const visit = (start: number, state: SignalValueChange | undefined) => {
-    if (state && !sameValue(state, previous)) result.push({ ...idFor(state), start, value: state.value, ...(state.displayFormat === undefined ? {} : { displayFormat: state.displayFormat }), ...(state.comment === undefined ? {} : { comment: state.comment }) });
+  const visit = (start: number, state: SignalValueChange | undefined, originalBoundary: boolean) => {
+    if (state && !sameValue(state, previous)) result.push({ ...idFor(state, originalBoundary), start, value: state.value, ...(state.displayFormat === undefined ? {} : { displayFormat: state.displayFormat }), ...(state.comment === undefined ? {} : { comment: state.comment }) });
     previous = state;
   };
   for (const segment of [...segments].filter((item) => item.to > item.from).sort((left, right) => left.outputStart - right.outputStart)) {
-    visit(segment.outputStart, valueAt(changes, segment.from));
-    for (const change of changes) if (change.start > segment.from && change.start < segment.to) visit(segment.outputStart + (change.start - segment.from), change);
+    const initial = valueAt(changes, segment.from);
+    visit(segment.outputStart, initial, !segment.copied && initial?.start === segment.from);
+    for (const change of changes) if (change.start > segment.from && change.start < segment.to) visit(segment.outputStart + (change.start - segment.from), change, !segment.copied);
   }
   return result;
 }
 
 function duplicateChanges(changes: readonly SignalValueChange[], cycleCount: number, start: number, end: number, at: number): SignalValueChange[] {
   const length = end - start;
-  return sparseChangesFromSegments(changes, [{ from: 0, to: at, outputStart: 0 }, { from: start, to: end, outputStart: at }, { from: at, to: cycleCount, outputStart: at + length }]);
+  return sparseChangesFromSegments(changes, [{ from: 0, to: at, outputStart: 0 }, { from: start, to: end, outputStart: at, copied: true }, { from: at, to: cycleCount, outputStart: at + length }]);
 }
 
 function moveCycleIndex(cycle: number, start: number, end: number, to: number): number {
