@@ -232,21 +232,23 @@ describe("canonical stable-ID reference registry", () => {
         { id: "constraint_handshake" as ConstraintId, type: "handshake", data: { requestSignalId: signalId, acknowledgeSignalId: "missing_ack", stableSignalIds: ["missing_stable"] } },
         { id: "constraint_latency_range" as ConstraintId, type: "latency-range", data: { requestSignalId: "missing_req", acknowledgeSignalId: signalId } },
         { id: "constraint_latency" as ConstraintId, type: "latency", data: { triggerSignalId: signalId, responseSignalId: "missing_response" } },
+        { id: "constraint_setup_hold" as ConstraintId, type: "setup", data: { dataSignalId: signalId, captureSignalId: "missing_capture" } },
       ],
       enumDefinitions: [{ id: "enum_registry", name: "Mode", entries: [{ value: 0, label: "Idle" }] }],
       signals: base.signals.map((signal) => signal.id === signalId ? { ...signal, enumId: "enum_registry" } : signal),
     };
 
     const references = canonicalReferences(document);
-    for (const kind of ["signal.enum", "annotationGroup.member", "timeGroup.resumeLabelAnchor", "transaction.group", "constraint.handshakeRequest", "constraint.handshakeAcknowledge", "constraint.handshakeStableSignal", "constraint.latencyRangeRequest", "constraint.latencyRangeAcknowledge", "constraint.latencyTrigger", "constraint.latencyResponse"] as const) {
+    for (const kind of ["signal.enum", "annotationGroup.member", "timeGroup.resumeLabelAnchor", "transaction.group", "constraint.handshakeRequest", "constraint.handshakeAcknowledge", "constraint.handshakeStableSignal", "constraint.latencyRangeRequest", "constraint.latencyRangeAcknowledge", "constraint.latencyTrigger", "constraint.latencyResponse", "constraint.setupHoldData", "constraint.setupHoldCapture"] as const) {
       expect(references.some((reference) => reference.kind === kind), kind).toBe(true);
     }
-    expect(referencesToSignal(document, signalId).filter((reference) => reference.kind.startsWith("constraint."))).toHaveLength(3);
+    expect(referencesToSignal(document, signalId).filter((reference) => reference.kind.startsWith("constraint."))).toHaveLength(4);
     expect(validateCanonicalDocument(document)).toEqual(expect.arrayContaining([
       expect.objectContaining({ code: "MISSING_CROSS_REFERENCE", path: "$.constraints[0].data.acknowledgeSignalId" }),
       expect.objectContaining({ code: "MISSING_CROSS_REFERENCE", path: "$.constraints[0].data.stableSignalIds[0]" }),
       expect.objectContaining({ code: "MISSING_CROSS_REFERENCE", path: "$.constraints[1].data.requestSignalId" }),
       expect.objectContaining({ code: "MISSING_CROSS_REFERENCE", path: "$.constraints[2].data.responseSignalId" }),
+      expect.objectContaining({ code: "MISSING_CROSS_REFERENCE", path: "$.constraints[3].data.captureSignalId" }),
     ]));
     const withoutConstraintAndMembership: CanonicalDocument = { ...document, constraints: [], annotationGroups: [] };
     expect(referencesToSignal(withoutConstraintAndMembership, signalId).some((reference) => reference.kind.startsWith("constraint."))).toBe(false);
@@ -295,6 +297,7 @@ describe("canonical stable-ID reference registry", () => {
         { id: "constraint_handshake_all" as ConstraintId, type: "handshake", data: { requestSignalId: signal.id, acknowledgeSignalId: signal.id, stableSignalIds: [signal.id], resetSignalId: signal.id } },
         { id: "constraint_range_all" as ConstraintId, type: "latency-range", data: { requestSignalId: signal.id, acknowledgeSignalId: signal.id } },
         { id: "constraint_latency_all" as ConstraintId, type: "latency", data: { triggerSignalId: signal.id, responseSignalId: signal.id } },
+        { id: "constraint_setup_hold_all" as ConstraintId, type: "hold", data: { dataSignalId: signal.id, captureSignalId: signal.id } },
       ],
     };
     const references = canonicalReferences(referencesDocument);

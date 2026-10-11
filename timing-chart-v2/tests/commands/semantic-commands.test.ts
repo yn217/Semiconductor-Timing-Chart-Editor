@@ -127,6 +127,32 @@ describe("pure Semantic Command planning", () => {
     expect(session.historyState().undoDepth).toBe(1);
   });
 
+  it("creates a typed Setup/Hold constraint through History, protects referenced Signals, and round-trips", () => {
+    const source = canonicalFixture();
+    const data: ValueSignal = { id: "sig_setup_hold_data" as SignalId, name: "DATA", type: "binary", role: "internal", source: { instancePath: [], signalName: "DATA" }, display: { name: "DATA" }, values: [{ start: 0, value: 0 }, { start: 1, value: 1 }] };
+    const capture: ValueSignal = { id: "sig_setup_hold_capture" as SignalId, name: "CAPTURE", type: "binary", role: "input", source: { instancePath: [], signalName: "CAPTURE" }, display: { name: "CAPTURE" }, values: [{ start: 0, value: 0 }, { start: 2, value: 1 }] };
+    const document = { ...source, signals: [...source.signals, data, capture], signalGroups: [{ ...source.signalGroups[0]!, rows: [...source.signalGroups[0]!.rows, data.id, capture.id] }] };
+    const session = new CommandHistorySession(document);
+    const constraintId = "constraint_setup_hold" as ConstraintId;
+    const created = session.execute({ id: commandId("cmd_setup_hold_create"), type: "constraint.createSetupHold", constraintId, kind: "setup", dataSignalId: data.id, captureSignalId: capture.id, captureEdge: "rising", minCycles: 3 });
+    expect(created.ok).toBe(true);
+    expect(session.getSnapshot().document.constraints).toEqual([{ id: constraintId, type: "setup", data: { dataSignalId: data.id, captureSignalId: capture.id, captureEdge: "rising", minCycles: 3 } }]);
+    expect(deriveTimingDiagnostics(session.getSnapshot().document)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "SETUP_TIME_VIOLATION", objectId: constraintId, entityId: data.id, sourceCycle: 2 }),
+    ]));
+    expect(parseDocument(serializeValidatedCanonicalDocument(session.getSnapshot().document)).document.constraints).toEqual(session.getSnapshot().document.constraints);
+    expect(session.execute({ id: commandId("cmd_setup_hold_delete_signal"), type: "signal.delete", signalId: data.id })).toMatchObject({ ok: false, problems: [{ code: "SIGNAL_HAS_DEPENDENTS" }] });
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.constraints).toEqual([]);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.constraints).toHaveLength(1);
+    expect(session.execute({ id: commandId("cmd_setup_hold_invalid"), type: "constraint.createSetupHold", constraintId: "constraint_bad_setup" as ConstraintId, kind: "hold", dataSignalId: data.id, captureSignalId: capture.id, captureEdge: "rising", minCycles: -1 })).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_SETUP_HOLD_CONSTRAINT" }] });
+    const clock = source.signals.find((signal) => signal.type === "clock")!;
+    const clockSession = new CommandHistorySession({ ...source, signals: [...source.signals, data], signalGroups: source.signalGroups.map((group) => ({ ...group, rows: [...group.rows, data.id] })) });
+    expect(clockSession.execute({ id: commandId("cmd_setup_hold_clock"), type: "constraint.createSetupHold", constraintId: "constraint_setup_hold_clock" as ConstraintId, kind: "setup", dataSignalId: data.id, captureSignalId: clock.id, captureEdge: "rising", minCycles: 2 }).ok).toBe(true);
+  });
+
   it("exposes an exhaustive, typed command-policy code inventory", () => {
     expect(commandPolicyDescriptors()).toHaveLength(commandPolicyCodes().length);
     expect(new Set(commandPolicyDescriptors().map((descriptor) => descriptor.code)).size).toBe(commandPolicyCodes().length);
