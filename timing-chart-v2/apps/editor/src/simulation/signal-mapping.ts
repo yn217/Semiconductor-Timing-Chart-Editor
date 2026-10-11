@@ -5,7 +5,6 @@ export type VcdSignalMapping = Readonly<{
   variable: VcdVariable;
   status: "matched" | "missing" | "ambiguous";
   signalId?: SignalId;
-  candidateSignalIds: readonly SignalId[];
   reason?: "multiple-canonical-candidates" | "multiple-vcd-candidates";
 }>;
 
@@ -60,57 +59,40 @@ export function mapVcdVariablesToSignals(
     }
   }
 
-  const candidateSetsByIdentity = new Map<string, readonly CanonicalCandidate[]>();
-  const candidatesByVariable = variables.map((variable) => {
+  const candidateCountByVariable: number[] = [];
+  const uniqueCandidateByVariable: (CanonicalCandidate | undefined)[] = [];
+  variables.forEach((variable) => {
     const hasHierarchy = completeHierarchy(variable.scope, variable.reference);
-    const identityKey = hierarchyKey(hasHierarchy ? variable.scope : [], variable.reference);
-    const existing = candidateSetsByIdentity.get(identityKey);
-    if (existing) return existing;
-
     const name = nameKey(variable.reference);
-    const nameCandidates = byName.get(name) ?? [];
-    let candidates: readonly CanonicalCandidate[];
-    if (!hasHierarchy) {
-      candidates = nameCandidates;
-    } else {
-      const exactHierarchy = byHierarchy.get(hierarchyKey(variable.scope, variable.reference)) ?? [];
-      const fallbackCandidates = byIncompleteName.get(name) ?? [];
-      candidates = exactHierarchy.length === 0
-        ? fallbackCandidates
-        : fallbackCandidates.length === 0
-          ? exactHierarchy
-          : [...exactHierarchy, ...fallbackCandidates];
-    }
-    candidateSetsByIdentity.set(identityKey, candidates);
-    return candidates;
+    const exactCandidates = hasHierarchy
+      ? byHierarchy.get(hierarchyKey(variable.scope, variable.reference)) ?? []
+      : byName.get(name) ?? [];
+    const fallbackCandidates = hasHierarchy ? byIncompleteName.get(name) ?? [] : [];
+    const candidateCount = exactCandidates.length + fallbackCandidates.length;
+    candidateCountByVariable.push(candidateCount);
+    uniqueCandidateByVariable.push(candidateCount === 1 ? (exactCandidates[0] ?? fallbackCandidates[0]) : undefined);
   });
 
   const vcdCandidatesBySignal = new Map<SignalId, number[]>();
-  candidatesByVariable.forEach((candidates, variableIndex) => {
-    if (candidates.length !== 1) return;
-    const signalId = candidates[0]!.signal.id;
+  uniqueCandidateByVariable.forEach((candidate, variableIndex) => {
+    if (!candidate) return;
+    const signalId = candidate.signal.id;
     const indexes = vcdCandidatesBySignal.get(signalId) ?? [];
     indexes.push(variableIndex);
     vcdCandidatesBySignal.set(signalId, indexes);
   });
 
-  const candidateIdsBySet = new WeakMap<readonly CanonicalCandidate[], readonly SignalId[]>();
   const mappings = variables.map((variable, index): VcdSignalMapping => {
-    const candidates = candidatesByVariable[index]!;
-    let candidateSignalIds = candidateIdsBySet.get(candidates);
-    if (!candidateSignalIds) {
-      candidateSignalIds = candidates.map(({ signal }) => signal.id);
-      candidateIdsBySet.set(candidates, candidateSignalIds);
+    const candidateCount = candidateCountByVariable[index]!;
+    if (candidateCount === 0) return { variable, status: "missing" };
+    if (candidateCount > 1) {
+      return { variable, status: "ambiguous", reason: "multiple-canonical-candidates" };
     }
-    if (candidates.length === 0) return { variable, status: "missing", candidateSignalIds };
-    if (candidates.length > 1) {
-      return { variable, status: "ambiguous", candidateSignalIds, reason: "multiple-canonical-candidates" };
-    }
-    const signal = candidates[0]!.signal;
+    const signal = uniqueCandidateByVariable[index]!.signal;
     if ((vcdCandidatesBySignal.get(signal.id)?.length ?? 0) > 1) {
-      return { variable, status: "ambiguous", candidateSignalIds, reason: "multiple-vcd-candidates" };
+      return { variable, status: "ambiguous", reason: "multiple-vcd-candidates" };
     }
-    return { variable, status: "matched", signalId: signal.id, candidateSignalIds };
+    return { variable, status: "matched", signalId: signal.id };
   });
 
   return { status: "ok", mappings };
