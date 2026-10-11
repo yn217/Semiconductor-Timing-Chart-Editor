@@ -40,11 +40,13 @@ documents and verify schema compatibility before rollback.
 
 ## Release identity
 
-The initial public version/channel requires owner confirmation (#1089). Internal
-workspace package versions of `0.0.0` are not a public release identity. Once
-confirmed, create an annotated `v<version>` tag on the verified source commit;
-record its full SHA, verification evidence, artifact identity, deployment target,
-and rollback target in `docs/releases/<version>.md`. Never move a published tag.
-The project source is distributed under the MIT License; verify that both
-`LICENSE` and `THIRD_PARTY_NOTICES.md` are present in the built artifact before
-distribution.
+The owner-approved initial public version/channel is `v0.1.0-beta.1` (beta).
+Internal workspace package versions of `0.0.0` are not the product release
+identity. This is a planned identity only, not a verified or published release.
+After final candidate verification and publication approval, create the
+annotated `v0.1.0-beta.1` tag on the exact verified source commit and record its
+full SHA, verification evidence, artifact identity, deployment target, and
+rollback target in `timing-chart-v2/docs/releases/v0.1.0-beta.1.md`. Never move
+a published tag. The project source is distributed under the MIT License;
+verify that both `LICENSE` and `THIRD_PARTY_NOTICES.md` are present in the built
+artifact before distribution.

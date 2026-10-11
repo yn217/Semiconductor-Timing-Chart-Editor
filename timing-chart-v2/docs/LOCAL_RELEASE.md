@@ -27,11 +27,17 @@ dirty checkout or treat a successful `npm run dev` session as release evidence.
 The product source license is MIT (`../../LICENSE`). The workspace package
 version remains `0.0.0` and is not the product release identity.
 
-The initial release channel/version is an owner decision and is not assigned by
-this procedure. Do not create a release tag until that value is approved. Once
-approved, use an annotated tag named `v<approved-semver>` pointing directly to
-the exact verified `main` commit; record both the tag and full commit SHA. Never
-move an existing release tag to a different commit.
+The approved initial release identity is **`v0.1.0-beta.1`** (beta channel).
+This identifies the planned first release; it does not mean that a release has
+been verified, published, or deployed.
+
+After all release gates are satisfied on the exact candidate commit, create the
+annotated source tag `v0.1.0-beta.1` directly on that commit and record the tag
+and full commit SHA in `docs/releases/v0.1.0-beta.1.md`. Do not create or move
+the tag before verification and publication approval. Never move an existing
+release tag to a different commit. If the candidate needs changes before the
+tag is created, verify the final candidate first; do not invent a replacement
+version without an owner decision.
 
 ## Build artifact and serving
 
@@ -63,9 +69,10 @@ the failed candidate for diagnosis; do not overwrite the prior artifact or
 retag its source commit. The exact host command is deployment-specific and must
 be recorded in that release's notes.
 
-## Current unresolved release choice
+## Publication status
 
-The owner has selected MIT for the distribution license. The initial version
-and channel are still undecided. Until they are selected, this document defines
-the local verification, artifact, tag, and rollback policy, but a public
-release must not be tagged or announced.
+The initial version/channel and distribution license have been decided. The
+release remains unpublished until the candidate passes the verification and
+deployment steps above. Do not describe the version as released, create the
+source tag, or announce it based only on this policy or the release-note
+template.
