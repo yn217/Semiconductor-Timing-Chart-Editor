@@ -209,6 +209,13 @@ test("keeps source-cycle targeting correct after production zoom and horizontal 
   await openBinarySignal(page);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   await page.getByLabel("Zoom preset").selectOption("200");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("waveform-pencil-ribbon").click();
+  const surface = page.getByTestId("cycle-surface");
+  const revision = await surface.getAttribute("data-canonical-revision");
+  const history = await page.getByTestId("history-status").innerText();
+  const dirty = await page.getByTestId("dirty-status").innerText();
+
   const scrollbar = page.getByTestId("timeline-hscroll");
   await expect(scrollbar).toBeVisible();
   const track = (await scrollbar.boundingBox())!;
@@ -220,10 +227,13 @@ test("keeps source-cycle targeting correct after production zoom and horizontal 
   await page.mouse.move(track.x + track.width / 2, track.y + track.height / 2);
   await page.mouse.wheel(600, 0);
   await expect.poll(() => scrollbar.evaluate((element: HTMLElement) => element.scrollLeft)).toBeGreaterThan(before);
+  await expect(page.locator("[data-role='waveform-pencil-preview']")).toHaveCount(0);
+  await expect(surface).toHaveAttribute("data-canonical-revision", revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(history);
+  await expect(page.getByTestId("dirty-status")).toHaveText(dirty);
+  await expect(page.getByTestId("waveform-pencil-ribbon")).toHaveAttribute("aria-pressed", "true");
 
   const cycle = await visibleCellCycle(page);
-  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
-  await page.getByTestId("waveform-pencil-ribbon").click();
   const point = await cellPoint(page, cycle, 0.8);
   await page.mouse.move(point.x, point.y);
   await page.mouse.down();
