@@ -6,7 +6,6 @@ import { type Point } from "@timing-chart-v2/geometry";
 import { quickValueLiteral, quickValueOptions, scenarioModelFromV2, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type GroupId, type ScenarioId, type ScenarioSignalDifference, type Signal,type SignalId, type TransactionGroup, type TransactionId } from "@timing-chart-v2/schema";
 import { ViewMetricsOwner } from "./runtime/view-metrics.js";
 import { ExportDialog } from "./export-dialog.js";
-import { downloadText } from "./download-text.js";
 import { nextCommandId } from "./command-id.js";
 import { nextEntityId } from "./entity-id.js";
 import { ContextMenuPanel, MinimalCycleViewTitleBar, RenameDialog, BulkRegistrationDialog } from "./minimal-cycle-view-panels.js";
@@ -17,7 +16,6 @@ import { HardwareHierarchyBrowser } from "./hardware-hierarchy-browser.js";
 import { SaveAsDialog } from "./save-as-dialog.js";
 import { DocumentProperties } from "./document-properties.js";
 import { cursorStatusReadout } from "./cursor-status-readout.js";
-import { useEditorApplicationOwner } from "./application/use-editor-application-owner.js";
 import { useDocumentEntityIndexes } from "./application/use-document-entity-indexes.js";
 import { useEditorCommandRouter } from "./application/use-editor-command-router.js";
 import { useEditorActions } from "./application/use-editor-actions.js";
@@ -33,7 +31,7 @@ import { useViewModeTransition } from "./runtime/use-view-mode-transition.js";
 import { useActivePaneTracking } from "./runtime/use-active-pane-tracking.js";
 import { useOverlayPresentationRefresh } from "./runtime/use-overlay-presentation-refresh.js";
 import { EditorDialogLayer } from "./editor-dialog-layer.js";
-import { useDocumentLifecycle } from "./application/use-document-lifecycle.js";
+import { useEditorDocumentLifecycleOwner } from "./application/use-editor-document-lifecycle-owner.js";
 import { deriveSelectionCapabilities, useSelectionOwner } from "./application/use-selection-owner.js";
 import { useClipboardActions } from "./application/clipboard-actions.js";
 import { useTimelineNavigationOwner } from "./runtime/use-timeline-navigation-owner.js";
@@ -55,10 +53,9 @@ import { documentFilename } from "./document-filename.js";
 
 export function MinimalCycleView() {
   const { visualReference, initialDocument, productTemplate, initialViewMode } = resolveEditorStartupDocument(typeof window !== "undefined" ? window.location.search : undefined);
-  const application = useEditorApplicationOwner(initialDocument);
-  const documentLifecycle = useDocumentLifecycle({ application, productTemplate, persistText: downloadText });
-  const exportController = useMemo(() => createEditorExportController(), []);
+  const { application, transactionDraftStore, pending: hasUnappliedTransactionDraft, documentLifecycle } = useEditorDocumentLifecycleOwner(initialDocument, productTemplate);
   const { snapshot, lastChangeSet, history, problem, validationDiagnostics, validationPending, runtimeDiagnostics, setProblem, setRuntimeDiagnostics } = application;
+  const exportController = useMemo(() => createEditorExportController(), []);
   const scenarioModel = application.runtime.session.scenarioModel();
   const activeScenarioId = application.runtime.session.activeScenarioId();
   const host = useRef<HTMLDivElement>(null);
@@ -572,6 +569,8 @@ export function MinimalCycleView() {
     projectionGeneration: application.runtime.session.projectionGeneration(),
     revision: snapshot.revision,
     transactionPresentationRevision,
+    transactionDraftStore,
+    transactionDraftPending: hasUnappliedTransactionDraft,
     history,
     problem,
     diagnostics,
@@ -863,6 +862,7 @@ export function MinimalCycleView() {
       unsavedCancelRef={unsavedCancelRef}
       cancelPendingFileAction={cancelPendingFileAction}
       continuePendingFileAction={continuePendingFileAction}
+      discardPendingTransactionDraft={documentLifecycle.discardPendingTransactionDraft}
       saveAndContinuePendingFileAction={saveAndContinuePendingFileAction}
       fileInputRef={fileInput}
       onFileChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) { capturePendingFileOrigin(); void documentLifecycle.readFile(file); } event.currentTarget.value = ""; }}

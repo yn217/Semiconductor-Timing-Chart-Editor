@@ -8,6 +8,7 @@ import { documentIdFromRecentText, isLegacyRecentDocument, loadRecentDocument, r
 import { canonicalDocumentOf, createNewDocumentFromProductTemplate, decodeOpenDocumentBytes, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseEditorDocument } from "../file-document-controller.js";
 import { documentFilename } from "../document-filename.js";
 import { randomId } from "../random-id.js";
+import type { TransactionBottomDraftStore } from "../runtime/transaction-bottom-draft-store.js";
 
 const RECENT_KEY = "timing-chart-v2.recent";
 const RECENT_META_KEY = "timing-chart-v2.recent-meta";
@@ -40,7 +41,7 @@ function publishRecentMetadata(identity: RecentDocumentIdentity, title: string):
   if (previousStorageVersion !== 2) localStorage.removeItem(RECENT_KEY);
 }
 
-export type PendingDocumentAction = Readonly<{ kind: "new" | "open"; requestId: number; text?: string; filename?: string | undefined }>;
+export type PendingDocumentAction = Readonly<{ kind: "new" | "open"; requestId: number; text?: string; filename?: string | undefined; hasUnappliedTransactionDraft?: boolean }>;
 // The file name the user last chose (Save As) or opened for the current document. Tagged with the document epoch so any replacement drops it.
 type RememberedFilename = Readonly<{ filename: string; documentEpoch: number }>;
 export type CompatibilityPreview = Readonly<{ sourceFormatVersion: number; sourceText: string; readOnly: boolean }>;
@@ -127,10 +128,12 @@ export function useDocumentLifecycle({
   application,
   productTemplate,
   persistText,
+  transactionDrafts,
 }: {
   readonly application: DocumentApplicationPort;
   readonly productTemplate: CanonicalDocument;
   readonly persistText: (text: string, filename: string) => void;
+  readonly transactionDrafts: TransactionBottomDraftStore;
 }) {
   const [pendingAction, setPendingAction] = useState<PendingDocumentAction | undefined>();
   const [compatibilityPreview, setCompatibilityPreview] = useState<CompatibilityPreview | undefined>();
@@ -158,10 +161,11 @@ export function useDocumentLifecycle({
       }
       return false;
     }
+    transactionDrafts.clearAll();
     setCompatibilityPreview(undefined);
     effectsRef.current?.applyReplacement({ document: outcome.document, session: outcome.session, documentEpoch: outcome.documentEpoch, migrationWarnings });
     return true;
-  }, [application]);
+  }, [application, transactionDrafts]);
 
   const replaceScenarioDocument = useCallback((model: ScenarioDocumentModel) => {
     let session!: ActiveEditorSession;
@@ -175,10 +179,11 @@ export function useDocumentLifecycle({
       application.setProblem(`The Scenario document could not be opened: ${error instanceof Error ? error.message : String(error)}`);
       return false;
     }
+    transactionDrafts.clearAll();
     setCompatibilityPreview(undefined);
     effectsRef.current?.applyReplacement({ document: session.getSnapshot().document as CanonicalDocument, session, documentEpoch, migrationWarnings: [] });
     return true;
-  }, [application]);
+  }, [application, transactionDrafts]);
 
   const openText = useCallback((text: string) => {
     const fileReadStartedAt = fileReadStartedAtRef.current;
@@ -230,16 +235,17 @@ export function useDocumentLifecycle({
     return opened;
   }, [openText, productTemplate, rememberFilename, replaceDocument]);
 
-  const requestAction = useCallback((action: Omit<PendingDocumentAction, "requestId">, requestId = ++requestIdRef.current) => {
+  const requestAction = useCallback((action: Omit<PendingDocumentAction, "requestId" | "hasUnappliedTransactionDraft">, requestId = ++requestIdRef.current) => {
     if (requestId !== requestIdRef.current) return;
     const pending: PendingDocumentAction = { ...action, requestId };
     // This decision can run after an async File.text() boundary. Read the
     // replaceable session at decision time so edits made while the file was
     // loading cannot be lost because a stale React history snapshot said the
     // document was clean.
-    if (application.runtime.session.current().historyState().dirty) setPendingAction(pending);
+    const hasUnappliedTransactionDraft = transactionDrafts.hasUnappliedDrafts();
+    if (application.runtime.session.current().historyState().dirty || hasUnappliedTransactionDraft) setPendingAction({ ...pending, hasUnappliedTransactionDraft });
     else performAction(pending);
-  }, [application.runtime, performAction]);
+  }, [application.runtime, performAction, transactionDrafts]);
 
   const requestNew = useCallback(() => requestAction({ kind: "new" }), [requestAction]);
   const requestOpenText = useCallback((text: string, requestId?: number, filename?: string) => requestAction({ kind: "open", text, filename }, requestId), [requestAction]);
@@ -294,6 +300,17 @@ export function useDocumentLifecycle({
     setPendingAction(undefined);
     if (action) performAction(action);
   }, [pendingAction, performAction]);
+  const discardPendingTransactionDraft = useCallback(() => {
+    const action = pendingAction;
+    if (!action?.hasUnappliedTransactionDraft) return;
+    transactionDrafts.clearAll();
+    if (application.runtime.session.current().historyState().dirty) {
+      setPendingAction({ ...action, hasUnappliedTransactionDraft: false });
+      return;
+    }
+    setPendingAction(undefined);
+    performAction(action);
+  }, [application.runtime, pendingAction, performAction, transactionDrafts]);
 
   const reportSaveFailure = useCallback((error: unknown, stage: "serialize" | "storage") => {
     const candidate = error as { problems?: unknown };
@@ -307,6 +324,11 @@ export function useDocumentLifecycle({
   }, [application]);
 
   const save = useCallback((filename: string) => {
+    if (transactionDrafts.hasUnappliedDrafts()) {
+      application.setProblem("Apply or revert the unapplied Transaction Bottom edits before saving. They have not been written to the document.");
+      application.setOperationMessage("Save stopped: unapplied Transaction edits remain.");
+      return false;
+    }
     const session = application.runtime.session.current();
     const saveSnapshot = session.getSnapshot();
     const savedDocument = saveSnapshot.document;
@@ -354,7 +376,7 @@ export function useDocumentLifecycle({
       recordSaveMeasure("timing-chart-v2.save.recent-write", recentWriteStartedAt, { characters: text.length });
     });
     return true;
-  }, [application, persistText, reportSaveFailure]);
+  }, [application, persistText, reportSaveFailure, transactionDrafts]);
 
   // Save As is an explicit choice, so later Saves of this document reuse it (until the document is replaced).
   const saveAs = useCallback((name: string) => {
@@ -474,6 +496,7 @@ export function useDocumentLifecycle({
     readFile,
     cancelPending,
     discardPending,
+    discardPendingTransactionDraft,
     save,
     saveAs,
     saveCurrent,
